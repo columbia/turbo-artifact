@@ -5,18 +5,18 @@ description = ""
 authors = ["Pierre Tholoniat <pierre@tholoniat.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
+simpy = "^4.0.1"
+loguru = "^0.5.3"
 jupyter = "^1.0.0"
 notebook = "^6.4.0"
 jupyterlab = "^3.0.16"
-black = "^21.6b0"
-flake8 = "^3.9.2"
-isort = "^5.9.2"
-simpy = "^4.0.1"
-loguru = "^0.5.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+black = "^21.6b0"
+flake8 = "^3.9.2"
+isort = "^5.9.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -24,3 +24,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.isort]
 profile = "black"
+
+[tool.black]
+max-line-length = 79
