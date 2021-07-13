@@ -11,6 +11,9 @@ loguru = "^0.5.3"
 jupyter = "^1.0.0"
 notebook = "^6.4.0"
 jupyterlab = "^3.0.16"
+numpy = "^1.21.0"
+PuLP = "^2.4"
+gurobipy = "^9.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

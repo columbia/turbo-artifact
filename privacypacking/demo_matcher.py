@@ -71,7 +71,8 @@ class Scheduler:
 
             # Trigger the job
             allocated_job.allocated.succeed()
-            # Don't do anything else with the rest of the allocatable jobs: the state might have changed
+            # Don't do anything else with the rest of the allocatable jobs
+            # (the state might have changed)
 
     def update_resources(self, request):
         # TODO: remove the consumed resource
