@@ -5,7 +5,7 @@ description = ""
 authors = ["Pierre Tholoniat <pierre@tholoniat.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python =  ">=3.8,<3.10"
 simpy = "^4.0.1"
 loguru = "^0.5.3"
 jupyter = "^1.0.0"
@@ -14,6 +14,7 @@ jupyterlab = "^3.0.16"
 numpy = "^1.21.0"
 PuLP = "^2.4"
 gurobipy = "^9.1.2"
+scipy = "^1.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

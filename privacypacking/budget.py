@@ -9,6 +9,7 @@ ALPHAS = [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64, 1e6]
 class Budget:
     def __init__(self, orders: Dict[float, float]) -> None:
         # TODO: float or other type? Floating point arith
+        # TODO: sorted dict? And keep it sorted.
         self.orders = orders
 
     @classmethod
@@ -49,5 +50,9 @@ class Budget:
     # TODO: better semantics, other comparison utilities? Overload __gt__ & cie?
     def is_positive(self) -> bool:
         return any(self.orders.values())
+
+    @property
+    def alphas(self) -> list:
+        return list(self.orders.keys())
 
     # TODO: plotting utilities
