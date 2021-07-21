@@ -19,7 +19,88 @@ def check_same_support():
     pass
 
 
+def toy():
+    """Dealing with 'exists' or max >=0 with Gurobi"""
+    m = gp.Model("pack")
+
+    a1 = 1.001
+    a2 = 1.5
+
+    b1 = 0.5
+    b2 = 1.1
+
+    c1 = 1.0
+    c2 = 1.0
+
+    xa = m.addVar(vtype=GRB.BINARY, name="xa")
+    xb = m.addVar(vtype=GRB.BINARY, name="xb")
+
+    # m.addConstr(1 == gp.or_(a1 * xa + b1 * xb <= c1, a2 * xa + b2 * xb <= c2))
+    # gurobipy.GurobiError: General expressions can only be the right hand side part of an assignment to a single variable
+
+    # m.addConstr(0.0 <= gp.max_([c1 - a1 * xa + b1 * xb, c2 - a2 * xa + b2 * xb]))
+    # TypeError: '<=' not supported between instances of 'float' and 'GenExpr'
+
+    # z = m.addVar(vtype=GRB.CONTINUOUS, name="z")
+    # m.addConstr(z == gp.max_([c1 - (a1 * xa + b1 * xb), c2 - (a2 * xa + b2 * xb)]))
+    # m.addConstr(z >= 0.0)
+    # gurobipy.GurobiError: Invalid data in vars array
+
+    z = m.addVar(vtype=GRB.CONTINUOUS, name="z")
+    s1 = m.addVar(lb=-float("inf"), ub=float("inf"), vtype=GRB.CONTINUOUS, name="s1")
+    s2 = m.addVar(lb=-float("inf"), ub=float("inf"), vtype=GRB.CONTINUOUS, name="s2")
+
+    m.addConstr(s1 == c1 - ((a1 * xa) + (b1 * xb)))
+    m.addConstr(s2 == c2 - ((a2 * xa) + (b2 * xb)))
+
+    m.addConstr(z == gp.max_([s1, s2]))
+    m.addConstr(z >= 0.0)
+
+    m.setObjective(xa + xb, GRB.MAXIMIZE)
+    print(m)
+    m.optimize()
+
+    print(s1.x, s2.x)
+
+    return xa.x, xb.x
+
+
 def pack_one_block(job_list, block):
+
+    """
+    Returns a list of booleans corresponding to the jobs that are allocated
+    """
+    m = gp.Model("pack")
+    n = len(job_list)
+    d = len(block.alphas)
+
+    indices = [i for i in range(n)]
+    alpha_indices = [j for j in range(d)]
+
+    # Tuple dict
+    x = m.addVars(indices, vtype=GRB.BINARY, name="x")
+    s = m.addVars(d, vtype=GRB.CONTINUOUS, name="s")
+    z = m.addVar(vtype=GRB.CONTINUOUS, name="z")
+    print(x, s, z)
+
+    for i, alpha in enumerate(block.alphas):
+        demands = {i: job_list[i].orders[alpha] for i in indices}
+        m.addConstr(block.orders[alpha] == x.prod(demands) + s[i], f"alpha: {alpha}")
+        print(m)
+    m.addConstr(z == gp.max_(s))
+    m.addConstr(z >= 0.0)
+
+    m.setObjective(x.sum(), GRB.MAXIMIZE)
+    m.optimize()
+
+    print(x)
+    print(x[0])
+    print(type(x[0].x))
+
+    return [i for i in indices if x[i].x]
+
+
+def pack_one_block_one_alpha(job_list, block):
     """
     Returns a list of booleans corresponding to the jobs that are allocated
     """
@@ -115,7 +196,8 @@ def main():
 
     # print(block)
 
-    print(pack_one_block(jobs, block))
+    # print(pack_one_block(jobs, block))
+    print(toy())
 
 
 if __name__ == "__main__":
