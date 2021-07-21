@@ -53,7 +53,7 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
             x=list(block.orders.keys()),
             y=list(block.orders.values()),
             name="Block capacity",
-            line=dict(color="firebrick", width=4),
+            line=dict(color="green", width=4),
         )
     )
 
