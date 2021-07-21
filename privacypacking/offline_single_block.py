@@ -11,6 +11,7 @@ from gurobipy import GRB
 
 from privacypacking.budget import Budget
 from privacypacking.curves import GaussianBudget
+from privacypacking.plot import save_fig, stack_jobs_under_block_curve
 
 # TODO: reduce to same support/utils/throw appropriate error
 
@@ -74,30 +75,23 @@ def pack_one_block(job_list, block):
     n = len(job_list)
     d = len(block.alphas)
 
-    indices = [i for i in range(n)]
-    alpha_indices = [j for j in range(d)]
-
-    # Tuple dict
-    x = m.addVars(indices, vtype=GRB.BINARY, name="x")
-    s = m.addVars(d, vtype=GRB.CONTINUOUS, name="s")
+    x = m.addVars(n, vtype=GRB.BINARY, name="x")
+    s = m.addVars(d, lb=-float("inf"), ub=float("inf"), vtype=GRB.CONTINUOUS, name="s")
     z = m.addVar(vtype=GRB.CONTINUOUS, name="z")
     print(x, s, z)
 
     for i, alpha in enumerate(block.alphas):
-        demands = {i: job_list[i].orders[alpha] for i in indices}
-        m.addConstr(block.orders[alpha] == x.prod(demands) + s[i], f"alpha: {alpha}")
+        demands = {j: job.orders[alpha] for j, job in enumerate(job_list)}
+        m.addConstr(s[i] == block.orders[alpha] - x.prod(demands))
         print(m)
+
     m.addConstr(z == gp.max_(s))
     m.addConstr(z >= 0.0)
 
     m.setObjective(x.sum(), GRB.MAXIMIZE)
     m.optimize()
 
-    print(x)
-    print(x[0])
-    print(type(x[0].x))
-
-    return [i for i in indices if x[i].x]
+    return [(abs(x[i].x - 1) < 1e-4) for i in range(n)]
 
 
 def pack_one_block_one_alpha(job_list, block):
@@ -188,7 +182,7 @@ def main():
 
     jobs = [GaussianBudget(sigma=s) for s in np.linspace(0.1, 1, 10)]
 
-    # random.shuffle(jobs)
+    random.shuffle(jobs)
 
     # TODO: add Laplace jobs to disturb DPF?
 
@@ -196,8 +190,10 @@ def main():
 
     # print(block)
 
-    # print(pack_one_block(jobs, block))
-    print(toy())
+    allocation = pack_one_block(jobs, block)
+
+    stack_jobs_under_block_curve(jobs, block, allocation)
+    # print(toy())
 
 
 if __name__ == "__main__":
