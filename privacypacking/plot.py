@@ -45,7 +45,7 @@ def multiplot(jobs, blocks, allocation):
 
     app.layout = html.Div(objs)
 
-    app.run_server(debug=True)
+    app.run_server(debug=True, port='8080', host='127.0.0.1')
 
 
 def singleplot(jobs, block, allocation):
