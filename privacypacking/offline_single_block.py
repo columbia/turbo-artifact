@@ -11,7 +11,8 @@ from gurobipy import GRB
 
 from privacypacking.budget import Budget
 from privacypacking.curves import GaussianBudget
-from privacypacking.plot import save_fig, singleplot
+from privacypacking.plot import singleplot
+
 
 # TODO: reduce to same support/utils/throw appropriate error
 
@@ -67,7 +68,6 @@ def toy():
 
 
 def pack_one_block(job_list, block):
-
     """
     Returns a list of booleans corresponding to the jobs that are allocated
     """
@@ -93,7 +93,6 @@ def pack_one_block(job_list, block):
 
     return [(abs(x[i].x - 1) < 1e-4) for i in range(n)]
 
-
 def main():
     block = Budget.from_epsilon_delta(epsilon=10, delta=0.001)
 
@@ -106,6 +105,7 @@ def main():
     allocation = pack_one_block(jobs, block)
 
     singleplot(jobs, block, allocation)
+
 
 if __name__ == "__main__":
     main()

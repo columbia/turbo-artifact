@@ -11,11 +11,10 @@ from gurobipy import GRB
 
 from privacypacking.budget import Budget, ALPHAS
 from privacypacking.curves import MultiblockGaussianBudget
-from privacypacking.plot import save_fig,  multiplot
+from privacypacking.plot import multiplot
 
 
 def pack_many_blocks(job_list, blocks):
-
     """
     Returns a list of booleans corresponding to the jobs that are allocated
     """
@@ -26,31 +25,30 @@ def pack_many_blocks(job_list, blocks):
     demands_upper_bound = {}
     for k, block in enumerate(blocks):
         for alpha in block.alphas:
-            demands_upper_bound[(k,alpha)] = sum([job.block_budgets[k].orders[alpha] for job in job_list])
+            demands_upper_bound[(k, alpha)] = sum([job.block_budgets[k].orders[alpha] for job in job_list])
 
     # Variables
-    x = m.addMVar((1,n), vtype=GRB.BINARY, name="x")
-    a = m.addMVar((len(blocks),d), vtype=GRB.BINARY, name="a")
+    x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
+    a = m.addMVar((len(blocks), d), vtype=GRB.BINARY, name="a")
     print(x, a)
 
     # Constraints
     for k, _ in enumerate(blocks):
-        print(k)
         m.addConstr(a[k].sum() >= 1)
 
     for k, block in enumerate(blocks):
         for i, alpha in enumerate(block.alphas):
-            print(demands_upper_bound[(k,alpha)])
-            print((1-a[k][i])*demands_upper_bound[(k,alpha)])
             demands = [job.block_budgets[k].orders[alpha] for j, job in enumerate(job_list)]
-            m.addConstr(sum([x[0,z]*demands[z] for z in range(n)]) - (1-a[k,i])*demands_upper_bound[(k,alpha)] <= block.orders[alpha])
+            m.addConstr(
+                sum([x[0, z] * demands[z] for z in range(n)]) - (1 - a[k, i]) * demands_upper_bound[(k, alpha)] <=
+                block.orders[alpha])
     print(m)
 
     # Objective function
     m.setObjective(x.sum(), GRB.MAXIMIZE)
     m.optimize()
 
-    return [bool((abs(x[0,i].x - 1) < 1e-4)) for i in range(n)]
+    return [bool((abs(x[0, i].x - 1) < 1e-4)) for i in range(n)]
 
 
 def main():
@@ -64,7 +62,6 @@ def main():
     random.shuffle(jobs)
 
     allocation = pack_many_blocks(jobs, blocks)
-    print(allocation)
     multiplot(jobs, blocks, allocation)
 
 

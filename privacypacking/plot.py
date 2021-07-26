@@ -33,7 +33,8 @@ def multiplot(jobs, blocks, allocation):
     figs = []
     for k, block in enumerate(blocks):
         figs.append(
-            go.FigureWidget(stack_jobs_under_block_curve([job.block_budgets[k] for job in jobs], block, allocation))
+            go.FigureWidget(stack_jobs_under_block_curve([job.block_budgets[k] for job in jobs],
+                                                         block, allocation))
         )
     app = dash.Dash()
     objs = []
@@ -45,7 +46,7 @@ def multiplot(jobs, blocks, allocation):
 
     app.layout = html.Div(objs)
 
-    app.run_server(debug=True, port='8080', host='127.0.0.1')
+    app.run_server(debug=False, port='8080', host='127.0.0.1')
 
 
 def singleplot(jobs, block, allocation):
@@ -58,7 +59,7 @@ def singleplot(jobs, block, allocation):
 
     app.layout = html.Div(obj)
 
-    app.run_server(debug=True, port='8080', host='127.0.0.1')
+    app.run_server(debug=False, port='8080', host='127.0.0.1')
 
 
 def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
@@ -94,5 +95,4 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
 
     log_toggle(fig)
 
-    # fig.show()
     return fig
