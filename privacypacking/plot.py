@@ -1,5 +1,8 @@
 from collections import defaultdict
 
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -26,6 +29,38 @@ def log_toggle(fig):
     )
 
 
+def multiplot(jobs, blocks, allocation):
+    figs = []
+    for k, block in enumerate(blocks):
+        figs.append(
+            go.FigureWidget(stack_jobs_under_block_curve([job.block_budgets[k] for job in jobs], block, allocation))
+        )
+    app = dash.Dash()
+    objs = []
+    for i, fig in enumerate(figs):
+        objs += [html.Div([
+            html.H3(f'Block {i + 1}'),
+            dcc.Graph(id=f'g{i}', figure=fig)
+        ], className="six columns")]
+
+    app.layout = html.Div(objs)
+
+    app.run_server(debug=True)
+
+
+def singleplot(jobs, block, allocation):
+    fig = stack_jobs_under_block_curve(jobs, block, allocation)
+    app = dash.Dash()
+    obj = [html.Div([
+        html.H3(f'Block {1}'),
+        dcc.Graph(id=f'g{1}', figure=fig)
+    ], className="six columns")]
+
+    app.layout = html.Div(obj)
+
+    app.run_server(debug=True, port='8080', host='127.0.0.1')
+
+
 def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
     data = defaultdict(list)
     for i, (job, status) in enumerate(zip(job_list, allocation_status_list)):
@@ -44,7 +79,7 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
         y="epsilon",
         color="allocated",
         line_group="job",
-        log_x=True,
+        log_x=False,
         log_y=False,
     )
 
@@ -59,5 +94,5 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
 
     log_toggle(fig)
 
-    fig.show()
-    # return fig
+    # fig.show()
+    return fig

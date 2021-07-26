@@ -3,7 +3,7 @@ from typing import Dict, List
 import numpy as np
 
 # TODO: other range of default alphas?
-ALPHAS = [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64, 1e6]
+ALPHAS = [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64] #, 1e6] omitting last alpha for better visualization
 
 
 class Budget:

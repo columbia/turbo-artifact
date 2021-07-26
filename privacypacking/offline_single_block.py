@@ -11,7 +11,7 @@ from gurobipy import GRB
 
 from privacypacking.budget import Budget
 from privacypacking.curves import GaussianBudget
-from privacypacking.plot import save_fig, stack_jobs_under_block_curve
+from privacypacking.plot import save_fig, singleplot
 
 # TODO: reduce to same support/utils/throw appropriate error
 
@@ -105,8 +105,7 @@ def main():
 
     allocation = pack_one_block(jobs, block)
 
-    stack_jobs_under_block_curve(jobs, block, allocation)
-
+    singleplot(jobs, block, allocation)
 
 if __name__ == "__main__":
     main()

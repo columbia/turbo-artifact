@@ -10,8 +10,8 @@ import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import Budget, ALPHAS
-from privacypacking.curves import GaussianBudget, MultiblockGaussianBudget
-from privacypacking.plot import save_fig, stack_jobs_under_block_curve
+from privacypacking.curves import MultiblockGaussianBudget
+from privacypacking.plot import save_fig,  multiplot
 
 
 def pack_many_blocks(job_list, blocks):
@@ -42,7 +42,7 @@ def pack_many_blocks(job_list, blocks):
         for i, alpha in enumerate(block.alphas):
             print(demands_upper_bound[(k,alpha)])
             print((1-a[k][i])*demands_upper_bound[(k,alpha)])
-            demands = [job.block_budgets[k].orders[alpha] for j, job in enumerate(job_list)]            # demands = demands.reshape([1,n])
+            demands = [job.block_budgets[k].orders[alpha] for j, job in enumerate(job_list)]
             m.addConstr(sum([x[0,z]*demands[z] for z in range(n)]) - (1-a[k,i])*demands_upper_bound[(k,alpha)] <= block.orders[alpha])
     print(m)
 
@@ -65,7 +65,7 @@ def main():
 
     allocation = pack_many_blocks(jobs, blocks)
     print(allocation)
-    # stack_jobs_under_block_curve(jobs, blocks, allocation)
+    multiplot(jobs, blocks, allocation)
 
 
 if __name__ == "__main__":

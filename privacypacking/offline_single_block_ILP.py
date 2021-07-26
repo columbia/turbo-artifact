@@ -11,9 +11,7 @@ from gurobipy import GRB
 
 from privacypacking.budget import Budget
 from privacypacking.curves import GaussianBudget
-from privacypacking.plot import save_fig, stack_jobs_under_block_curve
-
-# TODO: reduce to same support/utils/throw appropriate error
+from privacypacking.plot import save_fig, singleplot
 
 
 def check_same_support():
@@ -59,11 +57,8 @@ def main():
 
     random.shuffle(jobs)
 
-    # TODO: add Laplace jobs to disturb DPF?
-
     allocation = pack_one_block(jobs, block)
-    # print(allocation)
-    stack_jobs_under_block_curve(jobs, block, allocation)
+    singleplot(jobs, block, allocation)
 
 
 if __name__ == "__main__":
