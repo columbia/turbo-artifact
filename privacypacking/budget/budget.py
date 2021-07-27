@@ -21,7 +21,7 @@ ALPHAS = [
 ]  # , 1e6] omitting last alpha for better visualization
 
 # Default value for MNIST-like delta
-DELTA = 1e-6
+DELTA = 1e-5
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
 

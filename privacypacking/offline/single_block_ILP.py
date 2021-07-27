@@ -10,7 +10,11 @@ import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import Budget
-from privacypacking.budget.curves import GaussianBudget
+from privacypacking.budget.curves import (
+    GaussianBudget,
+    LaplaceBudget,
+    SubsampledGaussianBudget,
+)
 from privacypacking.plot import singleplot
 
 
@@ -55,7 +59,19 @@ def pack_one_block(job_list, block):
 def main():
     block = Budget.from_epsilon_delta(epsilon=10, delta=0.001)
 
-    jobs = [GaussianBudget(sigma=s) for s in np.linspace(0.1, 1, 10)]
+    jobs = (
+        [GaussianBudget(sigma=s) for s in np.linspace(1, 10, 5)]
+        + [LaplaceBudget(laplace_noise=l) for l in np.linspace(0.1, 10, 5)]
+        + [
+            SubsampledGaussianBudget.from_training_parameters(
+                dataset_size=60_000,
+                batch_size=64,
+                epochs=10,
+                sigma=s,
+            )
+            for s in np.linspace(1, 10, 5)
+        ]
+    )
 
     random.shuffle(jobs)
 
