@@ -1,9 +1,32 @@
-from typing import Dict, List
+from collections import namedtuple
+from typing import Dict, List, NamedTuple
 
 import numpy as np
+from opacus.privacy_analysis import get_privacy_spent
 
 # TODO: other range of default alphas?
-ALPHAS = [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64] #, 1e6] omitting last alpha for better visualization
+ALPHAS = [
+    1.5,
+    1.75,
+    2,
+    2.5,
+    3,
+    4,
+    5,
+    6,
+    8,
+    16,
+    32,
+    64,
+]  # , 1e6] omitting last alpha for better visualization
+
+# Default value for MNIST-like delta
+DELTA = 1e-6
+DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
+
+
+# TODO: make it immutable to remove ambiguity?
+# And blocks can have a mutable budget field.
 
 
 class Budget:
@@ -55,4 +78,17 @@ class Budget:
     def alphas(self) -> list:
         return list(self.orders.keys())
 
-    # TODO: plotting utilities
+    def dp_budget(self, delta: float = DELTA) -> DPBudget:
+        """
+        Uses a tight conversion formula to get (epsilon, delta)-DP.
+        It can be slow to compute for the first time.
+        """
+
+        epsilon, best_alpha = get_privacy_spent(
+            orders=list(self.orders.keys()),
+            rdp=list(self.orders.values()),
+            delta=delta,
+        )
+        # TODO: cache this? If orders is immutable.
+
+        return DPBudget(epsilon=epsilon, delta=delta, best_alpha=best_alpha)

@@ -10,11 +10,13 @@ This repo contains code to simulate and evaluate different privacy packing polic
 
 ## Contributing
 
+
+- Code style: flake8, Black, Google-style docstrings, type annotations (ideally)
+
 - Install [poetry](https://python-poetry.org/) to set up the environment. The `poetry.lock` will ensure that we all have the exact same packages. Useful commands:
     + `poetry add plotly` to install a package (e.g. Plotly) and update the requirements
     + `poetry update` to update the dependencies, `poetry lock --no-update` to just refresh the lockfile
     + `poetry install` to install the dependencies
     + `poetry shell` to activate the virtual environment
 
-- Code style: flake8, Black, Google-style docstrings (ideally)
 

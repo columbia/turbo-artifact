@@ -33,33 +33,40 @@ def multiplot(jobs, blocks, allocation):
     figs = []
     for k, block in enumerate(blocks):
         figs.append(
-            go.FigureWidget(stack_jobs_under_block_curve([job.block_budgets[k] for job in jobs],
-                                                         block, allocation))
+            go.FigureWidget(
+                stack_jobs_under_block_curve(
+                    [job.block_budgets[k] for job in jobs], block, allocation
+                )
+            )
         )
     app = dash.Dash()
     objs = []
     for i, fig in enumerate(figs):
-        objs += [html.Div([
-            html.H3(f'Block {i + 1}'),
-            dcc.Graph(id=f'g{i}', figure=fig)
-        ], className="six columns")]
+        objs += [
+            html.Div(
+                [html.H3(f"Block {i + 1}"), dcc.Graph(id=f"g{i}", figure=fig)],
+                className="six columns",
+            )
+        ]
 
     app.layout = html.Div(objs)
 
-    app.run_server(debug=False, port='8080', host='127.0.0.1')
+    app.run_server(debug=False, port="8080", host="127.0.0.1")
 
 
 def singleplot(jobs, block, allocation):
     fig = stack_jobs_under_block_curve(jobs, block, allocation)
     app = dash.Dash()
-    obj = [html.Div([
-        html.H3(f'Block {1}'),
-        dcc.Graph(id=f'g{1}', figure=fig)
-    ], className="six columns")]
+    obj = [
+        html.Div(
+            [html.H3(f"Block {1}"), dcc.Graph(id=f"g{1}", figure=fig)],
+            className="six columns",
+        )
+    ]
 
     app.layout = html.Div(obj)
 
-    app.run_server(debug=False, port='8080', host='127.0.0.1')
+    app.run_server(debug=False, port="8080", host="127.0.0.1")
 
 
 def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
@@ -70,9 +77,10 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
             data["epsilon"].append(epsilon)
             data["job"].append(i)
             data["allocated"].append(status)
+            data["dp_epsilon"].append(job.dp_budget().epsilon)
 
     df = pd.DataFrame(data=data)
-    df = df.sort_values(by=["allocated"], ascending=False)
+    df = df.sort_values(by=["allocated", "dp_epsilon"], ascending=[False, True])
 
     fig = px.area(
         df,

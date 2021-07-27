@@ -10,7 +10,7 @@ import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import Budget
-from privacypacking.curves import GaussianBudget
+from privacypacking.budget.curves import GaussianBudget
 from privacypacking.plot import singleplot
 
 
@@ -39,7 +39,10 @@ def pack_one_block(job_list, block):
     m.addConstr(a.sum() >= 1)
     for i, alpha in enumerate(block.alphas):
         demands = {j: job.orders[alpha] for j, job in enumerate(job_list)}
-        m.addConstr(x.prod(demands) - (1 - a[i]) * demands_upper_bound[alpha] <= block.orders[alpha])
+        m.addConstr(
+            x.prod(demands) - (1 - a[i]) * demands_upper_bound[alpha]
+            <= block.orders[alpha]
+        )
         print(m)
 
     # Objective function
@@ -47,6 +50,7 @@ def pack_one_block(job_list, block):
     m.optimize()
 
     return [(abs(x[i].x - 1) < 1e-4) for i in range(n)]
+
 
 def main():
     block = Budget.from_epsilon_delta(epsilon=10, delta=0.001)

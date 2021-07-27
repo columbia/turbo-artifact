@@ -10,7 +10,7 @@ import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import Budget, ALPHAS
-from privacypacking.curves import MultiblockGaussianBudget
+from privacypacking.budget.curves import MultiblockGaussianBudget
 from privacypacking.plot import multiplot
 
 
@@ -25,7 +25,9 @@ def pack_many_blocks(job_list, blocks):
     demands_upper_bound = {}
     for k, block in enumerate(blocks):
         for alpha in block.alphas:
-            demands_upper_bound[(k, alpha)] = sum([job.block_budgets[k].orders[alpha] for job in job_list])
+            demands_upper_bound[(k, alpha)] = sum(
+                [job.block_budgets[k].orders[alpha] for job in job_list]
+            )
 
     # Variables
     x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
@@ -38,10 +40,14 @@ def pack_many_blocks(job_list, blocks):
 
     for k, block in enumerate(blocks):
         for i, alpha in enumerate(block.alphas):
-            demands = [job.block_budgets[k].orders[alpha] for j, job in enumerate(job_list)]
+            demands = [
+                job.block_budgets[k].orders[alpha] for j, job in enumerate(job_list)
+            ]
             m.addConstr(
-                sum([x[0, z] * demands[z] for z in range(n)]) - (1 - a[k, i]) * demands_upper_bound[(k, alpha)] <=
-                block.orders[alpha])
+                sum([x[0, z] * demands[z] for z in range(n)])
+                - (1 - a[k, i]) * demands_upper_bound[(k, alpha)]
+                <= block.orders[alpha]
+            )
     print(m)
 
     # Objective function
@@ -57,7 +63,9 @@ def main():
     for _ in range(num_blocks):
         blocks += [Budget.from_epsilon_delta(epsilon=10, delta=0.001)]
 
-    jobs = [MultiblockGaussianBudget(num_blocks, sigma=s) for s in np.linspace(0.1, 1, 10)]
+    jobs = [
+        MultiblockGaussianBudget(num_blocks, sigma=s) for s in np.linspace(0.1, 1, 10)
+    ]
 
     random.shuffle(jobs)
 
