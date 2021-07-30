@@ -7,7 +7,6 @@ from privacypacking.budget import ALPHAS
 from privacypacking.budget.block import *
 from privacypacking.budget.task import *
 from privacypacking.offline.schedulers.scheduler import Scheduler
-from privacypacking.plot import plot
 
 
 class Simplex(Scheduler):

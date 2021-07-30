@@ -1,0 +1,40 @@
+renyi_epsilon: 10
+renyi_delta: 0.001
+
+blocks_spec:
+  offline:
+    enabled: false
+    num: 1
+
+  online:
+    enabled: false
+
+
+tasks_spec:
+  offline:
+    enabled: false
+    curve_distributions:
+      laplace:
+        num: 0
+        #        num_blocks: 0
+        noise_start: 0.1
+        noise_stop: 10
+      gaussian:
+        num: 0
+        #        num_blocks: 0
+        sigma_start: 1
+        sigma_stop: 10
+      SubsampledGaussian:
+        num: 0
+        #        num_blocks: 0
+        sigma_start: 1
+        sigma_stop: 10
+        dataset_size: 60_000
+        batch_size: 64
+        epochs: 10
+
+  online:
+    enabled: false
+
+scheduler: simplex
+
