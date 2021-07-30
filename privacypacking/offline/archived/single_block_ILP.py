@@ -10,6 +10,8 @@ import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import Budget
+from privacypacking.budget.block import create_blocks
+
 from privacypacking.budget.curves import (
     GaussianBudget,
     LaplaceBudget,
