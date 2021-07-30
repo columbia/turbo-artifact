@@ -3,10 +3,19 @@ from typing import List
 import numpy as np
 from opacus.privacy_analysis import compute_rdp
 
-from privacypacking.budget import ALPHAS, Budget
+
+from privacypacking.budget import Budget, ALPHAS
 
 
-class LaplaceBudget(Budget):
+class ZeroCurve:
+    def __init__(
+            self, alpha_list: List[float] = ALPHAS
+    ) -> None:
+        orders = {alpha: 0 for alpha in alpha_list}
+        self.budget = Budget(orders)
+
+
+class LaplaceCurve:
     """
     RDP curve for a Laplace mechanism with sensitivity 1.
     """
@@ -27,38 +36,25 @@ class LaplaceBudget(Budget):
                 + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
             )
             orders[α] = float(ε)
-        super().__init__(orders)
+        self.budget = Budget(orders)
 
 
-class GaussianBudget(Budget):
-    def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
+class GaussianCurve:
+    def __init__(
+            self, sigma: float, alpha_list: List[float] = ALPHAS
+    ) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
-        super().__init__(orders)
+        self.budget = Budget(orders)
 
 
-# TODO: let's add another level of abstraction for blocks and streams of blocks, with
-# budget as a black box, so we don't have to write the multiblock version for each curve
-class MultiblockGaussianBudget:
+class SubsampledGaussianCurve:
     def __init__(
-        self, num_blocks, sigma: float, alpha_list: List[float] = ALPHAS
+            self,
+            sampling_probability: float,
+            sigma: float,
+            steps: float,
+            alpha_list: List[float] = ALPHAS,
     ) -> None:
-
-        self.block_budgets = []
-        for _ in range(num_blocks):
-            orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
-            self.block_budgets += [Budget(orders)]
-            # super().__init__(orders)
-
-
-class SubsampledGaussianBudget(Budget):
-    def __init__(
-        self,
-        sampling_probability: float,
-        sigma: float,
-        steps: float,
-        alpha_list: List[float] = ALPHAS,
-    ) -> None:
-
         rdp = compute_rdp(
             q=sampling_probability,
             noise_multiplier=sigma,
@@ -67,17 +63,17 @@ class SubsampledGaussianBudget(Budget):
         )
 
         orders = {alpha: epsilon for (alpha, epsilon) in zip(alpha_list, rdp)}
-        super().__init__(orders)
+        self.budget = Budget(orders)
 
     @classmethod
     def from_training_parameters(
-        cls,
-        dataset_size: int,
-        batch_size: int,
-        epochs: int,
-        sigma: float,
-        alpha_list: List[float] = ALPHAS,
-    ) -> "SubsampledGaussianBudget":
+            cls,
+            dataset_size: int,
+            batch_size: int,
+            epochs: int,
+            sigma: float,
+            alpha_list: List[float] = ALPHAS,
+    ) -> "SubsampledGaussianCurve":
         """Helper function to build the SGM curve with more intuitive parameters."""
 
         sampling_probability = batch_size / dataset_size

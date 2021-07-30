@@ -29,13 +29,13 @@ def log_toggle(fig):
     )
 
 
-def multiplot(jobs, blocks, allocation):
+def plot(tasks, blocks, allocation):
     figs = []
     for k, block in enumerate(blocks):
         figs.append(
             go.FigureWidget(
                 stack_jobs_under_block_curve(
-                    [job.block_budgets[k] for job in jobs], block, allocation
+                    [task.budget_per_block[k] for task in tasks], block, allocation
                 )
             )
         )
@@ -50,21 +50,6 @@ def multiplot(jobs, blocks, allocation):
         ]
 
     app.layout = html.Div(objs)
-
-    app.run_server(debug=False, port="8080", host="127.0.0.1")
-
-
-def singleplot(jobs, block, allocation):
-    fig = stack_jobs_under_block_curve(jobs, block, allocation)
-    app = dash.Dash()
-    obj = [
-        html.Div(
-            [html.H3(f"Block {1}"), dcc.Graph(id=f"g{1}", figure=fig)],
-            className="six columns",
-        )
-    ]
-
-    app.layout = html.Div(obj)
 
     app.run_server(debug=False, port="8080", host="127.0.0.1")
 
@@ -94,8 +79,8 @@ def stack_jobs_under_block_curve(job_list, block, allocation_status_list):
 
     fig.add_trace(
         go.Scatter(
-            x=list(block.orders.keys()),
-            y=list(block.orders.values()),
+            x=list(block.budget.orders.keys()),
+            y=list(block.budget.orders.values()),
             name="Block capacity",
             line=dict(color="green", width=4),
         )
