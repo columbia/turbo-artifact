@@ -270,6 +270,11 @@ category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
+[package.dependencies]
+pyvcd = "*"
+PyYAML = "*"
+simpy = ">=4"
+
 [[package]]
 name = "docutils"
 version = "0.17.1"
@@ -1120,6 +1125,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "pyvcd"
+version = "0.2.4"
+description = "Python VCD file support"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "pywin32"
 version = "301"
 description = "Python for Window Extensions"
@@ -1430,7 +1443,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "eb65e5c921cb80e3cd5a2f4f6981128425614d3d4fb2ded2b0e148fc52eb2b5b"
+content-hash = "cddecc8f4c8de6b9e82deb39d25dd25e3018e3f07fad66a7958046b317a94e0c"
 
 [metadata.files]
 amply = [
@@ -1676,6 +1689,10 @@ decorator = [
 defusedxml = [
     {file = "defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61"},
     {file = "defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69"},
+]
+desmod = [
+    {file = "desmod-0.6.1-py2.py3-none-any.whl", hash = "sha256:a0744346330a893835231464100148090e79bed2aecdb6402ac9c7a0dd1241f7"},
+    {file = "desmod-0.6.1.tar.gz", hash = "sha256:141b8ebfe2a30ee7b9b134b8ee82533d4e2227fe50b207cf24030aed5a80ec6e"},
 ]
 docutils = [
     {file = "docutils-0.17.1-py2.py3-none-any.whl", hash = "sha256:cf316c8370a737a022b72b56874f6602acf974a37a9fba42ec2876387549fc61"},
@@ -2052,6 +2069,10 @@ python-dateutil = [
 pytz = [
     {file = "pytz-2021.1-py2.py3-none-any.whl", hash = "sha256:eb10ce3e7736052ed3623d49975ce333bcd712c7bb19a58b9e2089d4057d0798"},
     {file = "pytz-2021.1.tar.gz", hash = "sha256:83a4a90894bf38e243cf052c8b58f381bfe9a7a483f6a9cab140bc7f702ac4da"},
+]
+pyvcd = [
+    {file = "pyvcd-0.2.4-py2.py3-none-any.whl", hash = "sha256:c40b0e586a74cddaf82e6989f0168ae7f9b4f182a9a106a0da9df0d11a9c6b3b"},
+    {file = "pyvcd-0.2.4.tar.gz", hash = "sha256:071e51a8362908ad5a2a12f078185639b98b20b653a56f01679de169d0fa425d"},
 ]
 pywin32 = [
     {file = "pywin32-301-cp35-cp35m-win32.whl", hash = "sha256:93367c96e3a76dfe5003d8291ae16454ca7d84bb24d721e0b74a07610b7be4a7"},

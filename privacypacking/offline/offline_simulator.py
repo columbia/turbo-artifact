@@ -1,10 +1,12 @@
 import random
+
 import numpy as np
+
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import create_block
 from privacypacking.budget.task import create_laplace_task, create_gaussian_task, create_subsamplegaussian_task
-from privacypacking.offline.schedulers.simplex import Simplex
 from privacypacking.offline.schedulers.pierre_heuristic import PierreHeuristic
+from privacypacking.offline.schedulers.simplex import Simplex
 from privacypacking.utils.utils import *
 
 
@@ -65,7 +67,6 @@ class OfflineSimulator(BaseSimulator):
             return PierreHeuristic(tasks, blocks)
 
     def run(self):
-        self.num_blocks = self.blocks_spec[NUM]
         blocks = self.prepare_blocks()
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)

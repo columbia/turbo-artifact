@@ -21,6 +21,9 @@ SCHEDULER = "scheduler"
 SIMPLEX = "simplex"
 PIERRE_HEURISIC = "pierre_heuristic"
 
+FCFS = "fcfs"
+DPF = "dpf"
+
 
 def update_dict(src, des):
     ref = des
@@ -32,3 +35,9 @@ def update_dict(src, des):
             ref = prev_ref
         else:
             ref[k] = v
+
+
+def get_block_by_block_id(blocks, block_id):
+    for block in blocks:
+        if block.id == block_id:
+            return block

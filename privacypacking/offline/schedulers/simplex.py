@@ -64,7 +64,7 @@ def main():
     blocks = [create_block(i, 10, 0.001) for i in range(num_blocks)]
     tasks = ([create_gaussian_task(i, num_blocks, range(num_blocks), s) for i, s in
               enumerate(np.linspace(0.1, 1, 10))] +
-             [create_gaussian_task(i, num_blocks, range(num_blocks), l) for i, l in
+             [create_laplace_task(i, num_blocks, range(num_blocks), l) for i, l in
               enumerate(np.linspace(0.1, 10, 5))] +
              [create_subsamplegaussian_task(i, num_blocks, range(num_blocks),
                                             ds=60_000,
