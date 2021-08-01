@@ -1,4 +1,3 @@
-from privacypacking.plot import plot
 
 
 class Scheduler:
@@ -8,6 +7,3 @@ class Scheduler:
 
     def schedule(self):
         pass
-
-    def plot(self, allocation):
-        plot(self.tasks, self.blocks, allocation)

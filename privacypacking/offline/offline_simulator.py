@@ -25,24 +25,22 @@ class OfflineSimulator(BaseSimulator):
     def prepare_tasks(self):
         tasks = []
         task_num = 0
-        tasks_spec = self.tasks_spec[CURVE_DISTRIBUTIONS]
-
         ######## Laplace Tasks ########
-        laplace_tasks = tasks_spec[LAPLACE]
+        laplace_tasks = self.curve_distributions[LAPLACE]
         block_ids = self.choose_blocks()
         noises = np.linspace(laplace_tasks[NOISE_START], laplace_tasks[NOISE_STOP], laplace_tasks[NUM])
         tasks += [create_laplace_task(task_num + i, self.blocks_spec[NUM], block_ids, l) for i, l in enumerate(noises)]
         task_num += laplace_tasks[NUM]
 
         ######## Gaussian Tasks ########
-        gaussian_tasks = tasks_spec[GAUSSIAN]
+        gaussian_tasks = self.curve_distributions[GAUSSIAN]
         block_ids = self.choose_blocks()
         sigmas = np.linspace(gaussian_tasks[SIGMA_START], gaussian_tasks[SIGMA_STOP], gaussian_tasks[NUM])
         tasks += [create_gaussian_task(task_num + i, self.blocks_spec[NUM], block_ids, s) for i, s in enumerate(sigmas)]
         task_num += gaussian_tasks[NUM]
 
         ######## SubSampleGaussian Tasks ########
-        subsamplegaussian_tasks = tasks_spec[SUBSAMPLEGAUSSIAN]
+        subsamplegaussian_tasks = self.curve_distributions[SUBSAMPLEGAUSSIAN]
         block_ids = self.choose_blocks()
         sigmas = np.linspace(subsamplegaussian_tasks[SIGMA_START], subsamplegaussian_tasks[SIGMA_STOP],
                              subsamplegaussian_tasks[NUM])
@@ -57,7 +55,8 @@ class OfflineSimulator(BaseSimulator):
         return tasks
 
     def prepare_blocks(self):
-        blocks = [create_block(i, self.renyi_epsilon, self.renyi_delta) for i in range(self.blocks_spec[NUM])]
+        blocks = [create_block(i, self.renyi_epsilon, self.renyi_delta) for i in
+                  range(self.blocks_spec[NUM])]
         return blocks
 
     def prepare_scheduler(self, tasks, blocks):
@@ -71,4 +70,4 @@ class OfflineSimulator(BaseSimulator):
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()
-        scheduler.plot(allocation)
+        self.plotter.plot(tasks, blocks, allocation)

@@ -9,6 +9,6 @@ class FCFS(Scheduler):
         # todo
 
         # Schedule all tasks for now
-        task_idxs = [i for i, _ in enumerate(self.tasks)]
+        allocation = [True for _ in self.tasks]
 
-        return task_idxs
+        return allocation

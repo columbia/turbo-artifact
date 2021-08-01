@@ -12,6 +12,7 @@ ResourceManager owns a scheduling mechanism for servicing tasks according to a g
 from itertools import count
 
 import simpy.rt
+
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import create_block
 from privacypacking.budget.task import create_gaussian_task
@@ -36,12 +37,11 @@ class ResourceManager:
     A task must be granted "all" the resources that it demands or "nothing".
     """
 
-    def __init__(self, env):
+    def __init__(self, env, plotter):
         self.env = env
         self.config = {}
-
+        self.plotter = plotter
         self.num_blocks = self.config.get('num_blocks', 1)
-        self.alphas = self.config.get('alphas', [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64])
         self.renyi_epsilon = self.config.get('renyi_epsilon', 10)
         self.renyi_delta = self.config.get('renyi_delta', 0.01)
         self.renyi_delta = self.config.get('renyi_delta', 0.01)
@@ -50,6 +50,7 @@ class ResourceManager:
         self.scheduler = schedulers[self.config.get('scheduler', FCFS)]
 
         self.blocks = []
+        self.archived_allocated_tasks = []
 
         # To store the incoming task demands
         self.task_demands_queue = simpy.Store(self.env)
@@ -87,30 +88,35 @@ class ResourceManager:
             waiting_tasks.append((task, allocated_resources_event))
 
             # Try and schedule one or more of the waiting tasks
-            s = self.scheduler([t[0] for t in waiting_tasks], self.blocks)
-            scheduled_tasks_idxs = s.schedule()
-            print("Scheduled tasks", [waiting_tasks[i][0].id for i in scheduled_tasks_idxs])
+            tasks = [t[0] for t in waiting_tasks]
+            s = self.scheduler(tasks, self.blocks)
+            allocation = s.schedule()
+            # Update the figures
+            self.plotter.plot(tasks + self.archived_allocated_tasks, self.blocks,
+                              allocation + [True] * len(self.archived_allocated_tasks))
+            print("Scheduled tasks", [waiting_tasks[i][0].id for i, t in enumerate(allocation) if t])
 
             # Wake-up all the tasks that have been scheduled
-            for i in scheduled_tasks_idxs:
-                waiting_tasks[i][1].succeed()
+            for i, t in enumerate(allocation):
+                if t:
+                    waiting_tasks[i][1].succeed()
+                    self.archived_allocated_tasks += [waiting_tasks[i][0]]
 
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
 
             # Update/consume block-budgets
             # todo: lock
-
-            for i in scheduled_tasks_idxs:
-                t = waiting_tasks[i][0]
-                for block_id in t.block_ids:
-                    block_demand_budget = t.budget_per_block[block_id]
-                    # Get block with "block_id"
-                    block = get_block_by_block_id(self.blocks, block_id)
-                    block.budget -= block_demand_budget
+            for i, t in enumerate(allocation):
+                if t:
+                    task = waiting_tasks[i][0]
+                    for block_id in task.block_ids:
+                        block_demand_budget = task.budget_per_block[block_id]
+                        # Get block with "block_id"
+                        block = get_block_by_block_id(self.blocks, block_id)
+                        block.budget -= block_demand_budget
 
             # Delete the tasks that have been scheduled from the waiting list
-            waiting_tasks = [t for i, t in enumerate(waiting_tasks)
-                             if i not in scheduled_tasks_idxs]
+            waiting_tasks = [waiting_tasks[i] for i, t in enumerate(allocation) if not t]
 
 
 class Tasks:
@@ -167,14 +173,7 @@ class OnlineSimulator(BaseSimulator):
         super().__init__(config)
 
     def run(self):
-        env = simpy.rt.RealtimeEnvironment(factor=0.1)
-        resource_manager = ResourceManager(env)
+        env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
+        resource_manager = ResourceManager(env, self.plotter)
         tasks = Tasks(env, resource_manager)
         env.run()
-
-
-if __name__ == '__main__':
-    env = simpy.rt.RealtimeEnvironment(factor=0.1)
-    rm = ResourceManager(env)
-    ts = Tasks(env, rm)
-    env.run()

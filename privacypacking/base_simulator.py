@@ -1,5 +1,5 @@
 from privacypacking.utils.utils import *
-
+from privacypacking.plot import Plotter
 
 class BaseSimulator:
 
@@ -9,6 +9,11 @@ class BaseSimulator:
         self.renyi_epsilon = config[RENYI_EPSILON]
         self.renyi_delta = config[RENYI_DELTA]
         self.scheduler = config[SCHEDULER]
+        self.plotter = Plotter(config[PLOT_FILE])
+        self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
 
     def run(self):
         pass
+
+    def plot(self, allocation, tasks, blocks):
+        self.plotter.plot(tasks, blocks, allocation)

@@ -24,6 +24,7 @@ PIERRE_HEURISIC = "pierre_heuristic"
 FCFS = "fcfs"
 DPF = "dpf"
 
+PLOT_FILE = "plot_file"
 
 def update_dict(src, des):
     ref = des

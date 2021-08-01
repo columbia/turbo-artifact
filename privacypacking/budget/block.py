@@ -4,6 +4,7 @@ from privacypacking.budget import Budget
 class Block:
     def __init__(self, id, budget):
         self.id = id
+        self.initial_budget = budget
         self.budget = budget
         # add other properties here
 
