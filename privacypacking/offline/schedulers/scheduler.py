@@ -1,3 +1,4 @@
+from typing import List
 
 
 class Scheduler:
@@ -5,5 +6,5 @@ class Scheduler:
         self.tasks = tasks
         self.blocks = blocks
 
-    def schedule(self):
+    def schedule(self) -> List[bool]:
         pass

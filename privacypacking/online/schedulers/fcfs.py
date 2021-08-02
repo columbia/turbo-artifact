@@ -1,6 +1,9 @@
 from privacypacking.online.schedulers.scheduler import Scheduler
 from privacypacking.utils.utils import *
 
+# TODO: see if we can reuse the greedy heuristic here
+# (FCFS is a greedy heuristic with no heuristic)
+
 
 class FCFS(Scheduler):
     """
