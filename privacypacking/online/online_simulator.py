@@ -9,13 +9,14 @@ Resources are non-replenishable.
 ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
 """
 
+import random
 from itertools import count
 
 import simpy.rt
 
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import create_block
-from privacypacking.budget.task import create_gaussian_task
+from privacypacking.budget.task import create_gaussian_task, create_laplace_task, create_subsamplegaussian_task
 from privacypacking.online.schedulers import fcfs, dpf
 from privacypacking.utils.utils import *
 
@@ -141,13 +142,29 @@ class Tasks:
         """Generated task behavior."""
 
         print("Generated task: ", task_id)
+        # Determine task
+        curve_distribution = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
+
         # Determine demands
-        # sigmas = np.linspace(0.1, 1, 10)   # specify distribution, parameters, num_of_blocks, range
-        s = 0.1
         task_blocks_num = 2
         blocks_num = self.resource_manager.config.blocks_num
         task_blocks_num = max(1, min(task_blocks_num, blocks_num))
-        task = create_gaussian_task(task_id, blocks_num, range(task_blocks_num), s)
+
+        task = None
+        if curve_distribution == GAUSSIAN:
+            sigma = random.uniform(self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop)
+            task = create_gaussian_task(task_id, blocks_num, range(task_blocks_num), sigma)
+
+        elif curve_distribution == LAPLACE:
+            noise = random.uniform(self.config.laplace_noise_start, self.config.laplace_noise_stop)
+            task = create_laplace_task(task_id, blocks_num, range(task_blocks_num), noise)
+        elif curve_distribution == SUBSAMPLEGAUSSIAN:
+            sigma = random.uniform(self.config.subsamplegaussian_sigma_start, self.config.subsamplegaussian_sigma_stop)
+            task = create_subsamplegaussian_task(task_id, blocks_num, range(task_blocks_num),
+                                                 self.config.subsamplegaussian_dataset_size,
+                                                 self.config.subsamplegaussian_batch_size,
+                                                 self.config.subsamplegaussian_epochs, sigma)
+        assert task is not None
 
         allocated_resources_event = self.env.event()
         # Wait till the demand-request has been delivered to the resource-manager
@@ -168,5 +185,5 @@ class OnlineSimulator(BaseSimulator):
     def run(self):
         env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         resource_manager = ResourceManager(env, self.config)
-        tasks = Tasks(env, resource_manager)
+        Tasks(env, resource_manager)
         env.run()
