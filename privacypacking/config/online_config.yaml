@@ -1,7 +1,7 @@
 blocks_spec:
   offline:
     enabled: true
-    num: 2
+    num: 1
 
 tasks_spec:
   online:

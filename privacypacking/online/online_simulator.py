@@ -94,18 +94,21 @@ class ResourceManager:
                     waiting_tasks[i][1].succeed()
                     self.archived_allocated_tasks += [waiting_tasks[i][0]]
 
+            print("Block budget", self.blocks[0].budget.orders)
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
 
+            ###################### Moved that inside the scheduler ######################
             # Update/consume block-budgets
             # todo: lock
-            for i, t in enumerate(allocation):
-                if t:
-                    task = waiting_tasks[i][0]
-                    for block_id in task.block_ids:
-                        block_demand_budget = task.budget_per_block[block_id]
-                        # Get block with "block_id"
-                        block = get_block_by_block_id(self.blocks, block_id)
-                        block.budget -= block_demand_budget
+            # for i, t in enumerate(allocation):
+            #     if t:
+            #         task = waiting_tasks[i][0]
+            #         for block_id in task.block_ids:
+            #             block_demand_budget = task.budget_per_block[block_id]
+            #             # Get block with "block_id"
+            #             block = get_block_by_block_id(self.blocks, block_id)
+            #             block.budget -= block_demand_budget
+            #############################################################################
 
             # Delete the tasks that have been scheduled from the waiting list
             waiting_tasks = [waiting_tasks[i] for i, t in enumerate(allocation) if not t]
