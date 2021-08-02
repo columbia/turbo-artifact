@@ -23,6 +23,9 @@ def greedy_allocation(sorted_list: List[Task], blocks: List[Block]) -> List[bool
     return allocation
 
 
+# TODO: reverse order + backfill (dual heuristic)
+
+
 def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
     demand_fractions = []
     for block_id in task.block_ids:
