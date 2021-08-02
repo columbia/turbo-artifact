@@ -8,18 +8,26 @@ from privacypacking.budget.task import *
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
 
-def greedy_allocation(sorted_list: List[Task], blocks: List[Block]) -> List[bool]:
+# TODO: double check block mutability, should be a method?
+def greedy_allocation(sorted_tasks: List[Task], blocks: List[Block]) -> List[bool]:
     """Allocate tasks in order until there is no budget left
 
     Args:
-        sorted_list (List[Task]): ordered tasks
-        blocks (List[Block]): blocks requested by the tasks (won't be modified)
+        sorted_tasks (List[Task]): ordered tasks
+        blocks (List[Block]): blocks requested by the tasks (will be modified)
 
     Returns:
         List[bool]: i is True iff task i can be allocated
     """
-    allocation = []
-    # TODO: refactor budget comparison
+    n_tasks = len(sorted_tasks)
+    allocation = [False] * n_tasks
+    for i, task in enumerate(sorted_tasks):
+        for block_id in task.block_ids:
+            block = get_block_by_block_id(blocks, block_id)
+            block_budget = block.budget
+            demand_budget = task.budget_per_block[block_id]
+            if block_budget >= demand_budget:
+                allocation[i] = True
     return allocation
 
 
