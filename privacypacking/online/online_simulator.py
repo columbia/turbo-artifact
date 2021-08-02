@@ -37,27 +37,18 @@ class ResourceManager:
     A task must be granted "all" the resources that it demands or "nothing".
     """
 
-    def __init__(self, env, plotter):
+    def __init__(self, env, config):
         self.env = env
-        self.config = {}
-        self.plotter = plotter
-        self.num_blocks = self.config.get('num_blocks', 1)
-        self.renyi_epsilon = self.config.get('renyi_epsilon', 10)
-        self.renyi_delta = self.config.get('renyi_delta', 0.01)
-        self.renyi_delta = self.config.get('renyi_delta', 0.01)
-        self.blocks_num = self.config.get('blocks_num', 1)
-        self.task_arrival_interval = self.config.get('task_arrival_interval', 3)
-        self.scheduler = schedulers[self.config.get('scheduler', FCFS)]
-
+        self.config = config
         self.blocks = []
         self.archived_allocated_tasks = []
+        self.scheduler = schedulers[self.config.scheduler]
 
         # To store the incoming task demands
         self.task_demands_queue = simpy.Store(self.env)
 
         # A ResourceManager has two persistent processes.
-        # One that models the arrival of new resources
-        # Create blocks statically for now
+        # One that models the arrival of new resources - creates blocks statically for now
         self.generate_blocks()
         # env.process(self.generate_blocks())
         # One that models the distribution of resources to tasks
@@ -74,8 +65,8 @@ class ResourceManager:
 
         # while True:
         # self.env.process(self.task(next(block_id)))
-        self.blocks = [create_block(next(block_id), self.renyi_epsilon, self.renyi_delta)
-                       for _ in range(self.blocks_num)]
+        self.blocks = [create_block(next(block_id), self.config.renyi_epsilon, self.config.renyi_delta)
+                       for _ in range(self.config.blocks_num)]
         print("Generated blocks ", self.blocks)
         # yield self.env.timeout(arrival_interval_dist)
 
@@ -92,8 +83,8 @@ class ResourceManager:
             s = self.scheduler(tasks, self.blocks)
             allocation = s.schedule()
             # Update the figures
-            self.plotter.plot(tasks + self.archived_allocated_tasks, self.blocks,
-                              allocation + [True] * len(self.archived_allocated_tasks))
+            self.config.plotter.plot(tasks + self.archived_allocated_tasks, self.blocks,
+                                     allocation + [True] * len(self.archived_allocated_tasks))
             print("Scheduled tasks", [waiting_tasks[i][0].id for i, t in enumerate(allocation) if t])
 
             # Wake-up all the tasks that have been scheduled
@@ -129,6 +120,7 @@ class Tasks:
     def __init__(self, env, resource_manager):
         self.env = env
         self.resource_manager = resource_manager
+        self.config = resource_manager.config
         env.process(self.generate_tasks())
 
     def generate_tasks(self):
@@ -139,11 +131,11 @@ class Tasks:
         """
 
         task_id = count()
-        arrival_interval_dist = 10  # self.env.rand.expovariate, 1 / self.env.config['task.arrival_interval']
+        self.config.task_arrival_interval = 10  # self.env.rand.expovariate, 1 / self.env.config['task.arrival_interval']
 
         while True:
             self.env.process(self.task(next(task_id)))
-            yield self.env.timeout(arrival_interval_dist)
+            yield self.env.timeout(self.config.task_arrival_interval)
 
     def task(self, task_id):
         """Generated task behavior."""
@@ -152,8 +144,10 @@ class Tasks:
         # Determine demands
         # sigmas = np.linspace(0.1, 1, 10)   # specify distribution, parameters, num_of_blocks, range
         s = 0.1
-        blocks_num = 1
-        task = create_gaussian_task(task_id, blocks_num, range(blocks_num), s)
+        task_blocks_num = 2
+        blocks_num = self.resource_manager.config.blocks_num
+        task_blocks_num = max(1, min(task_blocks_num, blocks_num))
+        task = create_gaussian_task(task_id, blocks_num, range(task_blocks_num), s)
 
         allocated_resources_event = self.env.event()
         # Wait till the demand-request has been delivered to the resource-manager
@@ -162,7 +156,6 @@ class Tasks:
         # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
 
-        # yield self.active.put(1)
         print('Task ', task_id, 'start running')
         # yield self.env.timeout()
         print('Task ', task_id, 'completed at ', self.env.now)
@@ -174,6 +167,6 @@ class OnlineSimulator(BaseSimulator):
 
     def run(self):
         env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
-        resource_manager = ResourceManager(env, self.plotter)
+        resource_manager = ResourceManager(env, self.config)
         tasks = Tasks(env, resource_manager)
         env.run()

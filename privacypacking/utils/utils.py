@@ -25,6 +25,9 @@ FCFS = "fcfs"
 DPF = "dpf"
 
 PLOT_FILE = "plot_file"
+FREQUENCY = "frequency"
+TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
+
 
 def update_dict(src, des):
     ref = des

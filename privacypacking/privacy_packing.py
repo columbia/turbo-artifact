@@ -1,13 +1,15 @@
+import argparse
 import pprint as pp
 
 import yaml
 
+from privacypacking.config import Config
 from privacypacking.offline.offline_simulator import OfflineSimulator
 from privacypacking.online.online_simulator import OnlineSimulator
 from privacypacking.utils.utils import *
-import argparse
 
 DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
+
 
 class PrivacyPacking:
 
@@ -21,20 +23,20 @@ class PrivacyPacking:
         update_dict(self.user_config, self.config)
         pp.pprint(self.config)
 
-        blocks_spec = self.config[BLOCKS_SPEC]
-        tasks_spec = self.config[TASKS_SPEC]
+        config = Config(self.config)
+
         self.simulator = None
 
         # todo enable mixed block/task offline/online states in the future
-        if blocks_spec[OFFLINE][ENABLED] and tasks_spec[OFFLINE][ENABLED]:
+        if config.blocks_offline and config.tasks_offline:
             self.config[BLOCKS_SPEC] = self.config[BLOCKS_SPEC][OFFLINE]
             self.config[TASKS_SPEC] = self.config[TASKS_SPEC][OFFLINE]
-            self.simulator = OfflineSimulator(self.config)
+            self.simulator = OfflineSimulator(config)
 
-        elif blocks_spec[ONLINE][ENABLED] or tasks_spec[ONLINE][ENABLED]:
+        elif config.blocks_online or config.tasks_online:
             self.config[BLOCKS_SPEC] = self.config[BLOCKS_SPEC][ONLINE]
             self.config[TASKS_SPEC] = self.config[TASKS_SPEC][ONLINE]
-            self.simulator = OnlineSimulator(self.config)
+            self.simulator = OnlineSimulator(config)
 
     def simulate(self):
         self.simulator.run()

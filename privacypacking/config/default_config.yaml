@@ -2,7 +2,7 @@ renyi_epsilon: 10
 renyi_delta: 0.001
 #alphas: [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64]
 plot_file: "privacypacking/plots/plotfile.pickle"
-
+default_plot_file: "privacypacking/config/default_config.yaml"
 blocks_spec:
   offline:
     enabled: false
@@ -18,17 +18,17 @@ tasks_spec:
     curve_distributions:
       laplace:
         num: 0
-        #        num_blocks: 0
+        num_blocks: 1
         noise_start: 0.1
         noise_stop: 10
       gaussian:
         num: 0
-        #        num_blocks: 0
+        num_blocks: 1
         sigma_start: 1
         sigma_stop: 10
       SubsampledGaussian:
         num: 0
-        #        num_blocks: 0
+        num_blocks: 1
         sigma_start: 1
         sigma_stop: 10
         dataset_size: 60_000
@@ -39,23 +39,25 @@ tasks_spec:
     enabled: false
     curve_distributions:
       laplace:
-        num: 0
-        #        num_blocks: 0
+        frquency: 0
+        num_blocks: 1
         noise_start: 0.1
         noise_stop: 10
       gaussian:
-        num: 0
-        #        num_blocks: 0
+        frquency: 0
+        num_blocks: 1
         sigma_start: 1
         sigma_stop: 10
       SubsampledGaussian:
-        num: 0
-        #        num_blocks: 0
+        frquency: 0
+        num_blocks: 1
         sigma_start: 1
         sigma_stop: 10
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
+
+    task_arrival_interval: 2
 
 scheduler: simplex
 

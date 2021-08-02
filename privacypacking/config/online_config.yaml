@@ -8,13 +8,15 @@ tasks_spec:
     enabled: true
     curve_distributions:
       laplace:
-        num: 5
+        frequency: 0.33
         num_blocks: 1
 
       gaussian:
-        num: 5
+        frequency: 0.33
         num_blocks: 1
 
       SubsampledGaussian:
-        num: 5
+        frequency: 0.33
         num_blocks: 1
+
+scheduler: "fcfs"

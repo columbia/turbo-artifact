@@ -20,34 +20,33 @@ class OfflineSimulator(BaseSimulator):
         pass
 
     def choose_blocks(self):
-        return range(self.blocks_spec[NUM])  # todo: a task has demands from all blocks for now; change this
+        return range(self.config.blocks_num)  # todo: a task has demands from all blocks for now; change this
 
     def prepare_tasks(self):
         tasks = []
         task_num = 0
         ######## Laplace Tasks ########
-        laplace_tasks = self.curve_distributions[LAPLACE]
         block_ids = self.choose_blocks()
-        noises = np.linspace(laplace_tasks[NOISE_START], laplace_tasks[NOISE_STOP], laplace_tasks[NUM])
-        tasks += [create_laplace_task(task_num + i, self.blocks_spec[NUM], block_ids, l) for i, l in enumerate(noises)]
-        task_num += laplace_tasks[NUM]
+        noises = np.linspace(self.config.laplace_noise_start, self.config.laplace_noise_stop, self.config.laplace_num)
+        tasks += [create_laplace_task(task_num + i, self.config.blocks_num, block_ids, l) for i, l in enumerate(noises)]
+        task_num += self.config.laplace_num
 
         ######## Gaussian Tasks ########
-        gaussian_tasks = self.curve_distributions[GAUSSIAN]
         block_ids = self.choose_blocks()
-        sigmas = np.linspace(gaussian_tasks[SIGMA_START], gaussian_tasks[SIGMA_STOP], gaussian_tasks[NUM])
-        tasks += [create_gaussian_task(task_num + i, self.blocks_spec[NUM], block_ids, s) for i, s in enumerate(sigmas)]
-        task_num += gaussian_tasks[NUM]
+        sigmas = np.linspace(self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop,
+                             self.config.gaussian_num)
+        tasks += [create_gaussian_task(task_num + i, self.config.blocks_num, block_ids, s) for i, s in
+                  enumerate(sigmas)]
+        task_num += self.config.gaussian_num
 
         ######## SubSampleGaussian Tasks ########
-        subsamplegaussian_tasks = self.curve_distributions[SUBSAMPLEGAUSSIAN]
         block_ids = self.choose_blocks()
-        sigmas = np.linspace(subsamplegaussian_tasks[SIGMA_START], subsamplegaussian_tasks[SIGMA_STOP],
-                             subsamplegaussian_tasks[NUM])
-        tasks += [create_subsamplegaussian_task(task_num + i, self.blocks_spec[NUM], block_ids,
-                                                subsamplegaussian_tasks[DATASET_SIZE],
-                                                subsamplegaussian_tasks[BATCH_SIZE],
-                                                subsamplegaussian_tasks[EPOCHS], s)
+        sigmas = np.linspace(self.config.subsamplegaussian_sigma_start, self.config.subsamplegaussian_sigma_stop,
+                             self.config.subsamplegaussian_num)
+        tasks += [create_subsamplegaussian_task(task_num + i, self.config.blocks_num, block_ids,
+                                                self.config.subsamplegaussian_dataset_size,
+                                                self.config.subsamplegaussian_batch_size,
+                                                self.config.subsamplegaussian_epochs, s)
                   for i, s in enumerate(sigmas)]
 
         random.shuffle(tasks)
@@ -55,14 +54,14 @@ class OfflineSimulator(BaseSimulator):
         return tasks
 
     def prepare_blocks(self):
-        blocks = [create_block(i, self.renyi_epsilon, self.renyi_delta) for i in
-                  range(self.blocks_spec[NUM])]
+        blocks = [create_block(i, self.config.renyi_epsilon, self.config.renyi_delta) for i in
+                  range(self.config.blocks_num)]
         return blocks
 
     def prepare_scheduler(self, tasks, blocks):
-        if self.scheduler == SIMPLEX:
+        if self.config.scheduler == SIMPLEX:
             return Simplex(tasks, blocks)
-        elif self.scheduler == PIERRE_HEURISIC:
+        elif self.config.scheduler == PIERRE_HEURISIC:
             return PierreHeuristic(tasks, blocks)
 
     def run(self):
@@ -70,4 +69,4 @@ class OfflineSimulator(BaseSimulator):
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()
-        self.plotter.plot(tasks, blocks, allocation)
+        self.config.plotter.plot(tasks, blocks, allocation)
