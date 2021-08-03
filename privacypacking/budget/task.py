@@ -14,13 +14,14 @@ from privacypacking.utils.utils import *
 class Task:
     def __init__(self, id, num_blocks, block_ids, type):
         self.id = id
+
+        # TODO: make this optional? Some tasks are a combination, no type
         self.type = type
         self.budget_per_block = {}  # block_id -> Budget
 
         # TODO: I don't think that we need this field in general.
         # The process that generates the Task might need `num_blocks` to assign the blocks,
         # but the Task itself doesn't need to know anything else
-
         self.num_blocks = (
             num_blocks  # current total number of blocks in the environment
         )

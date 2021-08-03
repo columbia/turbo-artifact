@@ -212,6 +212,7 @@ class Tasks:
         print("Task ", task_id, "completed at ", self.env.now)
 
 
+# TODO: use discrete events instead of real time
 class OnlineSimulator(BaseSimulator):
     def __init__(self, config):
         super().__init__(config)

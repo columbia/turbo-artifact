@@ -1,0 +1,50 @@
+alphas:
+- 1.5
+- 1.75
+- 2
+- 2.5
+- 3
+- 4
+- 5
+- 6
+- 8
+- 16
+- 32
+- 64
+batch_size: 2048
+block_counts: /home/pierre/PrivateKube/evaluation/macrobenchmark/data/block_counts.yaml
+count_per_category:
+  0: 2816
+  1: 52068
+  2: 1980
+  3: 11985
+  4: 3335
+  5: 2931
+  6: 10723
+  7: 4279
+  8: 2937
+  9: 4569
+  10: 2299
+dataset_dir: ''
+dataset_monofile: /home/pierre/PrivateKube/evaluation/macrobenchmark/data/reviews.h5
+delta: 1.0e-10
+dp: event
+epsilon: 0.01
+log_path: /home/pierre/PrivateKube/evaluation/macrobenchmark/logs/amazon/statistics/count_per_category-event-gaussian-0429-183021/4.yaml
+mechanism: gaussian
+model: count_per_category
+n_blocks: 500
+rdp_epsilons:
+- 1.612972983852515e-06
+- 1.8818018144946007e-06
+- 2.1506306451366864e-06
+- 2.6882883064208584e-06
+- 3.22594596770503e-06
+- 4.301261290273373e-06
+- 5.376576612841717e-06
+- 6.45189193541006e-06
+- 8.602522580546746e-06
+- 1.720504516109349e-05
+- 3.441009032218698e-05
+- 6.882018064437397e-05
+relative_error: 0.0453

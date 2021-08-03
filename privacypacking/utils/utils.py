@@ -1,3 +1,10 @@
+from pathlib import Path
+from typing import Iterable, Tuple
+
+import yaml
+
+from privacypacking.budget import Budget
+
 RENYI_EPSILON = "renyi_epsilon"
 RENYI_DELTA = "renyi_delta"
 BLOCKS_SPEC = "blocks_spec"
@@ -29,6 +36,11 @@ FREQUENCY = "frequency"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
 
 
+PRIVATEKUBE_DEMANDS_PATH = Path(__file__).parent.parent.parent.joinpath(
+    "data/privatekube_demands"
+)
+
+
 def update_dict(src, des):
     ref = des
     for k, v in src.items():
@@ -45,3 +57,18 @@ def get_block_by_block_id(blocks, block_id):
     for block in blocks:
         if block.id == block_id:
             return block
+
+
+def load_blocks_and_budgets_from_dir(
+    path: Path = PRIVATEKUBE_DEMANDS_PATH,
+) -> Iterable[Tuple[int, Budget]]:
+    blocks_and_budgets = []
+    for yaml_path in path.glob("**/*.yaml"):
+        with open(yaml_path, "r") as f:
+            demand_dict = yaml.safe_load(f)
+            # print(demand_dict)
+            orders = {}
+            for i, alpha in enumerate(demand_dict["alphas"]):
+                orders[alpha] = demand_dict["rdp_epsilons"][i]
+            blocks_and_budgets.append((demand_dict["n_blocks"], Budget(orders)))
+    return blocks_and_budgets
