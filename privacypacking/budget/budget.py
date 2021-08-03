@@ -54,24 +54,6 @@ class Budget:
             orders[alpha] = max(epsilon + np.log(delta) / (alpha - 1), 0)
         return cls(orders)
 
-    def __sub__(self, other):
-        # TODO: Deal with range check and exceptions
-        return Budget(
-            {alpha: self.epsilon(alpha) - other.epsilon(alpha) for alpha in self.alphas}
-        )
-
-    def __add__(self, other):
-        return Budget(
-            {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
-        )
-
-    def __repr__(self) -> str:
-        return "Budget({})".format(self.__orders)
-
-    def __ge__(self, other) -> bool:
-        diff = self - other
-        return diff.is_positive()
-
     def is_positive(self) -> bool:
         for epsilon in self.epsilons:
             if epsilon >= 0:
@@ -95,8 +77,8 @@ class Budget:
         It can be slow to compute for the first time.
         """
 
-        if hasattr(self, "dp_budget"):
-            return self.dp_budget
+        if hasattr(self, "dp_budget_cached"):
+            return self.dp_budget_cached
 
         epsilon, best_alpha = get_privacy_spent(
             orders=list(self.alphas),
@@ -104,6 +86,29 @@ class Budget:
             delta=delta,
         )
         # Cache the result
-        self.dp_budget = DPBudget(epsilon=epsilon, delta=delta, best_alpha=best_alpha)
+        self.dp_budget_cached = DPBudget(
+            epsilon=epsilon, delta=delta, best_alpha=best_alpha
+        )
 
-        return self.dp_budget
+        return self.dp_budget_cached
+
+    def __sub__(self, other):
+        # TODO: Deal with range check and exceptions
+        return Budget(
+            {alpha: self.epsilon(alpha) - other.epsilon(alpha) for alpha in self.alphas}
+        )
+
+    def __add__(self, other):
+        return Budget(
+            {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
+        )
+
+    def __repr__(self) -> str:
+        return "Budget({})".format(self.__orders)
+
+    def __ge__(self, other) -> bool:
+        diff = self - other
+        return diff.is_positive()
+
+    def copy(self):
+        return Budget(self.__orders.copy())

@@ -1,7 +1,7 @@
 RENYI_EPSILON = "renyi_epsilon"
 RENYI_DELTA = "renyi_delta"
-BLOCKS_SPEC = 'blocks_spec'
-TASKS_SPEC = 'tasks_spec'
+BLOCKS_SPEC = "blocks_spec"
+TASKS_SPEC = "tasks_spec"
 OFFLINE = "offline"
 ONLINE = "online"
 ENABLED = "enabled"
@@ -19,7 +19,7 @@ BATCH_SIZE = "batch_size"
 EPOCHS = "epochs"
 SCHEDULER = "scheduler"
 SIMPLEX = "simplex"
-PIERRE_HEURISIC = "pierre_heuristic"
+OFFLINE_DPF = "offline_dpf"
 
 FCFS = "fcfs"
 DPF = "dpf"

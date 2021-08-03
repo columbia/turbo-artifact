@@ -1,4 +1,12 @@
-from privacypacking.budget.curves import *
+from typing import Iterable
+
+from privacypacking.budget.budget import Budget
+from privacypacking.budget.curves import (
+    GaussianCurve,
+    LaplaceCurve,
+    SubsampledGaussianCurve,
+    ZeroCurve,
+)
 from privacypacking.utils.utils import *
 
 
@@ -8,13 +16,28 @@ class Task:
         self.id = id
         self.type = type
         self.budget_per_block = {}  # block_id -> Budget
+
+        # TODO: I don't think that we need this field in general.
+        # The process that generates the Task might need `num_blocks` to assign the blocks,
+        # but the Task itself doesn't need to know anything else
+
         self.num_blocks = (
             num_blocks  # current total number of blocks in the environment
         )
+
         self.block_ids = block_ids  # block ids requested by task
         # Initialize all block demands to zero
         for i in range(num_blocks):
             self.budget_per_block[i] = ZeroCurve().budget
+
+
+class UniformTask(Task):
+    # For the general case
+    def __init__(self, id: int, block_ids: Iterable[int], budget: Budget):
+        self.id = id
+        self.budget_per_block = {}
+        for block_id in block_ids:
+            self.budget_per_block[block_id] = budget.copy()
 
 
 def create_laplace_task(task_id, num_blocks, block_ids, noise):

@@ -29,7 +29,7 @@ class FCFS(Scheduler):
                 # There must exist at least one order in the block's budget
                 # that is smaller or equal to the corresponding order of the demand budget
                 diff = block_budget - demand_budget
-                max_order = max(diff.orders.values())
+                max_order = max(diff.epsilons)
                 if max_order >= 0:
                     block.budget = diff
                     allocation[i] = True

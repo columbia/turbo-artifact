@@ -3,8 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from privacypacking.budget.block import *
-from privacypacking.budget.task import *
+from privacypacking.budget import Block, Task
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
 
@@ -28,6 +27,7 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: List[Block]) -> List[boo
             demand_budget = task.budget_per_block[block_id]
             if block_budget >= demand_budget:
                 allocation[i] = True
+                block.budget = block_budget - demand_budget
     return allocation
 
 
@@ -44,7 +44,7 @@ def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
         # Compute the demand share for each alpha of the block
         for alpha in block_initial_budget.alphas:
             demand_fractions.append(
-                demand_budget.orders[alpha] / block_initial_budget.orders[alpha]
+                demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
             )
 
     # Order by highest demand fraction first
@@ -111,7 +111,7 @@ def main():
     # num_blocks = 1 # single-block case
     num_blocks = 2  # multi-block case
 
-    blocks = [create_block(i, 10, 0.001) for i in range(num_blocks)]
+    blocks = [Block.from_epsilon_delta(i, 10, 0.001) for i in range(num_blocks)]
     tasks = (
         [
             create_gaussian_task(i, num_blocks, range(num_blocks), s)
