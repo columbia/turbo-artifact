@@ -3,9 +3,7 @@ import random
 import gurobipy as gp
 from gurobipy import GRB
 
-from privacypacking.budget import ALPHAS
-from privacypacking.budget.block import *
-from privacypacking.budget.task import *
+from privacypacking.budget import ALPHAS, Block
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
 
@@ -25,9 +23,15 @@ class Simplex(Scheduler):
         demands_upper_bound = {}
         for k, block in enumerate(self.blocks):
             for alpha in block.budget.alphas:
-                demands_upper_bound[(k, alpha)] = sum(
-                    [task.budget_per_block[k].orders[alpha] for task in self.tasks]
-                )
+                demands_upper_bound[(k, alpha)] = 0
+                for task in self.tasks:
+                    if k in task.budget_per_block:
+                        demands_upper_bound[(k, alpha)] += task.budget_per_block[
+                            k
+                        ].epsilon(alpha)
+
+                # Only non-zero blocks are tracked
+                # sum([task.budget_per_block[k].epsilon(alpha) for task in self.tasks])
 
         # Variables
         x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
@@ -40,13 +44,20 @@ class Simplex(Scheduler):
 
         for k, block in enumerate(self.blocks):
             for i, alpha in enumerate(block.budget.alphas):
-                demands = [
-                    task.budget_per_block[k].orders[alpha] for j, task in enumerate(self.tasks)
-                ]
+                demands = []
+                for task in self.tasks:
+                    if k in task.budget_per_block:
+                        demands.append(task.budget_per_block[k].epsilon(alpha))
+                    else:
+                        demands.append(0)
+                # demands = [
+                #     task.budget_per_block[k].epsilon(alpha)
+                #     for j, task in enumerate(self.tasks)
+                # ]
                 m.addConstr(
                     sum([x[0, z] * demands[z] for z in range(n)])
                     - (1 - a[k, i]) * demands_upper_bound[(k, alpha)]
-                    <= block.budget.orders[alpha]
+                    <= block.budget.epsilon(alpha)
                 )
         print(m)
 
@@ -61,17 +72,23 @@ def main():
     # num_blocks = 1 # single-block case
     num_blocks = 2  # multi-block case
 
-    blocks = [create_block(i, 10, 0.001) for i in range(num_blocks)]
-    tasks = ([create_gaussian_task(i, num_blocks, range(num_blocks), s) for i, s in
-              enumerate(np.linspace(0.1, 1, 10))] +
-             [create_laplace_task(i, num_blocks, range(num_blocks), l) for i, l in
-              enumerate(np.linspace(0.1, 10, 5))] +
-             [create_subsamplegaussian_task(i, num_blocks, range(num_blocks),
-                                            ds=60_000,
-                                            bs=64,
-                                            epochs=10,
-                                            s=s) for i, s in enumerate(np.linspace(1, 10, 5))]
-             )
+    blocks = [Block.from_epsilon_delta(i, 10, 0.001) for i in range(num_blocks)]
+    tasks = (
+        [
+            create_gaussian_task(i, num_blocks, range(num_blocks), s)
+            for i, s in enumerate(np.linspace(0.1, 1, 10))
+        ]
+        + [
+            create_laplace_task(i, num_blocks, range(num_blocks), l)
+            for i, l in enumerate(np.linspace(0.1, 10, 5))
+        ]
+        + [
+            create_subsamplegaussian_task(
+                i, num_blocks, range(num_blocks), ds=60_000, bs=64, epochs=10, s=s
+            )
+            for i, s in enumerate(np.linspace(1, 10, 5))
+        ]
+    )
 
     random.shuffle(tasks)
     scheduler = Simplex(tasks, blocks)

@@ -1,10 +1,10 @@
-from privacypacking.utils.utils import *
 from privacypacking.plot import Plotter
+from privacypacking.utils.utils import *
+
 
 class BaseSimulator:
-
     def __init__(self, config):
-       self.config = config
+        self.config = config
 
     def run(self):
         pass

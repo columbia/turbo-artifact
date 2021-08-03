@@ -15,15 +15,16 @@ from itertools import count
 import simpy.rt
 
 from privacypacking.base_simulator import BaseSimulator
-from privacypacking.budget.block import create_block
-from privacypacking.budget.task import create_gaussian_task, create_laplace_task, create_subsamplegaussian_task
-from privacypacking.online.schedulers import fcfs, dpf
+from privacypacking.budget.block import Block
+from privacypacking.budget.task import (
+    create_gaussian_task,
+    create_laplace_task,
+    create_subsamplegaussian_task,
+)
+from privacypacking.online.schedulers import dpf, fcfs
 from privacypacking.utils.utils import *
 
-schedulers = {
-    FCFS: fcfs.FCFS,
-    DPF: dpf.DPF
-}
+schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF}
 
 
 class ResourceManager:
@@ -66,8 +67,12 @@ class ResourceManager:
 
         # while True:
         # self.env.process(self.task(next(block_id)))
-        self.blocks = [create_block(next(block_id), self.config.renyi_epsilon, self.config.renyi_delta)
-                       for _ in range(self.config.blocks_num)]
+        self.blocks = [
+            Block.from_epsilon_delta(
+                next(block_id), self.config.renyi_epsilon, self.config.renyi_delta
+            )
+            for _ in range(self.config.blocks_num)
+        ]
         print("Generated blocks ", self.blocks)
         # yield self.env.timeout(arrival_interval_dist)
 
@@ -84,9 +89,15 @@ class ResourceManager:
             s = self.scheduler(tasks, self.blocks)
             allocation = s.schedule()
             # Update the figures
-            self.config.plotter.plot(tasks + self.archived_allocated_tasks, self.blocks,
-                                     allocation + [True] * len(self.archived_allocated_tasks))
-            print("Scheduled tasks", [waiting_tasks[i][0].id for i, t in enumerate(allocation) if t])
+            self.config.plotter.plot(
+                tasks + self.archived_allocated_tasks,
+                self.blocks,
+                allocation + [True] * len(self.archived_allocated_tasks),
+            )
+            print(
+                "Scheduled tasks",
+                [waiting_tasks[i][0].id for i, t in enumerate(allocation) if t],
+            )
 
             # Wake-up all the tasks that have been scheduled
             for i, t in enumerate(allocation):
@@ -94,7 +105,7 @@ class ResourceManager:
                     waiting_tasks[i][1].succeed()
                     self.archived_allocated_tasks += [waiting_tasks[i][0]]
 
-            print("Block budget", self.blocks[0].budget.orders)
+            print("Block budget", self.blocks[0].budget)
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
 
             ###################### Moved that inside the scheduler ######################
@@ -111,7 +122,9 @@ class ResourceManager:
             #############################################################################
 
             # Delete the tasks that have been scheduled from the waiting list
-            waiting_tasks = [waiting_tasks[i] for i, t in enumerate(allocation) if not t]
+            waiting_tasks = [
+                waiting_tasks[i] for i, t in enumerate(allocation) if not t
+            ]
 
 
 class Tasks:
@@ -155,32 +168,51 @@ class Tasks:
 
         task = None
         if curve_distribution == GAUSSIAN:
-            sigma = random.uniform(self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop)
-            task = create_gaussian_task(task_id, blocks_num, range(task_blocks_num), sigma)
+            sigma = random.uniform(
+                self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop
+            )
+            task = create_gaussian_task(
+                task_id, blocks_num, range(task_blocks_num), sigma
+            )
 
         elif curve_distribution == LAPLACE:
-            noise = random.uniform(self.config.laplace_noise_start, self.config.laplace_noise_stop)
-            task = create_laplace_task(task_id, blocks_num, range(task_blocks_num), noise)
+            noise = random.uniform(
+                self.config.laplace_noise_start, self.config.laplace_noise_stop
+            )
+            task = create_laplace_task(
+                task_id, blocks_num, range(task_blocks_num), noise
+            )
         elif curve_distribution == SUBSAMPLEGAUSSIAN:
-            sigma = random.uniform(self.config.subsamplegaussian_sigma_start, self.config.subsamplegaussian_sigma_stop)
-            task = create_subsamplegaussian_task(task_id, blocks_num, range(task_blocks_num),
-                                                 self.config.subsamplegaussian_dataset_size,
-                                                 self.config.subsamplegaussian_batch_size,
-                                                 self.config.subsamplegaussian_epochs, sigma)
+            sigma = random.uniform(
+                self.config.subsamplegaussian_sigma_start,
+                self.config.subsamplegaussian_sigma_stop,
+            )
+            task = create_subsamplegaussian_task(
+                task_id,
+                blocks_num,
+                range(task_blocks_num),
+                self.config.subsamplegaussian_dataset_size,
+                self.config.subsamplegaussian_batch_size,
+                self.config.subsamplegaussian_epochs,
+                sigma,
+            )
         assert task is not None
 
         allocated_resources_event = self.env.event()
         # Wait till the demand-request has been delivered to the resource-manager
-        yield self.resource_manager.task_demands_queue.put((task, allocated_resources_event))
+        yield self.resource_manager.task_demands_queue.put(
+            (task, allocated_resources_event)
+        )
         print("Task", task_id, "inserted demand")
         # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
 
-        print('Task ', task_id, 'start running')
+        print("Task ", task_id, "start running")
         # yield self.env.timeout()
-        print('Task ', task_id, 'completed at ', self.env.now)
+        print("Task ", task_id, "completed at ", self.env.now)
 
 
+# TODO: use discrete events instead of real time
 class OnlineSimulator(BaseSimulator):
     def __init__(self, config):
         super().__init__(config)

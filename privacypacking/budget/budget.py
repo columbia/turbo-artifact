@@ -1,5 +1,6 @@
 from collections import namedtuple
-from typing import Dict, List, NamedTuple
+from dataclasses import dataclass
+from typing import Dict, List, NamedTuple, OrderedDict
 
 import numpy as np
 from opacus.privacy_analysis import get_privacy_spent
@@ -25,15 +26,12 @@ DELTA = 1e-5
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
 
-# TODO: make it immutable to remove ambiguity?
-# And blocks can have a mutable budget field.
-
-
 class Budget:
     def __init__(self, orders: Dict[float, float]) -> None:
-        # TODO: float or other type? Floating point arith
-        # TODO: sorted dict? And keep it sorted.
-        self.orders = orders
+        # "Immutable" dict sorted by small alphas first
+        self.__orders = {}
+        for alpha in sorted(orders):
+            self.__orders[alpha] = orders[alpha]
 
     @classmethod
     def from_epsilon_list(
@@ -56,27 +54,22 @@ class Budget:
             orders[alpha] = max(epsilon + np.log(delta) / (alpha - 1), 0)
         return cls(orders)
 
-    def __sub__(self, other):
-        # TODO: Deal with range check and exceptions
-        return Budget(
-            {alpha: self.orders[alpha] - other.orders[alpha] for alpha in self.orders}
-        )
-
-    def __add__(self, other):
-        return Budget(
-            {alpha: self.orders[alpha] + other.orders[alpha] for alpha in self.orders}
-        )
-
-    def __repr__(self) -> str:
-        return "Budget({})".format(self.orders)
-
-    # TODO: better semantics, other comparison utilities? Overload __gt__ & cie?
     def is_positive(self) -> bool:
-        return any(self.orders.values())
+        for epsilon in self.epsilons:
+            if epsilon >= 0:
+                return True
+        return False
 
     @property
     def alphas(self) -> list:
-        return list(self.orders.keys())
+        return list(self.__orders.keys())
+
+    @property
+    def epsilons(self) -> list:
+        return list(self.__orders.values())
+
+    def epsilon(self, alpha: float) -> float:
+        return self.__orders[alpha]
 
     def dp_budget(self, delta: float = DELTA) -> DPBudget:
         """
@@ -84,11 +77,38 @@ class Budget:
         It can be slow to compute for the first time.
         """
 
+        if hasattr(self, "dp_budget_cached"):
+            return self.dp_budget_cached
+
         epsilon, best_alpha = get_privacy_spent(
-            orders=list(self.orders.keys()),
-            rdp=list(self.orders.values()),
+            orders=list(self.alphas),
+            rdp=list(self.epsilons),
             delta=delta,
         )
-        # TODO: cache this? If orders is immutable.
+        # Cache the result
+        self.dp_budget_cached = DPBudget(
+            epsilon=epsilon, delta=delta, best_alpha=best_alpha
+        )
 
-        return DPBudget(epsilon=epsilon, delta=delta, best_alpha=best_alpha)
+        return self.dp_budget_cached
+
+    def __sub__(self, other):
+        # TODO: Deal with range check and exceptions
+        return Budget(
+            {alpha: self.epsilon(alpha) - other.epsilon(alpha) for alpha in self.alphas}
+        )
+
+    def __add__(self, other):
+        return Budget(
+            {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
+        )
+
+    def __repr__(self) -> str:
+        return "Budget({})".format(self.__orders)
+
+    def __ge__(self, other) -> bool:
+        diff = self - other
+        return diff.is_positive()
+
+    def copy(self):
+        return Budget(self.__orders.copy())

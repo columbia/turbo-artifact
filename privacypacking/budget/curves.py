@@ -3,14 +3,11 @@ from typing import List
 import numpy as np
 from opacus.privacy_analysis import compute_rdp
 
-
-from privacypacking.budget import Budget, ALPHAS
+from privacypacking.budget import ALPHAS, Budget
 
 
 class ZeroCurve:
-    def __init__(
-            self, alpha_list: List[float] = ALPHAS
-    ) -> None:
+    def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: 0 for alpha in alpha_list}
         self.budget = Budget(orders)
 
@@ -40,20 +37,18 @@ class LaplaceCurve:
 
 
 class GaussianCurve:
-    def __init__(
-            self, sigma: float, alpha_list: List[float] = ALPHAS
-    ) -> None:
+    def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
         self.budget = Budget(orders)
 
 
 class SubsampledGaussianCurve:
     def __init__(
-            self,
-            sampling_probability: float,
-            sigma: float,
-            steps: float,
-            alpha_list: List[float] = ALPHAS,
+        self,
+        sampling_probability: float,
+        sigma: float,
+        steps: float,
+        alpha_list: List[float] = ALPHAS,
     ) -> None:
         rdp = compute_rdp(
             q=sampling_probability,
@@ -67,12 +62,12 @@ class SubsampledGaussianCurve:
 
     @classmethod
     def from_training_parameters(
-            cls,
-            dataset_size: int,
-            batch_size: int,
-            epochs: int,
-            sigma: float,
-            alpha_list: List[float] = ALPHAS,
+        cls,
+        dataset_size: int,
+        batch_size: int,
+        epochs: int,
+        sigma: float,
+        alpha_list: List[float] = ALPHAS,
     ) -> "SubsampledGaussianCurve":
         """Helper function to build the SGM curve with more intuitive parameters."""
 

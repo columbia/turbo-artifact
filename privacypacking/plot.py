@@ -18,7 +18,9 @@ class Plotter:
             figs.append(
                 go.FigureWidget(
                     self.stack_jobs_under_block_curve(
-                        [task.budget_per_block[k] for task in tasks], block, allocation
+                        [task.get_budget_or_zero(k) for task in tasks],
+                        block,
+                        allocation,
                     )
                 )
             )
@@ -32,13 +34,13 @@ class Plotter:
             ]
 
         # Pickle the figures in a file so that the dash server can show it in browser
-        with open(self.file, 'wb') as fp:
+        with open(self.file, "wb") as fp:
             pickle.dump(objs, fp)
 
     def stack_jobs_under_block_curve(self, job_list, block, allocation_status_list):
         data = defaultdict(list)
         for i, (job, status) in enumerate(zip(job_list, allocation_status_list)):
-            for alpha, epsilon in job.orders.items():
+            for alpha, epsilon in zip(job.alphas, job.epsilons):
                 data["alpha"].append(alpha)
                 data["epsilon"].append(epsilon)
                 data["job"].append(i)
@@ -55,13 +57,13 @@ class Plotter:
             color="allocated",
             line_group="job",
             log_x=False,
-            log_y=True,
+            log_y=False,
         )
 
         fig.add_trace(
             go.Scatter(
-                x=list(block.initial_budget.orders.keys()),
-                y=list(block.initial_budget.orders.values()),
+                x=list(block.initial_budget.alphas),
+                y=list(block.initial_budget.epsilons),
                 name="Block capacity",
                 line=dict(color="green", width=4),
             )
@@ -80,7 +82,9 @@ class Plotter:
                             method="relayout",
                             args=[{"yaxis.type": "linear"}],
                         ),
-                        dict(label="Log", method="relayout", args=[{"yaxis.type": "log"}]),
+                        dict(
+                            label="Log", method="relayout", args=[{"yaxis.type": "log"}]
+                        ),
                     ]
                 )
             ],

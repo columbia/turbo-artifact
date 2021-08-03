@@ -1,6 +1,9 @@
 from privacypacking.online.schedulers.scheduler import Scheduler
 from privacypacking.utils.utils import *
 
+# TODO: see if we can reuse the greedy heuristic here
+# (FCFS is a greedy heuristic with no heuristic)
+
 
 class FCFS(Scheduler):
     """
@@ -26,7 +29,7 @@ class FCFS(Scheduler):
                 # There must exist at least one order in the block's budget
                 # that is smaller or equal to the corresponding order of the demand budget
                 diff = block_budget - demand_budget
-                max_order = max(diff.orders.values())
+                max_order = max(diff.epsilons)
                 if max_order >= 0:
                     block.budget = diff
                     allocation[i] = True
