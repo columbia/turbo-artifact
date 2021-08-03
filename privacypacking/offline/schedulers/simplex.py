@@ -23,9 +23,15 @@ class Simplex(Scheduler):
         demands_upper_bound = {}
         for k, block in enumerate(self.blocks):
             for alpha in block.budget.alphas:
-                demands_upper_bound[(k, alpha)] = sum(
-                    [task.budget_per_block[k].epsilon(alpha) for task in self.tasks]
-                )
+                demands_upper_bound[(k, alpha)] = 0
+                for task in self.tasks:
+                    if k in task.budget_per_block:
+                        demands_upper_bound[(k, alpha)] += task.budget_per_block[
+                            k
+                        ].epsilon(alpha)
+
+                # Only non-zero blocks are tracked
+                # sum([task.budget_per_block[k].epsilon(alpha) for task in self.tasks])
 
         # Variables
         x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
@@ -38,10 +44,16 @@ class Simplex(Scheduler):
 
         for k, block in enumerate(self.blocks):
             for i, alpha in enumerate(block.budget.alphas):
-                demands = [
-                    task.budget_per_block[k].epsilon(alpha)
-                    for j, task in enumerate(self.tasks)
-                ]
+                demands = []
+                for task in self.tasks:
+                    if k in task.budget_per_block:
+                        demands.append(task.budget_per_block[k].epsilon(alpha))
+                    else:
+                        demands.append(0)
+                # demands = [
+                #     task.budget_per_block[k].epsilon(alpha)
+                #     for j, task in enumerate(self.tasks)
+                # ]
                 m.addConstr(
                     sum([x[0, z] * demands[z] for z in range(n)])
                     - (1 - a[k, i]) * demands_upper_bound[(k, alpha)]

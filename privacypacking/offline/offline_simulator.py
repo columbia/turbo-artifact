@@ -2,6 +2,7 @@ import random
 from typing import Iterable, Tuple
 
 import numpy as np
+from loguru import logger
 
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget import Block, Budget, Task
@@ -119,8 +120,9 @@ class OfflineSimulator(BaseSimulator):
         blocks = self.prepare_blocks()
 
         # Load PrivateKube's macrobenchmark data
-        blocks_and_budgets = load_blocks_and_budgets_from_dir()
+        blocks_and_budgets = load_blocks_and_budgets_from_dir()[0:40]
         tasks = self.prepare_tasks_random_offset(blocks_and_budgets)
+
         # tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()

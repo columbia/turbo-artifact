@@ -22,14 +22,24 @@ class Task:
         # TODO: I don't think that we need this field in general.
         # The process that generates the Task might need `num_blocks` to assign the blocks,
         # but the Task itself doesn't need to know anything else
+
         self.num_blocks = (
             num_blocks  # current total number of blocks in the environment
         )
 
         self.block_ids = block_ids  # block ids requested by task
         # Initialize all block demands to zero
+        # TODO: I think that zero budget should be implicit, because we might want to
+        # add more blocks over time. Also, it can be slow to keep track of all the blocks
+        # even if the task only cares about 1 or 2 blocks.
         for i in range(num_blocks):
             self.budget_per_block[i] = ZeroCurve().budget
+
+    def get_budget_or_zero(self, block_id: int) -> Budget:
+        if block_id in self.budget_per_block:
+            return self.budget_per_block[block_id]
+        else:
+            return ZeroCurve().budget
 
 
 class UniformTask(Task):
