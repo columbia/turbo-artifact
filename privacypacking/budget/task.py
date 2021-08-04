@@ -35,6 +35,7 @@ class Task:
         for i in range(num_blocks):
             self.budget_per_block[i] = ZeroCurve().budget
 
+    # TODO: this is a weird name/API
     def get_budget_or_zero(self, block_id: int) -> Budget:
         if block_id in self.budget_per_block:
             return self.budget_per_block[block_id]

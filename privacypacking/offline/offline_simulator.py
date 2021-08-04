@@ -12,7 +12,10 @@ from privacypacking.budget.task import (
     create_laplace_task,
     create_subsamplegaussian_task,
 )
-from privacypacking.offline.schedulers.greedy_heuristics import OfflineDPF
+from privacypacking.offline.schedulers.greedy_heuristics import (
+    FlatRelevance,
+    OfflineDPF,
+)
 from privacypacking.offline.schedulers.simplex import Simplex
 from privacypacking.utils import load_blocks_and_budgets_from_dir
 from privacypacking.utils.utils import *
@@ -113,14 +116,15 @@ class OfflineSimulator(BaseSimulator):
         if self.config.scheduler == SIMPLEX:
             return Simplex(tasks, blocks)
         elif self.config.scheduler == OFFLINE_DPF:
-            return OfflineDPF(tasks, blocks)
+            # return OfflineDPF(tasks, blocks)
+            return FlatRelevance(tasks, blocks)
 
     # TODO: adapt config file
     def run(self):
         blocks = self.prepare_blocks()
 
         # Load PrivateKube's macrobenchmark data
-        blocks_and_budgets = load_blocks_and_budgets_from_dir()[0:40]
+        blocks_and_budgets = load_blocks_and_budgets_from_dir()[0:10]
         tasks = self.prepare_tasks_random_offset(blocks_and_budgets)
 
         # tasks = self.prepare_tasks()

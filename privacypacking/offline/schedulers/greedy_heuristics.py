@@ -5,6 +5,7 @@ import numpy as np
 
 from privacypacking.budget import Block, Task
 from privacypacking.offline.schedulers.scheduler import Scheduler
+from privacypacking.utils.utils import get_block_by_block_id
 
 
 # TODO: double check block mutability, should be a method?
@@ -55,7 +56,7 @@ def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
 # TODO: subclasses
 # static relevance values only for now
 
-
+# TODO: add profit field to the tasks
 class GreedyHeuristic(Scheduler):
     def __init__(self, tasks, blocks):
         super().__init__(tasks, blocks)
@@ -97,6 +98,31 @@ class OfflineDPF(GreedyHeuristic):
             return dominant_shares(self.task[index], self.blocks)
 
         # Task number i is high priority if it has small dominant share
+        original_indices = list(range(n_tasks))
+        sorted_indices = original_indices.sorted(key=index_key)
+        sorted_tasks = [None] * n_tasks
+        for i in range(n_tasks):
+            # TODO: copy?
+            sorted_tasks[i] = self.tasks[sorted_indices[i]]
+
+        return sorted_indices, sorted_tasks
+
+
+class FlatRelevance(GreedyHeuristic):
+    def order(self) -> Tuple[List[int], List[Task]]:
+        """The cost of a task is the sum of its normalized demands"""
+        n_tasks = len(self.tasks)
+
+        def index_key(index):
+            cost = 0
+            task = self.tasks[index]
+            for block_id, budget in task.budget_per_block.items():
+                for alpha in budget.alphas:
+                    demand = budget.epsilon(alpha)
+                    capacity = self.blocks[block_id].initial_budget.epsilon(alpha)
+                    cost += demand / capacity
+            return cost
+
         original_indices = list(range(n_tasks))
         sorted_indices = original_indices.sorted(key=index_key)
         sorted_tasks = [None] * n_tasks
