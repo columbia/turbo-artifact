@@ -6,13 +6,13 @@ from opacus.privacy_analysis import compute_rdp
 from privacypacking.budget import ALPHAS, Budget
 
 
-class ZeroCurve:
+class ZeroCurve(Budget):
     def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: 0 for alpha in alpha_list}
-        self.budget = Budget(orders)
+        super().__init__(orders)
 
 
-class LaplaceCurve:
+class LaplaceCurve(Budget):
     """
     RDP curve for a Laplace mechanism with sensitivity 1.
     """
@@ -33,16 +33,16 @@ class LaplaceCurve:
                 + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
             )
             orders[α] = float(ε)
-        self.budget = Budget(orders)
+        super().__init__(orders)
 
 
-class GaussianCurve:
+class GaussianCurve(Budget):
     def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
-        self.budget = Budget(orders)
+        super().__init__(orders)
 
 
-class SubsampledGaussianCurve:
+class SubsampledGaussianCurve(Budget):
     def __init__(
         self,
         sampling_probability: float,
@@ -58,7 +58,7 @@ class SubsampledGaussianCurve:
         )
 
         orders = {alpha: epsilon for (alpha, epsilon) in zip(alpha_list, rdp)}
-        self.budget = Budget(orders)
+        super().__init__(orders)
 
     @classmethod
     def from_training_parameters(

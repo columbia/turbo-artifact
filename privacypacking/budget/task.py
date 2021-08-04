@@ -49,6 +49,7 @@ class UniformTask(Task):
         self.id = id
         self.budget_per_block = {}
         for block_id in block_ids:
+            # Keep an eye on the memory usage here (maybe we're fine without copy)
             self.budget_per_block[block_id] = budget.copy()
 
 
