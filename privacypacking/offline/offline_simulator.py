@@ -4,14 +4,15 @@ from typing import Iterable, Tuple
 import numpy as np
 from loguru import logger
 
+from privacypacking import budget
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget import Block, Budget, Task
-from privacypacking.budget.task import (
-    UniformTask,
-    create_gaussian_task,
-    create_laplace_task,
-    create_subsamplegaussian_task,
+from privacypacking.budget.curves import (
+    GaussianCurve,
+    LaplaceCurve,
+    SubsampledGaussianCurve,
 )
+from privacypacking.budget.task import UniformTask
 from privacypacking.offline.schedulers.greedy_heuristics import (
     FlatRelevance,
     OfflineDPF,
@@ -55,13 +56,19 @@ class OfflineSimulator(BaseSimulator):
         task_num = 0
         ######## Laplace Tasks ########
         block_ids = self.choose_blocks()
+        profit = 1
         noises = np.linspace(
             self.config.laplace_noise_start,
             self.config.laplace_noise_stop,
             self.config.laplace_num,
         )
         tasks += [
-            create_laplace_task(task_num + i, self.config.blocks_num, block_ids, l)
+            UniformTask(
+                id=task_num + i,
+                profit=profit,
+                block_ids=block_ids,
+                budget=LaplaceCurve(noises[i]),
+            )
             for i, l in enumerate(noises)
         ]
         task_num += self.config.laplace_num
@@ -74,7 +81,12 @@ class OfflineSimulator(BaseSimulator):
             self.config.gaussian_num,
         )
         tasks += [
-            create_gaussian_task(task_num + i, self.config.blocks_num, block_ids, s)
+            UniformTask(
+                id=task_num + i,
+                profit=profit,
+                block_ids=block_ids,
+                budget=GaussianCurve(s),
+            )
             for i, s in enumerate(sigmas)
         ]
         task_num += self.config.gaussian_num
@@ -87,14 +99,16 @@ class OfflineSimulator(BaseSimulator):
             self.config.subsamplegaussian_num,
         )
         tasks += [
-            create_subsamplegaussian_task(
-                task_num + i,
-                self.config.blocks_num,
-                block_ids,
-                self.config.subsamplegaussian_dataset_size,
-                self.config.subsamplegaussian_batch_size,
-                self.config.subsamplegaussian_epochs,
-                s,
+            UniformTask(
+                id=task_num + i,
+                profit=profit,
+                block_ids=block_ids,
+                budget=SubsampledGaussianCurve.from_training_parameters(
+                    self.config.subsamplegaussian_dataset_size,
+                    self.config.subsamplegaussian_batch_size,
+                    self.config.subsamplegaussian_epochs,
+                    s,
+                ),
             )
             for i, s in enumerate(sigmas)
         ]

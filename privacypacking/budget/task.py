@@ -44,28 +44,31 @@ class UniformTask(Task):
         super().__init__(id, profit, budget_per_block)
 
 
-# Deprecated. Use UniformTask instead.
-# def create_laplace_task(task_id, num_blocks, block_ids, noise):
-#     # Same curve for all blocks for now / same demands per block
-#     task = Task(task_id, num_blocks, block_ids, LAPLACE)
-#     for block_id in block_ids:
-#         task.budget_per_block[block_id] = LaplaceCurve(laplace_noise=noise).budget
-#     return task
+# Deprecated. Use UniformTask instead? (actually both are fine)
+def create_laplace_task(task_id, num_blocks, block_ids, noise, profit=1):
+    return UniformTask(
+        id=task_id,
+        profit=profit,
+        block_ids=block_ids,
+        budget=LaplaceCurve(noise),
+    )
 
 
-# def create_gaussian_task(task_id, num_blocks, block_ids, sigma):
-#     # Same curve for all blocks for now / same demands per block
-#     task = Task(task_id, num_blocks, block_ids, GAUSSIAN)
-#     for block_id in block_ids:
-#         task.budget_per_block[block_id] = GaussianCurve(sigma=sigma).budget
-#     return task
+def create_gaussian_task(task_id, num_blocks, block_ids, sigma, profit=1):
+    return UniformTask(
+        id=task_id,
+        profit=profit,
+        block_ids=block_ids,
+        budget=GaussianCurve(sigma),
+    )
 
 
-# def create_subsamplegaussian_task(task_id, num_blocks, block_ids, ds, bs, epochs, s):
-#     # Same curve for all blocks for now / same demands per block
-#     task = Task(task_id, num_blocks, block_ids, SUBSAMPLEGAUSSIAN)
-#     for block_id in block_ids:
-#         task.budget_per_block[
-#             block_id
-#         ] = SubsampledGaussianCurve.from_training_parameters(ds, bs, epochs, s).budget
-#     return task
+def create_subsamplegaussian_task(
+    task_id, num_blocks, block_ids, ds, bs, epochs, s, profit=1
+):
+    return UniformTask(
+        id=task_id,
+        profit=profit,
+        block_ids=block_ids,
+        budget=SubsampledGaussianCurve.from_training_parameters(ds, bs, epochs, s),
+    )
