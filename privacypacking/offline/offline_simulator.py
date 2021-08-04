@@ -4,7 +4,6 @@ from typing import Iterable, Tuple
 import numpy as np
 from loguru import logger
 
-from privacypacking import budget
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget import Block, Budget, Task
 from privacypacking.budget.curves import (

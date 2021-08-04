@@ -1,9 +1,15 @@
 import random
 
 import gurobipy as gp
+import numpy as np
 from gurobipy import GRB
 
 from privacypacking.budget import ALPHAS, Block
+from privacypacking.budget.task import (
+    create_gaussian_task,
+    create_laplace_task,
+    create_subsamplegaussian_task,
+)
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
 

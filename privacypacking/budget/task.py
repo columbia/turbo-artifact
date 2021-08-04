@@ -7,7 +7,6 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
     ZeroCurve,
 )
-from privacypacking.utils.utils import *
 
 
 class Task:

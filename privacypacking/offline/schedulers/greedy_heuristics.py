@@ -4,6 +4,11 @@ from typing import List, Tuple
 import numpy as np
 
 from privacypacking.budget import Block, Task
+from privacypacking.budget.task import (
+    create_gaussian_task,
+    create_laplace_task,
+    create_subsamplegaussian_task,
+)
 from privacypacking.offline.schedulers.scheduler import Scheduler
 from privacypacking.utils.utils import get_block_by_block_id
 
@@ -193,7 +198,7 @@ def main():
             for i, s in enumerate(np.linspace(0.1, 1, 10))
         ]
         + [
-            create_gaussian_task(i, num_blocks, range(num_blocks), l)
+            create_laplace_task(i, num_blocks, range(num_blocks), l)
             for i, l in enumerate(np.linspace(0.1, 10, 5))
         ]
         + [

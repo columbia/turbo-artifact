@@ -18,7 +18,7 @@ class Plotter:
             figs.append(
                 go.FigureWidget(
                     self.stack_jobs_under_block_curve(
-                        [task.get_budget_or_zero(k) for task in tasks],
+                        [task.get_budget(k) for task in tasks],
                         block,
                         allocation,
                     )
