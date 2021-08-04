@@ -4,7 +4,13 @@ from typing import List, Tuple
 import numpy as np
 
 from privacypacking.budget import Block, Task
+from privacypacking.budget.task import (
+    create_gaussian_task,
+    create_laplace_task,
+    create_subsamplegaussian_task,
+)
 from privacypacking.offline.schedulers.scheduler import Scheduler
+from privacypacking.utils.utils import get_block_by_block_id
 
 
 # TODO: double check block mutability, should be a method?
@@ -55,7 +61,7 @@ def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
 # TODO: subclasses
 # static relevance values only for now
 
-
+# TODO: add profit field to the tasks
 class GreedyHeuristic(Scheduler):
     def __init__(self, tasks, blocks):
         super().__init__(tasks, blocks)
@@ -107,6 +113,80 @@ class OfflineDPF(GreedyHeuristic):
         return sorted_indices, sorted_tasks
 
 
+class FlatRelevance(GreedyHeuristic):
+    def order(self) -> Tuple[List[int], List[Task]]:
+        """The cost of a task is the sum of its normalized demands"""
+        n_tasks = len(self.tasks)
+
+        def index_key(index):
+            cost = 0
+            task = self.tasks[index]
+            for block_id, budget in task.budget_per_block.items():
+                for alpha in budget.alphas:
+                    demand = budget.epsilon(alpha)
+                    capacity = self.blocks[block_id].initial_budget.epsilon(alpha)
+                    cost += demand / capacity
+            return cost
+
+        original_indices = list(range(n_tasks))
+        sorted_indices = original_indices.sorted(key=index_key)
+        sorted_tasks = [None] * n_tasks
+        for i in range(n_tasks):
+            # TODO: copy?
+            sorted_tasks[i] = self.tasks[sorted_indices[i]]
+
+        return sorted_indices, sorted_tasks
+
+
+class OverflowRelevance(GreedyHeuristic):
+    # TODO: add preprocessing to rule out the contention.
+    def order(self) -> Tuple[List[int], List[Task]]:
+        """The dimensions that are closer to being bottlenecks are more relevant
+            r_{jk\alpha} = 1/(\sum_{i}w_{ik\alpha} - c_{k\alpha})
+        This heuristic only works in the offline case with contention.
+        """
+        n_tasks = len(self.tasks)
+
+        # overflow_b_α[block_id][α] = \sum_{i}w_{i, block_id, α} - c_{block_id, α}
+        overflow_b_α = {}
+        for task in self.tasks:
+            for block_id, block_demand in task.budget_per_block.items():
+                for α in block_demand.alphas:
+                    if block_id not in overflow_b_α:
+                        overflow_b_α[block_id] = {}
+                    if α not in overflow_b_α[block_id]:
+                        overflow_b_α[block_id][α] = -self.blocks[
+                            block_id
+                        ].initial_budget.epsilon(α)
+                    overflow_b_α[block_id][α] += block_demand.epsilon(α)
+
+        def index_key(index):
+            cost = 0
+            task = self.tasks[index]
+            for block_id, block_demand in task.budget_per_block.items():
+                for alpha in block_demand.alphas:
+                    demand = block_demand.epsilon(alpha)
+                    overflow = overflow_b_α[block_id][alpha]
+                    cost += demand / overflow
+                    if overflow < 0:
+                        raise Exception("There is no contention for this block")
+            return cost
+
+        # TODO: refactor to avoid copying for relevance heuristics?
+        # TODO: threshold, exponent on the overflow
+        original_indices = list(range(n_tasks))
+        sorted_indices = original_indices.sorted(key=index_key)
+        sorted_tasks = [None] * n_tasks
+        for i in range(n_tasks):
+            # TODO: copy?
+            sorted_tasks[i] = self.tasks[sorted_indices[i]]
+
+        return sorted_indices, sorted_tasks
+
+
+# TODO: test and evaluate these greedy heuristics when we have more tooling
+
+
 def main():
     # num_blocks = 1 # single-block case
     num_blocks = 2  # multi-block case
@@ -118,7 +198,7 @@ def main():
             for i, s in enumerate(np.linspace(0.1, 1, 10))
         ]
         + [
-            create_gaussian_task(i, num_blocks, range(num_blocks), l)
+            create_laplace_task(i, num_blocks, range(num_blocks), l)
             for i, l in enumerate(np.linspace(0.1, 10, 5))
         ]
         + [
