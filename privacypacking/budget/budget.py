@@ -92,6 +92,31 @@ class Budget:
 
         return self.dp_budget_cached
 
+    def increase_budget_by_constant(self, amount: float, threshold: 'Budget'):
+        """
+        Increases every budget-epsilon by "amount".
+        The maximum value a budget-epsilon can take is threshold-epsilon.
+        """
+        for alpha, epsilon in self.__orders:
+            self.__orders[alpha] = max(self.__orders[alpha] + amount, threshold.epsilon(alpha))
+
+    def copy_epsilons_from(self, other):
+        for alpha in self.alphas:
+            self.__orders[alpha] = other.__epsilon[alpha]
+
+    def allocate_budget(self, demand_budget):
+        """
+        There must exist at least one order in the block's budget
+        that is smaller or equal to the corresponding order of the demand budget.
+        If so, we decrease every budget-epsilon by it's corresponding demand-epsilon
+        """
+        diff = self - demand_budget
+        max_order = max(diff.epsilons)
+        if max_order >= 0:
+            self.copy_epsilons_from(diff)
+            return True
+        return False
+
     def __sub__(self, other):
         # TODO: Deal with range check and exceptions
         return Budget(
@@ -101,6 +126,11 @@ class Budget:
     def __add__(self, other):
         return Budget(
             {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
+        )
+
+    def __truediv__(self, other):
+        return Budget(
+            {alpha: self.epsilon(alpha) / other.epsilon(alpha) for alpha in self.alphas}
         )
 
     def __repr__(self) -> str:

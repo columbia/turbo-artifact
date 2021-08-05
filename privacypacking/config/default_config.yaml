@@ -30,7 +30,8 @@ offline:
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
-  scheduler: simplex
+  scheduler_spec:
+    name: simplex
 
 online:
   enabled: false
@@ -60,7 +61,10 @@ online:
         batch_size: 64
         epochs: 10
       task_arrival_interval: 2
-  scheduler: fcfs
+
+  scheduler_spec:
+    name: fcfs
+    N: 10
 
 
 

@@ -27,9 +27,9 @@ EPOCHS = "epochs"
 SCHEDULER = "scheduler"
 SIMPLEX = "simplex"
 OFFLINE_DPF = "offline_dpf"
-
 FCFS = "fcfs"
 DPF = "dpf"
+NAME = "name"
 
 PLOT_FILE = "plot_file"
 FREQUENCY = "frequency"

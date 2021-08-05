@@ -15,8 +15,8 @@ from privacypacking.offline.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):
-    def __init__(self, tasks, blocks):
-        super().__init__(tasks, blocks)
+    def __init__(self, tasks, blocks, config=None):
+        super().__init__(tasks, blocks, config)
 
     def schedule(self):
 

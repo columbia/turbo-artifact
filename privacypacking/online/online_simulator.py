@@ -87,8 +87,8 @@ class ResourceManager:
 
             # Try and schedule one or more of the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
-            s = self.scheduler(tasks, self.blocks)
-            allocation = s.schedule()
+            s = self.scheduler(tasks, self.blocks, self.config)
+            allocation = s.schedule()  # schedule is triggered every time a new task arrives
             # Update the figures
             self.config.plotter.plot(
                 tasks + self.archived_allocated_tasks,

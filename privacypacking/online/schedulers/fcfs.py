@@ -10,8 +10,8 @@ class FCFS(Scheduler):
     Schedule by prioritizing the tasks that come first
     """
 
-    def __init__(self, tasks, blocks):
-        super().__init__(tasks, blocks)
+    def __init__(self, tasks, blocks, config=None):
+        super().__init__(tasks, blocks, config)
 
     def schedule(self):
         allocation = [False] * len(self.tasks)
@@ -26,12 +26,6 @@ class FCFS(Scheduler):
                 demand_budget = task.budget_per_block[block_id]
 
                 # todo: lock block
-                # There must exist at least one order in the block's budget
-                # that is smaller or equal to the corresponding order of the demand budget
-                diff = block_budget - demand_budget
-                max_order = max(diff.epsilons)
-                if max_order >= 0:
-                    block.budget = diff
-                    allocation[i] = True
+                allocation[i] = block_budget.allocate_budget(demand_budget)
 
         return allocation

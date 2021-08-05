@@ -15,6 +15,10 @@ class Config:
             self.mode = OFFLINE
             config = config[OFFLINE]
 
+            # Scheduler
+            self.scheduler = config[SCHEDULER]
+            self.scheduler_name = self.scheduler[NAME]
+
             # Blocks
             self.blocks_spec = config[BLOCKS_SPEC]
             self.blocks_num = self.blocks_spec[NUM]
@@ -35,6 +39,10 @@ class Config:
             self.mode = ONLINE
             config = config[ONLINE]
 
+            # Scheduler
+            self.scheduler = config[SCHEDULER]
+            self.scheduler_name = self.scheduler[NAME]
+            self.scheduler_N = config[SCHEDULER][NAME]
             # Blocks
             self.blocks_spec = config[BLOCKS_SPEC]
             self.blocks_num = self.blocks_spec[NUM]
@@ -60,6 +68,3 @@ class Config:
         self.subsamplegaussian_dataset_size = self.subsamplegaussian[DATASET_SIZE]
         self.subsamplegaussian_batch_size = self.subsamplegaussian[BATCH_SIZE]
         self.subsamplegaussian_epochs = self.subsamplegaussian[EPOCHS]
-
-        # Scheduler
-        self.scheduler = config[SCHEDULER]

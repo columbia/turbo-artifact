@@ -63,8 +63,8 @@ def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
 
 # TODO: add profit field to the tasks
 class GreedyHeuristic(Scheduler):
-    def __init__(self, tasks, blocks):
-        super().__init__(tasks, blocks)
+    def __init__(self, tasks, blocks, config=None):
+        super().__init__(tasks, blocks, config)
 
     def order(self) -> Tuple[List[int], List[Task]]:
         """Sorts the tasks according to a heuristic.

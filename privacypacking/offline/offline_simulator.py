@@ -126,9 +126,9 @@ class OfflineSimulator(BaseSimulator):
         return blocks
 
     def prepare_scheduler(self, tasks, blocks):
-        if self.config.scheduler == SIMPLEX:
+        if self.config.scheduler_name == SIMPLEX:
             return Simplex(tasks, blocks)
-        elif self.config.scheduler == OFFLINE_DPF:
+        elif self.config.scheduler_name == OFFLINE_DPF:
             # return OfflineDPF(tasks, blocks)
             return FlatRelevance(tasks, blocks)
 
