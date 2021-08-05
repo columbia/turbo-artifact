@@ -18,7 +18,7 @@ class FCFS(Scheduler):
 
         # Read them by order
         for i, task in enumerate(self.tasks):
-            for block_id in task.block_ids:
+            for block_id, demand_budget in task.budget_per_block:
                 block = get_block_by_block_id(self.blocks, block_id)
                 # Remaining block budget
                 block_budget = block.budget

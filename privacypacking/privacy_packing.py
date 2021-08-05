@@ -26,16 +26,9 @@ class PrivacyPacking:
         config = Config(self.config)
 
         self.simulator = None
-
-        # todo enable mixed block/task offline/online states in the future
-        if config.blocks_offline and config.tasks_offline:
-            self.config[BLOCKS_SPEC] = self.config[BLOCKS_SPEC][OFFLINE]
-            self.config[TASKS_SPEC] = self.config[TASKS_SPEC][OFFLINE]
+        if config.mode == OFFLINE:
             self.simulator = OfflineSimulator(config)
-
-        elif config.blocks_online or config.tasks_online:
-            self.config[BLOCKS_SPEC] = self.config[BLOCKS_SPEC][ONLINE]
-            self.config[TASKS_SPEC] = self.config[TASKS_SPEC][ONLINE]
+        elif config.mode == ONLINE:
             self.simulator = OnlineSimulator(config)
 
     def simulate(self):

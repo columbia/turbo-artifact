@@ -17,9 +17,10 @@ import simpy.rt
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import Block
 from privacypacking.budget.task import (
-    create_gaussian_task,
-    create_laplace_task,
-    create_subsamplegaussian_task,
+    GaussianCurve,
+    LaplaceCurve,
+    SubsampledGaussianCurve,
+    UniformTask
 )
 from privacypacking.online.schedulers import dpf, fcfs
 from privacypacking.utils.utils import *
@@ -78,7 +79,7 @@ class ResourceManager:
 
     def schedule(self):
         waiting_tasks = []
-        yield self.env.timeout(30)
+        # yield self.env.timeout(30)
         while True:
             # Pick the next task demand from the queue
             task, allocated_resources_event = yield self.task_demands_queue.get()
@@ -107,19 +108,6 @@ class ResourceManager:
 
             print("Block budget", self.blocks[0].budget)
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
-
-            ###################### Moved that inside the scheduler ######################
-            # Update/consume block-budgets
-            # todo: lock
-            # for i, t in enumerate(allocation):
-            #     if t:
-            #         task = waiting_tasks[i][0]
-            #         for block_id in task.block_ids:
-            #             block_demand_budget = task.budget_per_block[block_id]
-            #             # Get block with "block_id"
-            #             block = get_block_by_block_id(self.blocks, block_id)
-            #             block.budget -= block_demand_budget
-            #############################################################################
 
             # Delete the tasks that have been scheduled from the waiting list
             waiting_tasks = [
@@ -158,10 +146,9 @@ class Tasks:
         """Generated task behavior."""
 
         print("Generated task: ", task_id)
-        # Determine task
-        curve_distribution = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
 
         # Determine demands
+        curve_distribution = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
         task_blocks_num = 2
         blocks_num = self.resource_manager.config.blocks_num
         task_blocks_num = max(1, min(task_blocks_num, blocks_num))
@@ -171,31 +158,39 @@ class Tasks:
             sigma = random.uniform(
                 self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop
             )
-            task = create_gaussian_task(
-                task_id, blocks_num, range(task_blocks_num), sigma
+            task = UniformTask(
+                id=task_id,
+                profit=1,
+                block_ids=range(task_blocks_num),
+                budget=GaussianCurve(sigma),
             )
-
         elif curve_distribution == LAPLACE:
             noise = random.uniform(
                 self.config.laplace_noise_start, self.config.laplace_noise_stop
             )
-            task = create_laplace_task(
-                task_id, blocks_num, range(task_blocks_num), noise
+            task = UniformTask(
+                id=task_id,
+                profit=1,
+                block_ids=range(task_blocks_num),
+                budget=LaplaceCurve(noise)
             )
         elif curve_distribution == SUBSAMPLEGAUSSIAN:
             sigma = random.uniform(
                 self.config.subsamplegaussian_sigma_start,
                 self.config.subsamplegaussian_sigma_stop,
             )
-            task = create_subsamplegaussian_task(
-                task_id,
-                blocks_num,
-                range(task_blocks_num),
-                self.config.subsamplegaussian_dataset_size,
-                self.config.subsamplegaussian_batch_size,
-                self.config.subsamplegaussian_epochs,
-                sigma,
+            task = UniformTask(
+                id=task_id,
+                profit=1,
+                block_ids=range(task_blocks_num),
+                budget=SubsampledGaussianCurve.from_training_parameters(
+                    self.config.subsamplegaussian_dataset_size,
+                    self.config.subsamplegaussian_batch_size,
+                    self.config.subsamplegaussian_epochs,
+                    sigma,
+                ),
             )
+
         assert task is not None
 
         allocated_resources_event = self.env.event()

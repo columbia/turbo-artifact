@@ -6,9 +6,10 @@ from gurobipy import GRB
 
 from privacypacking.budget import ALPHAS, Block
 from privacypacking.budget.task import (
-    create_gaussian_task,
-    create_laplace_task,
-    create_subsamplegaussian_task,
+    GaussianCurve,
+    LaplaceCurve,
+    SubsampledGaussianCurve,
+    UniformTask
 )
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
@@ -36,9 +37,6 @@ class Simplex(Scheduler):
                             k
                         ].epsilon(alpha)
 
-                # Only non-zero blocks are tracked
-                # sum([task.budget_per_block[k].epsilon(alpha) for task in self.tasks])
-
         # Variables
         x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
         a = m.addMVar((len(self.blocks), d), vtype=GRB.BINARY, name="a")
@@ -56,10 +54,6 @@ class Simplex(Scheduler):
                         demands.append(task.budget_per_block[k].epsilon(alpha))
                     else:
                         demands.append(0)
-                # demands = [
-                #     task.budget_per_block[k].epsilon(alpha)
-                #     for j, task in enumerate(self.tasks)
-                # ]
                 m.addConstr(
                     sum([x[0, z] * demands[z] for z in range(n)])
                     - (1 - a[k, i]) * demands_upper_bound[(k, alpha)]
@@ -80,26 +74,41 @@ def main():
 
     blocks = [Block.from_epsilon_delta(i, 10, 0.001) for i in range(num_blocks)]
     tasks = (
-        [
-            create_gaussian_task(i, num_blocks, range(num_blocks), s)
-            for i, s in enumerate(np.linspace(0.1, 1, 10))
-        ]
-        + [
-            create_laplace_task(i, num_blocks, range(num_blocks), l)
-            for i, l in enumerate(np.linspace(0.1, 10, 5))
-        ]
-        + [
-            create_subsamplegaussian_task(
-                i, num_blocks, range(num_blocks), ds=60_000, bs=64, epochs=10, s=s
-            )
-            for i, s in enumerate(np.linspace(1, 10, 5))
-        ]
+            [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=GaussianCurve(s)
+                )
+                for i, s in enumerate(np.linspace(0.1, 1, 10))
+            ]
+            + [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=LaplaceCurve(l),
+                )
+                for i, l in enumerate(np.linspace(0.1, 10, 5))
+            ]
+            + [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=SubsampledGaussianCurve.from_training_parameters(
+                        60_000, 64, 10, s
+                    )
+                )
+                for i, s in enumerate(np.linspace(1, 10, 5))
+            ]
     )
 
     random.shuffle(tasks)
     scheduler = Simplex(tasks, blocks)
     allocation = scheduler.schedule()
-    scheduler.plot(allocation)
+    # self.config.plotter.plot(tasks, blocks, allocation)
 
 
 if __name__ == "__main__":

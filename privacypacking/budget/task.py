@@ -41,33 +41,3 @@ class UniformTask(Task):
         for block_id in block_ids:
             budget_per_block[block_id] = budget
         super().__init__(id, profit, budget_per_block)
-
-
-# Deprecated. Use UniformTask instead? (actually both are fine)
-def create_laplace_task(task_id, num_blocks, block_ids, noise, profit=1):
-    return UniformTask(
-        id=task_id,
-        profit=profit,
-        block_ids=block_ids,
-        budget=LaplaceCurve(noise),
-    )
-
-
-def create_gaussian_task(task_id, num_blocks, block_ids, sigma, profit=1):
-    return UniformTask(
-        id=task_id,
-        profit=profit,
-        block_ids=block_ids,
-        budget=GaussianCurve(sigma),
-    )
-
-
-def create_subsamplegaussian_task(
-    task_id, num_blocks, block_ids, ds, bs, epochs, s, profit=1
-):
-    return UniformTask(
-        id=task_id,
-        profit=profit,
-        block_ids=block_ids,
-        budget=SubsampledGaussianCurve.from_training_parameters(ds, bs, epochs, s),
-    )

@@ -34,6 +34,7 @@ DPF = "dpf"
 PLOT_FILE = "plot_file"
 FREQUENCY = "frequency"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
+BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
 
 
 PRIVATEKUBE_DEMANDS_PATH = Path(__file__).parent.parent.parent.joinpath(
