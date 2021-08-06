@@ -8,7 +8,7 @@ from privacypacking.budget.task import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
-    UniformTask
+    UniformTask,
 )
 from privacypacking.offline.schedulers.scheduler import Scheduler
 
@@ -196,10 +196,7 @@ def main():
     tasks = (
             [
                 UniformTask(
-                    id=i,
-                    profit=1,
-                    block_ids=range(num_blocks),
-                    budget=GaussianCurve(s)
+                    id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
                 )
                 for i, s in enumerate(np.linspace(0.1, 1, 10))
             ]
@@ -219,7 +216,7 @@ def main():
                     block_ids=range(num_blocks),
                     budget=SubsampledGaussianCurve.from_training_parameters(
                         60_000, 64, 10, s
-                    )
+                    ),
                 )
                 for i, s in enumerate(np.linspace(1, 10, 5))
             ]

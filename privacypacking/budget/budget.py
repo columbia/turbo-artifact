@@ -92,13 +92,15 @@ class Budget:
 
         return self.dp_budget_cached
 
-    def increase_budget_by_constant(self, amount: float, threshold: 'Budget'):
+    def increase_budget_by_constant(self, amount: float, threshold: "Budget"):
         """
         Increases every budget-epsilon by "amount".
         The maximum value a budget-epsilon can take is threshold-epsilon.
         """
         for alpha, epsilon in self.__orders:
-            self.__orders[alpha] = max(self.__orders[alpha] + amount, threshold.epsilon(alpha))
+            self.__orders[alpha] = max(
+                self.__orders[alpha] + amount, threshold.epsilon(alpha)
+            )
 
     def copy_epsilons_from(self, other):
         for alpha in self.alphas:

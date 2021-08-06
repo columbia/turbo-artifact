@@ -20,7 +20,7 @@ from privacypacking.budget.task import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
-    UniformTask
+    UniformTask,
 )
 from privacypacking.online.schedulers import dpf, fcfs
 from privacypacking.utils.utils import *
@@ -71,7 +71,8 @@ class ResourceManager:
         for _ in range(self.config.blocks_num):
             block_id = next(block_id)
             self.blocks[block_id] = Block.from_epsilon_delta(
-                block_id, self.config.renyi_epsilon, self.config.renyi_delta)
+                block_id, self.config.renyi_epsilon, self.config.renyi_delta
+            )
 
         print("Generated blocks ", self.blocks)
         # yield self.env.timeout(arrival_interval_dist)
@@ -87,7 +88,9 @@ class ResourceManager:
             # Try and schedule one or more of the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
             s = self.scheduler(tasks, self.blocks, self.config)
-            allocation = s.schedule()  # schedule is triggered every time a new task arrives
+            allocation = (
+                s.schedule()
+            )  # schedule is triggered every time a new task arrives
             # Update the figures
             self.config.plotter.plot(
                 tasks + self.archived_allocated_tasks,
@@ -171,7 +174,7 @@ class Tasks:
                 id=task_id,
                 profit=1,
                 block_ids=range(task_blocks_num),
-                budget=LaplaceCurve(noise)
+                budget=LaplaceCurve(noise),
             )
         elif curve_distribution == SUBSAMPLEGAUSSIAN:
             sigma = random.uniform(

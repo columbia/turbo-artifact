@@ -11,7 +11,9 @@ class DPFBlock:
 
     def __init__(self, block):
         self.id = block.id
-        self.budget = ZeroCurve()  # Will be gradually unlocking budget till we reach full capacity
+        self.budget = (
+            ZeroCurve()
+        )  # Will be gradually unlocking budget till we reach full capacity
         self.allocated_budget = ZeroCurve()  # Budget currently allocated by tasks
         self.block = block
 

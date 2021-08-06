@@ -9,7 +9,7 @@ from privacypacking.budget import Block, Budget, Task
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
-    SubsampledGaussianCurve
+    SubsampledGaussianCurve,
 )
 from privacypacking.budget.task import UniformTask
 from privacypacking.offline.schedulers.greedy_heuristics import (

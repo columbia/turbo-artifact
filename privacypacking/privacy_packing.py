@@ -12,11 +12,10 @@ DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
 
 
 class PrivacyPacking:
-
     def __init__(self, config_file, default_config_file):
-        with open(default_config_file, 'r') as default_config:
+        with open(default_config_file, "r") as default_config:
             self.config = yaml.safe_load(default_config)
-        with open(config_file, 'r') as config:
+        with open(config_file, "r") as config:
             self.user_config = yaml.safe_load(config)
 
         # Update the config file with the user-config's preferences
@@ -37,7 +36,7 @@ class PrivacyPacking:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', dest='config_file')
+    parser.add_argument("--config", dest="config_file")
     args = parser.parse_args()
     pp = PrivacyPacking(args.config_file, DEFAULT_CONFIG_FILE)
     pp.simulate()

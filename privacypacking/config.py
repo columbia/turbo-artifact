@@ -3,7 +3,6 @@ from privacypacking.utils.utils import *
 
 
 class Config:
-
     def __init__(self, config):
         self.config = config
         self.renyi_epsilon = config[RENYI_EPSILON]
@@ -32,7 +31,6 @@ class Config:
             self.laplace_num = self.laplace[NUM]
             self.subsamplegaussian_num = self.subsamplegaussian[NUM]
             self.gaussian_num = self.gaussian[NUM]
-
 
         # Online Mode
         elif config[ONLINE][ENABLED]:
