@@ -9,19 +9,19 @@ class DPFBlock:
     It holds a reference to the traditional-block but also has some additional DPF properties
     """
 
-    def __init__(self, block):
+    def __init__(self, block, n):
         self.id = block.id
         self.budget = (
             ZeroCurve()
         )  # Will be gradually unlocking budget till we reach full capacity
         self.allocated_budget = ZeroCurve()  # Budget currently allocated by tasks
         self.block = block
+        self.fair_share = self.block.initial_budget / n
 
-    def unlock_budget(self, n):
-        fair_share = self.block.initial_budget / n
+    def unlock_budget(self):
         # print("\n\nFair Share \n", fair_share)
         self.budget = self.budget.add_with_threshold(
-            fair_share, self.block.initial_budget
+            self.fair_share, self.block.initial_budget
         )
         # print("\n\nUpdate budget", self.budget)
         # print("\nInitial budget\n", self.block.initial_budget)
@@ -39,14 +39,14 @@ class DPF(Scheduler):
     def update_dpf_blocks(self):
         for block_id, block in self.blocks.items():
             if block_id not in DPF.dpf_blocks:
-                DPF.dpf_blocks[block_id] = DPFBlock(block)
+                DPF.dpf_blocks[block_id] = DPFBlock(block, self.config.scheduler_N)
 
     def unlock_block_budgets(self):
         new_task = self.tasks[-1]
         for block_id in new_task.budget_per_block.keys():
             dpf_block = DPF.dpf_blocks[block_id]
             # Unlock budget for each alpha
-            dpf_block.unlock_budget(self.config.scheduler_N)
+            dpf_block.unlock_budget()
 
     def task_dominant_shares(self, task_index: int) -> List[float]:
         demand_fractions = []
