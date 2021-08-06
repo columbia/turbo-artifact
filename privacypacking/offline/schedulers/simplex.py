@@ -28,7 +28,7 @@ class Simplex(Scheduler):
         d = len(ALPHAS)
 
         demands_upper_bound = {}
-        for k, block in enumerate(self.blocks):
+        for k, block in self.blocks.items():
             for alpha in block.budget.alphas:
                 demands_upper_bound[(k, alpha)] = 0
                 for task in self.tasks:
@@ -46,7 +46,7 @@ class Simplex(Scheduler):
         for k, _ in enumerate(self.blocks):
             m.addConstr(a[k].sum() >= 1)
 
-        for k, block in enumerate(self.blocks):
+        for k, block in self.blocks.items():
             for i, alpha in enumerate(block.budget.alphas):
                 demands = []
                 for task in self.tasks:
@@ -72,7 +72,10 @@ def main():
     # num_blocks = 1 # single-block case
     num_blocks = 2  # multi-block case
 
-    blocks = [Block.from_epsilon_delta(i, 10, 0.001) for i in range(num_blocks)]
+    blocks = {}
+    for i in range(num_blocks):
+        blocks[i] = Block.from_epsilon_delta(i, 10, 0.001)
+
     tasks = (
             [
                 UniformTask(
@@ -108,6 +111,7 @@ def main():
     random.shuffle(tasks)
     scheduler = Simplex(tasks, blocks)
     allocation = scheduler.schedule()
+    print(allocation)
     # self.config.plotter.plot(tasks, blocks, allocation)
 
 

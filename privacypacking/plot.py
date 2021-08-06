@@ -14,7 +14,7 @@ class Plotter:
 
     def plot(self, tasks, blocks, allocation):
         figs = []
-        for k, block in enumerate(blocks):
+        for k, block in blocks.items():
             figs.append(
                 go.FigureWidget(
                     self.stack_jobs_under_block_curve(

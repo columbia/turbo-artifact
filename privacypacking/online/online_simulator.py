@@ -43,7 +43,7 @@ class ResourceManager:
     def __init__(self, env, config):
         self.env = env
         self.config = config
-        self.blocks = []
+        self.blocks = {}
         self.archived_allocated_tasks = []
         self.scheduler = schedulers[self.config.scheduler]
 
@@ -68,12 +68,11 @@ class ResourceManager:
 
         # while True:
         # self.env.process(self.task(next(block_id)))
-        self.blocks = [
-            Block.from_epsilon_delta(
-                next(block_id), self.config.renyi_epsilon, self.config.renyi_delta
-            )
-            for _ in range(self.config.blocks_num)
-        ]
+        for _ in range(self.config.blocks_num):
+            block_id = next(block_id)
+            self.blocks[block_id] = Block.from_epsilon_delta(
+                block_id, self.config.renyi_epsilon, self.config.renyi_delta)
+
         print("Generated blocks ", self.blocks)
         # yield self.env.timeout(arrival_interval_dist)
 

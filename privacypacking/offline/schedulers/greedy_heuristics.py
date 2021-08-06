@@ -1,20 +1,20 @@
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import numpy as np
 
 from privacypacking.budget import Block, Task
 from privacypacking.budget.task import (
-    create_gaussian_task,
-    create_laplace_task,
-    create_subsamplegaussian_task,
+    GaussianCurve,
+    LaplaceCurve,
+    SubsampledGaussianCurve,
+    UniformTask
 )
 from privacypacking.offline.schedulers.scheduler import Scheduler
-from privacypacking.utils.utils import get_block_by_block_id
 
 
 # TODO: double check block mutability, should be a method?
-def greedy_allocation(sorted_tasks: List[Task], blocks: List[Block]) -> List[bool]:
+def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> List[bool]:
     """Allocate tasks in order until there is no budget left
 
     Args:
@@ -26,26 +26,24 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: List[Block]) -> List[boo
     """
     n_tasks = len(sorted_tasks)
     allocation = [False] * n_tasks
+
     for i, task in enumerate(sorted_tasks):
-        for block_id in task.block_ids:
-            block = get_block_by_block_id(blocks, block_id)
-            block_budget = block.budget
-            demand_budget = task.budget_per_block[block_id]
-            if block_budget >= demand_budget:
+        for block_id, demand_budget in task.budget_per_block:
+            block = blocks[block_id]
+            if block.budget >= demand_budget:
                 allocation[i] = True
-                block.budget = block_budget - demand_budget
+                block.budget -= demand_budget
     return allocation
 
 
 # TODO: reverse order + backfill (dual heuristic)
 
 
-def dominant_shares(task: Task, blocks: List[Block]) -> List[float]:
+def dominant_shares(task: Task, blocks: Dict[int, Block]) -> List[float]:
     demand_fractions = []
-    for block_id in task.block_ids:
-        block = get_block_by_block_id(blocks, block_id)
+    for block_id, demand_budget in task.budget_per_block:
+        block = blocks[block_id]
         block_initial_budget = block.initial_budget
-        demand_budget = task.budget_per_block[block_id]
 
         # Compute the demand share for each alpha of the block
         for alpha in block_initial_budget.alphas:
@@ -191,28 +189,46 @@ def main():
     # num_blocks = 1 # single-block case
     num_blocks = 2  # multi-block case
 
-    blocks = [Block.from_epsilon_delta(i, 10, 0.001) for i in range(num_blocks)]
+    blocks = {}
+    for i in range(num_blocks):
+        blocks[i] = Block.from_epsilon_delta(i, 10, 0.001)
+
     tasks = (
-        [
-            create_gaussian_task(i, num_blocks, range(num_blocks), s)
-            for i, s in enumerate(np.linspace(0.1, 1, 10))
-        ]
-        + [
-            create_laplace_task(i, num_blocks, range(num_blocks), l)
-            for i, l in enumerate(np.linspace(0.1, 10, 5))
-        ]
-        + [
-            create_subsamplegaussian_task(
-                i, num_blocks, range(num_blocks), ds=60_000, bs=64, epochs=10, s=s
-            )
-            for i, s in enumerate(np.linspace(1, 10, 5))
-        ]
+            [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=GaussianCurve(s)
+                )
+                for i, s in enumerate(np.linspace(0.1, 1, 10))
+            ]
+            + [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=LaplaceCurve(l),
+                )
+                for i, l in enumerate(np.linspace(0.1, 10, 5))
+            ]
+            + [
+                UniformTask(
+                    id=i,
+                    profit=1,
+                    block_ids=range(num_blocks),
+                    budget=SubsampledGaussianCurve.from_training_parameters(
+                        60_000, 64, 10, s
+                    )
+                )
+                for i, s in enumerate(np.linspace(1, 10, 5))
+            ]
     )
 
     random.shuffle(tasks)
     scheduler = GreedyHeuristic(tasks, blocks)
     allocation = scheduler.schedule()
-    scheduler.plot(allocation)
+    # config.plotter.plot(tasks, blocks, allocation)
 
 
 if __name__ == "__main__":

@@ -1,22 +1,22 @@
-blocks_spec:
-  offline:
-    enabled: true
-    num: 1
+online:
+  enabled: true
 
-tasks_spec:
-  online:
-    enabled: true
+  blocks_spec:
+    num: 1
+    block_arrival_interval: 2
+
+  tasks_spec:
     curve_distributions:
       laplace:
-        frequency: 0.33
+        frquency: 0.33
         num_blocks: 1
-
       gaussian:
-        frequency: 0.33
+        frquency: 0.33
         num_blocks: 1
-
       SubsampledGaussian:
-        frequency: 0.33
+        frquency: 0.33
         num_blocks: 1
+      task_arrival_interval: 2
 
-scheduler: "fcfs"
+  scheduler_spec:
+    name: fcfs

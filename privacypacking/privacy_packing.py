@@ -39,7 +39,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', dest='config_file')
     args = parser.parse_args()
-
-    default_config_file = DEFAULT_CONFIG_FILE
-    pp = PrivacyPacking(args.config_file, default_config_file)
+    pp = PrivacyPacking(args.config_file, DEFAULT_CONFIG_FILE)
     pp.simulate()

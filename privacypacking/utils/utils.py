@@ -24,18 +24,17 @@ SIGMA_STOP = "sigma_stop"
 DATASET_SIZE = "dataset_size"
 BATCH_SIZE = "batch_size"
 EPOCHS = "epochs"
-SCHEDULER = "scheduler"
+SCHEDULER_SPEC = "scheduler_spec"
 SIMPLEX = "simplex"
 OFFLINE_DPF = "offline_dpf"
 FCFS = "fcfs"
 DPF = "dpf"
 NAME = "name"
-
+N = "n"
 PLOT_FILE = "plot_file"
 FREQUENCY = "frequency"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
 BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
-
 
 PRIVATEKUBE_DEMANDS_PATH = Path(__file__).parent.parent.parent.joinpath(
     "data/privatekube_demands"
@@ -52,12 +51,6 @@ def update_dict(src, des):
             ref = prev_ref
         else:
             ref[k] = v
-
-
-def get_block_by_block_id(blocks, block_id):
-    for block in blocks:
-        if block.id == block_id:
-            return block
 
 
 def load_blocks_and_budgets_from_dir(

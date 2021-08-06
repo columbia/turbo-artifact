@@ -16,7 +16,7 @@ class Config:
             config = config[OFFLINE]
 
             # Scheduler
-            self.scheduler = config[SCHEDULER]
+            self.scheduler = config[SCHEDULER_SPEC]
             self.scheduler_name = self.scheduler[NAME]
 
             # Blocks
@@ -40,9 +40,10 @@ class Config:
             config = config[ONLINE]
 
             # Scheduler
-            self.scheduler = config[SCHEDULER]
+            self.scheduler = config[SCHEDULER_SPEC]
             self.scheduler_name = self.scheduler[NAME]
-            self.scheduler_N = config[SCHEDULER][NAME]
+            self.scheduler_N = self.scheduler[N]
+
             # Blocks
             self.blocks_spec = config[BLOCKS_SPEC]
             self.blocks_num = self.blocks_spec[NUM]

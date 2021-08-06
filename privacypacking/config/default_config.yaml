@@ -64,7 +64,7 @@ online:
 
   scheduler_spec:
     name: fcfs
-    N: 10
+    n: 10
 
 
 

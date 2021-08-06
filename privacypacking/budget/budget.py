@@ -104,16 +104,14 @@ class Budget:
         for alpha in self.alphas:
             self.__orders[alpha] = other.__epsilon[alpha]
 
-    def allocate_budget(self, demand_budget):
+    def can_allocate(self, demand_budget):
         """
         There must exist at least one order in the block's budget
         that is smaller or equal to the corresponding order of the demand budget.
-        If so, we decrease every budget-epsilon by it's corresponding demand-epsilon
         """
         diff = self - demand_budget
         max_order = max(diff.epsilons)
         if max_order >= 0:
-            self.copy_epsilons_from(diff)
             return True
         return False
 
