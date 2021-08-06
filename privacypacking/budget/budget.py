@@ -7,7 +7,7 @@ from opacus.privacy_analysis import get_privacy_spent
 
 # TODO: other range of default alphas?
 ALPHAS = [
-    1.5,
+    # 1.5,
     1.75,
     2,
     2.5,
@@ -92,15 +92,14 @@ class Budget:
 
         return self.dp_budget_cached
 
-    def increase_budget_by_constant(self, amount: float, threshold: "Budget"):
+    def add_with_threshold(self, other: "Budget", threshold: "Budget"):
         """
         Increases every budget-epsilon by "amount".
         The maximum value a budget-epsilon can take is threshold-epsilon.
         """
-        for alpha, epsilon in self.__orders:
-            self.__orders[alpha] = max(
-                self.__orders[alpha] + amount, threshold.epsilon(alpha)
-            )
+        return Budget(
+            {alpha: min(self.epsilon(alpha) + other.epsilon(alpha), threshold.epsilon(alpha)) for alpha in self.alphas}
+        )
 
     def can_allocate(self, demand_budget):
         """
@@ -124,9 +123,9 @@ class Budget:
             {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
         )
 
-    def __truediv__(self, other):
+    def __truediv__(self, n: int):
         return Budget(
-            {alpha: self.epsilon(alpha) / other.epsilon(alpha) for alpha in self.alphas}
+            {alpha: self.epsilon(alpha) / n for alpha in self.alphas}
         )
 
     def __repr__(self) -> str:

@@ -14,11 +14,11 @@ class Plotter:
 
     def plot(self, tasks, blocks, allocation):
         figs = []
-        for k, block in blocks.items():
+        for block in blocks.values():
             figs.append(
                 go.FigureWidget(
                     self.stack_jobs_under_block_curve(
-                        [task.get_budget(k) for task in tasks],
+                        tasks,
                         block,
                         allocation,
                     )
@@ -39,13 +39,13 @@ class Plotter:
 
     def stack_jobs_under_block_curve(self, job_list, block, allocation_status_list):
         data = defaultdict(list)
-        for i, (job, status) in enumerate(zip(job_list, allocation_status_list)):
-            for alpha, epsilon in zip(job.alphas, job.epsilons):
+        for (job, status) in zip(job_list, allocation_status_list):
+            for alpha, epsilon in zip(job.get_budget(block.id).alphas, job.get_budget(block.id).epsilons):
                 data["alpha"].append(alpha)
                 data["epsilon"].append(epsilon)
-                data["job"].append(i)
+                data["job"].append(job.id)
                 data["allocated"].append(status)
-                data["dp_epsilon"].append(job.dp_budget().epsilon)
+                data["dp_epsilon"].append(job.get_budget(block.id).dp_budget().epsilon)
 
         df = pd.DataFrame(data=data)
         df = df.sort_values(by=["allocated", "dp_epsilon"], ascending=[False, True])
@@ -57,7 +57,7 @@ class Plotter:
             color="allocated",
             line_group="job",
             log_x=False,
-            log_y=False,
+            log_y=True,
         )
 
         fig.add_trace(

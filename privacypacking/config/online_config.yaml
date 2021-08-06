@@ -19,4 +19,4 @@ online:
     task_arrival_interval: 2
 
   scheduler_spec:
-    name: fcfs
+    name: dpf

@@ -17,8 +17,12 @@ class DPFBlock:
         self.allocated_budget = ZeroCurve()  # Budget currently allocated by tasks
         self.block = block
 
-    def unlock_budget(self, fair_share):
-        self.budget.increase_budget_by_constant(fair_share, self.block.initial_budget)
+    def unlock_budget(self, n):
+        fair_share = self.block.initial_budget / n
+        # print("\n\nFair Share \n", fair_share)
+        self.budget = self.budget.add_with_threshold(fair_share, self.block.initial_budget)
+        # print("\n\nUpdate budget", self.budget)
+        # print("\nInitial budget\n", self.block.initial_budget)
 
 
 class DPF(Scheduler):
@@ -37,15 +41,15 @@ class DPF(Scheduler):
 
     def unlock_block_budgets(self):
         new_task = self.tasks[-1]
-        for block_id in new_task.block_ids:
+        for block_id in new_task.budget_per_block.keys():
             dpf_block = DPF.dpf_blocks[block_id]
-            fair_share = dpf_block.initial_budget / self.config.scheduler_N
-            dpf_block.unlock_budget(fair_share)
+            # Unlock budget for each alpha
+            dpf_block.unlock_budget(self.config.scheduler_N)
 
     def task_dominant_shares(self, task_index: int) -> List[float]:
         demand_fractions = []
         task = self.tasks[task_index]
-        for block_id, demand_budget in task.budget_per_block:
+        for block_id, demand_budget in task.budget_per_block.items():
             block = self.blocks[block_id]
             block_initial_budget = block.initial_budget
 
