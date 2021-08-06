@@ -102,10 +102,6 @@ class Budget:
                 self.__orders[alpha] + amount, threshold.epsilon(alpha)
             )
 
-    def copy_epsilons_from(self, other):
-        for alpha in self.alphas:
-            self.__orders[alpha] = other.__epsilon[alpha]
-
     def can_allocate(self, demand_budget):
         """
         There must exist at least one order in the block's budget

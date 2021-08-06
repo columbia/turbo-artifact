@@ -8,15 +8,15 @@ online:
   tasks_spec:
     curve_distributions:
       laplace:
-        frquency: 0.33
+        frequency: 0.33
         num_blocks: 1
       gaussian:
-        frquency: 0.33
+        frequency: 0.33
         num_blocks: 1
       SubsampledGaussian:
-        frquency: 0.33
+        frequency: 0.33
         num_blocks: 1
-      task_arrival_interval: 2
+    task_arrival_interval: 2
 
   scheduler_spec:
     name: fcfs

@@ -45,7 +45,7 @@ class ResourceManager:
         self.config = config
         self.blocks = {}
         self.archived_allocated_tasks = []
-        self.scheduler = schedulers[self.config.scheduler]
+        self.scheduler = schedulers[self.config.scheduler_name]
 
         # To store the incoming task demands
         self.task_demands_queue = simpy.Store(self.env)

@@ -28,7 +28,7 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
     allocation = [False] * n_tasks
 
     for i, task in enumerate(sorted_tasks):
-        for block_id, demand_budget in task.budget_per_block:
+        for block_id, demand_budget in task.budget_per_block.items():
             block = blocks[block_id]
             if block.budget >= demand_budget:
                 allocation[i] = True
@@ -41,7 +41,7 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
 
 def dominant_shares(task: Task, blocks: Dict[int, Block]) -> List[float]:
     demand_fractions = []
-    for block_id, demand_budget in task.budget_per_block:
+    for block_id, demand_budget in task.budget_per_block.items():
         block = blocks[block_id]
         block_initial_budget = block.initial_budget
 

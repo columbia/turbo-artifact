@@ -78,7 +78,7 @@ class DPF(Scheduler):
         A task can run only if we can allocate the demand budget
         for all the blocks requested
         """
-        for block_id, demand_budget in task.budget_per_block:
+        for block_id, demand_budget in task.budget_per_block.items():
             dpf_block = DPF.dpf_blocks[block_id]
             available_budget = dpf_block.budget - dpf_block.allocated_budget
             if not available_budget.can_allocate(demand_budget):
@@ -89,7 +89,7 @@ class DPF(Scheduler):
         """
         Updates the budgets of each block requested by the task
         """
-        for block_id, demand_budget in task.budget_per_block:
+        for block_id, demand_budget in task.budget_per_block.items():
             dpf_block = DPF.dpf_blocks[block_id]
             dpf_block.allocated_budget += demand_budget
             # Consume traditional block's budget as well
