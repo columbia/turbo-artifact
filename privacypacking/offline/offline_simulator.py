@@ -117,18 +117,17 @@ class OfflineSimulator(BaseSimulator):
         return tasks
 
     def prepare_blocks(self):
-        blocks = [
-            Block.from_epsilon_delta(
+        blocks = {}
+        for i in range(self.config.blocks_num):
+            blocks[i] = Block.from_epsilon_delta(
                 i, self.config.renyi_epsilon, self.config.renyi_delta
             )
-            for i in range(self.config.blocks_num)
-        ]
         return blocks
 
     def prepare_scheduler(self, tasks, blocks):
-        if self.config.scheduler == SIMPLEX:
+        if self.config.scheduler_name == SIMPLEX:
             return Simplex(tasks, blocks)
-        elif self.config.scheduler == OFFLINE_DPF:
+        elif self.config.scheduler_name == OFFLINE_DPF:
             # return OfflineDPF(tasks, blocks)
             return FlatRelevance(tasks, blocks)
 
@@ -137,10 +136,10 @@ class OfflineSimulator(BaseSimulator):
         blocks = self.prepare_blocks()
 
         # Load PrivateKube's macrobenchmark data
-        blocks_and_budgets = load_blocks_and_budgets_from_dir()[0:10]
-        tasks = self.prepare_tasks_random_offset(blocks_and_budgets)
+        # blocks_and_budgets = load_blocks_and_budgets_from_dir()[0:10]
+        # tasks = self.prepare_tasks_random_offset(blocks_and_budgets)
 
-        # tasks = self.prepare_tasks()
+        tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()
         self.config.plotter.plot(tasks, blocks, allocation)

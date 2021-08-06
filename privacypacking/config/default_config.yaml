@@ -3,18 +3,14 @@ renyi_delta: 0.001
 #alphas: [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64]
 plot_file: "privacypacking/plots/plotfile.pickle"
 default_plot_file: "privacypacking/config/default_config.yaml"
-blocks_spec:
-  offline:
-    enabled: false
+
+offline:
+  enabled: false
+
+  blocks_spec:
     num: 1
 
-  online:
-    enabled: false
-
-
-tasks_spec:
-  offline:
-    enabled: false
+  tasks_spec:
     curve_distributions:
       laplace:
         num: 0
@@ -34,9 +30,17 @@ tasks_spec:
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
+  scheduler_spec:
+    name: simplex
 
-  online:
-    enabled: false
+online:
+  enabled: false
+
+  blocks_spec:
+    num: 1
+    block_arrival_interval: 2
+
+  tasks_spec:
     curve_distributions:
       laplace:
         frquency: 0
@@ -56,8 +60,11 @@ tasks_spec:
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
+      task_arrival_interval: 2
 
-    task_arrival_interval: 2
+  scheduler_spec:
+    name: fcfs
+    n: 100
 
-scheduler: simplex
+
 

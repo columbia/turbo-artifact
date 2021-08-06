@@ -1,22 +1,20 @@
-blocks_spec:
-  offline:
-    enabled: true
-    num: 100
+offline:
+  enabled: true
 
-tasks_spec:
-  offline:
-    enabled: true
+  blocks_spec:
+    num: 1
+
+  tasks_spec:
     curve_distributions:
       laplace:
-        num: 0
+        num: 5
         num_blocks: 1
-
       gaussian:
-        num: 10
+        num: 5
         num_blocks: 1
-
       SubsampledGaussian:
-        num: 0
+        num: 5
         num_blocks: 1
 
-  scheduler: simplex
+  scheduler_spec:
+    name: simplex

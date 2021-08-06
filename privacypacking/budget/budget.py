@@ -7,7 +7,7 @@ from opacus.privacy_analysis import get_privacy_spent
 
 # TODO: other range of default alphas?
 ALPHAS = [
-    1.5,
+    # 1.5,
     1.75,
     2,
     2.5,
@@ -92,6 +92,31 @@ class Budget:
 
         return self.dp_budget_cached
 
+    def add_with_threshold(self, other: "Budget", threshold: "Budget"):
+        """
+        Increases every budget-epsilon by "amount".
+        The maximum value a budget-epsilon can take is threshold-epsilon.
+        """
+        return Budget(
+            {
+                alpha: min(
+                    self.epsilon(alpha) + other.epsilon(alpha), threshold.epsilon(alpha)
+                )
+                for alpha in self.alphas
+            }
+        )
+
+    def can_allocate(self, demand_budget):
+        """
+        There must exist at least one order in the block's budget
+        that is smaller or equal to the corresponding order of the demand budget.
+        """
+        diff = self - demand_budget
+        max_order = max(diff.epsilons)
+        if max_order >= 0:
+            return True
+        return False
+
     def __sub__(self, other):
         # TODO: Deal with range check and exceptions
         return Budget(
@@ -102,6 +127,9 @@ class Budget:
         return Budget(
             {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
         )
+
+    def __truediv__(self, n: int):
+        return Budget({alpha: self.epsilon(alpha) / n for alpha in self.alphas})
 
     def __repr__(self) -> str:
         return "Budget({})".format(self.__orders)
