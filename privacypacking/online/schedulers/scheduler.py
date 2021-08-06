@@ -24,7 +24,6 @@ class Scheduler:
                 return False
         return True
 
-
     def consume_budgets(self, task):
         """
         Updates the budgets of each block requested by the task

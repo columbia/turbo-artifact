@@ -98,7 +98,12 @@ class Budget:
         The maximum value a budget-epsilon can take is threshold-epsilon.
         """
         return Budget(
-            {alpha: min(self.epsilon(alpha) + other.epsilon(alpha), threshold.epsilon(alpha)) for alpha in self.alphas}
+            {
+                alpha: min(
+                    self.epsilon(alpha) + other.epsilon(alpha), threshold.epsilon(alpha)
+                )
+                for alpha in self.alphas
+            }
         )
 
     def can_allocate(self, demand_budget):
@@ -124,9 +129,7 @@ class Budget:
         )
 
     def __truediv__(self, n: int):
-        return Budget(
-            {alpha: self.epsilon(alpha) / n for alpha in self.alphas}
-        )
+        return Budget({alpha: self.epsilon(alpha) / n for alpha in self.alphas})
 
     def __repr__(self) -> str:
         return "Budget({})".format(self.__orders)

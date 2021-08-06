@@ -20,7 +20,9 @@ class DPFBlock:
     def unlock_budget(self, n):
         fair_share = self.block.initial_budget / n
         # print("\n\nFair Share \n", fair_share)
-        self.budget = self.budget.add_with_threshold(fair_share, self.block.initial_budget)
+        self.budget = self.budget.add_with_threshold(
+            fair_share, self.block.initial_budget
+        )
         # print("\n\nUpdate budget", self.budget)
         # print("\nInitial budget\n", self.block.initial_budget)
 

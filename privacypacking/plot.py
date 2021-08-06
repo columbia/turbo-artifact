@@ -40,7 +40,9 @@ class Plotter:
     def stack_jobs_under_block_curve(self, job_list, block, allocation_status_list):
         data = defaultdict(list)
         for (job, status) in zip(job_list, allocation_status_list):
-            for alpha, epsilon in zip(job.get_budget(block.id).alphas, job.get_budget(block.id).epsilons):
+            for alpha, epsilon in zip(
+                    job.get_budget(block.id).alphas, job.get_budget(block.id).epsilons
+            ):
                 data["alpha"].append(alpha)
                 data["epsilon"].append(epsilon)
                 data["job"].append(job.id)

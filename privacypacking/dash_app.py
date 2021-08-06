@@ -24,7 +24,6 @@ if __name__ == "__main__":
         )
     )
 
-
     @app.callback(
         Output("live-update-text", "children"),
         Input("interval-component", "n_intervals"),
@@ -33,6 +32,5 @@ if __name__ == "__main__":
         with open(args.file, "rb") as fp:
             objs = pickle.load(fp)
             return html.Div(objs)
-
 
     app.run_server(debug=False, port="8080", host="127.0.0.1")
