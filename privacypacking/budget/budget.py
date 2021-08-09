@@ -5,7 +5,6 @@ from typing import Dict, List, NamedTuple, OrderedDict
 import numpy as np
 from opacus.privacy_analysis import get_privacy_spent
 
-# TODO: other range of default alphas?
 ALPHAS = [
     1.5,
     1.75,
@@ -19,10 +18,14 @@ ALPHAS = [
     16,
     32,
     64,
-]  # , 1e6] omitting last alpha for better visualization
+]
 
-# Default value for MNIST-like delta
-DELTA = 1e-5
+# Default values for some datasets
+DELTA_MNIST = 1e-5
+DELTA_CIFAR10 = 1e-5
+DELTA_IMAGENET = 1e-7
+
+
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
 
