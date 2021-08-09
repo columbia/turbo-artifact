@@ -135,8 +135,8 @@ class Budget:
         ordered_support = sorted(shared_alphas)
         orders1, orders2 = {}, {}
         for alpha in ordered_support:
-            orders1 = budget1.epsilon(alpha)
-            orders2 = budget2.epsilon(alpha)
+            orders1[alpha] = budget1.epsilon(alpha)
+            orders2[alpha] = budget2.epsilon(alpha)
         return (cls(orders1), cls(orders2))
 
     def __sub__(self, other):
