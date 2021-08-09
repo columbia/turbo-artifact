@@ -10,12 +10,12 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.offline.schedulers.scheduler import Scheduler
+from privacypacking.online.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
 
 
 # TODO: double check block mutability, should be a method?
-def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> List[bool]:
+def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> List[int]:
     """Allocate tasks in order until there is no budget left
 
     Args:
@@ -23,18 +23,17 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
         blocks (List[Block]): blocks requested by the tasks (will be modified)
 
     Returns:
-        List[bool]: i is True iff task i can be allocated
+        List[int]: the ids of the tasks that can be allocated
     """
-    n_tasks = len(sorted_tasks)
-    allocation = [False] * n_tasks
+    allocated_tasks = []
 
-    for i, task in enumerate(sorted_tasks):
+    for task in sorted_tasks:
         for block_id, demand_budget in task.budget_per_block.items():
             block = blocks[block_id]
             if block.budget >= demand_budget:
-                allocation[i] = True
+                allocated_tasks.append(task.id)
                 block.budget -= demand_budget
-    return allocation
+    return allocated_tasks
 
 
 # TODO: reverse order + backfill (dual heuristic)
@@ -43,7 +42,9 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
 # TODO: subclasses
 # static relevance values only for now
 
-# TODO: add profit field to the tasks
+# TODO: any other useless field to remove?
+
+# TODO: use the profit field
 class GreedyHeuristic(Scheduler):
     def __init__(self, tasks, blocks, config=None):
         super().__init__(tasks, blocks, config)
@@ -60,18 +61,11 @@ class GreedyHeuristic(Scheduler):
         # The default heuristic doesn't do anything
         return list(range(len(self.tasks))), self.tasks.copy()
 
-    def schedule(self):
-        n_tasks = len(self.tasks)
-
+    def schedule(self) -> List[int]:
         # Sort and allocate in order
         sorted_indices, sorted_tasks = self.order()
         sorted_allocation = greedy_allocation(sorted_tasks, self.blocks)
-
-        # Reindex according to self.tasks
-        allocation = [False] * n_tasks
-        for i in range(n_tasks):
-            allocation[sorted_indices[i]] = sorted_allocation[i]
-        return allocation
+        return sorted_allocation
 
 
 class OfflineDPF(GreedyHeuristic):
@@ -208,7 +202,7 @@ def main():
 
     random.shuffle(tasks)
     scheduler = GreedyHeuristic(tasks, blocks)
-    allocation = scheduler.schedule()
+    scheduler.schedule()
     # config.plotter.plot(tasks, blocks, allocation)
 
 

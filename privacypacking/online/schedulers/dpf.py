@@ -104,9 +104,8 @@ class DPF(Scheduler):
             # Consume traditional block's budget as well
             dpf_block.block.budget -= demand_budget
 
-    def schedule(self):
-        n_tasks = len(self.tasks)
-        allocation = [False] * n_tasks
+    def schedule(self) -> List[int]:
+        allocated_tasks = []
 
         # Update dpf_blocks in case new blocks arrived
         self.update_dpf_blocks()
@@ -123,6 +122,6 @@ class DPF(Scheduler):
             task = self.tasks[i]
             if self.can_run(task):
                 self.consume_budgets(task)
-                allocation[i] = True
+                allocated_tasks.append(task.id)
 
-        return allocation
+        return allocated_tasks
