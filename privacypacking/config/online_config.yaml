@@ -16,7 +16,13 @@ online:
       SubsampledGaussian:
         frequency: 0.33
         num_blocks: 1
-    task_arrival_interval: 2
-
+    task_arrival_frequency:
+      constant:
+        enabled: true
+        task_arrival_interval: 2
+    block_request:
+      constant:
+        enabled: true
+          blocks_num: 1
   scheduler_spec:
     name: dpf

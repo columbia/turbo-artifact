@@ -13,6 +13,7 @@ import random
 from itertools import count
 
 import simpy.rt
+from functools import partial
 
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import Block
@@ -23,6 +24,7 @@ from privacypacking.budget.task import (
     UniformTask,
 )
 from privacypacking.online.schedulers import dpf, fcfs
+from privacypacking.online.block_selecting_policies.latest_first import LatestFirst
 from privacypacking.utils.utils import *
 
 schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF}
@@ -32,7 +34,7 @@ class ResourceManager:
     """
     A resource-manager has several blocks each one of them having a privacy-budget.
     While privacy-budgets are not replenishable in the sense that they can't be returned after used
-    by a task more privacy budget may be added to them or additional blocks with privacy-budgets may arrive.
+    by a task additional blocks with privacy-budgets may arrive.
 
     The resource-manager has a traffic generator process that causes tasks to arrive and be granted resources.
 
@@ -138,24 +140,67 @@ class Tasks:
         """
 
         task_id = count()
-        self.config.task_arrival_interval = 10  # self.env.rand.expovariate, 1 / self.env.config['task.arrival_interval']
-
+        # Determine task arrival interval
+        task_arrival_interval = self.set_task_arrival_time()
         while True:
             self.env.process(self.task(next(task_id)))
-            yield self.env.timeout(self.config.task_arrival_interval)
+            yield self.env.timeout(task_arrival_interval)
 
     def task(self, task_id):
         """Generated task behavior."""
 
         print("Generated task: ", task_id)
 
-        # Determine demands
-        curve_distribution = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
-        task_blocks_num = 2
-        blocks_num = self.resource_manager.config.blocks_num
-        task_blocks_num = max(1, min(task_blocks_num, blocks_num))
+        # Determine number of blocks requested
+        task_blocks_num = self.set_task_blocks_request()
+        # Determine curve distribution
+        curve_distribution = self.set_curve_distribution()
+        # Set task
+        task = self.set_task(task_id, curve_distribution, task_blocks_num)
 
+        allocated_resources_event = self.env.event()
+        # Wait till the demand-request has been delivered to the resource-manager
+        yield self.resource_manager.task_demands_queue.put(
+            (task, allocated_resources_event)
+        )
+        print("Task", task_id, "inserted demand")
+        # Wait till the demand-request has been granted by the resource-manager
+        yield allocated_resources_event
+
+        print("Task ", task_id, "start running")
+        # yield self.env.timeout()
+        print("Task ", task_id, "completed at ", self.env.now)
+
+    def set_task_arrival_time(self):
+        task_arrival_interval = None
+        if self.config.task_arrival_poisson_enabled:
+            rand = random.Random(self.config.poisson_random_seed)
+            task_arrival_interval = partial(rand.expovariate, 1 / self.config.task_arrival_interval)
+        elif self.config.task_arrival_constant_enabled:
+            task_arrival_interval = self.config.task_arrival_interval
+        assert task_arrival_interval is not None
+        return task_arrival_interval
+
+    def set_task_blocks_request(self):
+        task_blocks_num = None
+        if self.config.blocks_request_random_enabled:
+            rand = random.Random(self.config.blocks_request_random_seed)
+            task_blocks_num = rand.randint(1, self.config.blocks_request_random_max_num)
+        elif self.config.blocks_request_constant_enabled:
+            task_blocks_num = self.config.blocks_request_constant_num
+        assert task_blocks_num is not None
+        blocks_num = len(self.resource_manager.blocks)
+        task_blocks_num = max(1, min(task_blocks_num, blocks_num))
+        return task_blocks_num
+
+    def set_curve_distribution(self):
+        curve = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
+        return curve
+
+    def set_task(self, task_id, curve_distribution, task_blocks_num):
         task = None
+
+        self.set_block_choosing_policy()
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(
                 self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop
@@ -194,19 +239,19 @@ class Tasks:
             )
 
         assert task is not None
+        return task
 
-        allocated_resources_event = self.env.event()
-        # Wait till the demand-request has been delivered to the resource-manager
-        yield self.resource_manager.task_demands_queue.put(
-            (task, allocated_resources_event)
-        )
-        print("Task", task_id, "inserted demand")
-        # Wait till the demand-request has been granted by the resource-manager
-        yield allocated_resources_event
-
-        print("Task ", task_id, "start running")
-        # yield self.env.timeout()
-        print("Task ", task_id, "completed at ", self.env.now)
+    def set_block_choosing_policy(self, task_blocks_num):
+        selected_block_ids = None
+        policy = self.config.block_selecting_policy
+        if policy == LATEST_FIRST:
+            selected_block_ids = LatestFirst(
+                blocks=self.resource_manager.blocks,
+                task_blocks_num=task_blocks_num
+            ).select_blocks()
+        # elif other policy
+        assert selected_block_ids is not None
+        return selected_block_ids
 
 
 # TODO: use discrete events instead of real time

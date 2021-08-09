@@ -1,5 +1,5 @@
 renyi_epsilon: 10
-renyi_delta: 0.001
+renyi_delta: 1e-8
 #alphas: [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64]
 plot_file: "privacypacking/plots/plotfile.pickle"
 default_plot_file: "privacypacking/config/default_config.yaml"
@@ -60,7 +60,23 @@ online:
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
-      task_arrival_interval: 2
+    task_arrival_frequency:
+      poisson:
+        enabled: false
+        random_seed: 44
+        task_arrival_interval: 0.004264781
+      constant:
+        enabled: false
+        task_arrival_interval: 2
+    blocks_request:
+      random:
+        enabled: false
+          random_seed: 44
+          blocks_num_max: 10
+      constant:
+        enabled: false
+          blocks_num: 1
+    block_selecting_policy: "latest_first"
 
   scheduler_spec:
     name: fcfs
