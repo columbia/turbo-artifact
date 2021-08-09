@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -11,6 +11,7 @@ from privacypacking.budget.task import (
     UniformTask,
 )
 from privacypacking.offline.schedulers.scheduler import Scheduler
+from privacypacking.utils.scheduling import dominant_shares
 
 
 # TODO: double check block mutability, should be a method?
@@ -37,23 +38,6 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
 
 
 # TODO: reverse order + backfill (dual heuristic)
-
-
-def dominant_shares(task: Task, blocks: Dict[int, Block]) -> List[float]:
-    demand_fractions = []
-    for block_id, demand_budget in task.budget_per_block.items():
-        block = blocks[block_id]
-        block_initial_budget = block.initial_budget
-
-        # Compute the demand share for each alpha of the block
-        for alpha in block_initial_budget.alphas:
-            demand_fractions.append(
-                demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
-            )
-
-    # Order by highest demand fraction first
-    demand_fractions.sort(reverse=True)
-    return demand_fractions
 
 
 # TODO: subclasses
@@ -98,7 +82,7 @@ class OfflineDPF(GreedyHeuristic):
 
         def index_key(index):
             # Lexicographic order (the dominant share is the first component)
-            return dominant_shares(self.task[index], self.blocks)
+            return dominant_shares(self.tasks[index], self.blocks)
 
         # Task number i is high priority if it has small dominant share
         original_indices = list(range(n_tasks))
@@ -194,32 +178,32 @@ def main():
         blocks[i] = Block.from_epsilon_delta(i, 10, 0.001)
 
     tasks = (
-            [
-                UniformTask(
-                    id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
-                )
-                for i, s in enumerate(np.linspace(0.1, 1, 10))
-            ]
-            + [
-                UniformTask(
-                    id=i,
-                    profit=1,
-                    block_ids=range(num_blocks),
-                    budget=LaplaceCurve(l),
-                )
-                for i, l in enumerate(np.linspace(0.1, 10, 5))
-            ]
-            + [
-                UniformTask(
-                    id=i,
-                    profit=1,
-                    block_ids=range(num_blocks),
-                    budget=SubsampledGaussianCurve.from_training_parameters(
-                        60_000, 64, 10, s
-                    ),
-                )
-                for i, s in enumerate(np.linspace(1, 10, 5))
-            ]
+        [
+            UniformTask(
+                id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
+            )
+            for i, s in enumerate(np.linspace(0.1, 1, 10))
+        ]
+        + [
+            UniformTask(
+                id=i,
+                profit=1,
+                block_ids=range(num_blocks),
+                budget=LaplaceCurve(l),
+            )
+            for i, l in enumerate(np.linspace(0.1, 10, 5))
+        ]
+        + [
+            UniformTask(
+                id=i,
+                profit=1,
+                block_ids=range(num_blocks),
+                budget=SubsampledGaussianCurve.from_training_parameters(
+                    60_000, 64, 10, s
+                ),
+            )
+            for i, s in enumerate(np.linspace(1, 10, 5))
+        ]
     )
 
     random.shuffle(tasks)

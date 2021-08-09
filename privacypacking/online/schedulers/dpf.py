@@ -1,6 +1,8 @@
 from typing import List
+
 from privacypacking.budget import ZeroCurve
 from privacypacking.online.schedulers.scheduler import Scheduler
+from privacypacking.utils.scheduling import dominant_shares
 
 
 class DPFBlock:
@@ -48,22 +50,23 @@ class DPF(Scheduler):
             # Unlock budget for each alpha
             dpf_block.unlock_budget()
 
-    def task_dominant_shares(self, task_index: int) -> List[float]:
-        demand_fractions = []
-        task = self.tasks[task_index]
-        for block_id, demand_budget in task.budget_per_block.items():
-            block = self.blocks[block_id]
-            block_initial_budget = block.initial_budget
+    # TODO: duplicate code
+    # def task_dominant_shares(self, task_index: int) -> List[float]:
+    #     demand_fractions = []
+    #     task = self.tasks[task_index]
+    #     for block_id, demand_budget in task.budget_per_block.items():
+    #         block = self.blocks[block_id]
+    #         block_initial_budget = block.initial_budget
 
-            # Compute the demand share for each alpha of the block
-            for alpha in block_initial_budget.alphas:
-                demand_fractions.append(
-                    demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
-                )
+    #         # Compute the demand share for each alpha of the block
+    #         for alpha in block_initial_budget.alphas:
+    #             demand_fractions.append(
+    #                 demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
+    #             )
 
-        # Order by highest demand fraction first
-        demand_fractions.sort(reverse=True)
-        return demand_fractions
+    #     # Order by highest demand fraction first
+    #     demand_fractions.sort(reverse=True)
+    #     return demand_fractions
 
     def order(self) -> List[int]:
         """Sorts the tasks by dominant share"""
@@ -72,7 +75,7 @@ class DPF(Scheduler):
 
         def index_key(index):
             # Lexicographic order (the dominant share is the first component)
-            return self.task_dominant_shares(index)
+            return dominant_shares(self.tasks[index], self.blocks)
 
         # Task number i is high priority if it has small dominant share
         original_indices = list(range(n_tasks))

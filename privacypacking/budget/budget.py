@@ -7,7 +7,7 @@ from opacus.privacy_analysis import get_privacy_spent
 
 # TODO: other range of default alphas?
 ALPHAS = [
-    # 1.5,
+    1.5,
     1.75,
     2,
     2.5,
