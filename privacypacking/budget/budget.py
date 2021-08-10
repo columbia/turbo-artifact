@@ -1,13 +1,11 @@
 from collections import namedtuple
-from dataclasses import dataclass
-from typing import Dict, List, NamedTuple, OrderedDict
+from typing import Dict, List, Tuple
 
 import numpy as np
 from opacus.privacy_analysis import get_privacy_spent
 
-# TODO: other range of default alphas?
 ALPHAS = [
-    # 1.5,
+    1.5,
     1.75,
     2,
     2.5,
@@ -19,10 +17,14 @@ ALPHAS = [
     16,
     32,
     64,
-]  # , 1e6] omitting last alpha for better visualization
+]
 
-# Default value for MNIST-like delta
-DELTA = 1e-5
+# Default values for some datasets
+DELTA_MNIST = 1e-5
+DELTA_CIFAR10 = 1e-5
+DELTA_IMAGENET = 1e-7
+
+
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
 
@@ -71,7 +73,7 @@ class Budget:
     def epsilon(self, alpha: float) -> float:
         return self.__orders[alpha]
 
-    def dp_budget(self, delta: float = DELTA) -> DPBudget:
+    def dp_budget(self, delta: float = DELTA_MNIST) -> DPBudget:
         """
         Uses a tight conversion formula to get (epsilon, delta)-DP.
         It can be slow to compute for the first time.
@@ -117,15 +119,36 @@ class Budget:
             return True
         return False
 
+    @classmethod
+    def same_support(
+        cls, budget1: "Budget", budget2: "Budget"
+    ) -> Tuple["Budget", "Budget"]:
+        """Reduces two budgets to the same support (i.e. same set of RDP orders).
+        Does not modify the original budgets inplace.
+        The orders the new budgets are the intersection of the two original order sets.
+
+        Returns:
+            Tuple["Budget", "Budget"]: `(budget1, budget2)` reduced to the same support.
+        """
+
+        shared_alphas = set(budget1.alphas).intersection(budget2.alphas)
+        ordered_support = sorted(shared_alphas)
+        orders1, orders2 = {}, {}
+        for alpha in ordered_support:
+            orders1[alpha] = budget1.epsilon(alpha)
+            orders2[alpha] = budget2.epsilon(alpha)
+        return (cls(orders1), cls(orders2))
+
     def __sub__(self, other):
-        # TODO: Deal with range check and exceptions
+        a, b = Budget.same_support(self, other)
         return Budget(
-            {alpha: self.epsilon(alpha) - other.epsilon(alpha) for alpha in self.alphas}
+            {alpha: a.epsilon(alpha) - b.epsilon(alpha) for alpha in a.alphas}
         )
 
     def __add__(self, other):
+        a, b = Budget.same_support(self, other)
         return Budget(
-            {alpha: self.epsilon(alpha) + other.epsilon(alpha) for alpha in self.alphas}
+            {alpha: a.epsilon(alpha) + b.epsilon(alpha) for alpha in a.alphas}
         )
 
     def __truediv__(self, n: int):

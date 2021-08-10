@@ -1,15 +1,9 @@
-from typing import List
+# TODO: we don't need anything special in the offline setting.
+# class Scheduler:
+#     def __init__(self, tasks, blocks, config=None):
+#         self.tasks = tasks
+#         self.blocks = blocks
+#         self.config = config
 
-# QUESTION: should `schedule` modify the blocks inplace? (reduce the budget available)
-# TODO: should we store a dict of blocks, to avoid `get_block_by_id`?
-
-
-# Or should it just return an allocation, that we execute in a second step?
-class Scheduler:
-    def __init__(self, tasks, blocks, config=None):
-        self.tasks = tasks
-        self.blocks = blocks
-        self.config = config
-
-    def schedule(self) -> List[bool]:
-        pass
+#     def schedule(self) -> List[bool]:
+#         pass

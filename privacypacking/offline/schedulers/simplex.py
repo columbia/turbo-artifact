@@ -1,4 +1,5 @@
 import random
+from typing import List
 
 import gurobipy as gp
 import numpy as np
@@ -11,14 +12,14 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.offline.schedulers.scheduler import Scheduler
+from privacypacking.online.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):
     def __init__(self, tasks, blocks, config=None):
         super().__init__(tasks, blocks, config)
 
-    def schedule(self):
+    def solve_allocation(self) -> List[bool]:
 
         """
         Returns a list of booleans corresponding to the tasks that are allocated
@@ -67,6 +68,15 @@ class Simplex(Scheduler):
 
         return [bool((abs(x[0, i].x - 1) < 1e-4)) for i in range(n)]
 
+    def schedule(self) -> List[int]:
+        allocated_ids = []
+        allocation = self.solve_allocation()
+        for i, allocated in enumerate(allocation):
+            if allocated:
+                allocated_ids.append(self.tasks[i].id)
+                self.consume_budgets(self.tasks[i])
+        return allocated_ids
+
 
 def main():
     # num_blocks = 1 # single-block case
@@ -77,32 +87,32 @@ def main():
         blocks[i] = Block.from_epsilon_delta(i, 10, 0.001)
 
     tasks = (
-            [
-                UniformTask(
-                    id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
-                )
-                for i, s in enumerate(np.linspace(0.1, 1, 10))
-            ]
-            + [
-                UniformTask(
-                    id=i,
-                    profit=1,
-                    block_ids=range(num_blocks),
-                    budget=LaplaceCurve(l),
-                )
-                for i, l in enumerate(np.linspace(0.1, 10, 5))
-            ]
-            + [
-                UniformTask(
-                    id=i,
-                    profit=1,
-                    block_ids=range(num_blocks),
-                    budget=SubsampledGaussianCurve.from_training_parameters(
-                        60_000, 64, 10, s
-                    ),
-                )
-                for i, s in enumerate(np.linspace(1, 10, 5))
-            ]
+        [
+            UniformTask(
+                id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
+            )
+            for i, s in enumerate(np.linspace(0.1, 1, 10))
+        ]
+        + [
+            UniformTask(
+                id=i,
+                profit=1,
+                block_ids=range(num_blocks),
+                budget=LaplaceCurve(l),
+            )
+            for i, l in enumerate(np.linspace(0.1, 10, 5))
+        ]
+        + [
+            UniformTask(
+                id=i,
+                profit=1,
+                block_ids=range(num_blocks),
+                budget=SubsampledGaussianCurve.from_training_parameters(
+                    60_000, 64, 10, s
+                ),
+            )
+            for i, s in enumerate(np.linspace(1, 10, 5))
+        ]
     )
 
     random.shuffle(tasks)

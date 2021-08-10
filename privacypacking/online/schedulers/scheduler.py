@@ -7,7 +7,15 @@ class Scheduler:
         self.blocks = blocks
         self.config = config
 
-    def schedule(self):
+    def schedule(self) -> List[int]:
+        """Takes some tasks from `self.tasks` and allocates them
+        to some blocks from `self.blocks`.
+
+        Modifies the budgets of the blocks inplace.
+
+        Returns:
+            List[int]: the ids of the tasks that were scheduled
+        """
         pass
 
     def order(self) -> List[int]:

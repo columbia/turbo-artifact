@@ -13,12 +13,13 @@ class FCFS(Scheduler):
         super().__init__(tasks, blocks, config)
 
     def schedule(self):
-        allocation = [False] * len(self.tasks)
+        allocated_tasks = []
 
         # todo: lock block
         # Read them by order
         for i, task in enumerate(self.tasks):
             if self.can_run(task):
                 self.consume_budgets(task)
-                allocation[i] = True
-        return allocation
+                allocated_tasks.append(task.id)
+
+        return allocated_tasks

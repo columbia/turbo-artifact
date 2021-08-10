@@ -29,3 +29,19 @@ def test_immutable():
     assert original_alphas == b.alphas
 
     assert len(b.alphas) == 2
+
+
+def test_same_support():
+    b1 = Budget({1: 1, 2: 2})
+    b2 = Budget({1: 0.5, 2: 3, 4: 10})
+
+    assert b1.alphas != b2.alphas
+
+    c1, c2 = Budget.same_support(b1, b2)
+
+    assert c1.alphas == c2.alphas
+
+    s = b1 + b2
+
+    assert s.alphas == b1.alphas
+    assert s.alphas != b2.alphas
