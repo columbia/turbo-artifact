@@ -3,7 +3,7 @@ offline:
   enabled: true
 
   blocks_spec:
-    num: 1
+    num: 2
 
   tasks_spec:
     curve_distributions:
@@ -13,9 +13,9 @@ offline:
       gaussian:
         num: 5
         num_blocks: 1
-      SubsampledGaussian:
-        num: 5
-        num_blocks: 1
+      # SubsampledGaussian:
+      #   num: 5
+      #   num_blocks: 1
 
   scheduler_spec:
     name: simplex
