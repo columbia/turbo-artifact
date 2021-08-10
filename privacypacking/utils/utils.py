@@ -37,9 +37,11 @@ FREQUENCY = "frequency"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
 BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
 
-PRIVATEKUBE_DEMANDS_PATH = Path(__file__).parent.parent.parent.joinpath(
-    "data/privatekube_demands"
-)
+
+REPO_ROOT = Path(__file__).parent.parent.parent
+
+PRIVATEKUBE_DEMANDS_PATH = REPO_ROOT.joinpath("data/privatekube_demands")
+LOGS_PATH = REPO_ROOT.joinpath("logs")
 
 
 def update_dict(src, des):

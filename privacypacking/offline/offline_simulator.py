@@ -18,7 +18,7 @@ from privacypacking.offline.schedulers.greedy_heuristics import (
 )
 from privacypacking.offline.schedulers.simplex import Simplex
 from privacypacking.utils import load_blocks_and_budgets_from_dir
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import OFFLINE_DPF, SIMPLEX
 
 
 class OfflineSimulator(BaseSimulator):
@@ -35,7 +35,7 @@ class OfflineSimulator(BaseSimulator):
         )  # todo: a task has demands from all blocks for now; change this
 
     def prepare_tasks_random_offset(
-        self, blocks_and_budgets: Iterable[Tuple[int, Budget]]
+        self, blocks_and_budgets: Iterable[Tuple[int, "Budget"]]
     ) -> Iterable[Task]:
         tasks = []
         blocks_num = self.config.blocks_num

@@ -6,7 +6,7 @@ import yaml
 from privacypacking.config import Config
 from privacypacking.offline.offline_simulator import OfflineSimulator
 from privacypacking.online.online_simulator import OnlineSimulator
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import OFFLINE, ONLINE, update_dict
 
 DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
 
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", dest="config_file")
     args = parser.parse_args()
-    pp = PrivacyPacking(args.config_file, DEFAULT_CONFIG_FILE)
-    pp.simulate()
+    packing = PrivacyPacking(args.config_file, DEFAULT_CONFIG_FILE)
+    packing.simulate()

@@ -1,4 +1,4 @@
-log_file: "simplex_example"
+# log_file: "simplex_example"
 offline:
   enabled: true
 
