@@ -21,5 +21,5 @@ class Logger:
             for block in blocks.values():
                 log["blocks"].append(block.dump())
 
-            json_object = json.dumps(log, indent=4)
+            json_object = json.dumps(log, separators=(",", ":"))
             fp.write(json_object)
