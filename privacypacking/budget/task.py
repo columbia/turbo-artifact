@@ -29,10 +29,20 @@ class Task:
         else:
             return ZeroCurve()
 
+    def dump(self):
+        return {
+            "id": self.id,
+            "profit": self.profit,
+            "budget_per_block": {
+                block_id: budget.dump()
+                for block_id, budget in self.budget_per_block.items()
+            },
+        }
+
 
 class UniformTask(Task):
     def __init__(
-        self, id: int, profit: float, block_ids: Iterable[int], budget: Budget
+            self, id: int, profit: float, block_ids: Iterable[int], budget: Budget
     ):
         """
         A Task that requires (the same) `budget` for all blocks in `block_ids`
