@@ -10,11 +10,11 @@ ResourceManager owns a scheduling mechanism for servicing tasks according to a g
 """
 
 import random
+from functools import partial
 from itertools import count
 
 import simpy.rt
-from functools import partial
-
+import numpy as np
 from privacypacking.base_simulator import BaseSimulator
 from privacypacking.budget.block import Block
 from privacypacking.budget.task import (
@@ -23,8 +23,8 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.online.schedulers import dpf, fcfs
 from privacypacking.online.block_selecting_policies.latest_first import LatestFirst
+from privacypacking.online.schedulers import dpf, fcfs
 from privacypacking.utils.utils import *
 
 schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF}
@@ -147,15 +147,14 @@ class Tasks:
             yield self.env.timeout(task_arrival_interval)
 
     def task(self, task_id):
-        """Generated task behavior."""
+        """
+        Generated task behavior. Sets its own demand, notifies resource manager of its existence,
+        waits till it gets scheduled and then is executed
+        """
 
         print("Generated task: ", task_id)
-
-        # Determine number of blocks requested
         task_blocks_num = self.set_task_blocks_request()
-        # Determine curve distribution
         curve_distribution = self.set_curve_distribution()
-        # Set task
         task = self.set_task(task_id, curve_distribution, task_blocks_num)
 
         allocated_resources_event = self.env.event()
@@ -194,13 +193,15 @@ class Tasks:
         return task_blocks_num
 
     def set_curve_distribution(self):
-        curve = random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN])
+        curve = np.random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN], 1,
+                                 p=[self.config.gaussian_frequency,
+                                    self.config.laplace_frequency,
+                                    self.config.subsamplegaussian_frequency])
         return curve
 
     def set_task(self, task_id, curve_distribution, task_blocks_num):
         task = None
-
-        self.set_block_choosing_policy()
+        selected_block_ids = self.set_selected_block_ids(task_blocks_num)
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(
                 self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop
@@ -208,7 +209,7 @@ class Tasks:
             task = UniformTask(
                 id=task_id,
                 profit=1,
-                block_ids=range(task_blocks_num),
+                block_ids=selected_block_ids,
                 budget=GaussianCurve(sigma),
             )
         elif curve_distribution == LAPLACE:
@@ -218,7 +219,7 @@ class Tasks:
             task = UniformTask(
                 id=task_id,
                 profit=1,
-                block_ids=range(task_blocks_num),
+                block_ids=selected_block_ids,
                 budget=LaplaceCurve(noise),
             )
         elif curve_distribution == SUBSAMPLEGAUSSIAN:
@@ -229,7 +230,7 @@ class Tasks:
             task = UniformTask(
                 id=task_id,
                 profit=1,
-                block_ids=range(task_blocks_num),
+                block_ids=selected_block_ids,
                 budget=SubsampledGaussianCurve.from_training_parameters(
                     self.config.subsamplegaussian_dataset_size,
                     self.config.subsamplegaussian_batch_size,
@@ -241,7 +242,7 @@ class Tasks:
         assert task is not None
         return task
 
-    def set_block_choosing_policy(self, task_blocks_num):
+    def set_selected_block_ids(self, task_blocks_num):
         selected_block_ids = None
         policy = self.config.block_selecting_policy
         if policy == LATEST_FIRST:

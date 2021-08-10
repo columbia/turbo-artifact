@@ -43,18 +43,15 @@ online:
   tasks_spec:
     curve_distributions:
       laplace:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         noise_start: 0.1
         noise_stop: 10
       gaussian:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         sigma_start: 1
         sigma_stop: 10
       SubsampledGaussian:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         sigma_start: 1
         sigma_stop: 10
         dataset_size: 60_000
