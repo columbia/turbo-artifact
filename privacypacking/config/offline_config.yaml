@@ -1,3 +1,4 @@
+log_file: "simplex_example"
 offline:
   enabled: true
 

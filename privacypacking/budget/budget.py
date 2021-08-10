@@ -163,3 +163,17 @@ class Budget:
 
     def copy(self):
         return Budget(self.__orders.copy())
+
+    def dump(self):
+        budget_info = {"orders": self.__orders}
+        dp_budget = self.dp_budget()
+        budget_info.update(
+            {
+                "dp_budget": {
+                    "epsilon": dp_budget.epsilon,
+                    "delta": dp_budget.delta,
+                    "best_alpha": dp_budget.best_alpha,
+                }
+            }
+        )
+        return budget_info
