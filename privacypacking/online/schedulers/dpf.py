@@ -1,7 +1,7 @@
 from typing import List
 
 from privacypacking.budget import ZeroCurve
-from privacypacking.online.schedulers.scheduler import Scheduler
+from privacypacking.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
 
 

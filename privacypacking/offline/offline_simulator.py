@@ -45,7 +45,10 @@ class OfflineSimulator(BaseSimulator):
                 start = random.randint(0, blocks_num - n_blocks)
                 stop = start + n_blocks - 1
                 task = UniformTask(
-                    id=len(tasks), block_ids=range(start, stop + 1), budget=budget
+                    id=len(tasks),
+                    profit=1,
+                    block_ids=range(start, stop + 1),
+                    budget=budget,
                 )
                 tasks.append(task)
         return tasks
@@ -142,4 +145,4 @@ class OfflineSimulator(BaseSimulator):
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()
-        self.config.plotter.plot(tasks, blocks, allocation)
+        self.config.logger.log(tasks, blocks, allocation)
