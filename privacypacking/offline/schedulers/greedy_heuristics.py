@@ -80,7 +80,7 @@ class OfflineDPF(GreedyHeuristic):
 
         # Task number i is high priority if it has small dominant share
         original_indices = list(range(n_tasks))
-        sorted_indices = original_indices.sorted(key=index_key)
+        sorted_indices = original_indices.sort(key=index_key)
         sorted_tasks = [None] * n_tasks
         for i in range(n_tasks):
             # TODO: copy?

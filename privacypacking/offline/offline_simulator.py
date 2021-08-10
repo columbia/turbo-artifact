@@ -15,10 +15,12 @@ from privacypacking.budget.task import UniformTask
 from privacypacking.offline.schedulers.greedy_heuristics import (
     FlatRelevance,
     OfflineDPF,
+    OverflowRelevance,
 )
 from privacypacking.offline.schedulers.simplex import Simplex
 from privacypacking.utils import load_blocks_and_budgets_from_dir
-from privacypacking.utils.utils import OFFLINE_DPF, SIMPLEX
+
+# from privacypacking.utils.utils import OFFLINE_DPF, SIMPLEX
 
 
 class OfflineSimulator(BaseSimulator):
@@ -128,11 +130,17 @@ class OfflineSimulator(BaseSimulator):
         return blocks
 
     def prepare_scheduler(self, tasks, blocks):
-        if self.config.scheduler_name == SIMPLEX:
-            return Simplex(tasks, blocks)
-        elif self.config.scheduler_name == OFFLINE_DPF:
-            # return OfflineDPF(tasks, blocks)
-            return FlatRelevance(tasks, blocks)
+        try:
+            scheduler_class = globals()[self.config.scheduler_name]
+        except KeyError:
+            logger.error(f"Unknown scheduler: {self.config.scheduler_name}")
+        return scheduler_class(tasks, blocks)
+
+        # if self.config.scheduler_name == SIMPLEX:
+        #     return Simplex(tasks, blocks)
+        # elif self.config.scheduler_name == OFFLINE_DPF:
+        #     # return OfflineDPF(tasks, blocks)
+        #     return FlatRelevance(tasks, blocks)
 
     # TODO: adapt config file
     def run(self):
