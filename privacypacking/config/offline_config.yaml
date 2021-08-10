@@ -3,19 +3,19 @@ offline:
   enabled: true
 
   blocks_spec:
-    num: 2
+    num: 10
 
   tasks_spec:
     curve_distributions:
       laplace:
-        num: 5
-        num_blocks: 1
+        num: 1000
+        num_blocks: 3
       gaussian:
-        num: 5
-        num_blocks: 1
+        num: 50
+        num_blocks: 5
       SubsampledGaussian:
-        num: 5
-        num_blocks: 1
+        num: 100
+        num_blocks: 7
 
   scheduler_spec:
     name: OverflowRelevance
