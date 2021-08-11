@@ -4,6 +4,7 @@ from privacypacking.logger import Logger
 from privacypacking.utils.utils import *
 
 
+# TODO: SimulatorConfig? Also, refactor the CLI or PrivacyPacking class
 class Config:
     def __init__(self, config):
         self.config = config
@@ -78,3 +79,6 @@ class Config:
         self.subsamplegaussian_dataset_size = self.subsamplegaussian[DATASET_SIZE]
         self.subsamplegaussian_batch_size = self.subsamplegaussian[BATCH_SIZE]
         self.subsamplegaussian_epochs = self.subsamplegaussian[EPOCHS]
+
+    def dump(self) -> dict:
+        return self.config

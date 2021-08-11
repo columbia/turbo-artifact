@@ -24,6 +24,8 @@ DELTA_MNIST = 1e-5
 DELTA_CIFAR10 = 1e-5
 DELTA_IMAGENET = 1e-7
 
+MAX_DUMP_DIGITS = 5
+
 
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
@@ -165,12 +167,15 @@ class Budget:
         return Budget(self.__orders.copy())
 
     def dump(self):
-        budget_info = {"orders": self.__orders}
+        rounded_orders = {
+            alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
+        }
+        budget_info = {"orders": rounded_orders}
         dp_budget = self.dp_budget()
         budget_info.update(
             {
                 "dp_budget": {
-                    "epsilon": dp_budget.epsilon,
+                    "epsilon": round(dp_budget.epsilon, MAX_DUMP_DIGITS),
                     "delta": dp_budget.delta,
                     "best_alpha": dp_budget.best_alpha,
                 }

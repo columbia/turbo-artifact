@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Iterable, Tuple
 
@@ -54,6 +55,38 @@ def update_dict(src, des):
             ref = prev_ref
         else:
             ref[k] = v
+
+
+def load_logs(log_path: str, relative_path=True) -> dict:
+    full_path = Path(log_path)
+    if relative_path:
+        full_path = LOGS_PATH.joinpath(log_path)
+    with open(full_path, "r") as f:
+        logs = json.load(f)
+    return logs
+
+
+def global_metrics(logs: dict) -> dict:
+    n_allocated_tasks = 0
+    realized_profit = 0
+    n_tasks = 0
+    maximum_profit = 0
+
+    for task in logs["tasks"]:
+        n_tasks += 1
+        maximum_profit += task["profit"]
+        if task["allocated"]:
+            n_allocated_tasks += 1
+            realized_profit += task["profit"]
+    datapoint = {
+        "scheduler": logs["simulator_config"]["offline"]["scheduler_spec"]["name"],
+        "n_allocated_tasks": n_allocated_tasks,
+        "realized_profit": realized_profit,
+        "n_tasks": n_tasks,
+        "maximum_profit": maximum_profit,
+    }
+
+    return datapoint
 
 
 def load_blocks_and_budgets_from_dir(

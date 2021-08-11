@@ -182,4 +182,4 @@ class OfflineSimulator(BaseSimulator):
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
         allocation = scheduler.schedule()
-        self.config.logger.log(tasks, blocks, allocation)
+        self.config.logger.log(tasks, blocks, allocation, simulator_config=self.config)

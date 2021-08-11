@@ -5,7 +5,7 @@ class Logger:
     def __init__(self, file):
         self.file = file
 
-    def log(self, tasks, blocks, allocated_task_ids):
+    def log(self, tasks, blocks, allocated_task_ids, simulator_config, compact=False):
         with open(self.file, "w") as fp:
             log = {"tasks": []}
             for task in tasks:
@@ -21,5 +21,10 @@ class Logger:
             for block in blocks.values():
                 log["blocks"].append(block.dump())
 
-            json_object = json.dumps(log, separators=(",", ":"))
+            log["simulator_config"] = simulator_config.dump()
+
+            if compact:
+                json_object = json.dumps(log, separators=(",", ":"))
+            else:
+                json_object = json.dumps(log, indent=4)
             fp.write(json_object)

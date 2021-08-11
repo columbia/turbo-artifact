@@ -11,6 +11,7 @@ from privacypacking.utils.utils import OFFLINE, ONLINE, update_dict
 DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
 
 
+# TODO: seems like this would be the job of `BaseSimulator`?
 class PrivacyPacking:
     def __init__(self, config_file, default_config_file):
         with open(default_config_file, "r") as default_config:
