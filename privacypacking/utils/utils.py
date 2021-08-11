@@ -84,6 +84,7 @@ def global_metrics(logs: dict) -> dict:
         "realized_profit": realized_profit,
         "n_tasks": n_tasks,
         "maximum_profit": maximum_profit,
+        "scheduling_time": logs["scheduling_time"],
     }
 
     return datapoint

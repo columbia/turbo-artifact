@@ -8,17 +8,17 @@ offline:
   tasks_spec:
     curve_distributions:
       laplace:
-        num: 10
+        num: 85
         num_blocks: 3
         noise_start: 0.1
         noise_stop: 5
       gaussian:
-        num: 10
+        num: 85
         num_blocks: 4
         sigma_start: 1
         sigma_stop: 5
       SubsampledGaussian:
-        num: 10
+        num: 85
         num_blocks: 5
         sigma_start: 1
         sigma_stop: 5

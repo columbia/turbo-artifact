@@ -53,6 +53,12 @@ class Budget:
     def from_epsilon_delta(
         cls, epsilon: float, delta: float, alpha_list: List[float] = ALPHAS
     ) -> "Budget":
+        """Uses the RDP->DP conversion formula to initialize the RDP curve of a block.
+
+        If the sum of all the RDP curves of the tasks on this block is below the
+        budget returned by `from_epsilon_delta(epsilon, delta)` for at least one alpha,
+        then the composition of the tasks is (epsilon, delta)-DP.
+        """
         orders = {}
         for alpha in alpha_list:
             orders[alpha] = max(epsilon + np.log(delta) / (alpha - 1), 0)
