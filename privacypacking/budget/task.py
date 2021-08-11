@@ -11,6 +11,14 @@ from privacypacking.budget.curves import (
 
 class Task:
     def __init__(self, id: int, profit: float, budget_per_block: Dict[int, "Budget"]):
+        """Tasks are assumed to be immutable: the demands won't change over time.
+        The scheduler can be stateful (e.g. store whether task `id` has been scheduled).
+
+        Args:
+            id (int): unique identifier
+            profit (float): how much profit/reward the task gives if it is scheduled
+            budget_per_block (Dict[int,): task demand
+        """
         self.id = id
         self.profit = profit
         self.budget_per_block = budget_per_block  # block_id -> Budget
@@ -42,7 +50,7 @@ class Task:
 
 class UniformTask(Task):
     def __init__(
-            self, id: int, profit: float, block_ids: Iterable[int], budget: Budget
+        self, id: int, profit: float, block_ids: Iterable[int], budget: Budget
     ):
         """
         A Task that requires (the same) `budget` for all blocks in `block_ids`

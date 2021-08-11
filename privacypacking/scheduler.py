@@ -2,6 +2,7 @@ from typing import List
 
 
 class Scheduler:
+    # TODO: What is config? A `Config` object?
     def __init__(self, tasks, blocks, config=None):
         self.tasks = tasks
         self.blocks = blocks

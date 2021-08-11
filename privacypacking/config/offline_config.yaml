@@ -1,21 +1,31 @@
-log_file: "simplex_example"
+# log_file: "simplex_example"
 offline:
   enabled: true
 
   blocks_spec:
-    num: 1
+    num: 10
 
   tasks_spec:
     curve_distributions:
       laplace:
-        num: 5
-        num_blocks: 1
+        num: 85
+        num_blocks: 3
+        noise_start: 0.1
+        noise_stop: 5
       gaussian:
-        num: 5
-        num_blocks: 1
+        num: 85
+        num_blocks: 4
+        sigma_start: 1
+        sigma_stop: 5
       SubsampledGaussian:
-        num: 5
-        num_blocks: 1
+        num: 85
+        num_blocks: 5
+        sigma_start: 1
+        sigma_stop: 5
+        dataset_size: 60_000
+        batch_size: 64
+        epochs: 10
+
 
   scheduler_spec:
-    name: simplex
+    name: Simplex

@@ -42,61 +42,47 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
 # TODO: subclasses
 # static relevance values only for now
 
-# TODO: any other useless field to remove?
-
 # TODO: use the profit field
 class GreedyHeuristic(Scheduler):
     def __init__(self, tasks, blocks, config=None):
         super().__init__(tasks, blocks, config)
 
-    def order(self) -> Tuple[List[int], List[Task]]:
+    def order(self) -> List[Task]:
         """Sorts the tasks according to a heuristic.
-            (Can be stateful in the online case with dynamic heuristics)
+        The output list can point to the same task objects as the input list,
+        since tasks are immutable.
 
-        Returns:
-            Tuple[List[int], List[Task]]:
-            - `sorted_indices` such that `sorted_tasks[i] = tasks[sorted_indices[i]]`
-            - A sorted copy of the task list (highest priority first)
+        Can be stateful in the online case with dynamic heuristics.
+
+        Returns: List[Task]: A sorted task list (highest priority first).
         """
         # The default heuristic doesn't do anything
-        return list(range(len(self.tasks))), self.tasks.copy()
+        return self.tasks
 
     def schedule(self) -> List[int]:
         # Sort and allocate in order
-        sorted_indices, sorted_tasks = self.order()
+        sorted_tasks = self.order()
         sorted_allocation = greedy_allocation(sorted_tasks, self.blocks)
         return sorted_allocation
 
 
 class OfflineDPF(GreedyHeuristic):
-    def order(self) -> Tuple[List[int], List[Task]]:
+    def order(self) -> List[Task]:
         """Sorts the tasks by dominant share"""
 
-        n_tasks = len(self.tasks)
-
-        def index_key(index):
+        def task_key(task):
             # Lexicographic order (the dominant share is the first component)
-            return dominant_shares(self.tasks[index], self.blocks)
+            return dominant_shares(task, self.blocks)
 
-        # Task number i is high priority if it has small dominant share
-        original_indices = list(range(n_tasks))
-        sorted_indices = original_indices.sorted(key=index_key)
-        sorted_tasks = [None] * n_tasks
-        for i in range(n_tasks):
-            # TODO: copy?
-            sorted_tasks[i] = self.tasks[sorted_indices[i]]
-
-        return sorted_indices, sorted_tasks
+        return sorted(self.tasks, key=task_key)
 
 
 class FlatRelevance(GreedyHeuristic):
     def order(self) -> Tuple[List[int], List[Task]]:
         """The cost of a task is the sum of its normalized demands"""
-        n_tasks = len(self.tasks)
 
-        def index_key(index):
+        def task_key(task):
             cost = 0
-            task = self.tasks[index]
             for block_id, budget in task.budget_per_block.items():
                 for alpha in budget.alphas:
                     demand = budget.epsilon(alpha)
@@ -104,14 +90,7 @@ class FlatRelevance(GreedyHeuristic):
                     cost += demand / capacity
             return cost
 
-        original_indices = list(range(n_tasks))
-        sorted_indices = original_indices.sorted(key=index_key)
-        sorted_tasks = [None] * n_tasks
-        for i in range(n_tasks):
-            # TODO: copy?
-            sorted_tasks[i] = self.tasks[sorted_indices[i]]
-
-        return sorted_indices, sorted_tasks
+        return sorted(self.tasks, key=task_key)
 
 
 class OverflowRelevance(GreedyHeuristic):
@@ -121,8 +100,6 @@ class OverflowRelevance(GreedyHeuristic):
             r_{jk\alpha} = 1/(\sum_{i}w_{ik\alpha} - c_{k\alpha})
         This heuristic only works in the offline case with contention.
         """
-        n_tasks = len(self.tasks)
-
         # overflow_b_α[block_id][α] = \sum_{i}w_{i, block_id, α} - c_{block_id, α}
         overflow_b_α = {}
         for task in self.tasks:
@@ -136,9 +113,8 @@ class OverflowRelevance(GreedyHeuristic):
                         ].initial_budget.epsilon(α)
                     overflow_b_α[block_id][α] += block_demand.epsilon(α)
 
-        def index_key(index):
+        def task_key(task):
             cost = 0
-            task = self.tasks[index]
             for block_id, block_demand in task.budget_per_block.items():
                 for alpha in block_demand.alphas:
                     demand = block_demand.epsilon(alpha)
@@ -148,16 +124,8 @@ class OverflowRelevance(GreedyHeuristic):
                         raise Exception("There is no contention for this block")
             return cost
 
-        # TODO: refactor to avoid copying for relevance heuristics?
         # TODO: threshold, exponent on the overflow
-        original_indices = list(range(n_tasks))
-        sorted_indices = original_indices.sorted(key=index_key)
-        sorted_tasks = [None] * n_tasks
-        for i in range(n_tasks):
-            # TODO: copy?
-            sorted_tasks[i] = self.tasks[sorted_indices[i]]
-
-        return sorted_indices, sorted_tasks
+        return sorted(self.tasks, key=task_key)
 
 
 # TODO: test and evaluate these greedy heuristics when we have more tooling

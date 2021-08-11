@@ -1,14 +1,18 @@
 import argparse
-import dash
+import json
+import pprint as pp
 from collections import defaultdict
+from datetime import datetime
 
+import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import json
-import pprint as pp
+from loguru import logger
+
+from privacypacking.utils.utils import LOGS_PATH
 
 
 class Plotter:
@@ -101,9 +105,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", dest="file")
     args = parser.parse_args()
+
+    if args.file:
+        file = args.file
+    else:
+        logs = LOGS_PATH.glob("**/*.json")
+        most_recent_date = datetime.min
+        most_recent_log = None
+        for log in logs:
+            date = datetime.strptime(log.stem, "%m%d-%H%M%S")
+            if date > most_recent_date:
+                most_recent_log = log
+                most_recent_date = date
+        file = most_recent_log
+
+        logger.info(f"No file provided. Plotting the most recent experiment: {file}")
+
     app = dash.Dash()
 
-    plotter = Plotter(args.file)
+    plotter = Plotter(file)
     objs = plotter.plot()
     app.layout = html.Div(objs)
 
