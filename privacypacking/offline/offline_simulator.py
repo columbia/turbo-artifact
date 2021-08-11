@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 from typing import Iterable, List, Tuple
 
 import numpy as np
@@ -181,5 +182,13 @@ class OfflineSimulator(BaseSimulator):
 
         tasks = self.prepare_tasks()
         scheduler = self.prepare_scheduler(tasks, blocks)
+
+        start = datetime.now()
         allocation = scheduler.schedule()
-        self.config.logger.log(tasks, blocks, allocation, simulator_config=self.config)
+        self.config.logger.log(
+            tasks,
+            blocks,
+            allocation,
+            simulator_config=self.config,
+            scheduling_time=(datetime.now() - start).total_seconds(),
+        )

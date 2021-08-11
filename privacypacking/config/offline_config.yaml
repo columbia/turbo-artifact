@@ -8,14 +8,24 @@ offline:
   tasks_spec:
     curve_distributions:
       laplace:
-        num: 1000
+        num: 10
         num_blocks: 3
+        noise_start: 0.1
+        noise_stop: 5
       gaussian:
-        num: 50
-        num_blocks: 5
+        num: 10
+        num_blocks: 4
+        sigma_start: 1
+        sigma_stop: 5
       SubsampledGaussian:
-        num: 100
-        num_blocks: 7
+        num: 10
+        num_blocks: 5
+        sigma_start: 1
+        sigma_stop: 5
+        dataset_size: 60_000
+        batch_size: 64
+        epochs: 10
+
 
   scheduler_spec:
-    name: OverflowRelevance
+    name: Simplex
