@@ -1,6 +1,8 @@
 import argparse
 import json
+import pprint as pp
 from collections import defaultdict
+from datetime import datetime
 
 import dash
 import dash_core_components as dcc
@@ -9,6 +11,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from dash.dependencies import Output, Input
+from loguru import logger
+
+from privacypacking.utils.utils import LOGS_PATH
 
 
 class Plotter:
@@ -61,7 +66,6 @@ class Plotter:
             y="epsilon",
             color="allocated",
             line_group="job",
-
             log_x=False,
             log_y=False,
         )
@@ -116,6 +120,22 @@ if __name__ == "__main__":
     parser.add_argument("--file", dest="file")
     parser.add_argument("--port", dest="port", default="8080")
     args = parser.parse_args()
+
+    if args.file:
+        file = args.file
+    else:
+        logs = LOGS_PATH.glob("**/*.json")
+        most_recent_date = datetime.min
+        most_recent_log = None
+        for log in logs:
+            date = datetime.strptime(log.stem, "%m%d-%H%M%S")
+            if date > most_recent_date:
+                most_recent_log = log
+                most_recent_date = date
+        file = most_recent_log
+
+        logger.info(f"No file provided. Plotting the most recent experiment: {file}")
+
     app = dash.Dash()
     app.layout = html.Div(
         html.Div(
@@ -130,14 +150,16 @@ if __name__ == "__main__":
         )
     )
 
-
     @app.callback(
         Output("live-update-text", "children"),
         Input("interval-component", "n_intervals"),
     )
     def update(n):
-        objs = Plotter(args.file).plot()
+        objs = Plotter(file).plot()
         return html.Div(objs)
 
+
+    objs = Plotter(file).plot()
+    app.layout = html.Div(objs)
 
     app.run_server(debug=False, port=args.port, host="127.0.0.1")

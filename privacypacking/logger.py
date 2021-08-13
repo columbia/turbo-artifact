@@ -6,7 +6,15 @@ class Logger:
         self.file = file
         self.scheduler_name = scheduler_name
 
-    def log(self, tasks, blocks, allocated_task_ids):
+    def log(
+        self,
+        tasks,
+        blocks,
+        allocated_task_ids,
+        simulator_config,
+        compact=False,
+        **kwargs
+    ):
         with open(self.file, "w") as fp:
             log = {"tasks": []}
             num_scheduled = 0
@@ -28,7 +36,18 @@ class Logger:
             for block in blocks.values():
                 log["blocks"].append(block.dump())
 
-            log.update({"scheduler_name": self.scheduler_name})
-            log.update({"num_scheduled_tasks": num_scheduled})
-            json_object = json.dumps(log, indent=4)
+            log["scheduler_name"] = self.scheduler_name
+            log["num_scheduled_tasks"] num_scheduled
+            log["simulator_config"] = simulator_config.dump()
+
+            # Any other thing to log
+            for key, value in kwargs.items():
+                log[key] = value
+
+            if compact:
+                json_object = json.dumps(log, separators=(",", ":"))
+            else:
+                json_object = json.dumps(log, indent=4)
+
+
             fp.write(json_object)

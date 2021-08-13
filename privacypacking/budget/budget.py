@@ -24,6 +24,8 @@ DELTA_MNIST = 1e-5
 DELTA_CIFAR10 = 1e-5
 DELTA_IMAGENET = 1e-7
 
+MAX_DUMP_DIGITS = 5
+
 
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
 
@@ -51,6 +53,12 @@ class Budget:
     def from_epsilon_delta(
         cls, epsilon: float, delta: float, alpha_list: List[float] = ALPHAS
     ) -> "Budget":
+        """Uses the RDP->DP conversion formula to initialize the RDP curve of a block.
+
+        If the sum of all the RDP curves of the tasks on this block is below the
+        budget returned by `from_epsilon_delta(epsilon, delta)` for at least one alpha,
+        then the composition of the tasks is (epsilon, delta)-DP.
+        """
         orders = {}
         for alpha in alpha_list:
             orders[alpha] = max(epsilon + np.log(delta) / (alpha - 1), 0)
@@ -165,12 +173,15 @@ class Budget:
         return Budget(self.__orders.copy())
 
     def dump(self):
-        budget_info = {"orders": self.__orders}
+        rounded_orders = {
+            alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
+        }
+        budget_info = {"orders": rounded_orders}
         dp_budget = self.dp_budget()
         budget_info.update(
             {
                 "dp_budget": {
-                    "epsilon": dp_budget.epsilon,
+                    "epsilon": round(dp_budget.epsilon, MAX_DUMP_DIGITS),
                     "delta": dp_budget.delta,
                     "best_alpha": dp_budget.best_alpha,
                 }

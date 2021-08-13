@@ -28,6 +28,11 @@ class Simplex(Scheduler):
         n = len(self.tasks)
         d = len(ALPHAS)
 
+        # TODO: alphas from which block? Which subset?
+        alphas = ALPHAS
+        task_ids = [t.id for t in self.tasks]
+        block_ids = [k for k in self.blocks]
+
         demands_upper_bound = {}
         for k, block in self.blocks.items():
             for alpha in block.budget.alphas:
@@ -39,34 +44,35 @@ class Simplex(Scheduler):
                         ].epsilon(alpha)
 
         # Variables
-        x = m.addMVar((1, n), vtype=GRB.BINARY, name="x")
-        a = m.addMVar((len(self.blocks), d), vtype=GRB.BINARY, name="a")
-        print(x, a)
+        x = m.addVars(task_ids, vtype=GRB.BINARY, name="x")
+        a = m.addVars(
+            [(k, alpha) for alpha in alphas for k in block_ids],
+            vtype=GRB.BINARY,
+            name="a",
+        )
 
         # Constraints
         for k, _ in enumerate(self.blocks):
-            m.addConstr(a[k].sum() >= 1)
+            m.addConstr(a.sum(k, "*") >= 1)
 
         for k, block in self.blocks.items():
-            for i, alpha in enumerate(block.budget.alphas):
-                demands = []
-                for task in self.tasks:
-                    if k in task.budget_per_block:
-                        demands.append(task.budget_per_block[k].epsilon(alpha))
-                    else:
-                        demands.append(0)
+            for alpha in block.budget.alphas:
+                demands_k_alpha = {
+                    t.id: t.get_budget(k).epsilon(alpha) for t in self.tasks
+                }
                 m.addConstr(
-                    sum([x[0, z] * demands[z] for z in range(n)])
-                    - (1 - a[k, i]) * demands_upper_bound[(k, alpha)]
+                    # sum([x[z] * demands[z] for z in range(n)])
+                    x.prod(demands_k_alpha)
+                    - (1 - a[k, alpha]) * demands_upper_bound[(k, alpha)]
                     <= block.budget.epsilon(alpha)
                 )
-        print(m)
 
         # Objective function
-        m.setObjective(x.sum(), GRB.MAXIMIZE)
+        profits = {task.id: task.profit for task in self.tasks}
+        m.setObjective(x.prod(profits), GRB.MAXIMIZE)
         m.optimize()
 
-        return [bool((abs(x[0, i].x - 1) < 1e-4)) for i in range(n)]
+        return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
     def schedule(self) -> List[int]:
         allocated_ids = []
