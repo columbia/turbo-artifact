@@ -48,6 +48,9 @@ class ResourceManager:
         self.blocks = {}
         self.archived_allocated_tasks = []
         self.scheduler = schedulers[self.config.scheduler_name]
+        if self.config.deterministic:
+            random.seed(self.config.global_seed)
+            np.random.seed(self.config.global_seed)
 
         # To store the incoming task demands
         self.task_demands_queue = simpy.Store(self.env)
@@ -71,9 +74,9 @@ class ResourceManager:
         # while True:
         # self.env.process(self.task(next(block_id)))
         for _ in range(self.config.blocks_num):
-            block_id = next(block_id)
-            self.blocks[block_id] = Block.from_epsilon_delta(
-                block_id, self.config.renyi_epsilon, self.config.renyi_delta
+            block_id_ = next(block_id)
+            self.blocks[block_id_] = Block.from_epsilon_delta(
+                block_id_, self.config.epsilon, self.config.delta
             )
 
         print("Generated blocks ", self.blocks)
@@ -90,34 +93,32 @@ class ResourceManager:
             # Try and schedule one or more of the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
             s = self.scheduler(tasks, self.blocks, self.config)
-            allocation = (
+            allocated_ids = (
                 s.schedule()
             )  # schedule is triggered every time a new task arrives
-            # Update the figures
-            self.config.plotter.plot(
-                tasks + self.archived_allocated_tasks,
-                self.blocks,
-                allocation + [True] * len(self.archived_allocated_tasks),
-            )
+
+            # Update the logs for every time five new tasks arrive
+            if task.id % 5 == 0:
+                self.config.logger.log(
+                    tasks + self.archived_allocated_tasks,
+                    self.blocks,
+                    allocated_ids + [allocated_task.id for allocated_task in self.archived_allocated_tasks]
+                )
             print(
                 "Scheduled tasks",
-                [waiting_tasks[i][0].id for i, t in enumerate(allocation) if t],
+                [t[0].id for t in waiting_tasks if t[0].id in allocated_ids]
             )
 
             # Wake-up all the tasks that have been scheduled
-            for i, t in enumerate(allocation):
-                if t:
-                    waiting_tasks[i][1].succeed()
-                    self.archived_allocated_tasks += [waiting_tasks[i][0]]
+            for task in waiting_tasks:
+                if task[0].id in allocated_ids:
+                    task[1].succeed()
+                    self.archived_allocated_tasks += [task[0]]
 
-            print("Block budget", self.blocks[0].budget)
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
 
             # Delete the tasks that have been scheduled from the waiting list
-            waiting_tasks = [
-                waiting_tasks[i] for i, t in enumerate(allocation) if not t
-            ]
-
+            waiting_tasks = [task for task in waiting_tasks if task[0].id not in allocated_ids]
 
 class Tasks:
     """
@@ -130,6 +131,7 @@ class Tasks:
         self.env = env
         self.resource_manager = resource_manager
         self.config = resource_manager.config
+
         env.process(self.generate_tasks())
 
     def generate_tasks(self):
@@ -166,15 +168,14 @@ class Tasks:
         # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
 
-        print("Task ", task_id, "start running")
+        # print("Task ", task_id, "start running")
         # yield self.env.timeout()
         print("Task ", task_id, "completed at ", self.env.now)
 
     def set_task_arrival_time(self):
         task_arrival_interval = None
         if self.config.task_arrival_poisson_enabled:
-            rand = random.Random(self.config.poisson_random_seed)
-            task_arrival_interval = partial(rand.expovariate, 1 / self.config.task_arrival_interval)
+            task_arrival_interval = partial(random.expovariate, 1 / self.config.task_arrival_interval)
         elif self.config.task_arrival_constant_enabled:
             task_arrival_interval = self.config.task_arrival_interval
         assert task_arrival_interval is not None
@@ -183,10 +184,10 @@ class Tasks:
     def set_task_blocks_request(self):
         task_blocks_num = None
         if self.config.blocks_request_random_enabled:
-            rand = random.Random(self.config.blocks_request_random_seed)
-            task_blocks_num = rand.randint(1, self.config.blocks_request_random_max_num)
+            task_blocks_num = random.randint(1, self.config.blocks_request_random_max_num)
         elif self.config.blocks_request_constant_enabled:
             task_blocks_num = self.config.blocks_request_constant_num
+        print("\n\ntasks blocks num", task_blocks_num)
         assert task_blocks_num is not None
         blocks_num = len(self.resource_manager.blocks)
         task_blocks_num = max(1, min(task_blocks_num, blocks_num))
@@ -202,6 +203,7 @@ class Tasks:
     def set_task(self, task_id, curve_distribution, task_blocks_num):
         task = None
         selected_block_ids = self.set_selected_block_ids(task_blocks_num)
+
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(
                 self.config.gaussian_sigma_start, self.config.gaussian_sigma_stop
