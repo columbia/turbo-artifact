@@ -10,6 +10,7 @@ import dash_html_components as html
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from dash.dependencies import Output, Input
 from loguru import logger
 
 from privacypacking.utils.utils import LOGS_PATH
@@ -20,6 +21,8 @@ class Plotter:
         self.file = file
         with open(self.file, "r") as fp:
             log = json.load(fp)
+            self.scheduler_name = log["scheduler_name"]
+            self.num_scheduled_tasks = log["num_scheduled_tasks"]
             self.tasks = log["tasks"]
             self.blocks = log["blocks"]
 
@@ -27,7 +30,11 @@ class Plotter:
         figs = []
         for block in self.blocks:
             figs.append(go.FigureWidget(self.stack_jobs_under_block_curve(block)))
-        objs = []
+        objs = [
+            html.Div(
+                html.H1(f"Scheduler: {self.scheduler_name}"), className="six columns"
+            )
+        ]
         for i, fig in enumerate(figs):
             objs += [
                 html.Div(
@@ -76,6 +83,16 @@ class Plotter:
             )
         )
 
+        # Temporary hack to plot the number of scheduled tasks (don't know how plotly works)
+        fig.add_trace(
+            go.Scatter(
+                x=[1.5],
+                y=[0],
+                name=f"Scheduled Jobs: {self.num_scheduled_tasks}",
+                line=dict(color="black", width=1),
+            )
+        )
+
         self.log_toggle(fig)
         return fig
 
@@ -104,6 +121,7 @@ class Plotter:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", dest="file")
+    parser.add_argument("--port", dest="port", default="8080")
     args = parser.parse_args()
 
     if args.file:
@@ -122,9 +140,28 @@ if __name__ == "__main__":
         logger.info(f"No file provided. Plotting the most recent experiment: {file}")
 
     app = dash.Dash()
+    app.layout = html.Div(
+        html.Div(
+            [
+                html.Div(id="live-update-text"),
+                dcc.Interval(
+                    id="interval-component",
+                    interval=5 * 1000,  # in milliseconds
+                    n_intervals=0,
+                ),
+            ]
+        )
+    )
 
-    plotter = Plotter(file)
-    objs = plotter.plot()
+    @app.callback(
+        Output("live-update-text", "children"),
+        Input("interval-component", "n_intervals"),
+    )
+    def update(n):
+        objs = Plotter(file).plot()
+        return html.Div(objs)
+
+    objs = Plotter(file).plot()
     app.layout = html.Div(objs)
 
-    app.run_server(debug=False, port="8080", host="127.0.0.1")
+    app.run_server(debug=False, port=args.port, host="127.0.0.1")

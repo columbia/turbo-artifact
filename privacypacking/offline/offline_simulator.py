@@ -156,7 +156,7 @@ class OfflineSimulator(BaseSimulator):
         blocks = {}
         for i in range(self.config.blocks_num):
             blocks[i] = Block.from_epsilon_delta(
-                i, self.config.renyi_epsilon, self.config.renyi_delta
+                i, self.config.epsilon, self.config.delta
             )
         return blocks
 

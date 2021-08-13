@@ -6,8 +6,8 @@ import yaml
 
 from privacypacking.budget import Budget
 
-RENYI_EPSILON = "renyi_epsilon"
-RENYI_DELTA = "renyi_delta"
+EPSILON = "epsilon"
+DELTA = "delta"
 BLOCKS_SPEC = "blocks_spec"
 TASKS_SPEC = "tasks_spec"
 OFFLINE = "offline"
@@ -35,8 +35,21 @@ N = "n"
 PLOT_FILE = "plot_file"
 LOG_FILE = "log_file"
 FREQUENCY = "frequency"
+TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
+BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
+
+GLOBAL_SEED = "global_seed"
+DETERMINISTIC = "deterministic"
+RANDOM = "random"
+POISSON = "poisson"
+CONSTANT = "constant"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
 BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
+BLOCKS_REQUEST = "blocks_request"
+BLOCKS_NUM_MAX = "blocks_num_max"
+BLOCKS_NUM = "blocks_num"
+BLOCK_SELECTING_POLICY = "block_selecting_policy"
+LATEST_FIRST = "latest_first"
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent

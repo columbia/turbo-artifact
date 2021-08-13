@@ -2,8 +2,9 @@ import json
 
 
 class Logger:
-    def __init__(self, file):
+    def __init__(self, file, scheduler_name):
         self.file = file
+        self.scheduler_name = scheduler_name
 
     def log(
         self,
@@ -16,11 +17,15 @@ class Logger:
     ):
         with open(self.file, "w") as fp:
             log = {"tasks": []}
+            num_scheduled = 0
             for task in tasks:
                 task_dump = task.dump()
-                task_dump.update(
-                    {"allocated": True if task.id in allocated_task_ids else False}
-                )
+                if task.id in allocated_task_ids:
+                    num_scheduled += 1
+                    allocated = True
+                else:
+                    allocated = False
+                task_dump.update({"allocated": allocated})
                 log["tasks"].append(
                     task_dump
                 )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
@@ -29,6 +34,8 @@ class Logger:
             for block in blocks.values():
                 log["blocks"].append(block.dump())
 
+            log["scheduler_name"] = self.scheduler_name
+            log["num_scheduled_tasks"] = num_scheduled
             log["simulator_config"] = simulator_config.dump()
 
             # Any other thing to log

@@ -1,8 +1,10 @@
-renyi_epsilon: 10
-renyi_delta: 0.001
+epsilon: 10
+delta: 0.001
 #alphas: [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64]
-#log_file: "privacypacking/plots/plotfile.pickle"
+#log_file: "privacypacking/logs/plotfile.pickle"
 #default_config_file: "privacypacking/config/default_config.yaml"
+global_seed: 44
+deterministic: true
 
 offline:
   enabled: false
@@ -35,36 +37,50 @@ offline:
 
 online:
   enabled: false
-
   blocks_spec:
     num: 1
-    block_arrival_interval: 2
+    block_arrival_frequency:
+      enabled: false
+      poisson:
+        enabled: false
+        block_arrival_interval: 4
+      constant:
+        enabled: false
+        block_arrival_interval: 4
 
   tasks_spec:
     curve_distributions:
       laplace:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         noise_start: 0.1
         noise_stop: 10
       gaussian:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         sigma_start: 1
         sigma_stop: 10
       SubsampledGaussian:
-        frquency: 0
-        num_blocks: 1
+        frequency: 0
         sigma_start: 1
         sigma_stop: 10
         dataset_size: 60_000
         batch_size: 64
         epochs: 10
-      task_arrival_interval: 2
+    task_arrival_frequency:
+      poisson:
+        enabled: false
+        task_arrival_interval: 0.004264781
+      constant:
+        enabled: false
+        task_arrival_interval: 2
+    blocks_request:
+      random:
+        enabled: false
+        blocks_num_max: 10
+      constant:
+        enabled: false
+        blocks_num: 1
+    block_selecting_policy: "latest_first"
 
   scheduler_spec:
     name: fcfs
     n: 100
-
-
-

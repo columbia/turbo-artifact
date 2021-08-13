@@ -1,3 +1,5 @@
+log_file: "dpf_example"
+
 online:
   enabled: true
 
@@ -9,14 +11,17 @@ online:
     curve_distributions:
       laplace:
         frequency: 0.33
-        num_blocks: 1
       gaussian:
-        frequency: 0.33
-        num_blocks: 1
+        frequency: 0.34
       SubsampledGaussian:
         frequency: 0.33
-        num_blocks: 1
-    task_arrival_interval: 2
-
+    task_arrival_frequency:
+      constant:
+        enabled: true
+        task_arrival_interval: 2
+    blocks_request:
+      constant:
+        enabled: true
+        blocks_num: 1
   scheduler_spec:
     name: dpf
