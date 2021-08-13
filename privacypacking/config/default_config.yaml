@@ -40,7 +40,12 @@ online:
   blocks_spec:
     num: 1
     block_arrival_frequency:
+      enabled: false
+      poisson:
+        enabled: false
+        block_arrival_interval: 4
       constant:
+        enabled: false
         block_arrival_interval: 4
 
   tasks_spec:

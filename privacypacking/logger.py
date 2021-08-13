@@ -25,9 +25,7 @@ class Logger:
                     allocated = True
                 else:
                     allocated = False
-                task_dump.update(
-                    {"allocated": allocated}
-                )
+                task_dump.update({"allocated": allocated})
                 log["tasks"].append(
                     task_dump
                 )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
@@ -37,7 +35,7 @@ class Logger:
                 log["blocks"].append(block.dump())
 
             log["scheduler_name"] = self.scheduler_name
-            log["num_scheduled_tasks"] num_scheduled
+            log["num_scheduled_tasks"] = num_scheduled
             log["simulator_config"] = simulator_config.dump()
 
             # Any other thing to log
@@ -48,6 +46,5 @@ class Logger:
                 json_object = json.dumps(log, separators=(",", ":"))
             else:
                 json_object = json.dumps(log, indent=4)
-
 
             fp.write(json_object)

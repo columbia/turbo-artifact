@@ -30,7 +30,11 @@ class Plotter:
         figs = []
         for block in self.blocks:
             figs.append(go.FigureWidget(self.stack_jobs_under_block_curve(block)))
-        objs = [html.Div(html.H1(f"Scheduler: {self.scheduler_name}"), className="six columns")]
+        objs = [
+            html.Div(
+                html.H1(f"Scheduler: {self.scheduler_name}"), className="six columns"
+            )
+        ]
         for i, fig in enumerate(figs):
             objs += [
                 html.Div(
@@ -84,9 +88,8 @@ class Plotter:
             go.Scatter(
                 x=[1.5],
                 y=[0],
-                name=f'Scheduled Jobs: {self.num_scheduled_tasks}',
+                name=f"Scheduled Jobs: {self.num_scheduled_tasks}",
                 line=dict(color="black", width=1),
-
             )
         )
 
@@ -157,7 +160,6 @@ if __name__ == "__main__":
     def update(n):
         objs = Plotter(file).plot()
         return html.Div(objs)
-
 
     objs = Plotter(file).plot()
     app.layout = html.Div(objs)

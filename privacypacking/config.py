@@ -10,8 +10,8 @@ class Config:
         self.config = config
         self.global_seed = config[GLOBAL_SEED]
         self.deterministic = config[DETERMINISTIC]
-        self.renyi_epsilon = config[RENYI_EPSILON]
-        self.renyi_delta = config[RENYI_DELTA]
+        self.epsilon = config[EPSILON]
+        self.delta = config[DELTA]
 
         # Offline Mode
         if config[OFFLINE][ENABLED]:
@@ -50,7 +50,21 @@ class Config:
             self.blocks_spec = config[BLOCKS_SPEC]
             self.blocks_num = self.blocks_spec[NUM]
             self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
-            self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][BLOCK_ARRIVAL_INTERVAL]
+            if self.block_arrival_frequency[ENABLED]:
+                if self.block_arrival_frequency[POISSON][ENABLED]:
+                    self.block_arrival_poisson_enabled = True
+                    self.block_arrival_constant_enabled = False
+                    self.block_arrival_interval = self.block_arrival_frequency[POISSON][
+                        BLOCK_ARRIVAL_INTERVAL
+                    ]
+                if self.block_arrival_frequency[CONSTANT][ENABLED]:
+                    self.block_arrival_constant_enabled = True
+                    self.block_arrival_poisson_enabled = False
+                    self.block_arrival_interval = self.block_arrival_frequency[
+                        CONSTANT
+                    ][BLOCK_ARRIVAL_INTERVAL]
+            else:
+                self.block_arrival_interval = None
 
             # Tasks
             self.tasks_spec = config[TASKS_SPEC]
@@ -67,24 +81,32 @@ class Config:
             if self.task_arrival_frequency[POISSON][ENABLED]:
                 self.task_arrival_poisson_enabled = True
                 self.task_arrival_constant_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[POISSON][TASK_ARRIVAL_INTERVAL]
+                self.task_arrival_interval = self.task_arrival_frequency[POISSON][
+                    TASK_ARRIVAL_INTERVAL
+                ]
 
             elif self.task_arrival_frequency[CONSTANT][ENABLED]:
                 self.task_arrival_constant_enabled = True
                 self.task_arrival_poisson_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][TASK_ARRIVAL_INTERVAL]
+                self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
+                    TASK_ARRIVAL_INTERVAL
+                ]
 
             # Task's block request
             self.blocks_request = self.tasks_spec[BLOCKS_REQUEST]
             if self.blocks_request[RANDOM][ENABLED]:
                 self.blocks_request_random_enabled = True
                 self.blocks_request_constant_enabled = False
-                self.blocks_request_random_max_num = self.blocks_request[RANDOM][BLOCKS_NUM_MAX]
+                self.blocks_request_random_max_num = self.blocks_request[RANDOM][
+                    BLOCKS_NUM_MAX
+                ]
 
             elif self.blocks_request[CONSTANT][ENABLED]:
                 self.blocks_request_constant_enabled = True
                 self.blocks_request_random_enabled = False
-                self.blocks_request_constant_num = self.blocks_request[CONSTANT][BLOCKS_NUM]
+                self.blocks_request_constant_num = self.blocks_request[CONSTANT][
+                    BLOCKS_NUM
+                ]
 
             self.block_selecting_policy = self.tasks_spec[BLOCK_SELECTING_POLICY]
 

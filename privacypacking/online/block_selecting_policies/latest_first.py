@@ -1,4 +1,6 @@
-from privacypacking.online.block_selecting_policies.block_selecting_policy import BlockSelectingPolicy
+from privacypacking.online.block_selecting_policies.block_selecting_policy import (
+    BlockSelectingPolicy,
+)
 
 
 class LatestFirst(BlockSelectingPolicy):

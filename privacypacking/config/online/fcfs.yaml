@@ -5,7 +5,6 @@ online:
 
   blocks_spec:
     num: 3
-    block_arrival_interval: 2
 
   tasks_spec:
     curve_distributions:

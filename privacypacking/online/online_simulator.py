@@ -69,18 +69,35 @@ class ResourceManager:
         arrival times as well as the privacy budget of each block.
         """
         block_id = count()
-        # arrival_interval_dist = 100  #self.env.rand.expovariate, 1 / self.env.config['task.arrival_interval']
-
-        # while True:
-        # self.env.process(self.task(next(block_id)))
+        # Create the initial number of blocks
         for _ in range(self.config.blocks_num):
             block_id_ = next(block_id)
             self.blocks[block_id_] = Block.from_epsilon_delta(
                 block_id_, self.config.epsilon, self.config.delta
             )
+        # If more are set to keep coming
+        if self.config.block_arrival_interval is not None:
+            # Determine block arrival interval
+            block_arrival_interval = self.set_block_arrival_time()
+            while True:
+                block_id_ = next(block_id)
+                self.blocks[block_id_] = Block.from_epsilon_delta(
+                    block_id_, self.config.epsilon, self.config.delta
+                )
+                yield self.env.timeout(block_arrival_interval)
+                print("Generated blocks ", self.blocks)
+            # todo: add locks
 
-        print("Generated blocks ", self.blocks)
-        # yield self.env.timeout(arrival_interval_dist)
+    def set_block_arrival_time(self):
+        block_arrival_interval = None
+        if self.config.block_arrival_poisson_enabled:
+            block_arrival_interval = partial(
+                random.expovariate, 1 / self.config.block_arrival_interval
+            )
+        elif self.config.block_arrival_constant_enabled:
+            block_arrival_interval = self.config.block_arrival_interval
+        assert block_arrival_interval is not None
+        return block_arrival_interval
 
     def schedule(self):
         waiting_tasks = []
@@ -102,11 +119,15 @@ class ResourceManager:
                 self.config.logger.log(
                     tasks + self.archived_allocated_tasks,
                     self.blocks,
-                    allocated_ids + [allocated_task.id for allocated_task in self.archived_allocated_tasks]
+                    allocated_ids
+                    + [
+                        allocated_task.id
+                        for allocated_task in self.archived_allocated_tasks
+                    ],
                 )
             print(
                 "Scheduled tasks",
-                [t[0].id for t in waiting_tasks if t[0].id in allocated_ids]
+                [t[0].id for t in waiting_tasks if t[0].id in allocated_ids],
             )
 
             # Wake-up all the tasks that have been scheduled
@@ -118,7 +139,10 @@ class ResourceManager:
             # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
 
             # Delete the tasks that have been scheduled from the waiting list
-            waiting_tasks = [task for task in waiting_tasks if task[0].id not in allocated_ids]
+            waiting_tasks = [
+                task for task in waiting_tasks if task[0].id not in allocated_ids
+            ]
+
 
 class Tasks:
     """
@@ -175,7 +199,9 @@ class Tasks:
     def set_task_arrival_time(self):
         task_arrival_interval = None
         if self.config.task_arrival_poisson_enabled:
-            task_arrival_interval = partial(random.expovariate, 1 / self.config.task_arrival_interval)
+            task_arrival_interval = partial(
+                random.expovariate, 1 / self.config.task_arrival_interval
+            )
         elif self.config.task_arrival_constant_enabled:
             task_arrival_interval = self.config.task_arrival_interval
         assert task_arrival_interval is not None
@@ -184,7 +210,9 @@ class Tasks:
     def set_task_blocks_request(self):
         task_blocks_num = None
         if self.config.blocks_request_random_enabled:
-            task_blocks_num = random.randint(1, self.config.blocks_request_random_max_num)
+            task_blocks_num = random.randint(
+                1, self.config.blocks_request_random_max_num
+            )
         elif self.config.blocks_request_constant_enabled:
             task_blocks_num = self.config.blocks_request_constant_num
         print("\n\ntasks blocks num", task_blocks_num)
@@ -194,10 +222,15 @@ class Tasks:
         return task_blocks_num
 
     def set_curve_distribution(self):
-        curve = np.random.choice([GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN], 1,
-                                 p=[self.config.gaussian_frequency,
-                                    self.config.laplace_frequency,
-                                    self.config.subsamplegaussian_frequency])
+        curve = np.random.choice(
+            [GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN],
+            1,
+            p=[
+                self.config.gaussian_frequency,
+                self.config.laplace_frequency,
+                self.config.subsamplegaussian_frequency,
+            ],
+        )
         return curve
 
     def set_task(self, task_id, curve_distribution, task_blocks_num):
@@ -249,8 +282,7 @@ class Tasks:
         policy = self.config.block_selecting_policy
         if policy == LATEST_FIRST:
             selected_block_ids = LatestFirst(
-                blocks=self.resource_manager.blocks,
-                task_blocks_num=task_blocks_num
+                blocks=self.resource_manager.blocks, task_blocks_num=task_blocks_num
             ).select_blocks()
         # elif other policy
         assert selected_block_ids is not None
