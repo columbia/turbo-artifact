@@ -117,18 +117,21 @@ class ResourceManager:
             waiting_tasks.append((task, allocated_resources_event))
 
             # Don't schedule until all potential initial tasks have been collected
-            if len(waiting_tasks) < self.total_init_tasks and not initial_tasks_collected:
+            if (
+                len(waiting_tasks) < self.total_init_tasks
+                and not initial_tasks_collected
+            ):
                 continue
             else:
                 initial_tasks_collected = True
 
-            # Try and schedule one or more of the waiting tasks
+            # Try and schedule the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
             s = self.scheduler(tasks, self.blocks, self.config)
             allocated_ids = s.schedule()
 
             # Update the logs for every time five new tasks arrive
-            if task.id % 5 == 0:
+            if task.id == self.total_init_tasks - 1 or task.id % 5 == 0:
                 self.config.logger.log(
                     tasks + self.archived_allocated_tasks,
                     self.blocks,
@@ -139,7 +142,9 @@ class ResourceManager:
                     ],
                     self.config,
                 )
-            logger.info(f'Scheduled tasks: {[t[0].id for t in waiting_tasks if t[0].id in allocated_ids]}')
+            logger.info(
+                f"Scheduled tasks: {[t[0].id for t in waiting_tasks if t[0].id in allocated_ids]}"
+            )
 
             # Wake-up all the tasks that have been scheduled
             for task in waiting_tasks:

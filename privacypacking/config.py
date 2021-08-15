@@ -32,9 +32,9 @@ class Config:
             if self.block_arrival_frequency[CONSTANT][ENABLED]:
                 self.block_arrival_constant_enabled = True
                 self.block_arrival_poisson_enabled = False
-                self.block_arrival_interval = self.block_arrival_frequency[
-                    CONSTANT
-                ][BLOCK_ARRIVAL_INTERVAL]
+                self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
+                    BLOCK_ARRIVAL_INTERVAL
+                ]
         else:
             self.block_arrival_frequency_enabled = False
 
@@ -82,8 +82,7 @@ class Config:
                     TASK_ARRIVAL_INTERVAL
                 ]
             assert (
-                self.task_arrival_poisson_enabled
-                != self.task_arrival_constant_enabled
+                self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
             )
         else:
             self.task_arrival_frequency_enabled = False
@@ -92,7 +91,9 @@ class Config:
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
-            self.log_file = f"/{self.scheduler_name}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
+            self.log_file = (
+                f"/{self.scheduler_name}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
+            )
         log_path = LOGS_PATH.joinpath(self.log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger = Logger(log_path, self.scheduler_name)

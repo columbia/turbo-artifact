@@ -62,17 +62,22 @@ class Plotter:
                     )
 
         df = pd.DataFrame(data=data)
-        df = df.sort_values(by=["allocated", "dp_epsilon"], ascending=[False, True])
-
-        fig = px.area(
-            df,
-            x="alpha",
-            y="epsilon",
-            color="allocated",
-            line_group="job",
-            log_x=False,
-            log_y=False,
-        )
+        if not df.empty:
+            df = df.sort_values(by=["allocated", "dp_epsilon"], ascending=[False, True])
+            fig = px.area(
+                df,
+                x="alpha",
+                y="epsilon",
+                color="allocated",
+                line_group="job",
+                log_x=False,
+                log_y=False,
+            )
+        else:
+            fig = px.area(
+                log_x=False,
+                log_y=False,
+            )
 
         fig.add_trace(
             go.Scatter(
