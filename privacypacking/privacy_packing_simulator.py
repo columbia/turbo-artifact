@@ -9,11 +9,12 @@ Resources are non-replenishable.
 ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
 """
 
+import sys
 import random
 from functools import partial
 from itertools import count
+from loguru import logger
 from privacypacking.config import Config
-import yaml
 import simpy.rt
 import numpy as np
 import argparse
@@ -25,8 +26,7 @@ from privacypacking.budget.task import (
     UniformTask,
 )
 from privacypacking.block_selecting_policies import LatestFirst
-from privacypacking.schedulers import dpf, fcfs
-from privacypacking.offline.schedulers import simplex
+from privacypacking.schedulers import dpf, fcfs, simplex
 from privacypacking.utils.utils import *
 
 schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF, SIMPLEX: simplex.Simplex}
@@ -44,9 +44,9 @@ class ResourceManager:
     A task must be granted "all" the resources that it demands or "nothing".
     """
 
-    def __init__(self, environment, config):
+    def __init__(self, environment, configuration):
         self.env = environment
-        self.config = config
+        self.config = configuration
         self.blocks = {}
         self.archived_allocated_tasks = []
         self.total_init_tasks = (
@@ -94,7 +94,7 @@ class ResourceManager:
                     block_id, self.config.epsilon, self.config.delta
                 )
                 yield self.env.timeout(block_arrival_interval)
-                print("Generated blocks ", self.blocks)
+                logger.info(f'Generated blocks: {self.blocks}"')
         #     # todo: add locks
 
     def set_block_arrival_time(self):
@@ -110,14 +110,17 @@ class ResourceManager:
 
     def schedule(self):
         waiting_tasks = []
+        initial_tasks_collected = False
         while True:
             # Pick the next task demand from the queue
             task, allocated_resources_event = yield self.task_demands_queue.get()
             waiting_tasks.append((task, allocated_resources_event))
 
             # Don't schedule until all potential initial tasks have been collected
-            if len(waiting_tasks) < self.total_init_tasks:
+            if len(waiting_tasks) < self.total_init_tasks and not initial_tasks_collected:
                 continue
+            else:
+                initial_tasks_collected = True
 
             # Try and schedule one or more of the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
@@ -136,10 +139,7 @@ class ResourceManager:
                     ],
                     self.config,
                 )
-            print(
-                "Scheduled tasks",
-                [t[0].id for t in waiting_tasks if t[0].id in allocated_ids],
-            )
+            logger.info(f'Scheduled tasks: {[t[0].id for t in waiting_tasks if t[0].id in allocated_ids]}')
 
             # Wake-up all the tasks that have been scheduled
             for task in waiting_tasks:
@@ -147,7 +147,8 @@ class ResourceManager:
                     task[1].succeed()
                     self.archived_allocated_tasks += [task[0]]
 
-            # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
+            # todo: resolve race-condition between task-demands/budget updates and blocks;
+            #  perhaps use mutex for quicker solution
 
             # Delete the tasks that have been scheduled from the waiting list
             waiting_tasks = [
@@ -196,7 +197,6 @@ class Tasks:
         )
         random.shuffle(tasks)
         for task in tasks:
-            print(task)
             self.env.process(
                 self.task(next(task_id_gen), task, self.set_task_num_blocks(task))
             )
@@ -207,7 +207,7 @@ class Tasks:
         waits till it gets scheduled and then is executed
         """
 
-        print("Generated task: ", task_id)
+        # logger.info(f'Generated task: {task_id}')
         curve_distribution = (
             self.set_curve_distribution()
             if curve_distribution is None
@@ -226,10 +226,11 @@ class Tasks:
         yield self.resource_manager.task_demands_queue.put(
             (task, allocated_resources_event)
         )
-        print("Task", task_id, "inserted demand")
+        # logger.info(f'Task: {task_id} inserted demand')
+
         # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
-        print("Task ", task_id, "completed at ", self.env.now)
+        # logger.info(f'Task: {task_id} completed at {self.env.now}')
 
     def set_task_arrival_time(self):
         task_arrival_interval = None

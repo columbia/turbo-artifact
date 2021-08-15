@@ -25,15 +25,15 @@ def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> Lis
     Returns:
         List[int]: the ids of the tasks that can be allocated
     """
-    allocated_tasks = []
+    allocated_task_ids = []
 
     for task in sorted_tasks:
         for block_id, demand_budget in task.budget_per_block.items():
             block = blocks[block_id]
             if block.budget >= demand_budget:
-                allocated_tasks.append(task.id)
+                allocated_task_ids.append(task.id)
                 block.budget -= demand_budget
-    return allocated_tasks
+    return allocated_task_ids
 
 
 # TODO: reverse order + backfill (dual heuristic)

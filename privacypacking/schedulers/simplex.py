@@ -25,8 +25,6 @@ class Simplex(Scheduler):
         Returns a list of booleans corresponding to the tasks that are allocated
         """
         m = gp.Model("pack")
-        n = len(self.tasks)
-        d = len(ALPHAS)
 
         # TODO: alphas from which block? Which subset?
         alphas = ALPHAS
@@ -61,7 +59,6 @@ class Simplex(Scheduler):
                     t.id: t.get_budget(k).epsilon(alpha) for t in self.tasks
                 }
                 m.addConstr(
-                    # sum([x[z] * demands[z] for z in range(n)])
                     x.prod(demands_k_alpha)
                     - (1 - a[k, alpha]) * demands_upper_bound[(k, alpha)]
                     <= block.budget.epsilon(alpha)
@@ -75,58 +72,10 @@ class Simplex(Scheduler):
         return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
     def schedule(self) -> List[int]:
-        allocated_ids = []
+        allocated_task_ids = []
         allocation = self.solve_allocation()
         for i, allocated in enumerate(allocation):
             if allocated:
-                allocated_ids.append(self.tasks[i].id)
+                allocated_task_ids.append(self.tasks[i].id)
                 self.consume_budgets(self.tasks[i])
-        return allocated_ids
-
-
-def main():
-    # num_blocks = 1 # single-block case
-    num_blocks = 2  # multi-block case
-
-    blocks = {}
-    for i in range(num_blocks):
-        blocks[i] = Block.from_epsilon_delta(i, 10, 0.001)
-
-    tasks = (
-        [
-            UniformTask(
-                id=i, profit=1, block_ids=range(num_blocks), budget=GaussianCurve(s)
-            )
-            for i, s in enumerate(np.linspace(0.1, 1, 10))
-        ]
-        + [
-            UniformTask(
-                id=i,
-                profit=1,
-                block_ids=range(num_blocks),
-                budget=LaplaceCurve(l),
-            )
-            for i, l in enumerate(np.linspace(0.1, 10, 5))
-        ]
-        + [
-            UniformTask(
-                id=i,
-                profit=1,
-                block_ids=range(num_blocks),
-                budget=SubsampledGaussianCurve.from_training_parameters(
-                    60_000, 64, 10, s
-                ),
-            )
-            for i, s in enumerate(np.linspace(1, 10, 5))
-        ]
-    )
-
-    random.shuffle(tasks)
-    scheduler = Simplex(tasks, blocks)
-    allocation = scheduler.schedule()
-    print(allocation)
-    # self.config.plotter.plot(tasks, blocks, allocation)
-
-
-if __name__ == "__main__":
-    main()
+        return allocated_task_ids
