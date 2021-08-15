@@ -1,4 +1,4 @@
-from privacypacking.online.block_selecting_policies.block_selecting_policy import (
+from privacypacking.block_selecting_policies.block_selecting_policy import (
     BlockSelectingPolicy,
 )
 

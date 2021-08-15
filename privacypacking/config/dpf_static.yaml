@@ -1,0 +1,43 @@
+log_file: "dpf_static"
+
+blocks_spec:
+  num: 3
+
+tasks_spec:
+  curve_distributions:
+    laplace:
+      constant:
+        enabled: true
+        num: 85
+        noise_start: 0.1
+        noise_stop: 5
+    blocks_request:
+      constant:
+        enabled: true
+        num_blocks: 3
+
+    gaussian:
+      constant:
+        enabled: true
+        num: 85
+        noise_start: 0.1
+        noise_stop: 5
+      blocks_request:
+        constant:
+          enabled: true
+          num_blocks: 3
+
+    SubsampledGaussian:
+      constant:
+        enabled: true
+        num: 85
+        noise_start: 0.1
+        noise_stop: 5
+      blocks_request:
+        constant:
+          enabled: true
+          num_blocks: 3
+
+scheduler_spec:
+  name: dpf
+  n: 15000
