@@ -12,7 +12,7 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.scheduler import Scheduler
+from privacypacking.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):

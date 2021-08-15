@@ -33,4 +33,4 @@ tasks_spec:
           num_blocks: 5
 
 scheduler_spec:
-  name: Simplex
+  name: simplex

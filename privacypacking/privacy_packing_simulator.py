@@ -44,8 +44,8 @@ class ResourceManager:
     A task must be granted "all" the resources that it demands or "nothing".
     """
 
-    def __init__(self, env, config):
-        self.env = env
+    def __init__(self, environment, config):
+        self.env = environment
         self.config = config
         self.blocks = {}
         self.archived_allocated_tasks = []
@@ -72,9 +72,9 @@ class ResourceManager:
             )
         # A ResourceManager has two persistent processes.
         # One that models the arrival of new blocks
-        env.process(self.generate_blocks())
+        self.env.process(self.generate_blocks())
         # One that models the distribution of resources to tasks
-        env.process(self.schedule())
+        self.env.process(self.schedule())
 
     def generate_blocks(self):
         """
@@ -162,12 +162,12 @@ class Tasks:
     A new process is spawned for each task.
     """
 
-    def __init__(self, env, resource_manager):
-        self.env = env
+    def __init__(self, environment, resource_manager):
+        self.env = environment
         self.resource_manager = resource_manager
         self.config = resource_manager.config
 
-        env.process(self.generate_tasks())
+        self.env.process(self.generate_tasks())
 
     def generate_tasks(self):
         """
@@ -342,7 +342,6 @@ if __name__ == "__main__":
 
     # TODO: use discrete events instead of real time
     env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
-    resource_manager = ResourceManager(env, Config(config))
-    Tasks(env, resource_manager)
+    rm = ResourceManager(env, Config(config))
+    Tasks(env, rm)
     env.run()
-

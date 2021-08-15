@@ -52,7 +52,7 @@ BLOCK_SELECTING_POLICY = "block_selecting_policy"
 LATEST_FIRST = "latest_first"
 
 # Schedulers
-SIMPLEX = "Simplex"
+SIMPLEX = "simplex"
 OFFLINE_DPF = "offline_dpf"
 FCFS = "fcfs"
 DPF = "dpf"

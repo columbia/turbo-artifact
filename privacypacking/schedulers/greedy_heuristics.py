@@ -10,7 +10,7 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.scheduler import Scheduler
+from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
 
 
