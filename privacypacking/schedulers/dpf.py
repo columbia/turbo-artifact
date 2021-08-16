@@ -1,7 +1,7 @@
 from typing import List
 
 from privacypacking.budget import ZeroCurve
-from privacypacking.scheduler import Scheduler
+from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
 
 
@@ -88,7 +88,7 @@ class DPF(Scheduler):
             dpf_block.block.budget -= demand_budget
 
     def schedule(self) -> List[int]:
-        allocated_tasks = []
+        allocated_task_ids = []
 
         # Update dpf_blocks in case new blocks arrived
         self.update_dpf_blocks()
@@ -105,6 +105,6 @@ class DPF(Scheduler):
             task = self.tasks[i]
             if self.can_run(task):
                 self.consume_budgets(task)
-                allocated_tasks.append(task.id)
+                allocated_task_ids.append(task.id)
 
-        return allocated_tasks
+        return allocated_task_ids

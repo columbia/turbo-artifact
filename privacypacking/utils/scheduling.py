@@ -1,6 +1,9 @@
 from typing import Dict, List
 
-from privacypacking.budget import Block, Task
+from privacypacking.budget import (
+    Block,
+    Task,
+)
 
 
 def dominant_shares(task: Task, blocks: Dict[int, Block]) -> List[float]:

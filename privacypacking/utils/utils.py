@@ -10,6 +10,7 @@ EPSILON = "epsilon"
 DELTA = "delta"
 BLOCKS_SPEC = "blocks_spec"
 TASKS_SPEC = "tasks_spec"
+SCHEDULER_SPEC = "scheduler_spec"
 OFFLINE = "offline"
 ONLINE = "online"
 ENABLED = "enabled"
@@ -25,11 +26,7 @@ SIGMA_STOP = "sigma_stop"
 DATASET_SIZE = "dataset_size"
 BATCH_SIZE = "batch_size"
 EPOCHS = "epochs"
-SCHEDULER_SPEC = "scheduler_spec"
-SIMPLEX = "simplex"
-OFFLINE_DPF = "offline_dpf"
-FCFS = "fcfs"
-DPF = "dpf"
+
 NAME = "name"
 N = "n"
 PLOT_FILE = "plot_file"
@@ -46,11 +43,19 @@ CONSTANT = "constant"
 TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
 BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
 BLOCKS_REQUEST = "blocks_request"
-BLOCKS_NUM_MAX = "blocks_num_max"
-BLOCKS_NUM = "blocks_num"
+NUM_BLOCKS_MAX = "num_blocks_max"
+NUM_BLOCKS = "num_blocks"
+INITIAL_NUM = "initial_num"
+
+# Block selecting policies
 BLOCK_SELECTING_POLICY = "block_selecting_policy"
 LATEST_FIRST = "latest_first"
 
+# Schedulers
+SIMPLEX = "simplex"
+OFFLINE_DPF = "offline_dpf"
+FCFS = "fcfs"
+DPF = "dpf"
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 

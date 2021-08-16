@@ -6,81 +6,74 @@ delta: 0.001
 global_seed: 44
 deterministic: true
 
-offline:
-  enabled: false
-
-  blocks_spec:
-    num: 1
-
-  tasks_spec:
-    curve_distributions:
-      laplace:
-        num: 0
-        num_blocks: 1
-        noise_start: 0.1
-        noise_stop: 10
-      gaussian:
-        num: 0
-        num_blocks: 1
-        sigma_start: 1
-        sigma_stop: 10
-      SubsampledGaussian:
-        num: 0
-        num_blocks: 1
-        sigma_start: 1
-        sigma_stop: 10
-        dataset_size: 60_000
-        batch_size: 64
-        epochs: 10
-  scheduler_spec:
-    name: simplex
-
-online:
-  enabled: false
-  blocks_spec:
-    num: 1
-    block_arrival_frequency:
+blocks_spec:
+  initial_num: 1
+  block_arrival_frequency:
+    enabled: false    # no online blocks
+    poisson:
       enabled: false
-      poisson:
-        enabled: false
-        block_arrival_interval: 4
-      constant:
-        enabled: false
-        block_arrival_interval: 4
+      block_arrival_interval: 4
+    constant:
+      enabled: false
+      block_arrival_interval: 4
 
-  tasks_spec:
-    curve_distributions:
-      laplace:
-        frequency: 0
-        noise_start: 0.1
-        noise_stop: 10
-      gaussian:
-        frequency: 0
-        sigma_start: 1
-        sigma_stop: 10
-      SubsampledGaussian:
-        frequency: 0
-        sigma_start: 1
-        sigma_stop: 10
-        dataset_size: 60_000
-        batch_size: 64
-        epochs: 10
-    task_arrival_frequency:
-      poisson:
-        enabled: false
-        task_arrival_interval: 0.004264781
-      constant:
-        enabled: false
-        task_arrival_interval: 2
-    blocks_request:
-      random:
-        enabled: false
-        blocks_num_max: 10
-      constant:
-        enabled: false
-        blocks_num: 1
-    block_selecting_policy: "latest_first"
+tasks_spec:
+  curve_distributions:
+    laplace:
+      initial_num: 0
+      frequency: 0
+      noise_start: 0.1
+      noise_stop: 10
+      blocks_request:
+        random:
+          enabled: false
+          num_blocks_max: 10
+        constant:
+          enabled: false
+          num_blocks: 1
+      block_selecting_policy: "latest_first"
 
-  scheduler_spec:
-    name: fcfs
-    n: 100
+    gaussian:
+      initial_num: 0
+      frequency: 0
+      sigma_start: 1
+      sigma_stop: 10
+      blocks_request:
+        random:
+          enabled: false
+          num_blocks_max: 10
+        constant:
+          enabled: false
+          num_blocks: 1
+      block_selecting_policy: "latest_first"
+
+    SubsampledGaussian:
+      initial_num: 0
+      frequency: 0
+      sigma_start: 1
+      sigma_stop: 10
+      dataset_size: 60_000
+      batch_size: 64
+      epochs: 10
+      blocks_request:
+        random:
+          enabled: false
+          num_blocks_max: 10
+        constant:
+          enabled: false
+          num_blocks: 1
+      block_selecting_policy: "latest_first"
+
+  task_arrival_frequency:
+    enabled: false  # no online tasks
+    poisson:
+      enabled: false
+      task_arrival_interval: 0.004264781
+    constant:
+      enabled: false
+      task_arrival_interval: 2
+
+
+scheduler_spec:
+  name: fcfs
+  n: 100

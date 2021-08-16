@@ -9,13 +9,15 @@ Resources are non-replenishable.
 ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
 """
 
+import sys
 import random
 from functools import partial
 from itertools import count
-
+from loguru import logger
+from privacypacking.config import Config
 import simpy.rt
 import numpy as np
-from privacypacking.base_simulator import BaseSimulator
+import argparse
 from privacypacking.budget.block import Block
 from privacypacking.budget.task import (
     GaussianCurve,
@@ -23,11 +25,11 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.online.block_selecting_policies.latest_first import LatestFirst
-from privacypacking.online.schedulers import dpf, fcfs
+from privacypacking.block_selecting_policies import LatestFirst
+from privacypacking.schedulers import dpf, fcfs, simplex
 from privacypacking.utils.utils import *
 
-schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF}
+schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF, SIMPLEX: simplex.Simplex}
 
 
 class ResourceManager:
@@ -42,11 +44,17 @@ class ResourceManager:
     A task must be granted "all" the resources that it demands or "nothing".
     """
 
-    def __init__(self, env, config):
-        self.env = env
-        self.config = config
+    def __init__(self, environment, configuration):
+        self.env = environment
+        self.config = configuration
         self.blocks = {}
         self.archived_allocated_tasks = []
+        self.total_init_tasks = (
+            self.config.laplace_init_num
+            + self.config.gaussian_init_num
+            + self.config.subsamplegaussian_init_num
+        )
+        print(self.total_init_tasks)
         self.scheduler = schedulers[self.config.scheduler_name]
         if self.config.deterministic:
             random.seed(self.config.global_seed)
@@ -55,12 +63,18 @@ class ResourceManager:
         # To store the incoming task demands
         self.task_demands_queue = simpy.Store(self.env)
 
+        block_id_counter = count()
+        # Create the initial number of blocks if such exists
+        for _ in range(self.config.initial_blocks_num):
+            block_id = next(block_id_counter)
+            self.blocks[block_id] = Block.from_epsilon_delta(
+                block_id, self.config.epsilon, self.config.delta
+            )
         # A ResourceManager has two persistent processes.
-        # One that models the arrival of new resources - creates blocks statically for now
-        self.generate_blocks()
-        # env.process(self.generate_blocks())
+        # One that models the arrival of new blocks
+        self.env.process(self.generate_blocks())
         # One that models the distribution of resources to tasks
-        env.process(self.schedule())
+        self.env.process(self.schedule())
 
     def generate_blocks(self):
         """
@@ -68,25 +82,20 @@ class ResourceManager:
         Various configuration parameters determine the distribution of block
         arrival times as well as the privacy budget of each block.
         """
-        block_id = count()
-        # Create the initial number of blocks
-        for _ in range(self.config.blocks_num):
-            block_id_ = next(block_id)
-            self.blocks[block_id_] = Block.from_epsilon_delta(
-                block_id_, self.config.epsilon, self.config.delta
-            )
-        # If more are set to keep coming
-        if self.config.block_arrival_interval is not None:
+
+        block_id_counter = count(self.config.initial_blocks_num)
+        # If more blocks are coming on the fly
+        if self.config.block_arrival_frequency_enabled:
             # Determine block arrival interval
             block_arrival_interval = self.set_block_arrival_time()
             while True:
-                block_id_ = next(block_id)
-                self.blocks[block_id_] = Block.from_epsilon_delta(
-                    block_id_, self.config.epsilon, self.config.delta
+                block_id = next(block_id_counter)
+                self.blocks[block_id] = Block.from_epsilon_delta(
+                    block_id, self.config.epsilon, self.config.delta
                 )
                 yield self.env.timeout(block_arrival_interval)
-                print("Generated blocks ", self.blocks)
-            # todo: add locks
+                logger.info(f'Generated blocks: {self.blocks}"')
+        #     # todo: add locks
 
     def set_block_arrival_time(self):
         block_arrival_interval = None
@@ -101,21 +110,28 @@ class ResourceManager:
 
     def schedule(self):
         waiting_tasks = []
-        # yield self.env.timeout(30)
+        initial_tasks_collected = False
         while True:
             # Pick the next task demand from the queue
             task, allocated_resources_event = yield self.task_demands_queue.get()
             waiting_tasks.append((task, allocated_resources_event))
 
-            # Try and schedule one or more of the waiting tasks
+            # Don't schedule until all potential initial tasks have been collected
+            if (
+                len(waiting_tasks) < self.total_init_tasks
+                and not initial_tasks_collected
+            ):
+                continue
+            else:
+                initial_tasks_collected = True
+
+            # Try and schedule the waiting tasks
             tasks = [t[0] for t in waiting_tasks]
             s = self.scheduler(tasks, self.blocks, self.config)
-            allocated_ids = (
-                s.schedule()
-            )  # schedule is triggered every time a new task arrives
+            allocated_ids = s.schedule()
 
             # Update the logs for every time five new tasks arrive
-            if task.id % 5 == 0:
+            if task.id == self.total_init_tasks - 1 or task.id % 5 == 0:
                 self.config.logger.log(
                     tasks + self.archived_allocated_tasks,
                     self.blocks,
@@ -124,10 +140,10 @@ class ResourceManager:
                         allocated_task.id
                         for allocated_task in self.archived_allocated_tasks
                     ],
+                    self.config,
                 )
-            print(
-                "Scheduled tasks",
-                [t[0].id for t in waiting_tasks if t[0].id in allocated_ids],
+            logger.info(
+                f"Scheduled tasks: {[t[0].id for t in waiting_tasks if t[0].id in allocated_ids]}"
             )
 
             # Wake-up all the tasks that have been scheduled
@@ -136,7 +152,8 @@ class ResourceManager:
                     task[1].succeed()
                     self.archived_allocated_tasks += [task[0]]
 
-            # todo: resolve race-condition between task-demands/budget updates and blocks; perhaps use mutex for quicker solution
+            # todo: resolve race-condition between task-demands/budget updates and blocks;
+            #  perhaps use mutex for quicker solution
 
             # Delete the tasks that have been scheduled from the waiting list
             waiting_tasks = [
@@ -151,12 +168,12 @@ class Tasks:
     A new process is spawned for each task.
     """
 
-    def __init__(self, env, resource_manager):
-        self.env = env
+    def __init__(self, environment, resource_manager):
+        self.env = environment
         self.resource_manager = resource_manager
         self.config = resource_manager.config
 
-        env.process(self.generate_tasks())
+        self.env.process(self.generate_tasks())
 
     def generate_tasks(self):
         """
@@ -165,36 +182,60 @@ class Tasks:
         arrival times as well as the demands of each task.
         """
 
-        task_id = count()
-        # Determine task arrival interval
-        task_arrival_interval = self.set_task_arrival_time()
-        while True:
-            self.env.process(self.task(next(task_id)))
-            yield self.env.timeout(task_arrival_interval)
+        task_id_gen = count()
+        # Create the initial number of tasks if such exists
+        self.generate_initial_tasks(task_id_gen)
 
-    def task(self, task_id):
+        # If more are set to keep coming
+        if self.config.task_arrival_frequency_enabled:
+            # Determine task arrival interval
+            task_arrival_interval = self.set_task_arrival_time()
+            while True:
+                self.env.process(self.task(next(task_id_gen)))
+                yield self.env.timeout(task_arrival_interval)
+
+    def generate_initial_tasks(self, task_id_gen):
+        tasks = (
+            [LAPLACE] * self.config.laplace_init_num
+            + [GAUSSIAN] * self.config.gaussian_init_num
+            + [SUBSAMPLEGAUSSIAN] * self.config.subsamplegaussian_init_num
+        )
+        random.shuffle(tasks)
+        for task in tasks:
+            self.env.process(
+                self.task(next(task_id_gen), task, self.set_task_num_blocks(task))
+            )
+
+    def task(self, task_id, curve_distribution=None, task_blocks_num=None):
         """
         Generated task behavior. Sets its own demand, notifies resource manager of its existence,
         waits till it gets scheduled and then is executed
         """
 
-        print("Generated task: ", task_id)
-        task_blocks_num = self.set_task_blocks_request()
-        curve_distribution = self.set_curve_distribution()
-        task = self.set_task(task_id, curve_distribution, task_blocks_num)
+        # logger.info(f'Generated task: {task_id}')
+        curve_distribution = (
+            self.set_curve_distribution()
+            if curve_distribution is None
+            else curve_distribution
+        )
+        task_blocks_num = (
+            self.set_task_num_blocks(curve_distribution)
+            if task_blocks_num is None
+            else task_blocks_num
+        )
+
+        task = self.create_task(task_id, curve_distribution, task_blocks_num)
 
         allocated_resources_event = self.env.event()
         # Wait till the demand-request has been delivered to the resource-manager
         yield self.resource_manager.task_demands_queue.put(
             (task, allocated_resources_event)
         )
-        print("Task", task_id, "inserted demand")
+        # logger.info(f'Task: {task_id} inserted demand')
+
         # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
-
-        # print("Task ", task_id, "start running")
-        # yield self.env.timeout()
-        print("Task ", task_id, "completed at ", self.env.now)
+        # logger.info(f'Task: {task_id} completed at {self.env.now}')
 
     def set_task_arrival_time(self):
         task_arrival_interval = None
@@ -207,15 +248,13 @@ class Tasks:
         assert task_arrival_interval is not None
         return task_arrival_interval
 
-    def set_task_blocks_request(self):
+    def set_task_num_blocks(self, curve):
         task_blocks_num = None
-        if self.config.blocks_request_random_enabled:
-            task_blocks_num = random.randint(
-                1, self.config.blocks_request_random_max_num
-            )
-        elif self.config.blocks_request_constant_enabled:
-            task_blocks_num = self.config.blocks_request_constant_num
-        print("\n\ntasks blocks num", task_blocks_num)
+        block_requests = self.config.curve_distributions[curve][BLOCKS_REQUEST]
+        if block_requests[RANDOM][ENABLED]:
+            task_blocks_num = random.randint(1, block_requests[RANDOM][NUM_BLOCKS_MAX])
+        elif block_requests[CONSTANT][ENABLED]:
+            task_blocks_num = block_requests[CONSTANT][NUM_BLOCKS]
         assert task_blocks_num is not None
         blocks_num = len(self.resource_manager.blocks)
         task_blocks_num = max(1, min(task_blocks_num, blocks_num))
@@ -231,11 +270,13 @@ class Tasks:
                 self.config.subsamplegaussian_frequency,
             ],
         )
-        return curve
+        return curve[0]
 
-    def set_task(self, task_id, curve_distribution, task_blocks_num):
+    def create_task(self, task_id, curve_distribution, task_blocks_num):
         task = None
-        selected_block_ids = self.set_selected_block_ids(task_blocks_num)
+        selected_block_ids = self.set_task_block_ids(
+            task_blocks_num, curve_distribution
+        )
 
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(
@@ -277,9 +318,9 @@ class Tasks:
         assert task is not None
         return task
 
-    def set_selected_block_ids(self, task_blocks_num):
+    def set_task_block_ids(self, task_blocks_num, curve):
         selected_block_ids = None
-        policy = self.config.block_selecting_policy
+        policy = self.config.curve_distributions[curve][BLOCK_SELECTING_POLICY]
         if policy == LATEST_FIRST:
             selected_block_ids = LatestFirst(
                 blocks=self.resource_manager.blocks, task_blocks_num=task_blocks_num
@@ -289,13 +330,24 @@ class Tasks:
         return selected_block_ids
 
 
-# TODO: use discrete events instead of real time
-class OnlineSimulator(BaseSimulator):
-    def __init__(self, config):
-        super().__init__(config)
+DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
 
-    def run(self):
-        env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
-        resource_manager = ResourceManager(env, self.config)
-        Tasks(env, resource_manager)
-        env.run()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", dest="config_file")
+    args = parser.parse_args()
+
+    with open(DEFAULT_CONFIG_FILE, "r") as default_config:
+        config = yaml.safe_load(default_config)
+    with open(args.config_file, "r") as user_config:
+        user_config = yaml.safe_load(user_config)
+
+    # Update the config file with the user-config's preferences
+    update_dict(user_config, config)
+    # pp.pprint(self.config)
+
+    # TODO: use discrete events instead of real time
+    env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
+    rm = ResourceManager(env, Config(config))
+    Tasks(env, rm)
+    env.run()

@@ -1,4 +1,4 @@
-from privacypacking.scheduler import Scheduler
+from privacypacking.schedulers.scheduler import Scheduler
 
 # TODO: see if we can reuse the greedy heuristic here
 # (FCFS is a greedy heuristic with no heuristic)
@@ -13,13 +13,13 @@ class FCFS(Scheduler):
         super().__init__(tasks, blocks, config)
 
     def schedule(self):
-        allocated_tasks = []
+        allocated_task_ids = []
 
         # todo: lock block
         # Read them by order
         for i, task in enumerate(self.tasks):
             if self.can_run(task):
                 self.consume_budgets(task)
-                allocated_tasks.append(task.id)
+                allocated_task_ids.append(task.id)
 
-        return allocated_tasks
+        return allocated_task_ids
