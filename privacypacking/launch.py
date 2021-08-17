@@ -12,13 +12,6 @@ from privacypacking.privacy_packing_simulator import run
 from privacypacking.utils.utils import *
 
 
-def run_and_report(config: dict) -> None:
-
-    metrics = run(config)
-
-    tune.report(**metrics)
-
-
 def main():
 
     with open(DEFAULT_CONFIG_FILE, "r") as f:
@@ -42,6 +35,13 @@ def main():
         search_alg=BasicVariantGenerator(points_to_evaluate=search_space),
         num_samples=len(search_space),
     )
+
+
+def run_and_report(config: dict) -> None:
+
+    metrics = run(config)
+
+    tune.report(**metrics)
 
 
 if __name__ == "__main__":
