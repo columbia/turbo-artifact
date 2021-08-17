@@ -9,15 +9,17 @@ Resources are non-replenishable.
 ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
 """
 
-import sys
+import argparse
 import random
+import sys
 from functools import partial
 from itertools import count
-from loguru import logger
-from privacypacking.config import Config
-import simpy.rt
+
 import numpy as np
-import argparse
+import simpy.rt
+from loguru import logger
+
+from privacypacking.block_selecting_policies import LatestFirst
 from privacypacking.budget.block import Block
 from privacypacking.budget.task import (
     GaussianCurve,
@@ -25,11 +27,18 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.block_selecting_policies import LatestFirst
-from privacypacking.schedulers import dpf, fcfs, simplex
+from privacypacking.config import Config
+from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
 from privacypacking.utils.utils import *
 
-schedulers = {FCFS: fcfs.FCFS, DPF: dpf.DPF, SIMPLEX: simplex.Simplex}
+schedulers = {
+    FCFS: fcfs.FCFS,
+    DPF: dpf.DPF,
+    SIMPLEX: simplex.Simplex,
+    "OfflineDPF": greedy_heuristics.OfflineDPF,
+    "FlatRelevance": greedy_heuristics.FlatRelevance,
+    "OverflowRelevance": greedy_heuristics.OverflowRelevance,
+}
 
 
 class ResourceManager:
@@ -55,6 +64,8 @@ class ResourceManager:
             + self.config.subsamplegaussian_init_num
         )
         print(self.total_init_tasks)
+
+        # TODO: how to we pass arguments to the scheduler?
         self.scheduler = schedulers[self.config.scheduler_name]
         if self.config.deterministic:
             random.seed(self.config.global_seed)
@@ -126,11 +137,14 @@ class ResourceManager:
                 initial_tasks_collected = True
 
             # Try and schedule the waiting tasks
+            # TODO: we are re-intentiating a new scheduler at every step, even if just 1 task changed
+            # Can we keep stateful scheduler? (e.g. don't have to recompute all the heuristics, copy all the tasks, etc)
             tasks = [t[0] for t in waiting_tasks]
             s = self.scheduler(tasks, self.blocks, self.config)
             allocated_ids = s.schedule()
 
             # Update the logs for every time five new tasks arrive
+            # TODO(later): check if this is a bottleneck (reserializing the whole log for just the last inputs)
             if task.id == self.total_init_tasks - 1 or task.id % 5 == 0:
                 self.config.logger.log(
                     tasks + self.archived_allocated_tasks,
@@ -330,7 +344,25 @@ class Tasks:
         return selected_block_ids
 
 
-DEFAULT_CONFIG_FILE = "privacypacking/config/default_config.yaml"
+def run(config: dict) -> dict:
+    env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
+    rm = ResourceManager(env, Config(config))
+    Tasks(env, rm)
+    env.run()
+
+    # TODO: why does the logger live in the config? Make it a static dataclass (weird cycle).
+    # TODO: `ResourceManager` should update the state of a single `Scheduler`?
+    logs = rm.config.logger.log(
+        rm.archived_allocated_tasks,
+        rm.blocks,
+        allocated_task_ids=rm.archived_allocated_tasks,
+        simulator_config=rm.config,
+    )
+
+    metrics = global_metrics(logs)
+
+    return metrics
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -347,7 +379,4 @@ if __name__ == "__main__":
     # pp.pprint(self.config)
 
     # TODO: use discrete events instead of real time
-    env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
-    rm = ResourceManager(env, Config(config))
-    Tasks(env, rm)
-    env.run()
+    run(config)

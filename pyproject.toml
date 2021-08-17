@@ -23,6 +23,7 @@ torch = "1.8.1"
 opacus = "^0.14.0"
 PyYAML = "^5.4.1"
 desmod = "^0.6.1"
+ray = {extras = ["tune", "default"], version = "^1.5.2"}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

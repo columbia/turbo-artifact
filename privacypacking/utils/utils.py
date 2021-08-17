@@ -61,6 +61,8 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 
 PRIVATEKUBE_DEMANDS_PATH = REPO_ROOT.joinpath("data/privatekube_demands")
 LOGS_PATH = REPO_ROOT.joinpath("logs")
+DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default_config.yaml")
+RAY_LOGS = LOGS_PATH.joinpath("ray")
 
 
 def update_dict(src, des):
@@ -97,7 +99,7 @@ def global_metrics(logs: dict) -> dict:
             n_allocated_tasks += 1
             realized_profit += task["profit"]
     datapoint = {
-        "scheduler": logs["simulator_config"]["offline"]["scheduler_spec"]["name"],
+        "scheduler": logs["simulator_config"]["scheduler_spec"]["name"],
         "n_allocated_tasks": n_allocated_tasks,
         "realized_profit": realized_profit,
         "n_tasks": n_tasks,
@@ -110,7 +112,7 @@ def global_metrics(logs: dict) -> dict:
 
 def load_blocks_and_budgets_from_dir(
     path: Path = PRIVATEKUBE_DEMANDS_PATH,
-) -> Iterable[Tuple[int, Budget]]:
+) -> Iterable[Tuple[int, "Budget"]]:
     blocks_and_budgets = []
     block_rescaling_factor = 100  # The logs have 100 blocks per day
     for yaml_path in path.glob("**/*.yaml"):
