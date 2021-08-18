@@ -344,24 +344,11 @@ class Tasks:
         return selected_block_ids
 
 
-def run(config: dict) -> dict:
+def run(config: dict):
     env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
     rm = ResourceManager(env, Config(config))
     Tasks(env, rm)
     env.run()
-
-    # TODO: why does the logger live in the config? Make it a static dataclass (weird cycle).
-    # TODO: `ResourceManager` should update the state of a single `Scheduler`?
-    logs = rm.config.logger.log(
-        rm.archived_allocated_tasks,
-        rm.blocks,
-        allocated_task_ids=rm.archived_allocated_tasks,
-        simulator_config=rm.config,
-    )
-
-    metrics = global_metrics(logs)
-
-    return metrics
 
 
 if __name__ == "__main__":

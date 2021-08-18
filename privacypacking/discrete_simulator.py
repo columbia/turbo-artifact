@@ -3,6 +3,7 @@ The single-threaded scheduler is responsible for managing the state,
 no need to lock/mutex on blocks and tasks.
 """
 import argparse
+from datetime import datetime
 from itertools import count
 
 import simpy
@@ -20,6 +21,7 @@ class Simulator:
         self,
         env: simpy.Environment,
         config: Config,
+        log_every_n_iterations=0,
     ) -> None:
         # Global state
         self.env = env
@@ -27,6 +29,7 @@ class Simulator:
         self.new_blocks = []
         self.new_tasks = []
         self.logger = Logger(config.log_path, config.scheduler_name)
+        self.log_every_n_iterations = log_every_n_iterations
 
         # Initialize the scheduler
         initial_tasks, initial_blocks = self.config.create_initial_tasks_and_blocks()
@@ -50,6 +53,7 @@ class Simulator:
         self.task_gen_process = self.env.process(self.task_gen())
 
     def main(self):
+        scheduling_iteration = 0
 
         while True:
             # Wait until something new happens
@@ -74,16 +78,22 @@ class Simulator:
             )
 
             # TODO: improve the log period + perfs
-            self.logger.log(
-                self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),
-                self.scheduler.blocks,
-                list(self.scheduler.allocated_tasks.keys()),
-                self.config,
-            )
+            if self.log_every_n_iterations and (
+                ((scheduling_iteration + 1) % self.log_every_n_iterations) == 0
+            ):
+                self.logger.log(
+                    self.scheduler.tasks
+                    + list(self.scheduler.allocated_tasks.values()),
+                    self.scheduler.blocks,
+                    list(self.scheduler.allocated_tasks.keys()),
+                    self.config,
+                )
 
             if self.no_more_blocks and self.no_more_tasks:
                 # End the simulation in advance
                 return
+
+            scheduling_iteration += 1
 
     def block_gen(self):
         logger.debug("Starting block gen.")
@@ -123,6 +133,7 @@ class Simulator:
 
                 # Pick a curve, a number of blocks, and create the task
                 # TODO: pick a profit too
+                # TODO: encapsulate in a class that can also read from arbitrary demands (e.g. the PrivateKube data)
                 curve_distribution = self.config.set_curve_distribution()
                 task_blocks_num = self.config.set_task_num_blocks(
                     self.scheduler.blocks, curve_distribution
@@ -148,10 +159,27 @@ class Simulator:
             return
 
 
-def run(config: dict):
+def run(config: dict) -> dict:
     env = simpy.Environment()
     sim = Simulator(env, Config(config))
+
+    start = datetime.now()
     env.run(until=15)
+
+    # Rough estimate of the scheduler's performances
+    simulation_duration = (datetime.now() - start).total_seconds()
+
+    logs = sim.logger.get_log_dict(
+        sim.scheduler.tasks + list(sim.scheduler.allocated_tasks.values()),
+        sim.scheduler.blocks,
+        list(sim.scheduler.allocated_tasks.keys()),
+        sim.config,
+        scheduling_time=simulation_duration,
+    )
+
+    metrics = global_metrics(logs)
+
+    return metrics
 
 
 if __name__ == "__main__":
