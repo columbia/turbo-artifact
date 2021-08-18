@@ -1,33 +1,17 @@
 """Generates blocks, tasks and manages them with a stateful scheduler.
-The scheduler is responsible for managing the state, no need to lock/mutex here.
+The single-threaded scheduler is responsible for managing the state, 
+no need to lock/mutex on blocks and tasks.
 """
 import argparse
-import random
-import sys
-
-# from simpy.events import AllOf, Event
-import time
-from functools import partial
 from itertools import count
 
-import numpy as np
 import simpy
-import simpy.rt
 from loguru import logger
 
-from privacypacking.block_selecting_policies import LatestFirst
 from privacypacking.budget.block import Block
-from privacypacking.budget.task import (
-    GaussianCurve,
-    LaplaceCurve,
-    SubsampledGaussianCurve,
-    UniformTask,
-)
 from privacypacking.config import Config
 from privacypacking.logger import Logger
 from privacypacking.privacy_packing_simulator import schedulers
-from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
-from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.utils import *
 
 
@@ -57,6 +41,8 @@ class Simulator:
         # Synchronization events
         self.new_block_event = self.env.event()
         self.new_task_event = self.env.event()
+        self.no_more_blocks = False
+        self.no_more_tasks = False
 
         # The three processes
         self.main_process = self.env.process(self.main())
@@ -69,6 +55,10 @@ class Simulator:
             # Wait until something new happens
             yield self.new_block_event | self.new_task_event
 
+            logger.debug(
+                f"[{self.env.now}] Adding new blocks {self.new_blocks} or tasks {self.new_tasks}"
+            )
+
             # Update the state of the scheduler with the new blocks/tasks
             while self.new_blocks:
                 self.scheduler.add_block(self.new_blocks.pop())
@@ -79,7 +69,11 @@ class Simulator:
             allocated_task_ids = self.scheduler.schedule()
             self.scheduler.update_allocated_tasks(allocated_task_ids)
 
-            # TODO: log period + perfs
+            logger.debug(
+                f"[{self.env.now}] Allocated the following task ids: {allocated_task_ids}"
+            )
+
+            # TODO: improve the log period + perfs
             self.logger.log(
                 self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),
                 self.scheduler.blocks,
@@ -87,26 +81,77 @@ class Simulator:
                 self.config,
             )
 
+            if self.no_more_blocks and self.no_more_tasks:
+                # End the simulation in advance
+                return
+
     def block_gen(self):
-        while True:
-            yield self.env.timeout(3)
-            print(f"Done sleeping block, time to interrupt! {self.env.now}")
+        logger.debug("Starting block gen.")
+        if self.config.block_arrival_frequency_enabled:
+            while True:
+                # Sleep until it's time to create a new block
+                block_arrival_interval = self.config.set_block_arrival_time()
+                yield self.env.timeout(block_arrival_interval)
+
+                # Initialize a fresh block with a new id
+                block = Block.from_epsilon_delta(
+                    block_id=next(self.block_count),
+                    epsilon=self.config.epsilon,
+                    delta=self.config.delta,
+                )
+
+                # Add the block to the queue and ping the scheduler
+                logger.debug(f"[{self.env.now}] New block: {block}")
+                self.new_blocks.append(block)
+                self.new_block_event.succeed()
+
+                # Refresh the event to be ready for the next block
+                self.new_block_event = self.env.event()
+        else:
+            # Nothing to generate, run the scheduler once and terminate
+            self.no_more_blocks = True
             self.new_block_event.succeed()
             self.new_block_event = self.env.event()
+            return
 
     def task_gen(self):
-        while True:
-            yield self.env.timeout(3)
-            # TODO: task_count and create_task
-            print(f"Done sleeping task, time to interrupt! {self.env.now}")
+        if self.config.task_arrival_frequency_enabled:
+            while True:
+                # Sleep until it's time to create a new task
+                task_arrival_interval = self.config.set_task_arrival_time()
+                yield self.env.timeout(task_arrival_interval)
+
+                # Pick a curve, a number of blocks, and create the task
+                # TODO: pick a profit too
+                curve_distribution = self.config.set_curve_distribution()
+                task_blocks_num = self.config.set_task_num_blocks(
+                    self.scheduler.blocks, curve_distribution
+                )
+                task = self.config.create_task(
+                    blocks=self.scheduler.blocks,
+                    task_id=next(self.task_count),
+                    curve_distribution=curve_distribution,
+                    task_blocks_num=task_blocks_num,
+                )
+
+                # Add the task to the queue and ping the scheduler
+                logger.debug(f"[{self.env.now}] New task: {task}")
+                self.new_tasks.append(task)
+                self.new_task_event.succeed()
+
+                # Refresh the event to be ready for the next task
+                self.new_task_event = self.env.event()
+        else:
+            self.no_more_tasks = True
             self.new_task_event.succeed()
             self.new_task_event = self.env.event()
+            return
 
 
 def run(config: dict):
     env = simpy.Environment()
-    sim = Simulator(env)
-    env.run(until=10)
+    sim = Simulator(env, Config(config))
+    env.run(until=15)
 
 
 if __name__ == "__main__":

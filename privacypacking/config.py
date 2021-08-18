@@ -108,9 +108,9 @@ class Config:
             self.log_file = (
                 f"{self.scheduler_name}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
             )
-        log_path = LOGS_PATH.joinpath(self.log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(log_path, self.scheduler_name)
+        self.log_path = LOGS_PATH.joinpath(self.log_file)
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        self.logger = Logger(self.log_path, self.scheduler_name)
 
     def dump(self) -> dict:
         return self.config
@@ -172,8 +172,8 @@ class Config:
         random.shuffle(curves)
         for curve_distribution in curves:
             task = self.create_task(
-                next(task_id_counter),
                 initial_blocks,
+                next(task_id_counter),
                 curve_distribution,
                 task_blocks_num=self.set_task_num_blocks(
                     initial_blocks, curve_distribution
@@ -186,7 +186,7 @@ class Config:
 
     def create_task(
         self, blocks: Dict[int, Block], task_id, curve_distribution, task_blocks_num
-    ):
+    ) -> Task:
         task = None
         selected_block_ids = self.set_task_block_ids(
             blocks,
@@ -240,3 +240,14 @@ class Config:
             task_arrival_interval = self.task_arrival_interval
         assert task_arrival_interval is not None
         return task_arrival_interval
+
+    def set_block_arrival_time(self):
+        block_arrival_interval = None
+        if self.block_arrival_poisson_enabled:
+            block_arrival_interval = partial(
+                random.expovariate, 1 / self.block_arrival_interval
+            )
+        elif self.block_arrival_constant_enabled:
+            block_arrival_interval = self.block_arrival_interval
+        assert block_arrival_interval is not None
+        return block_arrival_interval
