@@ -177,6 +177,14 @@ def run(config: dict) -> dict:
         scheduling_time=simulation_duration,
     )
 
+    # Saving locally too
+    sim.logger.log(
+        sim.scheduler.tasks + list(sim.scheduler.allocated_tasks.values()),
+        sim.scheduler.blocks,
+        list(sim.scheduler.allocated_tasks.keys()),
+        sim.config,
+        scheduling_time=simulation_duration,
+    )
     metrics = global_metrics(logs)
 
     return metrics

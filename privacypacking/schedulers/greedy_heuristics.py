@@ -87,7 +87,8 @@ class FlatRelevance(GreedyHeuristic):
                 for alpha in budget.alphas:
                     demand = budget.epsilon(alpha)
                     capacity = self.blocks[block_id].initial_budget.epsilon(alpha)
-                    cost += demand / capacity
+                    if capacity > 0:
+                        cost += demand / capacity
             return cost
 
         return sorted(self.tasks, key=task_key)

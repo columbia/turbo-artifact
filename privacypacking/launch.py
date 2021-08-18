@@ -7,6 +7,7 @@ Usage: modify this script with the configuration logic you need.
 import os
 
 import yaml
+from loguru import logger
 from ray import tune
 from ray.tune.suggest.basic_variant import BasicVariantGenerator
 
@@ -17,15 +18,18 @@ from privacypacking.utils.utils import *
 def run_and_report(config: dict) -> None:
     os.environ["LOGURU_LEVEL"] = "INFO"
     metrics = run(config)
+    logger.info(metrics)
     tune.report(**metrics)
 
 
-def main():
+def custom_search_space():
 
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
 
-    with open(DEFAULT_CONFIG_FILE.parent.joinpath("simplex.yaml"), "r") as user_config:
+    with open(
+        DEFAULT_CONFIG_FILE.parent.joinpath("offline_dpf.yaml"), "r"
+    ) as user_config:
         user_config = yaml.safe_load(user_config)
 
     update_dict(user_config, config)
@@ -39,6 +43,7 @@ def main():
         "OverflowRelevance",
         "simplex",
     ]:
+        # Everything identical except the scheduler
         extra_config = {"scheduler_spec": {"name": scheduler_name}}
         search_space.append(extra_config)
 
@@ -55,5 +60,34 @@ def main():
     )
 
 
+def grid():
+    with open(DEFAULT_CONFIG_FILE, "r") as f:
+        config = yaml.safe_load(f)
+
+    with open(
+        DEFAULT_CONFIG_FILE.parent.joinpath("offline_dpf.yaml"), "r"
+    ) as user_config:
+        user_config = yaml.safe_load(user_config)
+
+    update_dict(user_config, config)
+
+    config["scheduler_spec"]["name"] = tune.grid_search(
+        [
+            "OfflineDPF",
+            "FlatRelevance",
+            "OverflowRelevance",
+            "simplex",
+        ]
+    )
+
+    tune.run(
+        run_and_report,
+        config=config,
+        resources_per_trial={"cpu": 1},
+        local_dir=RAY_LOGS,
+        resume=False,
+    )
+
+
 if __name__ == "__main__":
-    main()
+    grid()
