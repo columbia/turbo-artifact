@@ -2,6 +2,7 @@ import random
 from typing import Dict, List, Tuple
 
 import numpy as np
+from loguru import logger
 
 from privacypacking.budget import Block, Task
 from privacypacking.budget.task import (
@@ -12,29 +13,6 @@ from privacypacking.budget.task import (
 )
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
-
-
-# TODO: double check block mutability, should be a method?
-def greedy_allocation(sorted_tasks: List[Task], blocks: Dict[int, Block]) -> List[int]:
-    """Allocate tasks in order until there is no budget left
-
-    Args:
-        sorted_tasks (List[Task]): ordered tasks
-        blocks (List[Block]): blocks requested by the tasks (will be modified)
-
-    Returns:
-        List[int]: the ids of the tasks that can be allocated
-    """
-    allocated_task_ids = []
-
-    for task in sorted_tasks:
-        for block_id, demand_budget in task.budget_per_block.items():
-            block = blocks[block_id]
-            if block.budget >= demand_budget:
-                allocated_task_ids.append(task.id)
-                block.budget -= demand_budget
-    return allocated_task_ids
-
 
 # TODO: reverse order + backfill (dual heuristic)
 
@@ -59,10 +37,28 @@ class GreedyHeuristic(Scheduler):
         # The default heuristic doesn't do anything
         return self.tasks
 
+    def greedy_allocation(self, sorted_tasks: List[Task]) -> List[int]:
+        """Allocate tasks in order until there is no budget left.
+        Modifies the blocks of the scheduler in-place.
+
+        Args:
+            sorted_tasks (List[Task]): ordered tasks
+
+        Returns:
+            List[int]: the ids of the tasks that can be allocated
+        """
+        allocated_task_ids = []
+
+        for task in sorted_tasks:
+            if self.can_run(task):
+                allocated_task_ids.append(task.id)
+                self.consume_budgets(task)
+        return allocated_task_ids
+
     def schedule(self) -> List[int]:
         # Sort and allocate in order
         sorted_tasks = self.order()
-        sorted_allocation = greedy_allocation(sorted_tasks, self.blocks)
+        sorted_allocation = self.greedy_allocation(sorted_tasks)
         return sorted_allocation
 
 
@@ -95,7 +91,6 @@ class FlatRelevance(GreedyHeuristic):
 
 
 class OverflowRelevance(GreedyHeuristic):
-    # TODO: add preprocessing to rule out the contention.
     def order(self) -> Tuple[List[int], List[Task]]:
         """The dimensions that are closer to being bottlenecks are more relevant
             r_{jk\alpha} = 1/(\sum_{i}w_{ik\alpha} - c_{k\alpha})
@@ -122,7 +117,9 @@ class OverflowRelevance(GreedyHeuristic):
                     overflow = overflow_b_α[block_id][alpha]
                     cost += demand / overflow
                     if overflow < 0:
-                        raise Exception("There is no contention for this block")
+                        # TODO: add preprocessing to rule out the contention.
+                        # raise Exception("There is no contention for this block")
+                        cost = 0
             return cost
 
         # TODO: threshold, exponent on the overflow

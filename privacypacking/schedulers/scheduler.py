@@ -1,5 +1,7 @@
 from typing import List
 
+from loguru import logger
+
 from privacypacking.budget import Block, Task
 
 # NOTE: ideally, we should be able to plug this class in Kubernetes,
@@ -67,7 +69,6 @@ class Scheduler:
 
         # TODO: this is quite horrible, we should change `self.task` (but retrocompatible)
         tasks = {task.id: task for task in self.tasks}
-
         for task_id in allocated_task_ids:
             self.allocated_tasks[task_id] = tasks.pop(task_id)
 

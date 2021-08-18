@@ -68,9 +68,14 @@ def grid():
         DEFAULT_CONFIG_FILE.parent.joinpath("offline_dpf.yaml"), "r"
     ) as user_config:
         user_config = yaml.safe_load(user_config)
-
     update_dict(user_config, config)
 
+    config["blocks_spec"]["initial_num"] = tune.grid_search([5, 10])
+
+    for curve in ["laplace", "gaussian", "SubsampledGaussian"]:
+        config["tasks_spec"]["curve_distributions"][curve][
+            "initial_num"
+        ] = tune.grid_search([0, 50, 85, 100, 175])
     config["scheduler_spec"]["name"] = tune.grid_search(
         [
             "OfflineDPF",
