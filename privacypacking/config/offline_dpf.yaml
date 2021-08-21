@@ -1,0 +1,34 @@
+blocks_spec:
+  initial_num: 5
+
+tasks_spec:
+  curve_distributions:
+    laplace:
+      initial_num: 50
+      noise_start: 0.1
+      noise_stop: 5
+      blocks_request:
+        constant:
+          enabled: true
+          num_blocks: 3
+
+    gaussian:
+      initial_num: 50
+      sigma_start: 1
+      sigma_stop: 5
+      blocks_request:
+        constant:
+          enabled: true
+          num_blocks: 4
+
+    SubsampledGaussian:
+      initial_num: 50
+      sigma_start: 1
+      sigma_stop: 5
+      blocks_request:
+        constant:
+          enabled: true
+          num_blocks: 5
+
+scheduler_spec:
+  name: OfflineDPF
