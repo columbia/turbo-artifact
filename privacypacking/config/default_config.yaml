@@ -5,6 +5,7 @@ delta: 0.001
 #default_config_file: "privacypacking/config/default_config.yaml"
 global_seed: 44
 deterministic: true
+log_every_n_iterations: 10
 
 blocks_spec:
   initial_num: 1

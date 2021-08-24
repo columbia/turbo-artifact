@@ -121,6 +121,7 @@ class Config:
         self.log_path = LOGS_PATH.joinpath(self.log_file)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger = Logger(self.log_path, self.scheduler_name)
+        self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
         return self.config
@@ -157,13 +158,13 @@ class Config:
         assert policy_func is not None
         return policy_func
 
-    def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], List[Block]]:
+    def create_initial_tasks_and_blocks(self) -> Tuple[List[Task],  Dict[int, Block]]:
         # Create the initial tasks and blocks
-        initial_blocks = []
+        initial_blocks = {}
         block_id_counter = count()
         for _ in range(self.initial_blocks_num):
             block_id = next(block_id_counter)
-            initial_blocks.append(self.create_block(block_id))
+            initial_blocks[block_id] = self.create_block(block_id)
 
         initial_tasks = []
         task_id_counter = count()
@@ -175,7 +176,7 @@ class Config:
         random.shuffle(curves)
         for curve_distribution in curves:
             task_blocks_num = self.set_task_num_blocks(curve_distribution)
-            policy_func = self.config.get_policy(curve_distribution)
+            policy_func = self.get_policy(curve_distribution)
             selected_block_ids = policy_func(
                 blocks=initial_blocks, task_blocks_num=task_blocks_num
             ).select_blocks()
@@ -231,7 +232,7 @@ class Config:
 
     def create_block(self, block_id) -> Block:
         return Block.from_epsilon_delta(
-            block_id, self.config.epsilon, self.config.delta
+            block_id, self.epsilon, self.delta
         )
 
     def set_task_arrival_time(self):
@@ -258,9 +259,9 @@ class Config:
 
     def get_initial_task_curves(self):
         curves = (
-                [LAPLACE] * self.config.laplace_init_num
-                + [GAUSSIAN] * self.config.gaussian_init_num
-                + [SUBSAMPLEGAUSSIAN] * self.config.subsamplegaussian_init_num
+            [LAPLACE] * self.config.laplace_init_num
+            + [GAUSSIAN] * self.config.gaussian_init_num
+            + [SUBSAMPLEGAUSSIAN] * self.config.subsamplegaussian_init_num
         )
         random.shuffle(curves)
         return curves

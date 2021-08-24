@@ -12,8 +12,8 @@ from threading import Lock
 
 class Scheduler:
     def __init__(self, tasks, blocks):
-        self.tasks = {task.id: task for task in tasks}
-        self.blocks = {block.id: block for block in blocks}
+        self.tasks = tasks
+        self.blocks = blocks
         self.blocks_mutex = Lock()
 
         # TODO: manage the tasks state inside the scheduler. Pending, allocated, failed?
@@ -30,13 +30,13 @@ class Scheduler:
         """
         pass
 
-    def safe_schedule(self) -> List[int]:
-        self.blocks_mutex.acquire()
-        try:
-            allocated_ids = self.schedule()
-        finally:
-            self.blocks_mutex.release()
-        return allocated_ids
+    # def safe_schedule(self) -> List[int]:
+    #     self.blocks_mutex.acquire()
+    #     try:
+    #         allocated_ids = self.schedule()
+    #     finally:
+    #         self.blocks_mutex.release()
+    #     return allocated_ids
 
     def order(self) -> List[int]:
         pass
@@ -61,7 +61,7 @@ class Scheduler:
             block.budget -= demand_budget
 
     def add_task(self, task: Task) -> None:
-        self.tasks.update({task.id: task})
+        self.tasks.append(task)
 
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
@@ -83,8 +83,12 @@ class Scheduler:
         Args:
             allocated_task_ids (List[int]): returned by `self.schedule()`
         """
+        # TODO: this is quite horrible, we should change `self.task` (but retrocompatible)
+        tasks = {task.id: task for task in self.tasks}
         for task_id in allocated_task_ids:
-            self.allocated_tasks[task_id] = self.tasks.pop(task_id)
+            self.allocated_tasks[task_id] = tasks.pop(task_id)
+        self.tasks = list(tasks.values())
+
 
     def safe_select_block_ids(self, num_blocks, policy_func):
         self.blocks_mutex.acquire()

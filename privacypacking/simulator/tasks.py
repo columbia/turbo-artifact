@@ -12,6 +12,7 @@ class Tasks:
         self.resource_manager = resource_manager
         self.config = resource_manager.config
         self.task_count = count(resource_manager.initial_tasks_num)
+
         self.env.process(self.task_producer())
 
     def task_producer(self):
@@ -29,7 +30,7 @@ class Tasks:
         Task behavior. Sets its own demand, notifies resource manager of its existence,
         waits till it gets scheduled and then is executed
         """
-        logger.debug(f'Task: {task_id} generated at {self.env.now}')
+        logger.debug(f"Task: {task_id} generated at {self.env.now}")
         curve_distribution = (
             self.config.set_curve_distribution()
             if curve_distribution is None
@@ -45,13 +46,9 @@ class Tasks:
         task = self.config.create_task(task_id, curve_distribution, selected_block_ids)
         allocated_resources_event = self.env.event()
 
-        # Wait till the demand-request has been delivered to the resource-manager
-        yield self.config.resource_manager.task_demands_queue.put(
+        yield self.resource_manager.new_tasks_queue.put(
             (task, allocated_resources_event)
         )
 
-        # logger.info(f'Task: {task_id} inserted demand')
-
-        # Wait till the demand-request has been granted by the resource-manager
         yield allocated_resources_event
-        # logger.info(f'Task: {task_id} completed at {self.env.now}')
+        logger.debug(f'Task: {task_id} completed at {self.env.now}')

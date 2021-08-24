@@ -10,12 +10,11 @@ class FCFS(Scheduler):
     """
 
     def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks, config)
+        super().__init__(tasks, blocks)
 
     def schedule(self):
         allocated_task_ids = []
 
-        # todo: lock block
         # Read them by order
         for i, task in enumerate(self.tasks):
             if self.can_run(task):

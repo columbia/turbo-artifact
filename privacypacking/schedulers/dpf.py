@@ -36,7 +36,8 @@ class DPF(Scheduler):
     dpf_blocks = {}
 
     def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks, config)
+        super().__init__(tasks, blocks)
+        self.config = config
         assert config is not None
 
     def update_dpf_blocks(self):
