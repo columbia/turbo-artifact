@@ -1,7 +1,5 @@
 from typing import List
 
-from loguru import logger
-
 from privacypacking.budget import Block, Task
 from threading import Lock
 
@@ -19,6 +17,12 @@ class Scheduler:
         # TODO: manage the tasks state inside the scheduler. Pending, allocated, failed?
         self.allocated_tasks = {}
 
+    def safe_get_num_blocks(self):
+        self.blocks_mutex.acquire()
+        num_blocks = len(self.blocks)
+        self.blocks_mutex.release()
+        return num_blocks
+
     def schedule(self) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them
         to some blocks from `self.blocks`.
@@ -29,14 +33,6 @@ class Scheduler:
             List[int]: the ids of the tasks that were scheduled
         """
         pass
-
-    # def safe_schedule(self) -> List[int]:
-    #     self.blocks_mutex.acquire()
-    #     try:
-    #         allocated_ids = self.schedule()
-    #     finally:
-    #         self.blocks_mutex.release()
-    #     return allocated_ids
 
     def order(self) -> List[int]:
         pass
@@ -89,13 +85,14 @@ class Scheduler:
             self.allocated_tasks[task_id] = tasks.pop(task_id)
         self.tasks = list(tasks.values())
 
-
-    def safe_select_block_ids(self, num_blocks, policy_func):
+    # Acquire the lock before trying to get an instance of the current blocks state
+    # otherwise, other blocks might be added while selecting blocks for a task
+    def safe_select_block_ids(self, task_blocks_num, policy):
         self.blocks_mutex.acquire()
         try:
-            selected_block_ids = policy_func(
-                blocks=self.blocks, task_blocks_num=num_blocks
-            ).select_blocks()
+            selected_block_ids = policy.select_blocks(
+                blocks=self.blocks, task_blocks_num=task_blocks_num
+            )
         finally:
             self.blocks_mutex.release()
 

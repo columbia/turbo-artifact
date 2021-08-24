@@ -16,40 +16,46 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        initial_tasks, initial_blocks = self.config.create_initial_tasks_and_blocks()
-        self.scheduler = schedulers[self.config.scheduler_name](
-            initial_tasks,
-            initial_blocks,
-            self.config
-        )
-        self.initial_tasks_num = len(initial_tasks)
-        self.initial_blocks_num = len(initial_tasks)
+        self.scheduler = schedulers[self.config.scheduler_name]([], {}, self.config)
+
+        self.blocks_initialized = self.env.event()
 
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
 
     def block_consumer(self):
-        while True:
-            # Pick the next block from the queue
+        def consume():
             block, generated_block_event = yield self.new_blocks_queue.get()
             self.scheduler.safe_add_block(block)
             generated_block_event.succeed()
 
+        # Consume all initial blocks
+        initial_blocks_num = self.config.get_initial_blocks_num()
+        for _ in range(initial_blocks_num):
+            yield self.env.process(consume())
+        self.blocks_initialized.succeed()
+        # Keep consuming more incoming blocks
+        while True:
+            yield self.env.process(consume())
+
     def task_consumer(self):
         scheduling_iteration = 0
         waiting_events = {}
-        print(self.scheduler.tasks)
-        while True:
-            # Pick the next task from the queue
+
+        def consume():
             task, allocated_resources_event = yield self.new_tasks_queue.get()
-            print(task.id)
             waiting_events[task.id] = allocated_resources_event
-            # No synchronization needed for tasks as they are written/read sequentially
             self.scheduler.add_task(task)
 
+        # Consume all initial tasks
+        initial_tasks_num = self.config.get_initial_tasks_num()
+        for _ in range(initial_tasks_num):
+            yield self.env.process(consume())
+        # Keep consuming more incoming tasks
+        while True:
+            yield self.env.process(consume())
             # Schedule (it modifies the blocks) and update the list of pending tasks
             allocated_task_ids = self.scheduler.schedule()
-            print(allocated_task_ids)
             self.scheduler.update_allocated_tasks(allocated_task_ids)
 
             self.update_logs(scheduling_iteration)
@@ -61,11 +67,10 @@ class ResourceManager:
                 del waiting_events[allocated_id]
 
     def update_logs(self, scheduling_iteration):
-        # TODO: improve the log period + perfs
+        # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
             ((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0
         ):
-            print(list(self.scheduler.allocated_tasks.keys()))
             self.config.logger.log(
                 self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),
                 self.scheduler.blocks,

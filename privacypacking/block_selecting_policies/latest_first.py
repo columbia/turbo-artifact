@@ -1,12 +1,6 @@
-from privacypacking.block_selecting_policies.block_selecting_policy import (
-    BlockSelectingPolicy,
-)
-
-
-class LatestFirst(BlockSelectingPolicy):
-    def __init__(self, blocks, task_blocks_num):
-        super().__init__(blocks, task_blocks_num)
-
-    def select_blocks(self):
-        blocks_num = len(self.blocks)
-        return reversed(range(blocks_num - self.task_blocks_num, blocks_num))
+class LatestFirst:
+    @staticmethod
+    def select_blocks(blocks, task_blocks_num):
+        # passing the blocks because future policies might be more elaborate and require blocks info
+        blocks_num = len(blocks)
+        return reversed(range(blocks_num - task_blocks_num, blocks_num))

@@ -11,14 +11,21 @@ class Tasks:
         self.env = environment
         self.resource_manager = resource_manager
         self.config = resource_manager.config
-        self.task_count = count(resource_manager.initial_tasks_num)
-
+        self.task_count = count()
         self.env.process(self.task_producer())
 
     def task_producer(self):
         """
         Generate tasks.
         """
+        # Wait till blocks initialization is completed
+        yield self.resource_manager.blocks_initialized
+
+        # Produce initial tasks
+        initial_curves = self.config.get_initial_task_curves()
+        for curve in initial_curves:
+            self.env.process(self.task(next(self.task_count), curve))
+
         if self.config.task_arrival_frequency_enabled:
             while True:
                 task_arrival_interval = self.config.set_task_arrival_time()
@@ -36,11 +43,15 @@ class Tasks:
             if curve_distribution is None
             else curve_distribution
         )
-        task_blocks_num = self.config.set_task_num_blocks(curve_distribution)
-        policy_func = self.config.get_policy(curve_distribution)
+
+        num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+        task_blocks_num = self.config.set_task_num_blocks(
+            curve_distribution, num_blocks
+        )
+        policy = self.config.get_policy(curve_distribution)
         # Ask the stateful scheduler to set the block ids of the task according to the policy function
         selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(
-            task_blocks_num, policy_func
+            task_blocks_num, policy
         )
 
         task = self.config.create_task(task_id, curve_distribution, selected_block_ids)
@@ -51,4 +62,4 @@ class Tasks:
         )
 
         yield allocated_resources_event
-        logger.debug(f'Task: {task_id} completed at {self.env.now}')
+        logger.debug(f"Task: {task_id} completed at {self.env.now}")

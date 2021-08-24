@@ -70,12 +70,12 @@ class Plotter:
                 color="allocated",
                 line_group="job",
                 log_x=False,
-                log_y=False,
+                log_y=True,
             )
         else:
             fig = px.area(
                 log_x=False,
-                log_y=False,
+                log_y=True,
             )
 
         fig.add_trace(
