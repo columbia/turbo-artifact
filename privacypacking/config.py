@@ -6,7 +6,6 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from privacypacking.block_selecting_policies import LatestFirst
 from privacypacking.budget import Block, Task
 from privacypacking.budget.task import (
     GaussianCurve,
@@ -14,8 +13,19 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.logger import Logger
 from privacypacking.utils.utils import *
+from privacypacking.logger import Logger
+from privacypacking.block_selecting_policies import LatestFirst
+from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
+
+schedulers = {
+    FCFS: fcfs.FCFS,
+    DPF: dpf.DPF,
+    SIMPLEX: simplex.Simplex,
+    "OfflineDPF": greedy_heuristics.OfflineDPF,
+    "FlatRelevance": greedy_heuristics.FlatRelevance,
+    "OverflowRelevance": greedy_heuristics.OverflowRelevance,
+}
 
 
 class Config:
@@ -129,18 +139,7 @@ class Config:
         )
         return curve[0]
 
-    def set_task_block_ids(self, blocks: Dict[int, Block], task_blocks_num, curve):
-        selected_block_ids = None
-        policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
-        if policy == LATEST_FIRST:
-            selected_block_ids = LatestFirst(
-                blocks=blocks, task_blocks_num=task_blocks_num
-            ).select_blocks()
-        # elif other policy
-        assert selected_block_ids is not None
-        return selected_block_ids
-
-    def set_task_num_blocks(self, blocks: Dict[int, Block], curve):
+    def set_task_num_blocks(self, curve):
         task_blocks_num = None
         block_requests = self.curve_distributions[curve][BLOCKS_REQUEST]
         if block_requests[RANDOM][ENABLED]:
@@ -148,19 +147,23 @@ class Config:
         elif block_requests[CONSTANT][ENABLED]:
             task_blocks_num = block_requests[CONSTANT][NUM_BLOCKS]
         assert task_blocks_num is not None
-        blocks_num = len(blocks)
-        task_blocks_num = max(1, min(task_blocks_num, blocks_num))
         return task_blocks_num
 
-    def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], Dict[int, Block]]:
+    def get_policy(self, curve):
+        policy_func = None
+        policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
+        if policy == LATEST_FIRST:
+            policy_func = LatestFirst
+        assert policy_func is not None
+        return policy_func
+
+    def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], List[Block]]:
         # Create the initial tasks and blocks
-        initial_blocks = {}
+        initial_blocks = []
         block_id_counter = count()
         for _ in range(self.initial_blocks_num):
             block_id = next(block_id_counter)
-            initial_blocks[block_id] = Block.from_epsilon_delta(
-                block_id, self.epsilon, self.delta
-            )
+            initial_blocks.append(self.create_block(block_id))
 
         initial_tasks = []
         task_id_counter = count()
@@ -171,28 +174,24 @@ class Config:
         )
         random.shuffle(curves)
         for curve_distribution in curves:
+            task_blocks_num = self.set_task_num_blocks(curve_distribution)
+            policy_func = self.config.get_policy(curve_distribution)
+            selected_block_ids = policy_func(
+                blocks=initial_blocks, task_blocks_num=task_blocks_num
+            ).select_blocks()
+
             task = self.create_task(
-                initial_blocks,
                 next(task_id_counter),
                 curve_distribution,
-                task_blocks_num=self.set_task_num_blocks(
-                    initial_blocks, curve_distribution
-                ),
+                selected_block_ids=selected_block_ids,
             )
 
             initial_tasks.append(task)
 
         return initial_tasks, initial_blocks
 
-    def create_task(
-        self, blocks: Dict[int, Block], task_id, curve_distribution, task_blocks_num
-    ) -> Task:
+    def create_task(self, task_id, curve_distribution, selected_block_ids) -> Task:
         task = None
-        selected_block_ids = self.set_task_block_ids(
-            blocks,
-            task_blocks_num,
-            curve_distribution,
-        )
 
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(self.gaussian_sigma_start, self.gaussian_sigma_stop)
@@ -230,6 +229,11 @@ class Config:
         assert task is not None
         return task
 
+    def create_block(self, block_id) -> Block:
+        return Block.from_epsilon_delta(
+            block_id, self.config.epsilon, self.config.delta
+        )
+
     def set_task_arrival_time(self):
         task_arrival_interval = None
         if self.task_arrival_poisson_enabled:
@@ -251,3 +255,15 @@ class Config:
             block_arrival_interval = self.block_arrival_interval
         assert block_arrival_interval is not None
         return block_arrival_interval
+
+    def get_initial_task_curves(self):
+        curves = (
+                [LAPLACE] * self.config.laplace_init_num
+                + [GAUSSIAN] * self.config.gaussian_init_num
+                + [SUBSAMPLEGAUSSIAN] * self.config.subsamplegaussian_init_num
+        )
+        random.shuffle(curves)
+        return curves
+
+    def get_initial_blocks_num(self):
+        return self.initial_blocks_num
