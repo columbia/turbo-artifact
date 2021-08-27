@@ -1,6 +1,7 @@
 from typing import List
 
 from privacypacking.budget import ZeroCurve
+from privacypacking.budget import Block, Task
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
 
@@ -40,10 +41,19 @@ class DPF(Scheduler):
         self.config = config
         assert config is not None
 
-    def update_dpf_blocks(self):
-        for block_id, block in self.blocks.items():
-            if block_id not in DPF.dpf_blocks:
-                DPF.dpf_blocks[block_id] = DPFBlock(block, self.config.scheduler_N)
+    def add_task(self, task: Task) -> None:
+        self.tasks.append(task)
+        self.unlock_block_budgets()
+
+    def safe_add_block(self, block: Block) -> None:
+        self.blocks_mutex.acquire()
+        try:
+            if block.id in self.blocks:
+                raise Exception("This block id is already present in the scheduler.")
+            self.blocks.update({block.id: block})
+            DPF.dpf_blocks[block.id] = DPFBlock(block, self.config.scheduler_N)
+        finally:
+            self.blocks_mutex.release()
 
     def unlock_block_budgets(self):
         new_task = self.tasks[-1]
@@ -54,7 +64,6 @@ class DPF(Scheduler):
 
     def order(self) -> List[int]:
         """Sorts the tasks by dominant share"""
-
         n_tasks = len(self.tasks)
 
         def index_key(index):
@@ -90,22 +99,12 @@ class DPF(Scheduler):
 
     def schedule(self) -> List[int]:
         allocated_task_ids = []
-
-        # Update dpf_blocks in case new blocks arrived
-        self.update_dpf_blocks()
-
-        # Unlock budgets
-        self.unlock_block_budgets()
-
         # Task indices sorted by smallest dominant share
         sorted_indices = self.order()
-
-        # todo: lock blocks
         # Try and schedule tasks
         for i in sorted_indices:
             task = self.tasks[i]
             if self.can_run(task):
                 self.consume_budgets(task)
                 allocated_task_ids.append(task.id)
-
         return allocated_task_ids

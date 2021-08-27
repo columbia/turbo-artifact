@@ -22,8 +22,8 @@ class Simulator:
         self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         self.config = config
         self.rm = ResourceManager(self.env, self.config)
-        Tasks(self.env, self.rm)
         Blocks(self.env, self.rm)
+        Tasks(self.env, self.rm)
 
     def run(self):
         start = datetime.now()

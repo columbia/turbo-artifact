@@ -34,7 +34,7 @@ class ResourceManager:
         for _ in range(initial_blocks_num):
             yield self.env.process(consume())
         self.blocks_initialized.succeed()
-        # Keep consuming more incoming blocks
+
         while True:
             yield self.env.process(consume())
 
@@ -47,11 +47,11 @@ class ResourceManager:
             waiting_events[task.id] = allocated_resources_event
             self.scheduler.add_task(task)
 
-        # Consume all initial tasks
+        # Consume initial tasks
         initial_tasks_num = self.config.get_initial_tasks_num()
-        for _ in range(initial_tasks_num):
+        for _ in range(initial_tasks_num-1):
             yield self.env.process(consume())
-        # Keep consuming more incoming tasks
+
         while True:
             yield self.env.process(consume())
             # Schedule (it modifies the blocks) and update the list of pending tasks
@@ -77,3 +77,4 @@ class ResourceManager:
                 list(self.scheduler.allocated_tasks.keys()),
                 self.config,
             )
+''
