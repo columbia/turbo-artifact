@@ -62,18 +62,16 @@ class DPF(Scheduler):
             # Unlock budget for each alpha
             dpf_block.unlock_budget()
 
-    def order(self) -> List[int]:
+    def order(self) -> List[Task]:
         """Sorts the tasks by dominant share"""
-        n_tasks = len(self.tasks)
 
-        def index_key(index):
+        # n_tasks = len(self.tasks)
+
+        def task_key(task):
             # Lexicographic order (the dominant share is the first component)
-            return dominant_shares(self.tasks[index], self.blocks)
+            return dominant_shares(task, self.blocks)
 
-        # Task number i is high priority if it has small dominant share
-        original_indices = list(range(n_tasks))
-        sorted_indices = sorted(original_indices, key=index_key, reverse=True)
-        return sorted_indices
+        return sorted(self.tasks, key=task_key)
 
     def can_run(self, task):
         """
@@ -99,11 +97,10 @@ class DPF(Scheduler):
 
     def schedule(self) -> List[int]:
         allocated_task_ids = []
-        # Task indices sorted by smallest dominant share
-        sorted_indices = self.order()
+        # Task sorted by smallest dominant share
+        sorted_tasks = self.order()
         # Try and schedule tasks
-        for i in sorted_indices:
-            task = self.tasks[i]
+        for task in sorted_tasks:
             if self.can_run(task):
                 self.consume_budgets(task)
                 allocated_task_ids.append(task.id)

@@ -15,7 +15,7 @@ from privacypacking.budget.task import (
 )
 from privacypacking.utils.utils import *
 from privacypacking.logger import Logger
-from privacypacking.block_selecting_policies import LatestFirst
+from privacypacking.block_selecting_policies import LatestFirst, Random
 from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
 
 schedulers = {
@@ -159,6 +159,8 @@ class Config:
         policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
         if policy == LATEST_FIRST:
             policy = LatestFirst
+        elif policy == RANDOM:
+            policy = Random
         assert policy is not None
         return policy
 
@@ -202,6 +204,7 @@ class Config:
 
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(self.gaussian_sigma_start, self.gaussian_sigma_stop)
+            print(sigma)
             task = UniformTask(
                 id=task_id,
                 profit=1,
@@ -210,6 +213,7 @@ class Config:
             )
         elif curve_distribution == LAPLACE:
             noise = random.uniform(self.laplace_noise_start, self.laplace_noise_stop)
+            print(noise)
             task = UniformTask(
                 id=task_id,
                 profit=1,
@@ -221,6 +225,7 @@ class Config:
                 self.subsamplegaussian_sigma_start,
                 self.subsamplegaussian_sigma_stop,
             )
+            print(sigma)
             task = UniformTask(
                 id=task_id,
                 profit=1,

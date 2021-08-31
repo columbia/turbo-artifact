@@ -18,8 +18,9 @@ from privacypacking.utils.utils import *
 
 class Simulator:
     def __init__(self, config):
-        # TODO: use discrete events instead of real time
-        self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
+        # self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
+        self.env = simpy.Environment()
+
         self.config = config
         self.rm = ResourceManager(self.env, self.config)
         Blocks(self.env, self.rm)
@@ -27,7 +28,7 @@ class Simulator:
 
     def run(self):
         start = datetime.now()
-        self.env.run()
+        self.env.run(until=15)
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
 
