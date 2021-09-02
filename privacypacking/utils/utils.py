@@ -37,6 +37,7 @@ BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
 
 GLOBAL_SEED = "global_seed"
 DETERMINISTIC = "deterministic"
+LOG_EVERY_N_ITERATIONS = "log_every_n_iterations"
 RANDOM = "random"
 POISSON = "poisson"
 CONSTANT = "constant"

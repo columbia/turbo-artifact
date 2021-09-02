@@ -23,7 +23,7 @@ from privacypacking.utils.scheduling import dominant_shares
 # TODO: use the profit field
 class GreedyHeuristic(Scheduler):
     def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks, config)
+        super().__init__(tasks, blocks)
 
     def order(self) -> List[Task]:
         """Sorts the tasks according to a heuristic.

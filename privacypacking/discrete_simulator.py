@@ -12,7 +12,7 @@ from loguru import logger
 from privacypacking.budget.block import Block
 from privacypacking.config import Config
 from privacypacking.logger import Logger
-from privacypacking.privacy_packing_simulator import schedulers
+from privacypacking.config import schedulers
 from privacypacking.utils.utils import *
 
 
@@ -36,7 +36,6 @@ class Simulator:
         self.scheduler = schedulers[self.config.scheduler_name](
             initial_tasks,
             initial_blocks,
-            self.config,
         )
         self.task_count = count(len(initial_tasks))
         self.block_count = count(len(initial_blocks))
@@ -135,14 +134,17 @@ class Simulator:
                 # TODO: pick a profit too
                 # TODO: encapsulate in a class that can also read from arbitrary demands (e.g. the PrivateKube data)
                 curve_distribution = self.config.set_curve_distribution()
-                task_blocks_num = self.config.set_task_num_blocks(
-                    self.scheduler.blocks, curve_distribution
+                task_blocks_num = self.config.set_task_num_blocks(curve_distribution)
+                policy_func = self.config.get_policy(curve_distribution)
+                # Ask the stateful scheduler to set the block ids of the task according to the policy function
+                selected_block_ids = self.scheduler.safe_select_block_ids(
+                    task_blocks_num, policy_func
                 )
+
                 task = self.config.create_task(
-                    blocks=self.scheduler.blocks,
                     task_id=next(self.task_count),
                     curve_distribution=curve_distribution,
-                    task_blocks_num=task_blocks_num,
+                    selected_block_ids=selected_block_ids,
                 )
 
                 # Add the task to the queue and ping the scheduler

@@ -1,8 +1,7 @@
 import argparse
 import json
-import pprint as pp
-from collections import defaultdict
 from datetime import datetime
+from collections import defaultdict
 
 import dash
 import dash_core_components as dcc
@@ -71,12 +70,12 @@ class Plotter:
                 color="allocated",
                 line_group="job",
                 log_x=False,
-                log_y=False,
+                log_y=True,
             )
         else:
             fig = px.area(
                 log_x=False,
-                log_y=False,
+                log_y=True,
             )
 
         fig.add_trace(
@@ -165,8 +164,5 @@ if __name__ == "__main__":
     def update(n):
         objs = Plotter(file).plot()
         return html.Div(objs)
-
-    objs = Plotter(file).plot()
-    app.layout = html.Div(objs)
 
     app.run_server(debug=False, port=args.port, host="127.0.0.1")

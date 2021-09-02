@@ -1,4 +1,4 @@
-log_file: "simplex"
+log_file: "fcfs_static"
 
 blocks_spec:
   initial_num: 5
@@ -35,5 +35,6 @@ tasks_spec:
           num_blocks: 3
       block_selecting_policy: "random"
 
+
 scheduler_spec:
-  name: simplex
+  name: fcfs
