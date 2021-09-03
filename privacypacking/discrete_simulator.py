@@ -3,6 +3,7 @@ The single-threaded scheduler is responsible for managing the state,
 no need to lock/mutex on blocks and tasks.
 """
 import argparse
+import time
 from datetime import datetime
 from itertools import count
 
@@ -10,9 +11,8 @@ import simpy
 from loguru import logger
 
 from privacypacking.budget.block import Block
-from privacypacking.config import Config
+from privacypacking.config import Config, schedulers
 from privacypacking.logger import Logger
-from privacypacking.config import schedulers
 from privacypacking.utils.utils import *
 
 
@@ -58,6 +58,10 @@ class Simulator:
             # Wait until something new happens
             yield self.new_block_event | self.new_task_event
 
+            # We trigger the scheduler one block or task at a time
+            # assert len(self.new_blocks) + len(self.new_tasks) == 1
+            assert len(self.new_blocks) <= 1 and len(self.new_tasks) <= 1
+
             logger.debug(
                 f"[{self.env.now}] Adding new blocks {self.new_blocks} or tasks {self.new_tasks}"
             )
@@ -70,6 +74,10 @@ class Simulator:
 
             # Schedule (it modifies the blocks) and update the list of pending tasks
             allocated_task_ids = self.scheduler.schedule()
+
+            logger.debug("taking forever to schedule...")
+            time.sleep(1)
+            logger.debug("Done scheduling")
             self.scheduler.update_allocated_tasks(allocated_task_ids)
 
             logger.debug(

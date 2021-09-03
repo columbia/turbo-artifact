@@ -1,3 +1,4 @@
+import math
 import random
 from datetime import datetime
 from functools import partial
@@ -6,6 +7,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from privacypacking.block_selecting_policies import LatestFirst, Random
 from privacypacking.budget import Block, Task
 from privacypacking.budget.task import (
     GaussianCurve,
@@ -13,10 +15,9 @@ from privacypacking.budget.task import (
     SubsampledGaussianCurve,
     UniformTask,
 )
-from privacypacking.utils.utils import *
 from privacypacking.logger import Logger
-from privacypacking.block_selecting_policies import LatestFirst, Random
 from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
+from privacypacking.utils.utils import *
 
 schedulers = {
     FCFS: fcfs.FCFS,
@@ -144,18 +145,18 @@ class Config:
         )
         return curve[0]
 
-    def set_task_num_blocks(self, curve, num_blocks):
+    def set_task_num_blocks(self, curve: str, max_num_blocks: int = math.inf) -> int:
         task_blocks_num = None
         block_requests = self.curve_distributions[curve][BLOCKS_REQUEST]
         if block_requests[RANDOM][ENABLED]:
             task_blocks_num = random.randint(1, block_requests[RANDOM][NUM_BLOCKS_MAX])
         elif block_requests[CONSTANT][ENABLED]:
             task_blocks_num = block_requests[CONSTANT][NUM_BLOCKS]
-        task_blocks_num = max(1, min(task_blocks_num, num_blocks))
+        task_blocks_num = max(1, min(task_blocks_num, max_num_blocks))
         assert task_blocks_num is not None
         return task_blocks_num
 
-    def get_policy(self, curve):
+    def get_policy(self, curve: str):
         policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
         if policy == LATEST_FIRST:
             policy = LatestFirst
@@ -180,6 +181,8 @@ class Config:
             + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
         )
         random.shuffle(curves)
+        # TODO: We need a way to allow the same curve to request different nb of blocks
+        # TODO: plot on Jupyter
         for curve_distribution in curves:
             task_blocks_num = self.set_task_num_blocks(
                 curve_distribution, len(initial_blocks)
@@ -204,7 +207,6 @@ class Config:
 
         if curve_distribution == GAUSSIAN:
             sigma = random.uniform(self.gaussian_sigma_start, self.gaussian_sigma_stop)
-            print(sigma)
             task = UniformTask(
                 id=task_id,
                 profit=1,
@@ -213,7 +215,6 @@ class Config:
             )
         elif curve_distribution == LAPLACE:
             noise = random.uniform(self.laplace_noise_start, self.laplace_noise_stop)
-            print(noise)
             task = UniformTask(
                 id=task_id,
                 profit=1,
@@ -225,7 +226,6 @@ class Config:
                 self.subsamplegaussian_sigma_start,
                 self.subsamplegaussian_sigma_stop,
             )
-            print(sigma)
             task = UniformTask(
                 id=task_id,
                 profit=1,
@@ -268,18 +268,18 @@ class Config:
 
     def get_initial_task_curves(self):
         curves = (
-                [LAPLACE] * self.laplace_init_num
-                + [GAUSSIAN] * self.gaussian_init_num
-                + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
+            [LAPLACE] * self.laplace_init_num
+            + [GAUSSIAN] * self.gaussian_init_num
+            + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
         )
         random.shuffle(curves)
         return curves
 
     def get_initial_tasks_num(self):
         return (
-                self.laplace_init_num
-                + self.gaussian_init_num
-                + self.subsamplegaussian_init_num
+            self.laplace_init_num
+            + self.gaussian_init_num
+            + self.subsamplegaussian_init_num
         )
 
     def get_initial_blocks_num(self):

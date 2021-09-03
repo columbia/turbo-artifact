@@ -1,5 +1,12 @@
-from loguru import logger
+import random
 from itertools import count
+from pathlib import Path
+
+from loguru import logger
+
+from privacypacking.block_selecting_policies import LatestFirst, Random
+from privacypacking.budget.task import UniformTask
+from privacypacking.utils import load_blocks_and_budgets_from_dir
 
 
 class Tasks:
@@ -63,3 +70,48 @@ class Tasks:
 
         yield allocated_resources_event
         # logger.debug(f"Task: {task_id} completed at {self.env.now}")
+
+
+class TasksFromFile(Tasks):
+    """Loads the tasks (budget curves and number of blocks) from arbitrary yaml files,
+    instead of generating them from a few configuration parameters"""
+
+    # TODO: Add an optional profit field to the files
+    # TODO: Add optional frequencies to the files
+    # TODO: Add optional policy to each task (not tied to the budget)
+
+    def __init__(self, environment, resource_manager, blocks_and_budgets_path: Path):
+        self.blocks_and_budgets = load_blocks_and_budgets_from_dir(
+            blocks_and_budgets_path
+        )
+        super().__init__(environment, resource_manager)
+
+    def task(self, task_id, curve_distribution=None):
+
+        task_blocks_num, budget = random.choice(self.blocks_and_budgets)
+
+        num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+
+        PROFIT = 1
+        POLICY = LatestFirst
+
+        # Ask the stateful scheduler to set the block ids of the task according to the policy function
+        selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(
+            task_blocks_num, POLICY
+        )
+
+        logger.debug(list(selected_block_ids))
+
+        task = UniformTask(
+            id=task_id,
+            profit=PROFIT,
+            block_ids=selected_block_ids,
+            budget=budget,
+        )
+        allocated_resources_event = self.env.event()
+
+        yield self.resource_manager.new_tasks_queue.put(
+            (task, allocated_resources_event)
+        )
+
+        yield allocated_resources_event
