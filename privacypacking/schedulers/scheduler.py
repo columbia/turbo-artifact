@@ -1,7 +1,7 @@
+from threading import Lock
 from typing import List
 
 from privacypacking.budget import Block, Task
-from threading import Lock
 
 # NOTE: ideally, we should be able to plug this class in Kubernetes,
 # with just some thin wrappers to manage the CRD state and API calls.
@@ -43,6 +43,8 @@ class Scheduler:
         for all the blocks requested
         """
         for block_id, demand_budget in task.budget_per_block.items():
+            if not block_id in self.blocks:
+                return False
             block = self.blocks[block_id]
             if not block.budget.can_allocate(demand_budget):
                 return False
