@@ -75,9 +75,9 @@ class Simulator:
             # Schedule (it modifies the blocks) and update the list of pending tasks
             allocated_task_ids = self.scheduler.schedule()
 
-            logger.debug("taking forever to schedule...")
-            time.sleep(1)
-            logger.debug("Done scheduling")
+            # logger.debug("taking forever to schedule...")
+            # time.sleep(1)
+            # logger.debug("Done scheduling")
             self.scheduler.update_allocated_tasks(allocated_task_ids)
 
             logger.debug(

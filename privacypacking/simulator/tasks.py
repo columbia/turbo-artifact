@@ -52,6 +52,8 @@ class Tasks:
         )
 
         num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+
+        # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
         task_blocks_num = self.config.set_task_num_blocks(
             curve_distribution, num_blocks
         )
@@ -86,6 +88,26 @@ class TasksFromFile(Tasks):
         )
         super().__init__(environment, resource_manager)
 
+    def task_producer(self):
+        """
+        Generate tasks.
+        """
+        # Wait till blocks initialization is completed
+        yield self.resource_manager.blocks_initialized
+
+        # Produce initial tasks from the file (this is the only difference with the base class)
+        # initial_curves = self.config.get_initial_task_curves()
+        # for curve in initial_curves:
+        #     self.env.process(self.task(next(self.task_count), curve))
+        for _ in range(self.config.config["tasks_spec"]["initial_num"]):
+            self.env.process(self.task(next(self.task_count)))
+
+        if self.config.task_arrival_frequency_enabled:
+            while True:
+                task_arrival_interval = self.config.set_task_arrival_time()
+                self.env.process(self.task(next(self.task_count)))
+                yield self.env.timeout(task_arrival_interval)
+
     def task(self, task_id, curve_distribution=None):
 
         task_blocks_num, budget = random.choice(self.blocks_and_budgets)
@@ -93,7 +115,7 @@ class TasksFromFile(Tasks):
         num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
 
         PROFIT = 1
-        POLICY = LatestFirst
+        POLICY = Random
 
         # Ask the stateful scheduler to set the block ids of the task according to the policy function
         selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(

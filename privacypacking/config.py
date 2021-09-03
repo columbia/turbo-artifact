@@ -166,6 +166,48 @@ class Config:
         return policy
 
     def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], Dict[int, Block]]:
+        """Offline debug HACK"""
+
+        # TODO: don't sample. Take fixed proportions and just scale.
+        initial_blocks = {}
+        block_id_counter = count()
+        for _ in range(self.initial_blocks_num):
+            block_id = next(block_id_counter)
+            initial_blocks[block_id] = self.create_block(block_id)
+
+        initial_tasks = []
+        task_id_counter = count()
+
+        PROFIT = 1
+        POLICY = Random
+
+        data_path = REPO_ROOT.joinpath("data").joinpath(
+            self.config["tasks_spec"]["data_path"]
+        )
+        blocks_and_budgets = load_blocks_and_budgets_from_dir(data_path)
+
+        for _ in range(self.config["tasks_spec"]["initial_num"]):
+            task_blocks_num, budget = random.choice(blocks_and_budgets)
+
+            PROFIT = 1
+            POLICY = Random
+
+            selected_block_ids = POLICY.select_blocks(initial_blocks, task_blocks_num)
+
+            task = UniformTask(
+                id=next(task_id_counter),
+                profit=PROFIT,
+                block_ids=selected_block_ids,
+                budget=budget,
+            )
+
+            initial_tasks.append(task)
+
+        return initial_tasks, initial_blocks
+
+    def create_initial_tasks_and_blocks_real(
+        self,
+    ) -> Tuple[List[Task], Dict[int, Block]]:
         # Create the initial tasks and blocks
         initial_blocks = {}
         block_id_counter = count()
