@@ -10,9 +10,11 @@ from itertools import count
 import simpy
 from loguru import logger
 
+from privacypacking import schedulers
 from privacypacking.budget.block import Block
-from privacypacking.config import Config, schedulers
+from privacypacking.config import Config
 from privacypacking.logger import Logger
+from privacypacking.schedulers import get_scheduler_class
 from privacypacking.utils.utils import *
 
 
@@ -33,7 +35,8 @@ class Simulator:
 
         # Initialize the scheduler
         initial_tasks, initial_blocks = self.config.create_initial_tasks_and_blocks()
-        self.scheduler = schedulers[self.config.scheduler_name](
+        scheduler_class = get_scheduler_class(self.config.scheduler_name)
+        self.scheduler = scheduler_class(
             initial_tasks,
             initial_blocks,
         )

@@ -14,7 +14,6 @@ from datetime import datetime
 import simpy.rt
 
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
-from privacypacking.simulator.tasks import TasksFromFile
 from privacypacking.utils.utils import *
 
 
