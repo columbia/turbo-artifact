@@ -16,17 +16,7 @@ from privacypacking.budget.task import (
     UniformTask,
 )
 from privacypacking.logger import Logger
-from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
 from privacypacking.utils.utils import *
-
-schedulers = {
-    FCFS: fcfs.FCFS,
-    DPF: dpf.DPF,
-    SIMPLEX: simplex.Simplex,
-    "OfflineDPF": greedy_heuristics.OfflineDPF,
-    "FlatRelevance": greedy_heuristics.FlatRelevance,
-    "OverflowRelevance": greedy_heuristics.OverflowRelevance,
-}
 
 
 class Config:
@@ -165,8 +155,9 @@ class Config:
         assert policy is not None
         return policy
 
-    def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], Dict[int, Block]]:
-        """Offline debug HACK"""
+    def create_initial_tasks_and_blocks_from_data(
+        self,
+    ) -> Tuple[List[Task], Dict[int, Block]]:
 
         # Prepare the initial blocks
         initial_blocks = {}
@@ -181,32 +172,36 @@ class Config:
         data_path = REPO_ROOT.joinpath("data").joinpath(
             self.config["tasks_spec"]["data_path"]
         )
-        blocks_and_budgets = load_blocks_and_budgets_from_dir(data_path)
+        task_distribution = load_task_distribution(data_path)
 
         # Since the seed is fixed, increasing `initial_num` adds more tasks but keeps the
         # first tasks identical
         for _ in range(self.config["tasks_spec"]["initial_num"]):
-            task_blocks_num, budget = random.choice(blocks_and_budgets)
+            task_parameters = random.choice(task_distribution)
+            policy = task_parameters.policy
 
-            PROFIT = 1
-            POLICY = Random
-
-            selected_block_ids = POLICY.select_blocks(initial_blocks, task_blocks_num)
+            selected_block_ids = policy.select_blocks(
+                initial_blocks, task_parameters.n_blocks
+            )
 
             task = UniformTask(
                 id=next(task_id_counter),
-                profit=PROFIT,
+                profit=task_parameters.profit,
                 block_ids=selected_block_ids,
-                budget=budget,
+                budget=task_parameters.budget,
             )
 
             initial_tasks.append(task)
 
         return initial_tasks, initial_blocks
 
-    def create_initial_tasks_and_blocks_real(
+    def create_initial_tasks_and_blocks(
         self,
     ) -> Tuple[List[Task], Dict[int, Block]]:
+
+        if "data_path" in self.config["tasks_spec"]:
+            return self.create_initial_tasks_and_blocks_from_data()
+
         # Create the initial tasks and blocks
         initial_blocks = {}
         block_id_counter = count()

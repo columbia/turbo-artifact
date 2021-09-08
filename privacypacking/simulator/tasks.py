@@ -4,10 +4,6 @@ from pathlib import Path
 
 from loguru import logger
 
-from privacypacking.block_selecting_policies import LatestFirst, Random
-from privacypacking.budget.task import UniformTask
-from privacypacking.utils import load_blocks_and_budgets_from_dir
-
 
 class Tasks:
     """
@@ -74,66 +70,69 @@ class Tasks:
         # logger.debug(f"Task: {task_id} completed at {self.env.now}")
 
 
-class TasksFromFile(Tasks):
-    """Loads the tasks (budget curves and number of blocks) from arbitrary yaml files,
-    instead of generating them from a few configuration parameters"""
+# TODO: Build more custom task generators if the simulator works.
+# For now (offline case), it is easier to just change the function that generates the initial tasks.
 
-    # TODO: Add an optional profit field to the files
-    # TODO: Add optional frequencies to the files
-    # TODO: Add optional policy to each task (not tied to the budget)
+# class TasksFromFile(Tasks):
+#     """Loads the tasks (budget curves and number of blocks) from arbitrary yaml files,
+#     instead of generating them from a few configuration parameters"""
 
-    def __init__(self, environment, resource_manager, blocks_and_budgets_path: Path):
-        self.blocks_and_budgets = load_blocks_and_budgets_from_dir(
-            blocks_and_budgets_path
-        )
-        super().__init__(environment, resource_manager)
+#     # TODO: Add an optional profit field to the files
+#     # TODO: Add optional frequencies to the files
+#     # TODO: Add optional policy to each task (not tied to the budget)
 
-    def task_producer(self):
-        """
-        Generate tasks.
-        """
-        # Wait till blocks initialization is completed
-        yield self.resource_manager.blocks_initialized
+#     def __init__(self, environment, resource_manager, blocks_and_budgets_path: Path):
+#         self.blocks_and_budgets = load_blocks_and_budgets_from_dir(
+#             blocks_and_budgets_path
+#         )
+#         super().__init__(environment, resource_manager)
 
-        # Produce initial tasks from the file (this is the only difference with the base class)
-        # initial_curves = self.config.get_initial_task_curves()
-        # for curve in initial_curves:
-        #     self.env.process(self.task(next(self.task_count), curve))
-        for _ in range(self.config.config["tasks_spec"]["initial_num"]):
-            self.env.process(self.task(next(self.task_count)))
+#     def task_producer(self):
+#         """
+#         Generate tasks.
+#         """
+#         # Wait till blocks initialization is completed
+#         yield self.resource_manager.blocks_initialized
 
-        if self.config.task_arrival_frequency_enabled:
-            while True:
-                task_arrival_interval = self.config.set_task_arrival_time()
-                self.env.process(self.task(next(self.task_count)))
-                yield self.env.timeout(task_arrival_interval)
+#         # Produce initial tasks from the file (this is the only difference with the base class)
+#         # initial_curves = self.config.get_initial_task_curves()
+#         # for curve in initial_curves:
+#         #     self.env.process(self.task(next(self.task_count), curve))
+#         for _ in range(self.config.config["tasks_spec"]["initial_num"]):
+#             self.env.process(self.task(next(self.task_count)))
 
-    def task(self, task_id, curve_distribution=None):
+#         if self.config.task_arrival_frequency_enabled:
+#             while True:
+#                 task_arrival_interval = self.config.set_task_arrival_time()
+#                 self.env.process(self.task(next(self.task_count)))
+#                 yield self.env.timeout(task_arrival_interval)
 
-        task_blocks_num, budget = random.choice(self.blocks_and_budgets)
+#     def task(self, task_id, curve_distribution=None):
 
-        num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+#         task_blocks_num, budget = random.choice(self.blocks_and_budgets)
 
-        PROFIT = 1
-        POLICY = Random
+#         num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
 
-        # Ask the stateful scheduler to set the block ids of the task according to the policy function
-        selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(
-            task_blocks_num, POLICY
-        )
+#         PROFIT = 1
+#         POLICY = Random
 
-        logger.debug(list(selected_block_ids))
+#         # Ask the stateful scheduler to set the block ids of the task according to the policy function
+#         selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(
+#             task_blocks_num, POLICY
+#         )
 
-        task = UniformTask(
-            id=task_id,
-            profit=PROFIT,
-            block_ids=selected_block_ids,
-            budget=budget,
-        )
-        allocated_resources_event = self.env.event()
+#         logger.debug(list(selected_block_ids))
 
-        yield self.resource_manager.new_tasks_queue.put(
-            (task, allocated_resources_event)
-        )
+#         task = UniformTask(
+#             id=task_id,
+#             profit=PROFIT,
+#             block_ids=selected_block_ids,
+#             budget=budget,
+#         )
+#         allocated_resources_event = self.env.event()
 
-        yield allocated_resources_event
+#         yield self.resource_manager.new_tasks_queue.put(
+#             (task, allocated_resources_event)
+#         )
+
+#         yield allocated_resources_event

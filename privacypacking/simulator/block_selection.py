@@ -1,5 +1,5 @@
 import random
-from typing import Iterable
+from typing import Iterable, Type
 
 from privacypacking.budget import Block
 
@@ -10,7 +10,7 @@ class BlockSelectionException(Exception):
 
 class BlockSelectionPolicy:
     @staticmethod
-    def from_str(policy_name: str) -> "BlockSelectionPolicy":
+    def from_str(policy_name: str) -> Type["BlockSelectionPolicy"]:
         if policy_name in globals():
             return globals()[policy_name]
         else:
@@ -37,19 +37,17 @@ class LatestBlocksFirst(BlockSelectionPolicy):
     @staticmethod
     def select_blocks(blocks, task_blocks_num):
         n_blocks = len(blocks)
-        blocks_num = range(n_blocks)
         if task_blocks_num > n_blocks:
             raise BlockSelectionException(
                 f"Requested {task_blocks_num} blocks but there are only {n_blocks} blocks available."
             )
-        return reversed(range(blocks_num - task_blocks_num, blocks_num))
+        return reversed(range(n_blocks - task_blocks_num, n_blocks))
 
 
 class ContiguousBlocksRandomOffset(BlockSelectionPolicy):
     @staticmethod
     def select_blocks(blocks, task_blocks_num):
         n_blocks = len(blocks)
-        blocks_num = range(n_blocks)
         if task_blocks_num > n_blocks:
             raise BlockSelectionException(
                 f"Requested {task_blocks_num}  blocks but there are only {n_blocks} blocks available."

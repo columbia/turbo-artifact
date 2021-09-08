@@ -26,12 +26,12 @@ class Simulator:
         self.config = config
         self.rm = ResourceManager(self.env, self.config)
         Blocks(self.env, self.rm)
-        # Tasks(self.env, self.rm)
-        TasksFromFile(
-            self.env,
-            self.rm,
-            blocks_and_budgets_path=REPO_ROOT.joinpath("data/multiblock_dpf_killer"),
-        )
+        Tasks(self.env, self.rm)
+        # TasksFromFile(
+        #     self.env,
+        #     self.rm,
+        #     blocks_and_budgets_path=REPO_ROOT.joinpath("data/multiblock_dpf_killer"),
+        # )
 
     def run(self):
         start = datetime.now()
