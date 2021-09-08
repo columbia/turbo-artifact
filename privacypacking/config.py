@@ -6,6 +6,7 @@ from itertools import count
 from typing import Dict, List, Tuple
 
 import numpy as np
+from loguru import logger
 
 from privacypacking.block_selecting_policies import LatestFirst, Random
 from privacypacking.budget import Block, Task
