@@ -37,7 +37,7 @@ def grid():
     update_dict(user_config, config)
 
     config["tasks_spec"]["initial_num"] = tune.grid_search(
-        np.arange(1, 100, step=5, dtype=int).tolist()
+        np.arange(1, 500, step=5, dtype=int).tolist()
     )
 
     # config["blocks_spec"]["initial_num"] = tune.grid_search([5, 10])

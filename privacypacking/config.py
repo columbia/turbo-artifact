@@ -168,24 +168,23 @@ class Config:
     def create_initial_tasks_and_blocks(self) -> Tuple[List[Task], Dict[int, Block]]:
         """Offline debug HACK"""
 
-        # TODO: don't sample. Take fixed proportions and just scale.
+        # Prepare the initial blocks
         initial_blocks = {}
         block_id_counter = count()
         for _ in range(self.initial_blocks_num):
             block_id = next(block_id_counter)
             initial_blocks[block_id] = self.create_block(block_id)
 
+        # Sample the initial tasks according to the file's distribution
         initial_tasks = []
         task_id_counter = count()
-
-        PROFIT = 1
-        POLICY = Random
-
         data_path = REPO_ROOT.joinpath("data").joinpath(
             self.config["tasks_spec"]["data_path"]
         )
         blocks_and_budgets = load_blocks_and_budgets_from_dir(data_path)
 
+        # Since the seed is fixed, increasing `initial_num` adds more tasks but keeps the
+        # first tasks identical
         for _ in range(self.config["tasks_spec"]["initial_num"]):
             task_blocks_num, budget = random.choice(blocks_and_budgets)
 
