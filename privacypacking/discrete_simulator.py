@@ -3,16 +3,18 @@ The single-threaded scheduler is responsible for managing the state,
 no need to lock/mutex on blocks and tasks.
 """
 import argparse
+import time
 from datetime import datetime
 from itertools import count
 
 import simpy
 from loguru import logger
 
+from privacypacking import schedulers
 from privacypacking.budget.block import Block
 from privacypacking.config import Config
 from privacypacking.logger import Logger
-from privacypacking.config import schedulers
+from privacypacking.schedulers import get_scheduler_class
 from privacypacking.utils.utils import *
 
 
@@ -33,7 +35,8 @@ class Simulator:
 
         # Initialize the scheduler
         initial_tasks, initial_blocks = self.config.create_initial_tasks_and_blocks()
-        self.scheduler = schedulers[self.config.scheduler_name](
+        scheduler_class = get_scheduler_class(self.config.scheduler_name)
+        self.scheduler = scheduler_class(
             initial_tasks,
             initial_blocks,
         )
@@ -58,6 +61,10 @@ class Simulator:
             # Wait until something new happens
             yield self.new_block_event | self.new_task_event
 
+            # We trigger the scheduler one block or task at a time
+            # assert len(self.new_blocks) + len(self.new_tasks) == 1
+            assert len(self.new_blocks) <= 1 and len(self.new_tasks) <= 1
+
             logger.debug(
                 f"[{self.env.now}] Adding new blocks {self.new_blocks} or tasks {self.new_tasks}"
             )
@@ -70,6 +77,10 @@ class Simulator:
 
             # Schedule (it modifies the blocks) and update the list of pending tasks
             allocated_task_ids = self.scheduler.schedule()
+
+            # logger.debug("taking forever to schedule...")
+            # time.sleep(1)
+            # logger.debug("Done scheduling")
             self.scheduler.update_allocated_tasks(allocated_task_ids)
 
             logger.debug(

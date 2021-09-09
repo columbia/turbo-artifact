@@ -9,10 +9,11 @@ Resources are non-replenishable.
 ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
 """
 
+from datetime import datetime
+
 import simpy.rt
 
-from datetime import datetime
-from privacypacking.simulator import Tasks, Blocks, ResourceManager
+from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import *
 
 
@@ -25,6 +26,11 @@ class Simulator:
         self.rm = ResourceManager(self.env, self.config)
         Blocks(self.env, self.rm)
         Tasks(self.env, self.rm)
+        # TasksFromFile(
+        #     self.env,
+        #     self.rm,
+        #     blocks_and_budgets_path=REPO_ROOT.joinpath("data/multiblock_dpf_killer"),
+        # )
 
     def run(self):
         start = datetime.now()

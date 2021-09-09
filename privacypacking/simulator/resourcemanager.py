@@ -1,5 +1,6 @@
 import simpy.rt
-from privacypacking.config import schedulers
+
+from privacypacking.schedulers import get_scheduler_class
 
 
 class ResourceManager:
@@ -16,7 +17,8 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        self.scheduler = schedulers[self.config.scheduler_name]([], {}, self.config)
+        scheduler_class = get_scheduler_class(self.config.scheduler_name)
+        self.scheduler = scheduler_class([], {}, self.config)
 
         self.blocks_initialized = self.env.event()
 
@@ -69,8 +71,8 @@ class ResourceManager:
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
-                (scheduling_iteration == 0)
-                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+            (scheduling_iteration == 0)
+            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
         ):
             self.config.logger.log(
                 self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),

@@ -1,10 +1,13 @@
 import json
+from collections import namedtuple
 from pathlib import Path
 from typing import Iterable, Tuple
 
 import yaml
 
+from privacypacking.block_selecting_policies.random import Random
 from privacypacking.budget import Budget
+from privacypacking.simulator.block_selection import BlockSelectionPolicy
 
 EPSILON = "epsilon"
 DELTA = "delta"
@@ -64,6 +67,11 @@ PRIVATEKUBE_DEMANDS_PATH = REPO_ROOT.joinpath("data/privatekube_demands")
 LOGS_PATH = REPO_ROOT.joinpath("logs")
 DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default_config.yaml")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
+
+
+TaskParameters = namedtuple(
+    "TaskDistribution", ["n_blocks", "policy", "profit", "budget"]
+)
 
 
 def update_dict(src, des):
@@ -127,3 +135,33 @@ def load_blocks_and_budgets_from_dir(
                 (demand_dict["n_blocks"] // block_rescaling_factor, Budget(orders))
             )
     return blocks_and_budgets
+
+
+def load_task_distribution(
+    path: Path = PRIVATEKUBE_DEMANDS_PATH,
+) -> Iterable[TaskParameters]:
+    task_distribution = []
+    for yaml_path in path.glob("**/*.yaml"):
+        with open(yaml_path, "r") as f:
+            demand_dict = yaml.safe_load(f)
+            orders = {}
+            for i, alpha in enumerate(demand_dict["alphas"]):
+                orders[alpha] = demand_dict["rdp_epsilons"][i]
+
+            if "policy" in demand_dict:
+                policy = BlockSelectionPolicy.from_str(demand_dict["policy"])
+            else:
+                policy = BlockSelectionPolicy.from_str("RandomBlocks")
+
+            profit = demand_dict.get("profit", 1)
+
+            task_distribution.append(
+                TaskParameters(
+                    n_blocks=demand_dict["n_blocks"],
+                    policy=policy,
+                    profit=profit,
+                    budget=Budget(orders),
+                )
+            )
+
+    return task_distribution
