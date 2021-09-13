@@ -116,7 +116,7 @@ class Budget:
             }
         )
 
-    def can_allocate(self, demand_budget):
+    def can_allocate(self, demand_budget: "Budget") -> bool:
         """
         There must exist at least one order in the block's budget
         that is smaller or equal to the corresponding order of the demand budget.

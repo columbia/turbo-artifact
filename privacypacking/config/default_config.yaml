@@ -1,8 +1,5 @@
 epsilon: 10
 delta: 0.001
-#alphas: [1.5, 1.75, 2, 2.5, 3, 4, 5, 6, 8, 16, 32, 64]
-#log_file: "privacypacking/logs/plotfile.pickle"
-#default_config_file: "privacypacking/config/default_config.yaml"
 global_seed: 44
 deterministic: true
 log_every_n_iterations: 10
@@ -20,6 +17,14 @@ blocks_spec:
 
 tasks_spec:
   curve_distributions:
+    # Reading tasks from files
+    custom:
+      sampling: false # If true we sample uniformly tasks from the data_path else we read the tasks sequentially
+      initial_num: 0
+      frequency: 0
+      data_path: ""
+
+    # Sampling from a laplace
     laplace:
       initial_num: 0
       frequency: 0
@@ -32,8 +37,9 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_first"
+      block_selecting_policy: "latest_blocks_first"
 
+    # Sampling from a gaussian
     gaussian:
       initial_num: 0
       frequency: 0
@@ -46,8 +52,9 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_first"
+      block_selecting_policy: "latest_blocks_first"
 
+    # Sampling from a SubsampledGaussian
     SubsampledGaussian:
       initial_num: 0
       frequency: 0
@@ -63,7 +70,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_first"
+      block_selecting_policy: "latest_blocks_first"
 
   task_arrival_frequency:
     enabled: false  # no online tasks

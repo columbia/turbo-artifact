@@ -22,6 +22,8 @@ CURVE_DISTRIBUTIONS = "curve_distributions"
 LAPLACE = "laplace"
 GAUSSIAN = "gaussian"
 SUBSAMPLEGAUSSIAN = "SubsampledGaussian"
+CUSTOM = "custom"
+DATA_PATH = "data_path"
 NOISE_START = "noise_start"
 NOISE_STOP = "noise_stop"
 SIGMA_START = "sigma_start"
@@ -50,10 +52,12 @@ BLOCKS_REQUEST = "blocks_request"
 NUM_BLOCKS_MAX = "num_blocks_max"
 NUM_BLOCKS = "num_blocks"
 INITIAL_NUM = "initial_num"
+SAMPLING = "sampling"
 
 # Block selecting policies
 BLOCK_SELECTING_POLICY = "block_selecting_policy"
-LATEST_FIRST = "latest_first"
+LATEST_BLOLCKS_FIRST = "latest_blocks_first"
+RANDOM_BLOCKS = "random_blocks"
 
 # Schedulers
 SIMPLEX = "simplex"
