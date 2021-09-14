@@ -1,7 +1,5 @@
-import random
 from itertools import count
 from pathlib import Path
-
 from loguru import logger
 
 
@@ -17,7 +15,7 @@ class Tasks:
         self.task_count = count()
         self.env.process(self.task_producer())
 
-    def task_producer(self):
+    def task_producer(self) -> None:
         """
         Generate tasks.
         """
@@ -35,33 +33,17 @@ class Tasks:
                 self.env.process(self.task(next(self.task_count)))
                 yield self.env.timeout(task_arrival_interval)
 
-    def task(self, task_id, curve_distribution=None):
+    def task(self, task_id: int, curve_distribution=None) -> None:
         """
         Task behavior. Sets its own demand, notifies resource manager of its existence,
         waits till it gets scheduled and then is executed
         """
-        logger.debug(f"Task: {task_id} generated at {self.env.now}")
-        curve_distribution = (
-            self.config.set_curve_distribution()
-            if curve_distribution is None
-            else curve_distribution
-        )
 
         num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+        task = self.config.create_task(task_id, curve_distribution, num_blocks)
 
-        # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
-        task_blocks_num = self.config.set_task_num_blocks(
-            curve_distribution, num_blocks
-        )
-        policy = self.config.get_policy(curve_distribution)
-        # Ask the stateful scheduler to set the block ids of the task according to the policy function
-        selected_block_ids = self.resource_manager.scheduler.safe_select_block_ids(
-            task_blocks_num, policy
-        )
-
-        task = self.config.create_task(task_id, curve_distribution, selected_block_ids)
+        logger.debug(f"Task: {task_id} generated at {self.env.now}")
         allocated_resources_event = self.env.event()
-
         yield self.resource_manager.new_tasks_queue.put(
             (task, allocated_resources_event)
         )

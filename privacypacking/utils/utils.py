@@ -5,9 +5,8 @@ from typing import Iterable, Tuple
 
 import yaml
 
-from privacypacking.block_selecting_policies.random import Random
 from privacypacking.budget import Budget
-from privacypacking.simulator.block_selection import BlockSelectionPolicy
+from privacypacking.budget.block_selection import BlockSelectionPolicy
 
 EPSILON = "epsilon"
 DELTA = "delta"
@@ -72,9 +71,12 @@ LOGS_PATH = REPO_ROOT.joinpath("logs")
 DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default_config.yaml")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
 
-
 TaskParameters = namedtuple(
     "TaskDistribution", ["n_blocks", "policy", "profit", "budget"]
+)
+
+TaskSpec = namedtuple(
+    "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget"]
 )
 
 
@@ -141,6 +143,7 @@ def load_blocks_and_budgets_from_dir(
     return blocks_and_budgets
 
 
+# todo: why we may have more than one yaml files?
 def load_task_distribution(
     path: Path = PRIVATEKUBE_DEMANDS_PATH,
 ) -> Iterable[TaskParameters]:
@@ -169,3 +172,28 @@ def load_task_distribution(
             )
 
     return task_distribution
+
+
+def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
+    with open(path, "r") as f:
+        demand_dict = yaml.safe_load(f)
+        orders = {}
+        for i, alpha in enumerate(demand_dict["alphas"]):
+            orders[alpha] = demand_dict["rdp_epsilons"][i]
+
+        profit = demand_dict.get("profit", 1)
+        if "block_selection_policy" in demand_dict:
+            block_selection_policy = BlockSelectionPolicy.from_str(
+                demand_dict["block_selection_policy"]
+            )
+        else:
+            block_selection_policy = BlockSelectionPolicy.from_str("RandomBlocks")
+
+        task_spec = TaskSpec(
+            profit=profit,
+            block_selection_policy=block_selection_policy,
+            n_blocks=demand_dict["n_blocks"],
+            budget=Budget(orders),
+        )
+    assert task_spec is not None
+    return task_spec
