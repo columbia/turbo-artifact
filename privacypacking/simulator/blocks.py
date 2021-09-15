@@ -31,7 +31,7 @@ class Blocks:
 
     def block(self, block_id):
         """
-        Block behavior. Sets its own demand, notifies resource manager of its existence,
+        Block behavior. Sets its own budget, notifies resource manager of its existence,
         waits till it gets generated
         """
         block = self.config.create_block(block_id)

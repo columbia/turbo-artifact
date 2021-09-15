@@ -270,7 +270,7 @@ class Config:
 
         if curve_distribution is None:
             # If curve is not pre-specified (as in offline setting) then sample one
-            curve_distribution = self.config.set_curve_distribution()
+            curve_distribution = self.set_curve_distribution()
 
         if curve_distribution == CUSTOM:
             # Read custom task specs from a file
@@ -290,10 +290,10 @@ class Config:
         else:
             # Sample the specs of the task
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
-            task_num_blocks = self.config.set_task_num_blocks(
+            task_num_blocks = self.set_task_num_blocks(
                 curve_distribution, num_blocks
             )
-            block_selection_policy = self.config.get_block_selection_policy(
+            block_selection_policy = self.get_block_selection_policy(
                 curve_distribution
             )
 

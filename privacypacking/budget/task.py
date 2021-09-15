@@ -32,7 +32,7 @@ class Task:
         # i.e. it is re-set every time the task is considered for scheduling
         # is set only once for offline setting
         # Add Other API / constraints
-        # block selection policy and task_num_blocks is user-defined (API)
+        # block selection policy and n_blocks is user-defined (API)
         self.budget_per_block = {}
 
     def get_budget(self, block_id: int) -> Budget:
