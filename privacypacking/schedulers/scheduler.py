@@ -2,6 +2,7 @@ from threading import Lock
 from typing import List
 
 from privacypacking.budget import Block, Task
+from privacypacking.simulator.tasks import TaskMessage
 
 # NOTE: ideally, we should be able to plug this class in Kubernetes,
 # with just some thin wrappers to manage the CRD state and API calls.
@@ -9,11 +10,10 @@ from privacypacking.budget import Block, Task
 
 
 class Scheduler:
-    def __init__(self, tasks, blocks):
-        self.tasks = tasks
-        self.blocks = blocks
+    def __init__(self):
+        self.task_messages = []
+        self.blocks = {}
         self.blocks_mutex = Lock()
-
         # TODO: manage the tasks state inside the scheduler. Pending, allocated, failed?
         self.allocated_tasks = {}
 
@@ -58,9 +58,12 @@ class Scheduler:
             block = self.blocks[block_id]
             block.budget -= demand_budget
 
-    def add_task(self, task: Task) -> None:
-        self.task_set_block_ids(task)
-        self.tasks.append(task)
+    def add_task(self, task_message: TaskMessage) -> None:
+        self.task_set_block_ids(task_message.task)
+        self.task_messages.append(task_message)
+
+        allocated_task_ids = self.schedule()
+        self.update_allocated_tasks(allocated_task_ids)
 
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
@@ -83,10 +86,11 @@ class Scheduler:
             allocated_task_ids (List[int]): returned by `self.schedule()`
         """
         # TODO: this is quite horrible, we should change `self.task` (but retrocompatible)
-        tasks = {task.id: task for task in self.tasks}
+        task_messages = {task_message.task.id: task_message for task_message in self.task_messages}
         for task_id in allocated_task_ids:
-            self.allocated_tasks[task_id] = tasks.pop(task_id)
-        self.tasks = list(tasks.values())
+            self.task_messages[task_id].allocated_resources_event.succeed()
+            self.allocated_tasks[task_id] = self.task_messages.pop(task_id).task
+        self.task_messages = list(task_messages.values())
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints

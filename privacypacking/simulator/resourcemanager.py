@@ -18,7 +18,7 @@ class ResourceManager:
 
         # Initialize the scheduler
         scheduler_class = get_scheduler_class(self.config.scheduler_name)
-        self.scheduler = scheduler_class([], {}, self.config)
+        self.scheduler = scheduler_class()
 
         self.blocks_initialized = self.env.event()
 
@@ -41,13 +41,10 @@ class ResourceManager:
             yield self.env.process(consume())
 
     def task_consumer(self):
-        scheduling_iteration = 0
-        waiting_events = {}
-
+        # scheduling_iteration = 0
         def consume():
-            task, allocated_resources_event = yield self.new_tasks_queue.get()
-            waiting_events[task.id] = allocated_resources_event
-            self.scheduler.add_task(task)
+            task_message = yield self.new_tasks_queue.get()
+            self.scheduler.add_task(task_message)
 
         # Consume initial tasks
         initial_tasks_num = self.config.get_initial_tasks_num()
@@ -56,17 +53,9 @@ class ResourceManager:
 
         while True:
             yield self.env.process(consume())
-            # Schedule (it modifies the blocks) and update the list of pending tasks
-            allocated_task_ids = self.scheduler.schedule()
-            self.scheduler.update_allocated_tasks(allocated_task_ids)
-
             # self.update_logs(scheduling_iteration)
-            scheduling_iteration += 1
+            # scheduling_iteration += 1
 
-            # Wake-up all the tasks that have been scheduled
-            for allocated_id in allocated_task_ids:
-                waiting_events[allocated_id].succeed()
-                del waiting_events[allocated_id]
 
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
