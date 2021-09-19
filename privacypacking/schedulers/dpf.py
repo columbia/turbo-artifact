@@ -36,8 +36,8 @@ class DPF(Scheduler):
     # that has additional information related to the DPF scheduler
     dpf_blocks = {}
 
-    def __init__(self, tasks, n):
-        super().__init__(tasks)
+    def __init__(self, env, n):
+        super().__init__(env)
         self.n = n
         assert self.n is not None
 

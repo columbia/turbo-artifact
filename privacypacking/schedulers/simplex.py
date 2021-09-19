@@ -7,8 +7,8 @@ from privacypacking.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):
-    def __init__(self, tasks):
-        super().__init__(tasks)
+    def __init__(self, env):
+        super().__init__(env)
 
     def solve_allocation(self, tasks) -> List[bool]:
 
