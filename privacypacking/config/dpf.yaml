@@ -34,4 +34,4 @@ tasks_spec:
 
 scheduler_spec:
   name: dpf
-  n: 15000
+  n: 150

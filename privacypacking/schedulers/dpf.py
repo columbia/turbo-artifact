@@ -1,9 +1,9 @@
-from typing import List
-
+from simpy import Event
+from typing import List, Tuple, Type, Any
 from privacypacking.budget import ZeroCurve
 from privacypacking.budget import Block, Task
 from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.utils.scheduling import dominant_shares
+from privacypacking.schedulers.utils import dominant_shares
 
 
 class DPFBlock:
@@ -36,14 +36,15 @@ class DPF(Scheduler):
     # that has additional information related to the DPF scheduler
     dpf_blocks = {}
 
-    def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks)
-        self.config = config
-        assert config is not None
+    def __init__(self, tasks, n):
+        super().__init__(tasks)
+        self.n = n
+        assert self.n is not None
 
-    def add_task(self, task: Task) -> None:
-        self.tasks.append(task)
-        self.unlock_block_budgets()
+    def add_task(self, task_message: Tuple[Task, Event]) -> Tuple[Any, bool]:
+        queue, is_new_queue = super().add_task(task_message)
+        self.unlock_block_budgets(queue.tasks)
+        return queue, is_new_queue
 
     def safe_add_block(self, block: Block) -> None:
         self.blocks_mutex.acquire()
@@ -51,27 +52,25 @@ class DPF(Scheduler):
             if block.id in self.blocks:
                 raise Exception("This block id is already present in the scheduler.")
             self.blocks.update({block.id: block})
-            DPF.dpf_blocks[block.id] = DPFBlock(block, self.config.scheduler_N)
+            DPF.dpf_blocks[block.id] = DPFBlock(block, self.n)
         finally:
             self.blocks_mutex.release()
 
-    def unlock_block_budgets(self):
-        new_task = self.tasks[-1]
+    def unlock_block_budgets(self, tasks):
+        new_task = tasks[-1]
         for block_id in new_task.budget_per_block.keys():
             dpf_block = DPF.dpf_blocks[block_id]
             # Unlock budget for each alpha
             dpf_block.unlock_budget()
 
-    def order(self) -> List[Task]:
+    def order(self, tasks: List[Task]) -> List[Task]:
         """Sorts the tasks by dominant share"""
-
-        # n_tasks = len(self.tasks)
 
         def task_key(task):
             # Lexicographic order (the dominant share is the first component)
             return dominant_shares(task, self.blocks)
 
-        return sorted(self.tasks, key=task_key)
+        return sorted(tasks, key=task_key)
 
     def can_run(self, task):
         """
@@ -95,14 +94,14 @@ class DPF(Scheduler):
             # Consume traditional block's budget as well
             dpf_block.block.budget -= demand_budget
 
-    def schedule(self) -> List[int]:
+    def schedule(self, tasks: List[Task]) -> List[int]:
         allocated_task_ids = []
         # Task sorted by smallest dominant share
-        sorted_tasks = self.order()
+        sorted_tasks = self.order(tasks)
         # Try and schedule tasks
         for task in sorted_tasks:
             # self.task_set_block_ids(task)
             if self.can_run(task):
-                self.consume_budgets(task)
+                self.allocate_task(task)
                 allocated_task_ids.append(task.id)
         return allocated_task_ids

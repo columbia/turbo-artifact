@@ -1,12 +1,8 @@
-from typing import Type
-
 from privacypacking.schedulers import dpf, fcfs, greedy_heuristics, simplex
 from privacypacking.schedulers.scheduler import Scheduler
 
-# from privacypacking.utils.utils import DPF, FCFS, SIMPLEX
 
-
-def get_scheduler_class(scheduler_name: str) -> Type[Scheduler]:
+def get_scheduler(env, config) -> Scheduler:
     schedulers = {
         "fcfs": fcfs.FCFS,
         "dpf": dpf.DPF,
@@ -15,4 +11,8 @@ def get_scheduler_class(scheduler_name: str) -> Type[Scheduler]:
         "FlatRelevance": greedy_heuristics.FlatRelevance,
         "OverflowRelevance": greedy_heuristics.OverflowRelevance,
     }
-    return schedulers[scheduler_name]
+    # Some schedulers might need some additional arguments
+    if config.scheduler_name == "dpf":
+        return schedulers[config.scheduler_name](env, config.scheduler_N)
+    else:
+        return schedulers[config.scheduler_name](env)

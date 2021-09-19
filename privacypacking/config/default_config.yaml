@@ -3,6 +3,7 @@ delta: 0.001
 global_seed: 44
 deterministic: true
 log_every_n_iterations: 10
+scheduling_mode: "N_based"    # Other option: T_based
 
 blocks_spec:
   initial_num: 1

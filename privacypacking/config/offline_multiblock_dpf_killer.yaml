@@ -1,3 +1,4 @@
+N_based: true
 blocks_spec:
   initial_num: 10
 tasks_spec:

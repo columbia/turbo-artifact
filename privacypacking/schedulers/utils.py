@@ -5,6 +5,12 @@ from privacypacking.budget import (
     Task,
 )
 
+N_BASED = "N_based"
+T_BASED = "T_based"
+FAILED = "failed"
+PENDING = "pending"
+ALLOCATED = "allocated"
+
 
 def dominant_shares(task: Task, blocks: Dict[int, Block]) -> List[float]:
     demand_fractions = []

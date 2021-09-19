@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Any
 
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.curves import (
@@ -68,7 +68,7 @@ class UniformTask(Task):
             self,
             id: int,
             profit: float,
-            block_selection_policy: BlockSelectionPolicy,
+            block_selection_policy: Any,
             n_blocks: int,
             budget: Budget,
     ):

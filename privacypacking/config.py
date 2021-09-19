@@ -27,6 +27,7 @@ class Config:
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
+        self.scheduling_mode = config[SCHEDULING_MODE]
 
         # DETERMINISM
         self.global_seed = config[GLOBAL_SEED]
@@ -74,7 +75,7 @@ class Config:
         if self.data_path != "":
             path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
             for _, _, files in os.walk(path):
-                self.task_files += [f'{path}/{file}' for file in files]
+                self.task_files += [f"{path}/{file}" for file in files]
             random.shuffle(self.task_files)
             self.file_idx = -1
             assert len(self.task_files) > 0
@@ -167,13 +168,14 @@ class Config:
         return task_blocks_num
 
     def get_block_selection_policy(self, curve: str):
+        block_selection_policy = None
         policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
         if policy == LATEST_BLOLCKS_FIRST:
-            policy = LatestBlocksFirst
+            block_selection_policy = LatestBlocksFirst
         elif policy == RANDOM_BLOCKS:
-            policy = RandomBlocks
-        assert policy is not None
-        return policy
+            block_selection_policy = RandomBlocks
+        assert block_selection_policy is not None
+        return block_selection_policy
 
     # ################################## Used by 'privacypacking/discrete_simulator.py' ##################################
     # def create_initial_tasks_and_blocks_from_data(
@@ -290,12 +292,8 @@ class Config:
         else:
             # Sample the specs of the task
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
-            task_num_blocks = self.set_task_num_blocks(
-                curve_distribution, num_blocks
-            )
-            block_selection_policy = self.get_block_selection_policy(
-                curve_distribution
-            )
+            task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
+            block_selection_policy = self.get_block_selection_policy(curve_distribution)
 
             if curve_distribution == GAUSSIAN:
                 sigma = random.uniform(

@@ -33,6 +33,7 @@ EPOCHS = "epochs"
 
 NAME = "name"
 N = "n"
+SCHEDULING_MODE = "scheduling_mode"
 PLOT_FILE = "plot_file"
 LOG_FILE = "log_file"
 FREQUENCY = "frequency"

@@ -1,10 +1,6 @@
 from itertools import count
 from loguru import logger
 
-class TaskMessage:
-    def __init__(self, task, allocated_resources_event):
-        self.task = task
-        self.allocated_resources_event = allocated_resources_event
 
 class Tasks:
     """
@@ -48,8 +44,8 @@ class Tasks:
         logger.debug(f"Task: {task_id} generated at {self.env.now}")
         allocated_resources_event = self.env.event()
         yield self.resource_manager.new_tasks_queue.put(
-            TaskMessage(task, allocated_resources_event)
+            (task, allocated_resources_event)
         )
 
         yield allocated_resources_event
-        # logger.debug(f"Task: {task_id} completed at {self.env.now}")
+        logger.debug(f"Task: {task_id} completed at {self.env.now}")
