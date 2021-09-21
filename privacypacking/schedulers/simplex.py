@@ -1,17 +1,8 @@
-import random
 from typing import List
-
 import gurobipy as gp
-import numpy as np
 from gurobipy import GRB
 
-from privacypacking.budget import ALPHAS, Block
-from privacypacking.budget.task import (
-    GaussianCurve,
-    LaplaceCurve,
-    SubsampledGaussianCurve,
-    UniformTask,
-)
+from privacypacking.budget import ALPHAS
 from privacypacking.schedulers.scheduler import Scheduler
 
 

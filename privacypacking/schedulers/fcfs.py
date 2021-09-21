@@ -17,6 +17,7 @@ class FCFS(Scheduler):
 
         # Read them by order
         for i, task in enumerate(self.tasks):
+            # self.task_set_block_ids(task)
             if self.can_run(task):
                 self.consume_budgets(task)
                 allocated_task_ids.append(task.id)

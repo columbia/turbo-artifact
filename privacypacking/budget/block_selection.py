@@ -1,5 +1,5 @@
 import random
-from typing import Iterable, Type
+from typing import List, Type
 
 from privacypacking.budget import Block
 
@@ -17,7 +17,7 @@ class BlockSelectionPolicy:
             raise BlockSelectionException(f"Unknown policy name: {policy_name}")
 
     @staticmethod
-    def select_blocks(blocks: Iterable[Block], task_blocks_num: int) -> Iterable[int]:
+    def select_blocks(blocks: List[Block], task_blocks_num: int) -> List[int]:
         pass
 
 

@@ -1,7 +1,10 @@
 blocks_spec:
   initial_num: 10
 tasks_spec:
-  initial_num: 100
-  data_path: "multiblock_dpf_killer"
+  curve_distributions:
+    custom:
+      sampling: true
+      initial_num: 100
+      data_path: "multiblock_dpf_killer"
 scheduler_spec:
   name: simplex

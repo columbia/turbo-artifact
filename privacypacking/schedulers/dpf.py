@@ -101,6 +101,7 @@ class DPF(Scheduler):
         sorted_tasks = self.order()
         # Try and schedule tasks
         for task in sorted_tasks:
+            # self.task_set_block_ids(task)
             if self.can_run(task):
                 self.consume_budgets(task)
                 allocated_task_ids.append(task.id)

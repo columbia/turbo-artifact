@@ -1,5 +1,5 @@
 from privacypacking.budget import Block
-from privacypacking.simulator.block_selection import (
+from privacypacking.budget.block_selection import (
     BlockSelectionException,
     ContiguousBlocksRandomOffset,
 )

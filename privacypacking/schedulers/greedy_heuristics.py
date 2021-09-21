@@ -6,13 +6,16 @@ from loguru import logger
 
 from privacypacking.budget import Block, Task
 from privacypacking.budget.task import (
+    UniformTask,
+)
+from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
-    UniformTask,
 )
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.utils.scheduling import dominant_shares
+
 
 # TODO: reverse order + backfill (dual heuristic)
 
