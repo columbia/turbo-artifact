@@ -22,4 +22,4 @@ tasks_spec:
 scheduler_spec:
   method: threshold_updating
   metric: flat_relevance
-  shortest_time_window: 1500
+  shortest_time_window: 120

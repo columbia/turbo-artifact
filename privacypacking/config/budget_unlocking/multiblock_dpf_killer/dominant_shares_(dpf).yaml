@@ -1,4 +1,5 @@
 log_file: "multiblock_dpf_killer_budget_unlocking_dominant_shares_DPF"
+scheduling_mode: "P_based"
 
 blocks_spec:
   initial_num: 10

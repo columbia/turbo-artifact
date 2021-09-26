@@ -16,7 +16,7 @@ class TaskQueue:
     def __init__(self):
         self.tasks = []
         self.time_window = 0
-        self.cost_threshold = 0
+        self.cost_threshold = 1
         self.priority_num = 0
 
 

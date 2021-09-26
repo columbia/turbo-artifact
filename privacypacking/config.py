@@ -44,6 +44,9 @@ class Config:
         self.scheduler_N = self.scheduler[N]
         self.scheduler_shortest_time_window = self.scheduler[SHORTEST_TIME_WINDOW]
         self.queues_waiting_times = self.set_queues_waiting_times()
+        self.scheduler_threshold_update_mechanism = self.scheduler[
+            THRESHOLD_UPDATE_MECHANISM
+        ]
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]

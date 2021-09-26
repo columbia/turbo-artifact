@@ -90,3 +90,4 @@ scheduler_spec:
   metric: fcfs
   n: 100
   shortest_time_window: 20
+  threshold_update_mechanism: queue_average_static
