@@ -17,7 +17,8 @@ def dominant_shares(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
                 # Drop RDP orders that are already negative
                 if block_initial_budget.epsilon(alpha) > 0:
                     demand_fractions.append(
-                        demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
+                        demand_budget.epsilon(alpha)
+                        / block_initial_budget.epsilon(alpha)
                     )
         # Order by highest demand fraction first
         demand_fractions.sort(reverse=True)

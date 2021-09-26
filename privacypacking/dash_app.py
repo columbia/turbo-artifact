@@ -163,7 +163,6 @@ if __name__ == "__main__":
             )
         )
 
-
     @app.callback(
         Output("live-update-text", "children"),
         Input("interval-component", "n_intervals"),
@@ -171,6 +170,5 @@ if __name__ == "__main__":
     def update(n):
         objs = Plotter(file).plot()
         return html.Div(objs)
-
 
     app.run_server(debug=False, port=args.port, host="127.0.0.1")

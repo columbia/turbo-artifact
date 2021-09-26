@@ -42,6 +42,7 @@ class ResourceManager:
 
     def task_consumer(self):
         scheduling_iteration = 0
+
         def consume():
             task_message = yield self.new_tasks_queue.get()
             return self.scheduler.add_task(task_message)

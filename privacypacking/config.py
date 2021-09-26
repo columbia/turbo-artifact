@@ -132,12 +132,12 @@ class Config:
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
-            self.log_file = (
-                f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
-            )
+            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
         self.log_path = LOGS_PATH.joinpath(self.log_file)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}")
+        self.logger = Logger(
+            self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}"
+        )
         self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:

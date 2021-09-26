@@ -18,6 +18,7 @@ class TaskQueue:
         self.time_window = t
         self.cost_threshold = 0
 
+
 class TasksInfo:
     def __init__(self):
         self.allocated_tasks = {}
@@ -58,7 +59,9 @@ class Scheduler:
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
         self.tasks_info.allocated_tasks[task.id] = task
-        self.get_queue_from_task(task).tasks.remove(task)  # Todo: this takes linear time -> optimize
+        self.get_queue_from_task(task).tasks.remove(
+            task
+        )  # Todo: this takes linear time -> optimize
 
     def schedule(self, tasks: List[Task]) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them

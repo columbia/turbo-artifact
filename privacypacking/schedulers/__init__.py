@@ -1,4 +1,10 @@
-from privacypacking.schedulers.metrics import dominant_shares, fcfs, overflow_relevance, flat_relevance, round_robins
+from privacypacking.schedulers.metrics import (
+    dominant_shares,
+    fcfs,
+    overflow_relevance,
+    flat_relevance,
+    round_robins,
+)
 from privacypacking.schedulers import greedy_heuristics, simplex
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.schedulers.budget_unlocking import BudgetUnlocking
