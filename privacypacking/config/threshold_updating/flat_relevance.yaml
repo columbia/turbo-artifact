@@ -1,4 +1,5 @@
-log_file: "budget_unlocking_flat_relevance"
+log_file: "threshold_updating_flat_relevance"
+scheduling_mode: "T_based"
 
 blocks_spec:
   initial_num: 10
@@ -19,6 +20,6 @@ tasks_spec:
       task_arrival_interval: 5
 
 scheduler_spec:
-  method: budget_unlocking
+  method: threshold_updating
   metric: flat_relevance
-  n: 100
+  shortest_time_window: 1500

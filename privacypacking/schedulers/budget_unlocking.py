@@ -40,8 +40,8 @@ class BudgetUnlocking(Scheduler):
     # Static variable
     wrapper_blocks = {}
 
-    def __init__(self, env, metric, n):
-        super().__init__(env, metric)
+    def __init__(self, env, number_of_queues, metric, n):
+        super().__init__(env, number_of_queues, metric)
         self.n = n
         assert self.n is not None
 

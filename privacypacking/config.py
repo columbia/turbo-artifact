@@ -27,7 +27,7 @@ class Config:
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
-        self.scheduling_mode = config[SCHEDULING_MODE]
+        self.number_of_queues = config[NUMBER_OF_QUEUES]
 
         # DETERMINISM
         self.global_seed = config[GLOBAL_SEED]
@@ -37,10 +37,13 @@ class Config:
             np.random.seed(self.global_seed)
 
         # SCHEDULER
+        self.scheduling_mode = config[SCHEDULING_MODE]
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
         self.scheduler_metric = self.scheduler[METRIC]
         self.scheduler_N = self.scheduler[N]
+        self.scheduler_shortest_time_window = self.scheduler[SHORTEST_TIME_WINDOW]
+        self.queues_waiting_times = self.set_queues_waiting_times()
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -143,6 +146,12 @@ class Config:
     def dump(self) -> dict:
         return self.config
 
+    def set_queues_waiting_times(self):
+        queues_waiting_times = {}
+        for i in range(self.number_of_queues):
+            queues_waiting_times[i] = self.scheduler_shortest_time_window * (2 ** i)
+        return queues_waiting_times
+
     # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
     def set_curve_distribution(self) -> str:
         curve = np.random.choice(
@@ -217,7 +226,7 @@ class Config:
                 )
                 task = UniformTask(
                     id=task_id,
-                    profit=1,
+                    profit=self.set_profit(),
                     block_selection_policy=block_selection_policy,
                     n_blocks=task_num_blocks,
                     budget=GaussianCurve(sigma),
@@ -228,7 +237,7 @@ class Config:
                 )
                 task = UniformTask(
                     id=task_id,
-                    profit=1,
+                    profit=self.set_profit(),
                     block_selection_policy=block_selection_policy,
                     n_blocks=task_num_blocks,
                     budget=LaplaceCurve(noise),
@@ -240,7 +249,7 @@ class Config:
                 )
                 task = UniformTask(
                     id=task_id,
-                    profit=1,
+                    profit=self.set_profit(),
                     block_selection_policy=block_selection_policy,
                     n_blocks=task_num_blocks,
                     budget=SubsampledGaussianCurve.from_training_parameters(
@@ -255,6 +264,9 @@ class Config:
 
     def create_block(self, block_id: int) -> Block:
         return Block.from_epsilon_delta(block_id, self.epsilon, self.delta)
+
+    def set_profit(self):
+        return random.randint(1, self.number_of_queues)
 
     def set_task_arrival_time(self):
         task_arrival_interval = None

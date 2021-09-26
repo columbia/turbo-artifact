@@ -1,6 +1,6 @@
 from simpy import Event
 from threading import Lock
-from typing import List, Tuple, Type, Any
+from typing import List, Tuple, Any
 from privacypacking.budget import Block, Task
 from privacypacking.schedulers.utils import PENDING, ALLOCATED
 
@@ -13,10 +13,11 @@ from privacypacking.schedulers.utils import PENDING, ALLOCATED
 
 
 class TaskQueue:
-    def __init__(self, t):
+    def __init__(self):
         self.tasks = []
-        self.time_window = t
+        self.time_window = 0
         self.cost_threshold = 0
+        self.priority_num = 0
 
 
 class TasksInfo:
@@ -24,21 +25,25 @@ class TasksInfo:
         self.allocated_tasks = {}
         self.allocated_resources_events = {}
         self.tasks_status = {}
-        self.tasks_priority = {}
 
 
 class Scheduler:
-    def __init__(self, env, metric=None):
+    def __init__(self, env, number_of_queues, metric=None):
         self.env = env
         self.metric = metric
         self.task_queues = {}
+        self.number_of_queues = number_of_queues
         self.blocks = {}
         self.blocks_mutex = Lock()
         self.tasks_info = TasksInfo()
 
     def get_queue_from_task(self, task):
-        priority_num = self.tasks_info.tasks_priority[task.id]
+        priority_num = self.get_priority_num(task)
         return self.task_queues[priority_num]
+
+    def get_priority_num(self, task):
+        # tasks profits can take discrete/specific values
+        return self.number_of_queues - task.profit
 
     def consume_budgets(self, task):
         """
@@ -88,17 +93,15 @@ class Scheduler:
             # Waits for "time_window" units of time
             yield self.env.timeout(queue.time_window)
             # Try and schedule the tasks existing in the queue
-            return self.schedule(queue.tasks)
+            self.schedule(queue.tasks)
 
     def add_task(self, task_message: Tuple[Task, Event]) -> Tuple[Any, bool]:
         (task, allocated_resources_event) = task_message
         self.task_set_block_ids(task)
 
-        priority_num = 0  # fixed for now (should depend on task's profit)
-        t = 0  # fixed for now (should depend on the priority); we allow only one queue
+        priority_num = self.get_priority_num(task)
 
         # Update tasks_info
-        self.tasks_info.tasks_priority[task.id] = priority_num
         self.tasks_info.tasks_status[task.id] = PENDING
         self.tasks_info.allocated_resources_events[task.id] = allocated_resources_event
 
@@ -106,7 +109,7 @@ class Scheduler:
         # If there is no queue for that priority yet create one
         if priority_num not in self.task_queues:
             is_new_queue = True
-            self.task_queues[priority_num] = TaskQueue(t)
+            self.task_queues[priority_num] = TaskQueue()
 
         self.task_queues[priority_num].tasks.append(task)
         return self.task_queues[priority_num], is_new_queue

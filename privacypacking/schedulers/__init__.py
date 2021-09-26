@@ -17,7 +17,7 @@ def get_scheduler(env, config) -> Scheduler:
         "budget_unlocking": BudgetUnlocking,
         "threshold_updating": ThresholdUpdating,
         "simplex": simplex.Simplex,
-        # the following should be metrics; not schedulers
+        # todo: the following should be metrics; not schedulers
         "OfflineDPF": greedy_heuristics.OfflineDPF,
         "FlatRelevance": greedy_heuristics.FlatRelevance,
         "OverflowRelevance": greedy_heuristics.OverflowRelevance,
@@ -26,11 +26,15 @@ def get_scheduler(env, config) -> Scheduler:
     if config.scheduler_metric in globals():
         metric = globals()[config.scheduler_metric]
     assert metric is not None
-    # Some schedulers might need additional arguments
-    if config.scheduler_method in {"basic_scheduler", "threshold_updating"}:
-        return schedulers[config.scheduler_method](env, metric)
+    # Some schedulers might need custom arguments
+    if config.scheduler_method == "basic_scheduler":
+        return schedulers[config.scheduler_method](env, config.number_of_queues, metric)
     elif config.scheduler_method == "budget_unlocking":
-        return schedulers[config.scheduler_method](env, metric, config.scheduler_N)
+        return schedulers[config.scheduler_method](
+            env, config.number_of_queues, metric, config.scheduler_N
+        )
+    elif config.scheduler_method == "threshold_updating":
+        return schedulers[config.scheduler_method](env, config.number_of_queues, metric)
     elif config.scheduler_method == "simplex":
         return schedulers[config.scheduler_method](env)
     else:

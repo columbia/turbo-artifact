@@ -3,7 +3,9 @@ delta: 0.001
 global_seed: 44
 deterministic: true
 log_every_n_iterations: 0
-scheduling_mode: "N_based"    # Other option: T_based
+scheduling_mode: "P_based"     # Other option: T_based
+number_of_queues: 1
+profit: 1
 
 blocks_spec:
   initial_num: 1
@@ -87,3 +89,4 @@ scheduler_spec:
   name: basic_scheduler
   metric: fcfs
   n: 100
+  shortest_time_window: 20

@@ -43,9 +43,15 @@ def flat_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
                 capacity = blocks[block_id].initial_budget.epsilon(alpha)
                 if capacity > 0:
                     cost += demand / capacity
+        # While sorting keep the costs
+        task.cost = cost
         return cost
 
     return sorted(tasks, key=task_key)
+
+
+def round_robins(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
+    pass
 
 
 def overflow_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
@@ -70,10 +76,8 @@ def overflow_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task
                 cost += demand / overflow
                 if overflow < 0:
                     cost = 0
+        # While sorting keep the costs
+        task.cost = cost
         return cost
 
     return sorted(tasks, key=task_key)
-
-
-def round_robins(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
-    pass

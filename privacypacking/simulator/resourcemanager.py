@@ -1,7 +1,7 @@
 import simpy.rt
 
 from privacypacking.schedulers import get_scheduler
-from privacypacking.schedulers.utils import N_BASED, T_BASED
+from privacypacking.schedulers.utils import P_BASED, T_BASED
 
 
 class ResourceManager:
@@ -54,12 +54,13 @@ class ResourceManager:
 
         while True:
             queue, is_new_queue = yield self.env.process(consume())
-            # If the scheduling is N_based then we try to schedule every time a new task arrives
-            if self.config.scheduling_mode == N_BASED:
+            # If the scheduling is P_based then we try to schedule every time a new task arrives
+            if self.config.scheduling_mode == P_BASED:
                 self.scheduler.schedule_queue(queue)
             # If the scheduling is T_based and the queue is new then spawn a process that
             # tries to schedule the queue every T units of time
             elif self.config.scheduling_mode == T_BASED and is_new_queue:
+                queue.time_window = self.config.queues_waiting_times[queue.priority_num]
                 self.env.process(self.scheduler.wait_and_schedule_queue(queue))
 
             self.update_logs(scheduling_iteration)

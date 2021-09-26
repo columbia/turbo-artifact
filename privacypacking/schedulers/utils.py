@@ -1,4 +1,4 @@
-N_BASED = "N_based"
+P_BASED = "P_based"
 T_BASED = "T_based"
 FAILED = "failed"
 PENDING = "pending"
