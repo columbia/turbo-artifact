@@ -1,4 +1,4 @@
-log_file: "fcfs_static"
+log_file: "dpf_static"
 
 blocks_spec:
   initial_num: 5
@@ -37,4 +37,6 @@ tasks_spec:
 
 
 scheduler_spec:
-  name: fcfs
+  method: budget_unlocking
+  metric: dominant_shares
+  n: 150

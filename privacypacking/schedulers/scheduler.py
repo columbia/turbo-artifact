@@ -16,7 +16,7 @@ class TaskQueue:
     def __init__(self, t):
         self.tasks = []
         self.time_window = t
-
+        self.cost_threshold = 0
 
 class TasksInfo:
     def __init__(self):
@@ -27,12 +27,17 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, env):
+    def __init__(self, env, metric=None):
         self.env = env
+        self.metric = metric
         self.task_queues = {}
         self.blocks = {}
         self.blocks_mutex = Lock()
         self.tasks_info = TasksInfo()
+
+    def get_queue_from_task(self, task):
+        priority_num = self.tasks_info.tasks_priority[task.id]
+        return self.task_queues[priority_num]
 
     def consume_budgets(self, task):
         """
@@ -49,12 +54,11 @@ class Scheduler:
         # Consume_budgets
         self.consume_budgets(task)
         # Clean/update scheduler's state
-        priority_num = self.tasks_info.tasks_priority[task.id]
         self.tasks_info.tasks_status[task.id] = ALLOCATED
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
         self.tasks_info.allocated_tasks[task.id] = task
-        self.task_queues[priority_num].tasks.remove(task)  # Todo: this takes linear time -> optimize
+        self.get_queue_from_task(task).tasks.remove(task)  # Todo: this takes linear time -> optimize
 
     def schedule(self, tasks: List[Task]) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them
@@ -63,7 +67,15 @@ class Scheduler:
         Returns:
             List[int]: the ids of the tasks that were scheduled
         """
-        pass
+        allocated_task_ids = []
+        # Task sorted by 'metric'
+        sorted_tasks = self.order(tasks)
+        # Try and schedule tasks
+        for task in sorted_tasks:
+            if self.can_run(task):
+                self.allocate_task(task)
+                allocated_task_ids.append(task.id)
+        return allocated_task_ids
 
     def schedule_queue(self, queue: TaskQueue) -> List[int]:
         return self.schedule(queue.tasks)
@@ -114,8 +126,9 @@ class Scheduler:
         self.blocks_mutex.release()
         return num_blocks
 
-    def order(self, tasks: List[Task]) -> List[int]:
-        pass
+    def order(self, tasks: List[Task]) -> List[Task]:
+        """Sorts the tasks by metric"""
+        return self.metric(tasks, self.blocks)
 
     def can_run(self, task: Task) -> bool:
         """

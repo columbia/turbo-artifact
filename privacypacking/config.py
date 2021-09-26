@@ -38,7 +38,8 @@ class Config:
 
         # SCHEDULER
         self.scheduler = config[SCHEDULER_SPEC]
-        self.scheduler_name = self.scheduler[NAME]
+        self.scheduler_method = self.scheduler[METHOD]
+        self.scheduler_metric = self.scheduler[METRIC]
         self.scheduler_N = self.scheduler[N]
 
         # BLOCKS
@@ -132,11 +133,11 @@ class Config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
             self.log_file = (
-                f"{self.scheduler_name}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
+                f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
             )
         self.log_path = LOGS_PATH.joinpath(self.log_file)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(self.log_path, self.scheduler_name)
+        self.logger = Logger(self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}")
         self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
@@ -177,92 +178,6 @@ class Config:
         assert block_selection_policy is not None
         return block_selection_policy
 
-    # ################################## Used by 'privacypacking/discrete_simulator.py' ##################################
-    # def create_initial_tasks_and_blocks_from_data(
-    #         self,
-    # ) -> Tuple[List[Task], Dict[int, Block]]:
-    #
-    #     # Prepare the initial blocks
-    #     initial_blocks = {}
-    #     block_id_counter = count()
-    #     for _ in range(self.initial_blocks_num):
-    #         block_id = next(block_id_counter)
-    #         initial_blocks[block_id] = self.create_block(block_id)
-    #
-    #     # Sample the initial tasks according to the file's distribution
-    #     initial_tasks = []
-    #     task_id_counter = count()
-    #     data_path = REPO_ROOT.joinpath("data").joinpath(
-    #         self.config["tasks_spec"]["from_file"]["data_path"]
-    #     )
-    #     task_distribution = load_task_distribution(data_path)
-    #
-    #     # Since the seed is fixed, increasing `initial_num` adds more tasks but keeps the
-    #     # first tasks identical
-    #     for _ in range(self.config["tasks_spec"]["initial_num"]):
-    #         task_parameters = random.choice(task_distribution)
-    #         policy = task_parameters.policy
-    #
-    #         selected_block_ids = policy.select_blocks(
-    #             initial_blocks, task_parameters.n_blocks
-    #         )
-    #
-    #         task = UniformTask(
-    #             id=next(task_id_counter),
-    #             profit=task_parameters.profit,
-    #             block_ids=selected_block_ids,
-    #             budget=task_parameters.budget,
-    #         )
-    #
-    #         initial_tasks.append(task)
-    #
-    #     return initial_tasks, initial_blocks
-    #
-    # def create_initial_tasks_and_blocks(
-    #         self,
-    # ) -> Tuple[List[Task], Dict[int, Block]]:
-    #
-    #     if "data_path" in self.config["tasks_spec"]:
-    #         return self.create_initial_tasks_and_blocks_from_data()
-    #
-    #     # Create the initial tasks and blocks
-    #     initial_blocks = {}
-    #     block_id_counter = count()
-    #     for _ in range(self.initial_blocks_num):
-    #         block_id = next(block_id_counter)
-    #         initial_blocks[block_id] = self.create_block(block_id)
-    #
-    #     initial_tasks = []
-    #     task_id_counter = count()
-    #     curves = (
-    #             [LAPLACE] * self.laplace_init_num
-    #             + [GAUSSIAN] * self.gaussian_init_num
-    #             + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
-    #     )
-    #     random.shuffle(curves)
-    #     # TODO: We need a way to allow the same curve to request different nb of blocks
-    #     # TODO: plot on Jupyter
-    #     for curve_distribution in curves:
-    #         task_blocks_num = self.set_task_num_blocks(
-    #             curve_distribution, len(initial_blocks)
-    #         )
-    #         policy = self.get_policy(curve_distribution)
-    #         selected_block_ids = policy.select_blocks(
-    #             blocks=initial_blocks, task_blocks_num=task_blocks_num
-    #         )
-    #
-    #         task = self.create_task(
-    #             next(task_id_counter),
-    #             curve_distribution,
-    #             selected_block_ids=selected_block_ids,
-    #         )
-    #
-    #         initial_tasks.append(task)
-    #
-    #     return initial_tasks, initial_blocks
-    #
-    # ####################################################################################################################
-
     def create_task(
             self, task_id: int, curve_distribution: str, num_blocks: int
     ) -> Task:
@@ -292,6 +207,7 @@ class Config:
         else:
             # Sample the specs of the task
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
+            #  Kelly: it's not the same num of blocks. you can specify through the config the max_num_of_blocks and a num within that range will be sampled
             task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
             block_selection_policy = self.get_block_selection_policy(curve_distribution)
 

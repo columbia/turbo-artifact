@@ -1,7 +1,15 @@
-log_file: "dpf_example"
+log_file: "fcfs"
 
 blocks_spec:
   initial_num: 3
+  block_arrival_frequency:
+    enabled: true    # no online blocks
+    poisson:
+      enabled: false
+      block_arrival_interval: 4
+    constant:
+      enabled: true
+      block_arrival_interval: 1
 
 tasks_spec:
   curve_distributions:
@@ -33,5 +41,4 @@ tasks_spec:
       task_arrival_interval: 5
 
 scheduler_spec:
-  name: dpf
-  n: 150
+  metric: fcfs

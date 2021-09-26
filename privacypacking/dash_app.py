@@ -126,6 +126,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", dest="file")
     parser.add_argument("--port", dest="port", default="8080")
+    parser.add_argument("--mode", dest="mode", default="offline")
     args = parser.parse_args()
 
     if args.file:
@@ -144,18 +145,24 @@ if __name__ == "__main__":
         logger.info(f"No file provided. Plotting the most recent experiment: {file}")
 
     app = dash.Dash()
-    app.layout = html.Div(
-        html.Div(
-            [
-                html.Div(id="live-update-text"),
-                dcc.Interval(
-                    id="interval-component",
-                    interval=5 * 1000,  # in milliseconds
-                    n_intervals=0,
-                ),
-            ]
+
+    if args.mode == "offline":
+        objs = Plotter(file).plot()
+        app.layout = html.Div(objs)
+    else:
+        app.layout = html.Div(
+            html.Div(
+                [
+                    html.Div(id="live-update-text"),
+                    dcc.Interval(
+                        id="interval-component",
+                        interval=5 * 1000,  # in milliseconds
+                        n_intervals=0,
+                    ),
+                ]
+            )
         )
-    )
+
 
     @app.callback(
         Output("live-update-text", "children"),
@@ -164,5 +171,6 @@ if __name__ == "__main__":
     def update(n):
         objs = Plotter(file).plot()
         return html.Div(objs)
+
 
     app.run_server(debug=False, port=args.port, host="127.0.0.1")

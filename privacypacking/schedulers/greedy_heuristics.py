@@ -14,7 +14,7 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.schedulers.utils import dominant_shares
+from privacypacking.schedulers import dominant_shares
 
 
 # TODO: reverse order + backfill (dual heuristic)

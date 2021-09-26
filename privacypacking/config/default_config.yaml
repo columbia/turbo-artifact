@@ -2,7 +2,7 @@ epsilon: 10
 delta: 0.001
 global_seed: 44
 deterministic: true
-log_every_n_iterations: 10
+log_every_n_iterations: 0
 scheduling_mode: "N_based"    # Other option: T_based
 
 blocks_spec:
@@ -53,7 +53,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: "random_blocks"
 
     # Sampling from a SubsampledGaussian
     SubsampledGaussian:
@@ -84,5 +84,6 @@ tasks_spec:
 
 
 scheduler_spec:
-  name: fcfs
+  name: basic_scheduler
+  metric: fcfs
   n: 100

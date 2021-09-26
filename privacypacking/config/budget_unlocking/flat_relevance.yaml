@@ -1,0 +1,38 @@
+log_file: "budget_unlocking_flat_relevance"
+
+blocks_spec:
+  initial_num: 10
+
+tasks_spec:
+  curve_distributions:
+    #    laplace:
+    #      frequency: 0.33
+    #      blocks_request:
+    #        random:
+    #          enabled: true
+    #          num_blocks_max: 3
+
+    gaussian:
+      frequency: 1
+      blocks_request:
+        random:
+          enabled: true
+          num_blocks_max: 10
+  #
+  #    SubsampledGaussian:
+  #      frequency: 0.33
+  #      blocks_request:
+  #        random:
+  #          enabled: true
+  #          num_blocks_max: 3
+
+  task_arrival_frequency:
+    enabled: true
+    constant:
+      enabled: true
+      task_arrival_interval: 5
+
+scheduler_spec:
+  method: budget_unlocking
+  metric: flat_relevance
+  n: 1000

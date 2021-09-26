@@ -41,7 +41,7 @@ class ResourceManager:
             yield self.env.process(consume())
 
     def task_consumer(self):
-        # scheduling_iteration = 0
+        scheduling_iteration = 0
         def consume():
             task_message = yield self.new_tasks_queue.get()
             return self.scheduler.add_task(task_message)
@@ -61,18 +61,21 @@ class ResourceManager:
             elif self.config.scheduling_mode == T_BASED and is_new_queue:
                 self.env.process(self.scheduler.wait_and_schedule_queue(queue))
 
-            # self.update_logs(scheduling_iteration)
-            # scheduling_iteration += 1
+            self.update_logs(scheduling_iteration)
+            scheduling_iteration += 1
 
-    # def update_logs(self, scheduling_iteration):
-    #     # TODO: improve the log period + perfs (it definitely is a bottleneck)
-    #     if self.config.log_every_n_iterations and (
-    #         (scheduling_iteration == 0)
-    #         or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
-    #     ):
-    #         self.config.logger.log(
-    #             self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),
-    #             self.scheduler.blocks,
-    #             list(self.scheduler.allocated_tasks.keys()),
-    #             self.config,
-    #         )
+    def update_logs(self, scheduling_iteration):
+        # TODO: improve the log period + perfs (it definitely is a bottleneck)
+        if self.config.log_every_n_iterations and (
+                (scheduling_iteration == 0)
+                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+        ):
+            all_tasks = []
+            for queue in self.scheduler.task_queues.values():
+                all_tasks += queue.tasks
+            self.config.logger.log(
+                all_tasks + list(self.scheduler.tasks_info.allocated_tasks.values()),
+                self.scheduler.blocks,
+                list(self.scheduler.tasks_info.allocated_tasks.keys()),
+                self.config,
+            )

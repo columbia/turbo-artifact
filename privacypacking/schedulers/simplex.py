@@ -66,5 +66,5 @@ class Simplex(Scheduler):
         for i, allocated in enumerate(allocation):
             if allocated:
                 allocated_task_ids.append(tasks[i].id)
-                self.consume_budgets(tasks[i])
+                self.allocate_task(tasks[i])
         return allocated_task_ids

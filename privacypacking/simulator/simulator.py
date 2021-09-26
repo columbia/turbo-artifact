@@ -29,14 +29,17 @@ class Simulator:
 
     def run(self):
         start = datetime.now()
-        self.env.run(until=15)
+        self.env.run(until=10000)
+        # self.env.run()
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
 
+        all_tasks = []
+        for queue in self.rm.scheduler.task_queues.values():
+            all_tasks += queue.tasks
+
         logs = self.config.logger.get_log_dict(
-            # assuming only one queue for now (quick fix)
-            self.rm.scheduler.task_queues[0].tasks
-            + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
@@ -45,9 +48,7 @@ class Simulator:
 
         # Saving locally too
         self.config.logger.log(
-            # assuming only one queue for now (quick fix)
-            self.rm.scheduler.task_queues[0].tasks
-            + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
