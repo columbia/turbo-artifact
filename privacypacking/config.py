@@ -180,21 +180,10 @@ class Config:
         assert task_blocks_num is not None
         return task_blocks_num
 
-    def get_block_selection_policy(self, curve: str):
-        block_selection_policy = None
-        policy = self.curve_distributions[curve][BLOCK_SELECTING_POLICY]
-        if policy == LATEST_BLOLCKS_FIRST:
-            block_selection_policy = LatestBlocksFirst
-        elif policy == RANDOM_BLOCKS:
-            block_selection_policy = RandomBlocks
-        assert block_selection_policy is not None
-        return block_selection_policy
-
     def create_task(
             self, task_id: int, curve_distribution: str, num_blocks: int
     ) -> Task:
 
-        # Todo: read profit from config
         task = None
 
         if curve_distribution is None:
@@ -221,7 +210,9 @@ class Config:
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
             #  Kelly: it's not the same num of blocks. you can specify through the config the max_num_of_blocks and a num within that range will be sampled
             task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
-            block_selection_policy = self.get_block_selection_policy(curve_distribution)
+            block_selection_policy = BlockSelectionPolicy.from_str(
+                self.curve_distributions[curve_distribution][BLOCK_SELECTING_POLICY]
+            )
 
             if curve_distribution == GAUSSIAN:
                 sigma = random.uniform(

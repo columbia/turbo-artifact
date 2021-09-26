@@ -40,7 +40,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst # Others: RandomBlocks
 
     # Sampling from a gaussian
     gaussian:
@@ -55,7 +55,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "random_blocks"
+      block_selecting_policy: RandomBlocks
 
     # Sampling from a SubsampledGaussian
     SubsampledGaussian:
@@ -73,7 +73,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst
 
   task_arrival_frequency:
     enabled: false  # no online tasks
@@ -90,4 +90,4 @@ scheduler_spec:
   metric: fcfs
   n: 100
   shortest_time_window: 20
-  threshold_update_mechanism: queue_average_static
+  threshold_update_mechanism: QueueAverageStatic

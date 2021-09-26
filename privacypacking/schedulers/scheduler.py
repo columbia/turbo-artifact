@@ -68,13 +68,14 @@ class Scheduler:
             task
         )  # Todo: this takes linear time -> optimize
 
-    def schedule(self, tasks: List[Task]) -> List[int]:
+    def schedule_queue(self, queue: TaskQueue) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them
         to some blocks from `self.blocks`.
         Modifies the budgets of the blocks inplace.
         Returns:
             List[int]: the ids of the tasks that were scheduled
         """
+        tasks = queue.tasks
         allocated_task_ids = []
         # Task sorted by 'metric'
         sorted_tasks = self.order(tasks)
@@ -85,15 +86,12 @@ class Scheduler:
                 allocated_task_ids.append(task.id)
         return allocated_task_ids
 
-    def schedule_queue(self, queue: TaskQueue) -> List[int]:
-        return self.schedule(queue.tasks)
-
     def wait_and_schedule_queue(self, queue: TaskQueue) -> List[int]:
         while True:
             # Waits for "time_window" units of time
             yield self.env.timeout(queue.time_window)
             # Try and schedule the tasks existing in the queue
-            self.schedule(queue.tasks)
+            self.schedule_queue(queue)
 
     def add_task(self, task_message: Tuple[Task, Event]) -> Tuple[Any, bool]:
         (task, allocated_resources_event) = task_message

@@ -1,5 +1,3 @@
-from privacypacking.schedulers import greedy_heuristics, simplex
-from privacypacking.schedulers.budget_unlocking import BudgetUnlocking
 from privacypacking.schedulers.metrics import (
     dominant_shares,
     fcfs,
@@ -7,8 +5,19 @@ from privacypacking.schedulers.metrics import (
     flat_relevance,
     round_robins,
 )
+
 from privacypacking.schedulers.scheduler import Scheduler
+from privacypacking.schedulers.scheduler import TaskQueue
+from privacypacking.schedulers.budget_unlocking import BudgetUnlocking
 from privacypacking.schedulers.threshold_updating import ThresholdUpdating
+from privacypacking.schedulers import greedy_heuristics, simplex
+
+from privacypacking.schedulers.threshold_update_mechanisms import (
+    ThresholdUpdateMechanism,
+    NaiveAverage,
+    QueueAverageStatic,
+    QueueAverageDynamic,
+)
 
 
 def get_scheduler(env, config) -> Scheduler:
@@ -40,14 +49,10 @@ def get_scheduler(env, config) -> Scheduler:
                 env, config.number_of_queues, metric, config.scheduler_N
             )
         elif config.scheduler_method == "threshold_updating":
-            scheduler_threshold_update_mechanism = None
-            if config.threshold_update_mechanism in globals():
-                scheduler_threshold_update_mechanism = globals()[
-                    config.scheduler_threshold_update_mechanism
-                ]
-            assert scheduler_threshold_update_mechanism is not None
-
-            return schedulers[config.scheduler_threshold_update_mechanism](
+            scheduler_threshold_update_mechanism = ThresholdUpdateMechanism.from_str(
+                config.scheduler_threshold_update_mechanism
+            )
+            return schedulers[config.scheduler_method](
                 env,
                 config.number_of_queues,
                 metric,

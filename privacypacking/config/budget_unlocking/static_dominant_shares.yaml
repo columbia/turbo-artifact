@@ -13,7 +13,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "random"
+      block_selecting_policy: "RandomBlocks"
 
     gaussian:
       initial_num: 100
@@ -23,7 +23,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "random"
+      block_selecting_policy: "RandomBlocks"
 
     SubsampledGaussian:
       initial_num: 100
@@ -33,7 +33,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "random"
+      block_selecting_policy: "RandomBlocks"
 
 
 scheduler_spec:
