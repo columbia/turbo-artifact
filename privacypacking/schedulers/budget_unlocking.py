@@ -7,7 +7,7 @@ from privacypacking.budget import ZeroCurve
 from privacypacking.schedulers import Scheduler
 
 """
-For all schedulers based on gradually unlocking budget (not only DPF) 
+For all schedulers based on gradually unlocking budget
 
 """
 
