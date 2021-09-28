@@ -1,12 +1,8 @@
 import math
-import os
 import random
 from datetime import datetime
 from functools import partial
 from typing import List
-
-import numpy as np
-
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import LatestBlocksFirst, RandomBlocks
 from privacypacking.budget.curves import (
@@ -192,8 +188,14 @@ class Config:
         if curve_distribution == CUSTOM:
             # Read custom task specs from a file
             if self.custom_tasks_sampling:
-                files = [f'{self.path}/{task_file}' for task_file in self.task_files_frequencies.keys()]
-                frequencies = [task_files_frequency for task_files_frequency in self.task_files_frequencies.values()]
+                files = [
+                    f"{self.path}/{task_file}"
+                    for task_file in self.task_files_frequencies.keys()
+                ]
+                frequencies = [
+                    task_files_frequency
+                    for task_files_frequency in self.task_files_frequencies.values()
+                ]
                 file = np.random.choice(
                     files,
                     1,
