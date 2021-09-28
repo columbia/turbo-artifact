@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable, Tuple
 
 import yaml
-
+import numpy as np
 from privacypacking.budget import Budget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 
@@ -193,10 +193,19 @@ def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
         else:
             block_selection_policy = BlockSelectionPolicy.from_str("RandomBlocks")
 
+        n_blocks_requests = demand_dict["n_blocks"].split(",")
+        num_blocks = [n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests]
+        frequencies = [n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests]
+        n_blocks = np.random.choice(
+            num_blocks,
+            1,
+            p=frequencies,
+        )
+
         task_spec = TaskSpec(
             profit=profit,
             block_selection_policy=block_selection_policy,
-            n_blocks=demand_dict["n_blocks"],
+            n_blocks=n_blocks,
             budget=Budget(orders),
         )
     assert task_spec is not None
