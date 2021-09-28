@@ -78,14 +78,13 @@ class Config:
         self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
         self.custom_tasks_frequency = self.curve_distributions[CUSTOM][FREQUENCY]
         self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
-        self.task_files = []
+        self.task_files_frequencies = None
+
         if self.data_path != "":
-            path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-            for _, _, files in os.walk(path):
-                self.task_files += [f"{path}/{file}" for file in files]
-            random.shuffle(self.task_files)
-            self.file_idx = -1
-            assert len(self.task_files) > 0
+            self.path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
+            with open(self.path.joinpath("frequencies.yaml"), "r") as f:
+                self.task_files_frequencies = yaml.safe_load(f)
+            assert len(self.task_files_frequencies) > 0
 
         # Setting config for laplace tasks
         self.laplace = self.curve_distributions[LAPLACE]
@@ -193,18 +192,21 @@ class Config:
         if curve_distribution == CUSTOM:
             # Read custom task specs from a file
             if self.custom_tasks_sampling:
-                self.file_idx = random.randint(0, len(self.task_files) - 1)
-            else:
-                self.file_idx += 1
-            file = self.task_files[self.file_idx]
-            task_spec = load_task_spec_from_file(file)
-            task = UniformTask(
-                id=task_id,
-                profit=task_spec.profit,
-                block_selection_policy=task_spec.block_selection_policy,
-                n_blocks=task_spec.n_blocks,
-                budget=task_spec.budget,
-            )
+                files = [f'{self.path}/{task_file}' for task_file in self.task_files_frequencies.keys()]
+                frequencies = [task_files_frequency for task_files_frequency in self.task_files_frequencies.values()]
+                file = np.random.choice(
+                    files,
+                    1,
+                    p=frequencies,
+                )
+                task_spec = load_task_spec_from_file(file)
+                task = UniformTask(
+                    id=task_id,
+                    profit=task_spec.profit,
+                    block_selection_policy=task_spec.block_selection_policy,
+                    n_blocks=task_spec.n_blocks,
+                    budget=task_spec.budget,
+                )
         else:
             # Sample the specs of the task
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
@@ -267,7 +269,7 @@ class Config:
         if self.task_arrival_poisson_enabled:
             task_arrival_interval = partial(
                 random.expovariate, 1 / self.task_arrival_interval
-            )
+            )()
         elif self.task_arrival_constant_enabled:
             task_arrival_interval = self.task_arrival_interval
         assert task_arrival_interval is not None
@@ -278,7 +280,7 @@ class Config:
         if self.block_arrival_poisson_enabled:
             block_arrival_interval = partial(
                 random.expovariate, 1 / self.block_arrival_interval
-            )
+            )()
         elif self.block_arrival_constant_enabled:
             block_arrival_interval = self.block_arrival_interval
         assert block_arrival_interval is not None
