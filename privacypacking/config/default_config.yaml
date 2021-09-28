@@ -2,7 +2,10 @@ epsilon: 10
 delta: 0.001
 global_seed: 44
 deterministic: true
-log_every_n_iterations: 10
+log_every_n_iterations: 0
+scheduling_mode: "P_based"     # Other option: T_based
+number_of_queues: 1
+profit: 1
 
 blocks_spec:
   initial_num: 1
@@ -37,7 +40,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst # Others: RandomBlocks
 
     # Sampling from a gaussian
     gaussian:
@@ -52,7 +55,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: RandomBlocks
 
     # Sampling from a SubsampledGaussian
     SubsampledGaussian:
@@ -70,7 +73,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst
 
   task_arrival_frequency:
     enabled: false  # no online tasks
@@ -83,5 +86,8 @@ tasks_spec:
 
 
 scheduler_spec:
-  name: fcfs
+  name: basic_scheduler
+  metric: fcfs
   n: 100
+  shortest_time_window: 20
+  threshold_update_mechanism: QueueAverageStatic

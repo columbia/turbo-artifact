@@ -1,6 +1,7 @@
 import simpy.rt
 
-from privacypacking.schedulers import get_scheduler_class
+from privacypacking.schedulers import get_scheduler
+from privacypacking.schedulers.utils import P_BASED, T_BASED
 
 
 class ResourceManager:
@@ -17,8 +18,7 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        scheduler_class = get_scheduler_class(self.config.scheduler_name)
-        self.scheduler = scheduler_class([], {}, self.config)
+        self.scheduler = get_scheduler(self.env, self.config)
 
         self.blocks_initialized = self.env.event()
 
@@ -42,12 +42,10 @@ class ResourceManager:
 
     def task_consumer(self):
         scheduling_iteration = 0
-        waiting_events = {}
 
         def consume():
-            task, allocated_resources_event = yield self.new_tasks_queue.get()
-            waiting_events[task.id] = allocated_resources_event
-            self.scheduler.add_task(task)
+            task_message = yield self.new_tasks_queue.get()
+            return self.scheduler.add_task(task_message)
 
         # Consume initial tasks
         initial_tasks_num = self.config.get_initial_tasks_num()
@@ -55,28 +53,31 @@ class ResourceManager:
             yield self.env.process(consume())
 
         while True:
-            yield self.env.process(consume())
-            # Schedule (it modifies the blocks) and update the list of pending tasks
-            allocated_task_ids = self.scheduler.schedule()
-            self.scheduler.update_allocated_tasks(allocated_task_ids)
+            queue, is_new_queue = yield self.env.process(consume())
+            # If the scheduling is P_based then we try to schedule every time a new task arrives
+            if self.config.scheduling_mode == P_BASED:
+                self.scheduler.schedule_queue(queue)
+            # If the scheduling is T_based and the queue is new then spawn a process that
+            # tries to schedule the queue every T units of time
+            elif self.config.scheduling_mode == T_BASED and is_new_queue:
+                queue.time_window = self.config.queues_waiting_times[queue.priority_num]
+                self.env.process(self.scheduler.wait_and_schedule_queue(queue))
 
-            # self.update_logs(scheduling_iteration)
+            self.update_logs(scheduling_iteration)
             scheduling_iteration += 1
-
-            # Wake-up all the tasks that have been scheduled
-            for allocated_id in allocated_task_ids:
-                waiting_events[allocated_id].succeed()
-                del waiting_events[allocated_id]
 
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
-            (scheduling_iteration == 0)
-            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+                (scheduling_iteration == 0)
+                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
         ):
+            all_tasks = []
+            for queue in self.scheduler.task_queues.values():
+                all_tasks += queue.tasks
             self.config.logger.log(
-                self.scheduler.tasks + list(self.scheduler.allocated_tasks.values()),
+                all_tasks + list(self.scheduler.tasks_info.allocated_tasks.values()),
                 self.scheduler.blocks,
-                list(self.scheduler.allocated_tasks.keys()),
+                list(self.scheduler.tasks_info.allocated_tasks.keys()),
                 self.config,
             )

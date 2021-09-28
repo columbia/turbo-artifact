@@ -7,10 +7,10 @@ from privacypacking.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):
-    def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks)
+    def __init__(self, env):
+        super().__init__(env)
 
-    def solve_allocation(self) -> List[bool]:
+    def solve_allocation(self, tasks) -> List[bool]:
 
         """
         Returns a list of booleans corresponding to the tasks that are allocated
@@ -19,14 +19,14 @@ class Simplex(Scheduler):
 
         # TODO: alphas from which block? Which subset?
         alphas = ALPHAS
-        task_ids = [t.id for t in self.tasks]
+        task_ids = [t.id for t in tasks]
         block_ids = [k for k in self.blocks]
 
         demands_upper_bound = {}
         for k, block in self.blocks.items():
             for alpha in block.budget.alphas:
                 demands_upper_bound[(k, alpha)] = 0
-                for task in self.tasks:
+                for task in tasks:
                     if k in task.budget_per_block:
                         demands_upper_bound[(k, alpha)] += task.budget_per_block[
                             k
@@ -46,9 +46,7 @@ class Simplex(Scheduler):
 
         for k, block in self.blocks.items():
             for alpha in block.budget.alphas:
-                demands_k_alpha = {
-                    t.id: t.get_budget(k).epsilon(alpha) for t in self.tasks
-                }
+                demands_k_alpha = {t.id: t.get_budget(k).epsilon(alpha) for t in tasks}
                 m.addConstr(
                     x.prod(demands_k_alpha)
                     - (1 - a[k, alpha]) * demands_upper_bound[(k, alpha)]
@@ -56,17 +54,17 @@ class Simplex(Scheduler):
                 )
 
         # Objective function
-        profits = {task.id: task.profit for task in self.tasks}
+        profits = {task.id: task.profit for task in tasks}
         m.setObjective(x.prod(profits), GRB.MAXIMIZE)
         m.optimize()
 
         return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
-    def schedule(self) -> List[int]:
+    def schedule(self, tasks) -> List[int]:
         allocated_task_ids = []
-        allocation = self.solve_allocation()
+        allocation = self.solve_allocation(tasks)
         for i, allocated in enumerate(allocation):
             if allocated:
-                allocated_task_ids.append(self.tasks[i].id)
-                self.consume_budgets(self.tasks[i])
+                allocated_task_ids.append(tasks[i].id)
+                self.allocate_task(tasks[i])
         return allocated_task_ids

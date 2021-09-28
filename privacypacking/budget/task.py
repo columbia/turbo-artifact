@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Any
 
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.curves import (
@@ -27,13 +27,9 @@ class Task:
         self.profit = profit
         self.block_selection_policy = block_selection_policy
         self.n_blocks = n_blocks
-        # The scheduler sets the budget_per_block according to the task's block selection
-        # policy and the current state of existing blocks
-        # i.e. it is re-set every time the task is considered for scheduling
-        # is set only once for offline setting
-        # Add Other API / constraints
-        # block selection policy and n_blocks is user-defined (API)
+        # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
+        self.cost = 0
 
     def get_budget(self, block_id: int) -> Budget:
         """
@@ -68,7 +64,7 @@ class UniformTask(Task):
             self,
             id: int,
             profit: float,
-            block_selection_policy: BlockSelectionPolicy,
+            block_selection_policy: Any,
             n_blocks: int,
             budget: Budget,
     ):

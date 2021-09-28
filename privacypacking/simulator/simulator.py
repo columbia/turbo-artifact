@@ -26,31 +26,31 @@ class Simulator:
         self.rm = ResourceManager(self.env, self.config)
         Blocks(self.env, self.rm)
         Tasks(self.env, self.rm)
-        # TasksFromFile(
-        #     self.env,
-        #     self.rm,
-        #     blocks_and_budgets_path=REPO_ROOT.joinpath("data/multiblock_dpf_killer"),
-        # )
 
     def run(self):
         start = datetime.now()
-        self.env.run(until=15)
+        self.env.run(until=10000)
+        # self.env.run()
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
 
+        all_tasks = []
+        for queue in self.rm.scheduler.task_queues.values():
+            all_tasks += queue.tasks
+
         logs = self.config.logger.get_log_dict(
-            self.rm.scheduler.tasks + list(self.rm.scheduler.allocated_tasks.values()),
+            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
-            list(self.rm.scheduler.allocated_tasks.keys()),
+            list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
         )
 
         # Saving locally too
         self.config.logger.log(
-            self.rm.scheduler.tasks + list(self.rm.scheduler.allocated_tasks.values()),
+            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
-            list(self.rm.scheduler.allocated_tasks.keys()),
+            list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
         )

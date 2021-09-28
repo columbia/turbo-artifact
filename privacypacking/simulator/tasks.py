@@ -48,4 +48,4 @@ class Tasks:
         )
 
         yield allocated_resources_event
-        # logger.debug(f"Task: {task_id} completed at {self.env.now}")
+        logger.debug(f"Task: {task_id} scheduled at {self.env.now}")

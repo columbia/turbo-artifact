@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 from loguru import logger
@@ -14,7 +14,7 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.utils.scheduling import dominant_shares
+from privacypacking.schedulers import dominant_shares
 
 
 # TODO: reverse order + backfill (dual heuristic)
@@ -25,10 +25,10 @@ from privacypacking.utils.scheduling import dominant_shares
 
 # TODO: use the profit field
 class GreedyHeuristic(Scheduler):
-    def __init__(self, tasks, blocks, config=None):
-        super().__init__(tasks, blocks)
+    def __init__(self, env):
+        super().__init__(env)
 
-    def order(self) -> List[Task]:
+    def order(self, tasks) -> List[Task]:
         """Sorts the tasks according to a heuristic.
         The output list can point to the same task objects as the input list,
         since tasks are immutable.
@@ -38,7 +38,7 @@ class GreedyHeuristic(Scheduler):
         Returns: List[Task]: A sorted task list (highest priority first).
         """
         # The default heuristic doesn't do anything
-        return self.tasks
+        return tasks
 
     def greedy_allocation(self, sorted_tasks: List[Task]) -> List[int]:
         """Allocate tasks in order until there is no budget left.
@@ -55,29 +55,29 @@ class GreedyHeuristic(Scheduler):
         for task in sorted_tasks:
             if self.can_run(task):
                 allocated_task_ids.append(task.id)
-                self.consume_budgets(task)
+                self.allocate_task(task)
         return allocated_task_ids
 
-    def schedule(self) -> List[int]:
+    def schedule(self, tasks) -> List[int]:
         # Sort and allocate in order
-        sorted_tasks = self.order()
+        sorted_tasks = self.order(tasks)
         sorted_allocation = self.greedy_allocation(sorted_tasks)
         return sorted_allocation
 
 
 class OfflineDPF(GreedyHeuristic):
-    def order(self) -> List[Task]:
+    def order(self, tasks) -> List[Task]:
         """Sorts the tasks by dominant share"""
 
         def task_key(task):
             # Lexicographic order (the dominant share is the first component)
             return dominant_shares(task, self.blocks)
 
-        return sorted(self.tasks, key=task_key)
+        return sorted(tasks, key=task_key)
 
 
 class FlatRelevance(GreedyHeuristic):
-    def order(self) -> Tuple[List[int], List[Task]]:
+    def order(self, tasks) -> List[Task]:
         """The cost of a task is the sum of its normalized demands"""
 
         def task_key(task):
@@ -90,7 +90,7 @@ class FlatRelevance(GreedyHeuristic):
                         cost += demand / capacity
             return cost
 
-        return sorted(self.tasks, key=task_key)
+        return sorted(tasks, key=task_key)
 
 
 class OverflowRelevance(GreedyHeuristic):
