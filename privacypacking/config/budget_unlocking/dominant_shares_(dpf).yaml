@@ -21,4 +21,4 @@ tasks_spec:
 scheduler_spec:
   method: budget_unlocking
   metric: dominant_shares
-  n: 1000
+  n: 100

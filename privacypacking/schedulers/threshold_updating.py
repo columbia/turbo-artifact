@@ -68,4 +68,6 @@ class ThresholdUpdating(Scheduler):
             self, queue: TaskQueue, cost: float, can_run: bool
     ) -> None:
         if self.scheduler_threshold_update_mechanism != QueueAverageStatic:
-            self.scheduler_threshold_update_mechanism.update_threshold(queue, cost, can_run)
+            self.scheduler_threshold_update_mechanism.update_threshold(
+                queue, cost, can_run
+            )
