@@ -183,7 +183,6 @@ def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
         orders = {}
         for i, alpha in enumerate(demand_dict["alphas"]):
             orders[alpha] = demand_dict["rdp_epsilons"][i]
-
         profit = demand_dict.get("profit", 1)
         block_selection_policy = None
         if "block_selection_policy" in demand_dict:
@@ -203,12 +202,12 @@ def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
             num_blocks,
             1,
             p=frequencies,
-        )
+        )[0]
 
         task_spec = TaskSpec(
             profit=profit,
             block_selection_policy=block_selection_policy,
-            n_blocks=n_blocks,
+            n_blocks=int(n_blocks),
             budget=Budget(orders),
         )
     assert task_spec is not None

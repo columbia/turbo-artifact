@@ -143,13 +143,13 @@ class Config:
     def dump(self) -> dict:
         return self.config
 
+    # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
     def set_queues_waiting_times(self):
         queues_waiting_times = {}
         for i in range(self.number_of_queues):
             queues_waiting_times[i] = self.scheduler_shortest_time_window * (2 ** i)
         return queues_waiting_times
 
-    # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
     def set_curve_distribution(self) -> str:
         curve = np.random.choice(
             [CUSTOM, GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN],
@@ -199,7 +199,8 @@ class Config:
                     files,
                     1,
                     p=frequencies,
-                )
+                )[0]
+
                 task_spec = load_task_spec_from_file(file)
                 task = UniformTask(
                     id=task_id,

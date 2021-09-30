@@ -24,7 +24,7 @@ DELTA_MNIST = 1e-5
 DELTA_CIFAR10 = 1e-5
 DELTA_IMAGENET = 1e-7
 
-MAX_DUMP_DIGITS = 5
+MAX_DUMP_DIGITS = 50
 
 
 DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
