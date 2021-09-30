@@ -86,7 +86,7 @@ tasks_spec:
 
 
 scheduler_spec:
-  name: basic_scheduler
+  method: basic_scheduler
   metric: fcfs
   n: 100
   shortest_time_window: 20
