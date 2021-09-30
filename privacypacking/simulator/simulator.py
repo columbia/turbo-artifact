@@ -29,7 +29,7 @@ class Simulator:
 
     def run(self):
         start = datetime.now()
-        self.env.run(until=10000)
+        self.env.run(until=10)
         # self.env.run()
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()

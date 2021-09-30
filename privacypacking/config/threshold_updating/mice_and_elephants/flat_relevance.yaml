@@ -1,5 +1,5 @@
-log_file: "mice_and_elephants_budget_unlocking_dominant_shares_DPF"
-scheduling_mode: "P_based"
+log_file: "mice_and_elephants_threshold_updating_flat_relevance"
+scheduling_mode: "T_based"
 epsilon: 10
 delta: 1.0e-3
 
@@ -20,6 +20,7 @@ tasks_spec:
       task_arrival_interval: 0.004264781
 
 scheduler_spec:
-  method: budget_unlocking
-  metric: dominant_shares
-  n: 100
+  method: threshold_updating
+  metric: flat_relevance
+  shortest_time_window: 120
+  threshold_update_mechanism: QueueAverageDynamic
