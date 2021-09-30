@@ -28,7 +28,7 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, env, number_of_queues, metric=None):
+    def __init__(self, env, number_of_queues=1, metric=None):
         self.env = env
         self.metric = metric
         self.task_queues = {}

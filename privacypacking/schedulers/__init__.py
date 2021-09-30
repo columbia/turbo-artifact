@@ -27,9 +27,9 @@ def get_scheduler(env, config) -> Scheduler:
         "threshold_updating": ThresholdUpdating,
         "simplex": simplex.Simplex,
         # todo: the following should be metrics; not schedulers
-        "OfflineDPF": greedy_heuristics.OfflineDPF,
-        "FlatRelevance": greedy_heuristics.FlatRelevance,
-        "OverflowRelevance": greedy_heuristics.OverflowRelevance,
+        # "OfflineDPF": greedy_heuristics.OfflineDPF,
+        # "FlatRelevance": greedy_heuristics.FlatRelevance,
+        # "OverflowRelevance": greedy_heuristics.OverflowRelevance,
     }
     if config.scheduler_method == "simplex":
         return schedulers[config.scheduler_method](env)
@@ -58,6 +58,9 @@ def get_scheduler(env, config) -> Scheduler:
                 metric,
                 scheduler_threshold_update_mechanism,
             )
+
+        # elif config.scheduler_method in {"OfflineDPF", "FlatRelevance", "OverflowRelevance"}:
+        #     return schedulers[config.scheduler_method](env)
 
         else:
             return schedulers[config.scheduler_method](env, metric)

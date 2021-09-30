@@ -31,4 +31,5 @@ tasks_spec:
           num_blocks: 5
 
 scheduler_spec:
-  name: OfflineDPF
+  method: basic_scheduler
+  metric: dominant_shares
