@@ -8,16 +8,14 @@ from typing import List
 import numpy as np
 
 from privacypacking.budget import Block, Task
+from privacypacking.budget.block_selection import LatestBlocksFirst, RandomBlocks
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
 )
-from privacypacking.budget.task import (
-    UniformTask,
-)
+from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
-from privacypacking.budget.block_selection import LatestBlocksFirst, RandomBlocks
 from privacypacking.utils.utils import *
 
 
@@ -41,6 +39,8 @@ class Config:
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
         self.scheduler_metric = self.scheduler[METRIC]
+        # TODO: define mode, method, metric
+        # TODO: encapsulate all the rest in kwargs
         self.scheduler_N = self.scheduler[N]
         self.scheduler_shortest_time_window = self.scheduler[SHORTEST_TIME_WINDOW]
         self.queues_waiting_times = self.set_queues_waiting_times()
@@ -181,7 +181,7 @@ class Config:
         return task_blocks_num
 
     def create_task(
-            self, task_id: int, curve_distribution: str, num_blocks: int
+        self, task_id: int, curve_distribution: str, num_blocks: int
     ) -> Task:
 
         task = None
@@ -209,6 +209,8 @@ class Config:
             # Sample the specs of the task
             # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
             #  Kelly: it's not the same num of blocks. you can specify through the config the max_num_of_blocks and a num within that range will be sampled
+            # Pierre: agree that it's not necessarily deterministic. But it's always sampled from the same distribution, right?
+            # What if I want 20% of Gaussians with 1 block, and 80% of Gaussians with 10 blocks? Anyway it's fine, we're mostly loading from files now.
             task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
             block_selection_policy = BlockSelectionPolicy.from_str(
                 self.curve_distributions[curve_distribution][BLOCK_SELECTING_POLICY]
@@ -286,20 +288,20 @@ class Config:
 
     def get_initial_task_curves(self) -> List[str]:
         curves = (
-                [LAPLACE] * self.laplace_init_num
-                + [GAUSSIAN] * self.gaussian_init_num
-                + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
-                + [CUSTOM] * self.custom_tasks_init_num
+            [LAPLACE] * self.laplace_init_num
+            + [GAUSSIAN] * self.gaussian_init_num
+            + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
+            + [CUSTOM] * self.custom_tasks_init_num
         )
         random.shuffle(curves)
         return curves
 
     def get_initial_tasks_num(self) -> int:
         return (
-                self.laplace_init_num
-                + self.gaussian_init_num
-                + self.subsamplegaussian_init_num
-                + self.custom_tasks_init_num
+            self.laplace_init_num
+            + self.gaussian_init_num
+            + self.subsamplegaussian_init_num
+            + self.custom_tasks_init_num
         )
 
     def get_initial_blocks_num(self) -> int:

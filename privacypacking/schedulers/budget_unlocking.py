@@ -1,9 +1,8 @@
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 from simpy import Event
 
-from privacypacking.budget import Block, Task
-from privacypacking.budget import ZeroCurve
+from privacypacking.budget import Block, Task, ZeroCurve
 from privacypacking.schedulers import Scheduler
 
 """
@@ -11,7 +10,7 @@ For all schedulers based on gradually unlocking budget
 
 """
 
-
+# TODO: sublass of Block?
 class WrapperBlock:
     """
     A wrapper for the traditional-block.
@@ -38,6 +37,7 @@ class WrapperBlock:
 
 class BudgetUnlocking(Scheduler):
     # Static variable
+    # TODO: why??
     wrapper_blocks = {}
 
     def __init__(self, env, number_of_queues, metric, n):
