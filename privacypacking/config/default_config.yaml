@@ -55,7 +55,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: RandomBlocks
+      block_selecting_policy: LatestBlocksFirst
 
     # Sampling from a SubsampledGaussian
     SubsampledGaussian:
