@@ -31,7 +31,7 @@ def grid():
         config = yaml.safe_load(f)
 
     with open(
-        DEFAULT_CONFIG_FILE.parent.joinpath("offline_multiblock_dpf_killer.yaml"), "r"
+        DEFAULT_CONFIG_FILE.parent.joinpath("offline_single_block_dpf_killer.yaml"), "r"
     ) as user_config:
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
