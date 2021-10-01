@@ -1,11 +1,11 @@
 from typing import List
+
 from privacypacking.budget import Task
-from privacypacking.schedulers import Scheduler
-from privacypacking.schedulers.scheduler import TaskQueue
+from privacypacking.schedulers.scheduler import Scheduler, TaskQueue
 from privacypacking.schedulers.threshold_update_mechanisms import (
+    NaiveAverage,
     QueueAverageDynamic,
     QueueAverageStatic,
-    NaiveAverage,
 )
 
 """
@@ -16,7 +16,7 @@ For all schedulers based on threshold updating approach
 
 class ThresholdUpdating(Scheduler):
     def __init__(
-            self, env, number_of_queues, metric, scheduler_threshold_update_mechanism
+        self, env, number_of_queues, metric, scheduler_threshold_update_mechanism
     ):
         super().__init__(env, number_of_queues, metric)
         self.scheduler_threshold_update_mechanism = scheduler_threshold_update_mechanism
@@ -65,7 +65,9 @@ class ThresholdUpdating(Scheduler):
             self.scheduler_threshold_update_mechanism.update_threshold(queue)
 
     def post_update_queue_threshold(
-            self, queue: TaskQueue, cost: float, can_run: bool
+        self, queue: TaskQueue, cost: float, can_run: bool
     ) -> None:
         if self.scheduler_threshold_update_mechanism != QueueAverageStatic:
-            self.scheduler_threshold_update_mechanism.update_threshold(queue, cost, can_run)
+            self.scheduler_threshold_update_mechanism.update_threshold(
+                queue, cost, can_run
+            )

@@ -1,6 +1,6 @@
 from typing import Type
 
-from privacypacking.schedulers import TaskQueue
+from privacypacking.schedulers.scheduler import TaskQueue
 
 
 class ThresholdUpdateMechanismException(Exception):
@@ -42,7 +42,7 @@ class QueueAverageDynamic(ThresholdUpdateMechanism):
 class QueueAverageStatic(ThresholdUpdateMechanism):
     @staticmethod
     def update_threshold(
-            queue: TaskQueue, cost: float = None, can_run: bool = None
+        queue: TaskQueue, cost: float = None, can_run: bool = None
     ) -> None:
         queue.cost_threshold = 0
         for task in queue.tasks:
