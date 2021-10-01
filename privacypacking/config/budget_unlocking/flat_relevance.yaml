@@ -22,4 +22,4 @@ tasks_spec:
 scheduler_spec:
   method: budget_unlocking
   metric: flat_relevance
-  n: 100
+  n: 10
