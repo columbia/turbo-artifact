@@ -11,8 +11,8 @@ ResourceManager owns a scheduling mechanism for servicing tasks according to a g
 
 from datetime import datetime
 
-import simpy.rt
-
+# import simpy.rt
+import simpy
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import *
 
@@ -34,12 +34,9 @@ class Simulator:
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
 
-        all_tasks = []
-        for queue in self.rm.scheduler.task_queues.values():
-            all_tasks += queue.tasks
-
         logs = self.config.logger.get_log_dict(
-            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+            self.rm.scheduler.task_queue.tasks
+            + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
@@ -48,12 +45,11 @@ class Simulator:
 
         # Saving locally too
         self.config.logger.log(
-            all_tasks + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+            self.rm.scheduler.task_queue.tasks
+            + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
         )
-        metrics = global_metrics(logs)
-
-        return metrics
+        return global_metrics(logs)

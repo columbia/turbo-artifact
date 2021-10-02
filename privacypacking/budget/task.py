@@ -15,14 +15,6 @@ class Task:
             block_selection_policy: BlockSelectionPolicy,
             n_blocks: int,
     ):
-        """Tasks are assumed to be immutable: the demands won't change over time.
-        The scheduler can be stateful (e.g. store whether task `id` has been scheduled).
-
-        Args:
-            id (int): unique identifier
-            profit (float): how much profit/reward the task gives if it is scheduled
-            budget_per_block (Dict[int,): task demand
-        """
         self.id = id
         self.profit = profit
         self.block_selection_policy = block_selection_policy
@@ -30,6 +22,14 @@ class Task:
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
         self.cost = 0
+
+    def get_efficiency(self):
+        efficiency = 0
+        try:
+            efficiency = self.profit / self.cost
+        except ZeroDivisionError as err:
+            print("Handling run-time error:", err)
+        return efficiency
 
     def get_budget(self, block_id: int) -> Budget:
         """

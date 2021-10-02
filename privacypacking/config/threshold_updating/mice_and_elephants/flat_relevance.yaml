@@ -1,5 +1,4 @@
 log_file: "mice_and_elephants_threshold_updating_flat_relevance"
-scheduling_mode: "T_based"
 epsilon: 10
 delta: 1.0e-3
 
@@ -22,5 +21,4 @@ tasks_spec:
 scheduler_spec:
   method: threshold_updating
   metric: flat_relevance
-  shortest_time_window: 0.5
   threshold_update_mechanism: NaiveAverage

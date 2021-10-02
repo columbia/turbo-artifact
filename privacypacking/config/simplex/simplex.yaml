@@ -13,7 +13,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst
 
     gaussian:
       initial_num: 100
@@ -23,7 +23,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst
 
     SubsampledGaussian:
       initial_num: 100
@@ -33,7 +33,7 @@ tasks_spec:
         constant:
           enabled: true
           num_blocks: 3
-      block_selecting_policy: "latest_blocks_first"
+      block_selecting_policy: LatestBlocksFirst
 
 scheduler_spec:
   name: simplex

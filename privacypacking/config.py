@@ -4,7 +4,6 @@ from datetime import datetime
 from functools import partial
 from typing import List
 from privacypacking.budget import Block, Task
-from privacypacking.budget.block_selection import LatestBlocksFirst, RandomBlocks
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
@@ -13,6 +12,7 @@ from privacypacking.budget.curves import (
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
 from privacypacking.utils.utils import *
+from privacypacking.schedulers.utils import THRESHOLD_UPDATING
 
 
 # Configuration Reading Logic
@@ -21,7 +21,6 @@ class Config:
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
-        self.number_of_queues = config[NUMBER_OF_QUEUES]
 
         # DETERMINISM
         self.global_seed = config[GLOBAL_SEED]
@@ -31,18 +30,18 @@ class Config:
             np.random.seed(self.global_seed)
 
         # SCHEDULER
-        self.scheduling_mode = config[SCHEDULING_MODE]
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
         self.scheduler_metric = self.scheduler[METRIC]
-        # TODO: define mode, method, metric
+        # TODO: define method, metric
         # TODO: encapsulate all the rest in kwargs
         self.scheduler_N = self.scheduler[N]
-        self.scheduler_shortest_time_window = self.scheduler[SHORTEST_TIME_WINDOW]
-        self.queues_waiting_times = self.set_queues_waiting_times()
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
+        self.new_task_driven_scheduling = True
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_block_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -145,12 +144,6 @@ class Config:
         return self.config
 
     # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
-    def set_queues_waiting_times(self):
-        queues_waiting_times = {}
-        for i in range(self.number_of_queues):
-            queues_waiting_times[i] = self.scheduler_shortest_time_window * (2 ** i)
-        return queues_waiting_times
-
     def set_curve_distribution(self) -> str:
         curve = np.random.choice(
             [CUSTOM, GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN],
@@ -212,10 +205,6 @@ class Config:
                 )
         else:
             # Sample the specs of the task
-            # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
-            #  Kelly: it's not the same num of blocks. you can specify through the config the max_num_of_blocks and a num within that range will be sampled
-            # Pierre: agree that it's not necessarily deterministic. But it's always sampled from the same distribution, right?
-            # What if I want 20% of Gaussians with 1 block, and 80% of Gaussians with 10 blocks? Anyway it's fine, we're mostly loading from files now.
             task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
             block_selection_policy = BlockSelectionPolicy.from_str(
                 self.curve_distributions[curve_distribution][BLOCK_SELECTING_POLICY]
@@ -267,7 +256,7 @@ class Config:
         return Block.from_epsilon_delta(block_id, self.epsilon, self.delta)
 
     def set_profit(self):
-        return random.randint(1, self.number_of_queues)
+        return 1
 
     def set_task_arrival_time(self):
         task_arrival_interval = None

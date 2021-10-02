@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Tuple
 
 from simpy import Event
 
@@ -7,7 +7,6 @@ from privacypacking.schedulers.scheduler import Scheduler
 
 """
 For all schedulers based on gradually unlocking budget
-
 """
 
 
@@ -29,20 +28,20 @@ class UnlockingBlock(Block):
         # print("\nTotal budget capacity\n", self.block.initial_budget)
         # print("\n\n")
 
+
 class NBudgetUnlocking(Scheduler):
     """N-unlocking: unlocks some budget every time a new task arrives."""
 
-    def __init__(self, env, number_of_queues, metric, n):
-        super().__init__(env, number_of_queues, metric)
+    def __init__(self, env, metric, n):
+        super().__init__(env, metric)
         self.n = n
         assert self.n is not None
 
-    def add_task(self, task_message: Tuple[Task, Event]) -> Tuple[Any, bool]:
-        queue, is_new_queue = super().add_task(task_message)
-        self.unlock_block_budgets(queue.tasks)
-        return queue, is_new_queue
+    def add_task(self, task_message: Tuple[Task, Event]):
+        super().add_task(task_message)
+        self.unlock_block_budgets(self.task_queue.tasks)
 
-    def safe_add_block(self, block: Block) -> None:
+    def add_block(self, block: Block) -> None:
         unlocking_block = UnlockingBlock(block.id, block.budget, self.n)
         super().add_block(unlocking_block)
 
@@ -54,12 +53,6 @@ class NBudgetUnlocking(Scheduler):
             self.blocks[block_id].unlock_budget()
 
     def can_run(self, task):
-        """
-        A task can run only if we can allocate the demand budget
-        for all the blocks requested, by using only unlocked budget
-        (i.e. after allocating the task, for each block there is one alpha
-        that is below the unlocked budget)
-        """
         for block_id, demand_budget in task.budget_per_block.items():
             block = self.blocks[block_id]
             allocated_budget = block.initial_budget - block.budget

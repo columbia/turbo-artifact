@@ -1,5 +1,5 @@
 log_file: "mice_and_elephants_budget_unlocking_dominant_shares_DPF"
-scheduling_mode: "P_based"
+
 epsilon: 10
 delta: 1.0e-3
 
