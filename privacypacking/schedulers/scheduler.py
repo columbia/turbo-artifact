@@ -59,11 +59,8 @@ class Scheduler:
             self.task_queue.tasks
         )  # todo: no need to order, just assign costs and try to schedule
         # Try and schedule tasks
-        # print("Sorted\n")
         for task in sorted_tasks:
-            # print(task.id)
             if self.can_run(task):
-                # print("Can Run\n\n")
                 self.allocate_task(task)
                 allocated_task_ids.append(task.id)
         return allocated_task_ids
