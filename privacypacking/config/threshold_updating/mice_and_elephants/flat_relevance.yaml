@@ -22,5 +22,5 @@ tasks_spec:
 scheduler_spec:
   method: threshold_updating
   metric: flat_relevance
-  shortest_time_window: 120
-  threshold_update_mechanism: QueueAverageDynamic
+  shortest_time_window: 0.5
+  threshold_update_mechanism: NaiveAverage

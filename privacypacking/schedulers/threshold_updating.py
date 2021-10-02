@@ -32,7 +32,6 @@ class ThresholdUpdating(Scheduler):
         allocated_task_ids = []
         # Task sorted by 'metric'
         sorted_tasks = self.order(tasks)
-
         # Do some static pre-calculation of queue's threshold before trying to schedule
         self.pre_update_queue_threshold(queue)
 
