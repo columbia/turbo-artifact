@@ -21,12 +21,11 @@ class Task:
         self.n_blocks = n_blocks
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
-        self.cost = 0
 
-    def get_efficiency(self):
+    def get_efficiency(self, cost):
         efficiency = 0
         try:
-            efficiency = self.profit / self.cost
+            efficiency = self.profit / cost
         except ZeroDivisionError as err:
             print("Handling run-time error:", err)
         return efficiency

@@ -22,40 +22,35 @@ class ThresholdUpdating(Scheduler):
             self,
     ) -> List[int]:
         allocated_task_ids = []
-        # Task sorted by 'metric'
-        # sorted_tasks = self.order(self.task_queue.tasks)
         # # Do some static pre-calculation of queue's threshold before trying to schedule
         # self.pre_update_queue_threshold()
-
         # Try and schedule tasks
-        for task in sorted_tasks:
-            if self.can_run(task):
-                self.allocate_task(task)
-                allocated_task_ids.append(task.id)
+        tasks = self.task_queue.tasks
+        for task in tasks:
+            task_cost = self.metric(task, self.blocks, tasks)
+            print(
+                "Exceeds threshold?",
+                self.task_queue.efficiency_threshold,
+                task.get_efficiency(task_cost),
+                "\n",
+                task.budget,
+            )
+            passed_threshold = False
+            if self.task_queue.efficiency_threshold <= task.get_efficiency(task_cost):
+                print("Yes! :-)")
+                passed_threshold = True
+                if super().can_run(task):
+                    self.allocate_task(task)
+                    allocated_task_ids.append(task.id)
+
+            # Re-calculate queue's threshold after observing the efficiency of the task
+            self.post_update_queue_threshold(
+                task.get_efficiency(task_cost), passed_threshold
+            )
+            print("\nUpdate", self.task_queue.efficiency_threshold)
+            print("\n\n")
+
         return allocated_task_ids
-
-    def can_run(self, task: Task) -> bool:
-        can_run = False
-        queue = self.task_queue
-
-        print(
-            "Can run?",
-            queue.efficiency_threshold,
-            task.get_efficiency(),
-            "\n",
-            task.budget,
-        )
-        if queue.efficiency_threshold <= task.get_efficiency():
-            can_run = super().can_run(task)
-        if not can_run:
-            print("No!")
-
-        # Re-calculate queue's threshold after observing the efficiency of the task
-        self.post_update_queue_threshold(task.get_efficiency(), can_run)
-
-        print("\nUpdate", queue.efficiency_threshold)
-        print("\n\n")
-        return can_run
 
     # def pre_update_queue_threshold(self,) -> None:
     #     if self.scheduler_threshold_update_mechanism == QueueAverageStatic:

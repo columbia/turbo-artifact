@@ -18,13 +18,13 @@ class ThresholdUpdateMechanism:
             )
 
     @staticmethod
-    def update_threshold(queue: TaskQueue, cost: float, can_run: bool):
+    def update_threshold(queue: TaskQueue, cost: float, passed_threshold: bool):
         pass
 
 
 class NaiveAverage(ThresholdUpdateMechanism):
     @staticmethod
-    def update_threshold(queue: TaskQueue, cost: float, can_run: bool) -> None:
+    def update_threshold(queue: TaskQueue, cost: float, passed_threshold: bool) -> None:
         queue.cost_threshold = (queue.cost_threshold + cost) / 2
 
 
@@ -42,7 +42,7 @@ class QueueAverageDynamic(ThresholdUpdateMechanism):
 class QueueAverageStatic(ThresholdUpdateMechanism):
     @staticmethod
     def update_threshold(
-        queue: TaskQueue, cost: float = None, can_run: bool = None
+            queue: TaskQueue, cost: float = None, passed_threshold: bool = None
     ) -> None:
         queue.cost_threshold = 0
         for task in queue.tasks:

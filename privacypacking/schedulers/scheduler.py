@@ -85,7 +85,11 @@ class Scheduler:
 
     def order(self, tasks: List[Task]) -> List[Task]:
         """Sorts the tasks by metric"""
-        return self.metric(tasks, self.blocks)
+
+        def task_key(task):
+            return self.metric(task, self.blocks, tasks)
+
+        return sorted(tasks, key=task_key)
 
     def can_run(self, task: Task) -> bool:
         """
