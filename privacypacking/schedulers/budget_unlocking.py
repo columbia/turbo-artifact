@@ -62,6 +62,7 @@ class BudgetUnlocking(Scheduler):
 
     def unlock_block_budgets(self, tasks):
         new_task = tasks[-1]
+        # print("task", new_task.id, new_task.budget_per_block.keys())
         for block_id in new_task.budget_per_block.keys():
             wrapper_block = BudgetUnlocking.wrapper_blocks[block_id]
             # Unlock budget for each alpha

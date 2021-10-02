@@ -16,7 +16,7 @@ class TaskQueue:
     def __init__(self):
         self.tasks = []
         self.time_window = 0
-        self.cost_threshold = 1
+        self.cost_threshold = 0.01
         self.priority_num = 0
 
 
@@ -80,8 +80,11 @@ class Scheduler:
         # Task sorted by 'metric'
         sorted_tasks = self.order(tasks)
         # Try and schedule tasks
+        # print("Sorted\n")
         for task in sorted_tasks:
+            # print(task.id)
             if self.can_run(task):
+                # print("Can Run\n\n")
                 self.allocate_task(task)
                 allocated_task_ids.append(task.id)
         return allocated_task_ids
