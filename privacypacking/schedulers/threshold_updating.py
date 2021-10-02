@@ -1,6 +1,5 @@
 from typing import List
 
-from privacypacking.budget import Task
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.schedulers.threshold_update_mechanisms import (
     NaiveAverage,

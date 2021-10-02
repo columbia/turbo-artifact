@@ -12,6 +12,7 @@ from privacypacking.schedulers.utils import (
     SIMPLEX,
 )
 
+# Loading them so that they get stored in globals()
 from privacypacking.schedulers.metrics import (
     dominant_shares,
     fcfs,
