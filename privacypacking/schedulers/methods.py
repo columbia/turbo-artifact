@@ -21,7 +21,7 @@ from privacypacking.schedulers.metrics import (
 )
 
 
-def get_scheduler(env, config) -> Scheduler:
+def get_scheduler(config) -> Scheduler:
     schedulers = {
         BASIC_SCHEDULER: Scheduler,
         BUDGET_UNLOCKING: NBudgetUnlocking,
@@ -29,7 +29,7 @@ def get_scheduler(env, config) -> Scheduler:
         SIMPLEX: simplex.Simplex,
     }
     if config.scheduler_method == SIMPLEX:
-        return schedulers[config.scheduler_method](env)
+        return schedulers[config.scheduler_method]()
     else:
         metric = None
         if config.scheduler_metric in globals():
@@ -38,15 +38,14 @@ def get_scheduler(env, config) -> Scheduler:
 
         # Some schedulers might need custom arguments
         if config.scheduler_method == BASIC_SCHEDULER:
-            return schedulers[config.scheduler_method](env, metric)
+            return schedulers[config.scheduler_method](metric)
         elif config.scheduler_method == BUDGET_UNLOCKING:
-            return schedulers[config.scheduler_method](env, metric, config.scheduler_N)
+            return schedulers[config.scheduler_method](metric, config.scheduler_N)
         elif config.scheduler_method == THRESHOLD_UPDATING:
             scheduler_threshold_update_mechanism = ThresholdUpdateMechanism.from_str(
                 config.scheduler_threshold_update_mechanism
             )
             return schedulers[config.scheduler_method](
-                env,
                 metric,
                 scheduler_threshold_update_mechanism,
             )

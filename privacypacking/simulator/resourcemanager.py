@@ -17,7 +17,7 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        self.scheduler = get_scheduler(self.env, self.config)
+        self.scheduler = get_scheduler(self.config)
 
         self.blocks_initialized = self.env.event()
 

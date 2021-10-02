@@ -11,7 +11,7 @@ For all schedulers based on gradually unlocking budget
 
 
 class UnlockingBlock(Block):
-    def __init__(self, id, budget, n=1):
+    def __init__(self, id: int, budget: Budget, n: int = 1):
         super().__init__(id, budget)
         self.unlocked_budget = (
             ZeroCurve()
@@ -32,8 +32,8 @@ class UnlockingBlock(Block):
 class NBudgetUnlocking(Scheduler):
     """N-unlocking: unlocks some budget every time a new task arrives."""
 
-    def __init__(self, env, metric, n):
-        super().__init__(env, metric)
+    def __init__(self, metric, n):
+        super().__init__(metric)
         self.n = n
         assert self.n is not None
 

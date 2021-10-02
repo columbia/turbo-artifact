@@ -14,8 +14,8 @@ For all schedulers based on threshold updating approach
 
 
 class ThresholdUpdating(Scheduler):
-    def __init__(self, env, metric, scheduler_threshold_update_mechanism):
-        super().__init__(env, metric)
+    def __init__(self, metric, scheduler_threshold_update_mechanism):
+        super().__init__(metric)
         self.scheduler_threshold_update_mechanism = scheduler_threshold_update_mechanism
 
     def schedule_queue(

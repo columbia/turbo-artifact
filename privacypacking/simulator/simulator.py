@@ -1,14 +1,3 @@
-"""
-Model a privacy-resource-manager that grants privacy-budget resources to incoming tasks
-according to a given scheduling mechanism.
-
-ResourceManager has several block-resources each one of them having a privacy budget-capacity.
-Incoming tasks arrive each one of them having a privacy budget-demand for one or more blocks.
-Resources are non-replenishable.
-
-ResourceManager owns a scheduling mechanism for servicing tasks according to a given policy.
-"""
-
 from datetime import datetime
 
 # import simpy.rt

@@ -36,4 +36,4 @@ tasks_spec:
       block_selecting_policy: LatestBlocksFirst
 
 scheduler_spec:
-  name: simplex
+  method: simplex

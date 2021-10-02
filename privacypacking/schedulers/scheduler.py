@@ -18,8 +18,7 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, env, metric=None):
-        self.env = env
+    def __init__(self, metric=None):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
