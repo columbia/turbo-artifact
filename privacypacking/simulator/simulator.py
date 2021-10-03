@@ -10,7 +10,6 @@ class Simulator:
     def __init__(self, config):
         # self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         self.env = simpy.Environment()
-
         self.config = config
         self.rm = ResourceManager(self.env, self.config)
         Blocks(self.env, self.rm)
@@ -18,7 +17,7 @@ class Simulator:
 
     def run(self):
         start = datetime.now()
-        self.env.run(until=10)
+        self.env.run(until=5)
         # self.env.run()
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
@@ -27,6 +26,7 @@ class Simulator:
             self.rm.scheduler.task_queue.tasks
             + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
+            self.rm.scheduler.tasks_info,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
@@ -37,6 +37,7 @@ class Simulator:
             self.rm.scheduler.task_queue.tasks
             + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
+            self.rm.scheduler.tasks_info,
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,

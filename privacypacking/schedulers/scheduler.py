@@ -1,5 +1,8 @@
-from simpy import Event
+import time
 from typing import List, Tuple
+
+from simpy import Event
+
 from privacypacking.budget import Block, Task
 from privacypacking.schedulers.utils import PENDING, ALLOCATED
 
@@ -15,6 +18,16 @@ class TasksInfo:
         self.allocated_tasks = {}
         self.allocated_resources_events = {}
         self.tasks_status = {}
+        self.tasks_scheduling_time = {}
+
+    def dump(self):
+        tasks_info = {"allocated_tasks": {}, "tasks_scheduling_time": {}}
+        for task_id, task in self.allocated_tasks.items():
+            tasks_info["allocated_tasks"][task_id] = task
+            tasks_info["tasks_scheduling_time"][task_id] = self.tasks_scheduling_time[
+                task_id
+            ]
+        return tasks_info
 
 
 class Scheduler:
@@ -42,6 +55,9 @@ class Scheduler:
         self.tasks_info.tasks_status[task.id] = ALLOCATED
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
+        self.tasks_info.tasks_scheduling_time[task.id] = (
+                time.time() - self.tasks_info.tasks_scheduling_time[task.id]
+        )
         self.tasks_info.allocated_tasks[task.id] = task
         self.task_queue.tasks.remove(task)  # Todo: this takes linear time -> optimize
 
@@ -71,7 +87,7 @@ class Scheduler:
         # Update tasks_info
         self.tasks_info.tasks_status[task.id] = PENDING
         self.tasks_info.allocated_resources_events[task.id] = allocated_resources_event
-
+        self.tasks_info.tasks_scheduling_time[task.id] = time.time()
         self.task_queue.tasks.append(task)
 
     def add_block(self, block: Block) -> None:

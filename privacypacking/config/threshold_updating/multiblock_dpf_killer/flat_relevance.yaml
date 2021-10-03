@@ -10,6 +10,7 @@ tasks_spec:
       sampling: true
       frequency: 1
       data_path: "multiblock_dpf_killer"
+      data_task_frequencies_path: "frequencies.yaml"
 
   task_arrival_frequency:
     enabled: true

@@ -35,6 +35,7 @@ def get_scheduler(config) -> Scheduler:
         metric = None
         if config.scheduler_metric in globals():
             metric = globals()[config.scheduler_metric]
+            print(metric)
         assert metric is not None
 
         # Some schedulers might need custom arguments

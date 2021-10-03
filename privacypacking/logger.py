@@ -6,13 +6,16 @@ class Logger:
         self.file = file
         self.scheduler_name = scheduler_name
 
+    # todo: do some housekeeping here
+
     def get_log_dict(
-        self,
-        tasks,
-        blocks,
-        allocated_task_ids,
-        simulator_config,
-        **kwargs,
+            self,
+            tasks,
+            blocks,
+            tasks_info,
+            allocated_task_ids,
+            simulator_config,
+            **kwargs,
     ) -> dict:
         log = {"tasks": []}
         num_scheduled = 0
@@ -34,6 +37,13 @@ class Logger:
 
         log["scheduler_name"] = self.scheduler_name
         log["num_scheduled_tasks"] = num_scheduled
+        log["total_tasks"] = len(tasks)
+        tasks_info = tasks_info.dump()
+        # tasks_info["allocated_tasks"]
+        log["tasks_scheduling_times"] = sorted(
+            tasks_info["tasks_scheduling_time"].values()
+        )
+
         log["simulator_config"] = simulator_config.dump()
 
         # Any other thing to log
@@ -43,19 +53,21 @@ class Logger:
         return log
 
     def log(
-        self,
-        tasks,
-        blocks,
-        allocated_task_ids,
-        simulator_config,
-        compact=False,
-        **kwargs,
+            self,
+            tasks,
+            blocks,
+            tasks_info,
+            allocated_task_ids,
+            simulator_config,
+            compact=False,
+            **kwargs,
     ):
         with open(self.file, "w") as fp:
 
             log = self.get_log_dict(
                 tasks,
                 blocks,
+                tasks_info,
                 allocated_task_ids,
                 simulator_config,
                 compact=False,

@@ -24,6 +24,7 @@ tasks_spec:
       initial_num: 0
       frequency: 0
       data_path: ""
+      data_task_frequencies_path: ""
 
     # Sampling from a laplace
     laplace:

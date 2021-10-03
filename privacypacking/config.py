@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 from functools import partial
 from typing import List
+
 from privacypacking.budget import Block, Task
 from privacypacking.budget.curves import (
     GaussianCurve,
@@ -11,8 +12,8 @@ from privacypacking.budget.curves import (
 )
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
-from privacypacking.utils.utils import *
 from privacypacking.schedulers.utils import THRESHOLD_UPDATING
+from privacypacking.utils.utils import *
 
 
 # Configuration Reading Logic
@@ -40,6 +41,7 @@ class Config:
             THRESHOLD_UPDATE_MECHANISM
         ]
         self.new_task_driven_scheduling = True
+        self.new_block_driven_scheduling = False
         if self.scheduler_method == THRESHOLD_UPDATING:
             self.new_block_driven_scheduling = True
 
@@ -70,16 +72,24 @@ class Config:
 
         # Setting config for "custom" tasks
         self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
+        self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
+            DATA_TASK_FREQUENCIES_PATH
+        ]
         self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
         self.custom_tasks_frequency = self.curve_distributions[CUSTOM][FREQUENCY]
         self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
-        self.task_files_frequencies = None
+        self.task_frequencies_file = None
 
         if self.data_path != "":
-            self.path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-            with open(self.path.joinpath("frequencies.yaml"), "r") as f:
-                self.task_files_frequencies = yaml.safe_load(f)
-            assert len(self.task_files_frequencies) > 0
+            self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
+            self.tasks_path = self.data_path.joinpath("tasks")
+            self.task_frequencies_path = self.data_path.joinpath(
+                "task_frequencies"
+            ).joinpath(self.data_task_frequencies_path)
+
+            with open(self.task_frequencies_path, "r") as f:
+                self.task_frequencies_file = yaml.safe_load(f)
+            assert len(self.task_frequencies_file) > 0
 
         # Setting config for laplace tasks
         self.laplace = self.curve_distributions[LAPLACE]
@@ -182,12 +192,12 @@ class Config:
             # Read custom task specs from a file
             if self.custom_tasks_sampling:
                 files = [
-                    f"{self.path}/{task_file}"
-                    for task_file in self.task_files_frequencies.keys()
+                    f"{self.tasks_path}/{task_file}"
+                    for task_file in self.task_frequencies_file.keys()
                 ]
                 frequencies = [
-                    task_files_frequency
-                    for task_files_frequency in self.task_files_frequencies.values()
+                    task_frequency
+                    for task_frequency in self.task_frequencies_file.values()
                 ]
                 file = np.random.choice(
                     files,

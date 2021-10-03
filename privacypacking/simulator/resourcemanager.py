@@ -1,5 +1,4 @@
 import simpy
-
 from privacypacking.schedulers.methods import get_scheduler
 
 
@@ -18,7 +17,6 @@ class ResourceManager:
 
         # Initialize the scheduler
         self.scheduler = get_scheduler(self.config)
-
         self.blocks_initialized = self.env.event()
 
         self.env.process(self.block_consumer())
