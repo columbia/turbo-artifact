@@ -38,14 +38,14 @@ class Tasks:
         waits till it gets scheduled and then is executed
         """
 
-        num_blocks = self.resource_manager.scheduler.safe_get_num_blocks()
+        num_blocks = self.resource_manager.scheduler.get_num_blocks()
         task = self.config.create_task(task_id, curve_distribution, num_blocks)
 
-        logger.debug(f"Task: {task_id} generated at {self.env.now}")
+        # logger.debug(f"Task: {task_id} generated at {self.env.now}")
         allocated_resources_event = self.env.event()
         yield self.resource_manager.new_tasks_queue.put(
             (task, allocated_resources_event)
         )
 
         yield allocated_resources_event
-        logger.debug(f"Task: {task_id} scheduled at {self.env.now}")
+        # logger.debug(f"Task: {task_id} scheduled at {self.env.now}")

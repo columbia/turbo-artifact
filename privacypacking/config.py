@@ -1,14 +1,10 @@
 import math
-import os
 import random
 from datetime import datetime
 from functools import partial
 from typing import List
 
-import numpy as np
-
 from privacypacking.budget import Block, Task
-from privacypacking.budget.block_selection import LatestBlocksFirst, RandomBlocks
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
@@ -16,6 +12,7 @@ from privacypacking.budget.curves import (
 )
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
+from privacypacking.schedulers.utils import THRESHOLD_UPDATING
 from privacypacking.utils.utils import *
 
 
@@ -25,7 +22,6 @@ class Config:
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
-        self.number_of_queues = config[NUMBER_OF_QUEUES]
 
         # DETERMINISM
         self.global_seed = config[GLOBAL_SEED]
@@ -35,18 +31,19 @@ class Config:
             np.random.seed(self.global_seed)
 
         # SCHEDULER
-        self.scheduling_mode = config[SCHEDULING_MODE]
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
         self.scheduler_metric = self.scheduler[METRIC]
-        # TODO: define mode, method, metric
+        # TODO: define method, metric
         # TODO: encapsulate all the rest in kwargs
         self.scheduler_N = self.scheduler[N]
-        self.scheduler_shortest_time_window = self.scheduler[SHORTEST_TIME_WINDOW]
-        self.queues_waiting_times = self.set_queues_waiting_times()
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
+        self.new_task_driven_scheduling = True
+        self.new_block_driven_scheduling = False
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_block_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -75,17 +72,24 @@ class Config:
 
         # Setting config for "custom" tasks
         self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
+        self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
+            DATA_TASK_FREQUENCIES_PATH
+        ]
         self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
         self.custom_tasks_frequency = self.curve_distributions[CUSTOM][FREQUENCY]
         self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
-        self.task_files = []
+        self.task_frequencies_file = None
+
         if self.data_path != "":
-            path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-            for _, _, files in os.walk(path):
-                self.task_files += [f"{path}/{file}" for file in files]
-            random.shuffle(self.task_files)
-            self.file_idx = -1
-            assert len(self.task_files) > 0
+            self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
+            self.tasks_path = self.data_path.joinpath("tasks")
+            self.task_frequencies_path = self.data_path.joinpath(
+                "task_frequencies"
+            ).joinpath(self.data_task_frequencies_path)
+
+            with open(self.task_frequencies_path, "r") as f:
+                self.task_frequencies_file = yaml.safe_load(f)
+            assert len(self.task_frequencies_file) > 0
 
         # Setting config for laplace tasks
         self.laplace = self.curve_distributions[LAPLACE]
@@ -149,12 +153,6 @@ class Config:
     def dump(self) -> dict:
         return self.config
 
-    def set_queues_waiting_times(self):
-        queues_waiting_times = {}
-        for i in range(self.number_of_queues):
-            queues_waiting_times[i] = self.scheduler_shortest_time_window * (2 ** i)
-        return queues_waiting_times
-
     # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
     def set_curve_distribution(self) -> str:
         curve = np.random.choice(
@@ -193,24 +191,30 @@ class Config:
         if curve_distribution == CUSTOM:
             # Read custom task specs from a file
             if self.custom_tasks_sampling:
-                self.file_idx = random.randint(0, len(self.task_files) - 1)
-            else:
-                self.file_idx += 1
-            file = self.task_files[self.file_idx]
-            task_spec = load_task_spec_from_file(file)
-            task = UniformTask(
-                id=task_id,
-                profit=task_spec.profit,
-                block_selection_policy=task_spec.block_selection_policy,
-                n_blocks=task_spec.n_blocks,
-                budget=task_spec.budget,
-            )
+                files = [
+                    f"{self.tasks_path}/{task_file}"
+                    for task_file in self.task_frequencies_file.keys()
+                ]
+                frequencies = [
+                    task_frequency
+                    for task_frequency in self.task_frequencies_file.values()
+                ]
+                file = np.random.choice(
+                    files,
+                    1,
+                    p=frequencies,
+                )[0]
+
+                task_spec = load_task_spec_from_file(file)
+                task = UniformTask(
+                    id=task_id,
+                    profit=task_spec.profit,
+                    block_selection_policy=task_spec.block_selection_policy,
+                    n_blocks=task_spec.n_blocks,
+                    budget=task_spec.budget,
+                )
         else:
             # Sample the specs of the task
-            # TODO: this is a limiting assumption. It forces us to use the same number of blocks for all tasks with the same type.
-            #  Kelly: it's not the same num of blocks. you can specify through the config the max_num_of_blocks and a num within that range will be sampled
-            # Pierre: agree that it's not necessarily deterministic. But it's always sampled from the same distribution, right?
-            # What if I want 20% of Gaussians with 1 block, and 80% of Gaussians with 10 blocks? Anyway it's fine, we're mostly loading from files now.
             task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
             block_selection_policy = BlockSelectionPolicy.from_str(
                 self.curve_distributions[curve_distribution][BLOCK_SELECTING_POLICY]
@@ -262,14 +266,14 @@ class Config:
         return Block.from_epsilon_delta(block_id, self.epsilon, self.delta)
 
     def set_profit(self):
-        return random.randint(1, self.number_of_queues)
+        return 1
 
     def set_task_arrival_time(self):
         task_arrival_interval = None
         if self.task_arrival_poisson_enabled:
             task_arrival_interval = partial(
                 random.expovariate, 1 / self.task_arrival_interval
-            )
+            )()
         elif self.task_arrival_constant_enabled:
             task_arrival_interval = self.task_arrival_interval
         assert task_arrival_interval is not None
@@ -280,7 +284,7 @@ class Config:
         if self.block_arrival_poisson_enabled:
             block_arrival_interval = partial(
                 random.expovariate, 1 / self.block_arrival_interval
-            )
+            )()
         elif self.block_arrival_constant_enabled:
             block_arrival_interval = self.block_arrival_interval
         assert block_arrival_interval is not None

@@ -2,17 +2,20 @@ import json
 
 
 class Logger:
-    def __init__(self, file, scheduler_name):
+    def __init__(self, file, scheduler_method):
         self.file = file
-        self.scheduler_name = scheduler_name
+        self.scheduler_method = scheduler_method
+
+    # todo: do some housekeeping here
 
     def get_log_dict(
-        self,
-        tasks,
-        blocks,
-        allocated_task_ids,
-        simulator_config,
-        **kwargs,
+            self,
+            tasks,
+            blocks,
+            tasks_info,
+            allocated_task_ids,
+            simulator_config,
+            **kwargs,
     ) -> dict:
         log = {"tasks": []}
         num_scheduled = 0
@@ -32,8 +35,15 @@ class Logger:
         for block in blocks.values():
             log["blocks"].append(block.dump())
 
-        log["scheduler_name"] = self.scheduler_name
+        log["scheduler_method"] = self.scheduler_method
         log["num_scheduled_tasks"] = num_scheduled
+        log["total_tasks"] = len(tasks)
+        tasks_info = tasks_info.dump()
+        # tasks_info["allocated_tasks"]
+        log["tasks_scheduling_times"] = sorted(
+            tasks_info["tasks_scheduling_time"].values()
+        )
+
         log["simulator_config"] = simulator_config.dump()
 
         # Any other thing to log
@@ -43,19 +53,21 @@ class Logger:
         return log
 
     def log(
-        self,
-        tasks,
-        blocks,
-        allocated_task_ids,
-        simulator_config,
-        compact=False,
-        **kwargs,
+            self,
+            tasks,
+            blocks,
+            tasks_info,
+            allocated_task_ids,
+            simulator_config,
+            compact=False,
+            **kwargs,
     ):
         with open(self.file, "w") as fp:
 
             log = self.get_log_dict(
                 tasks,
                 blocks,
+                tasks_info,
                 allocated_task_ids,
                 simulator_config,
                 compact=False,

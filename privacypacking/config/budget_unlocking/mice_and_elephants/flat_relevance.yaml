@@ -1,4 +1,6 @@
-log_file: "multiblock_dpf_killer_budget_unlocking_overflow_relevance"
+log_file: "mice_and_elephants_budget_unlocking_flat_relevance"
+epsilon: 10
+delta: 1.0e-3
 
 blocks_spec:
   initial_num: 10
@@ -13,16 +15,16 @@ tasks_spec:
     custom:
       sampling: true
       frequency: 1
-      data_path: "multiblock_dpf_killer"
-      data_task_frequencies_path: "frequencies.yaml"
+      data_path: "mice_and_elephants"
+      data_task_frequencies_path: "mice_80.yaml"
 
   task_arrival_frequency:
     enabled: true
-    constant:
+    poisson:
       enabled: true
-      task_arrival_interval: 5
+      task_arrival_interval: 0.004264781
 
 scheduler_spec:
   method: budget_unlocking
-  metric: overflow_relevance
+  metric: flat_relevance
   n: 125

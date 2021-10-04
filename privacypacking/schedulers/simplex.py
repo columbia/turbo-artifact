@@ -7,8 +7,8 @@ from privacypacking.schedulers.scheduler import Scheduler
 
 
 class Simplex(Scheduler):
-    def __init__(self, env):
-        super().__init__(env)
+    def __init__(self):
+        super().__init__()
 
     def solve_allocation(self, tasks) -> List[bool]:
 
@@ -60,11 +60,14 @@ class Simplex(Scheduler):
 
         return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
-    def schedule(self, tasks) -> List[int]:
-        allocated_task_ids = []
+    def schedule_queue(self) -> List[int]:
+        tasks = self.task_queue.tasks
+        allocated_tasks = []
         allocation = self.solve_allocation(tasks)
         for i, allocated in enumerate(allocation):
             if allocated:
-                allocated_task_ids.append(tasks[i].id)
-                self.allocate_task(tasks[i])
-        return allocated_task_ids
+                allocated_tasks.append(tasks[i])
+        for task in allocated_tasks:
+            self.allocate_task(task)
+
+        return [task.id for task in allocated_tasks]

@@ -3,8 +3,6 @@ delta: 0.001
 global_seed: 44
 deterministic: true
 log_every_n_iterations: 0
-scheduling_mode: "P_based"     # Other option: T_based
-number_of_queues: 1
 profit: 1
 
 blocks_spec:
@@ -26,6 +24,7 @@ tasks_spec:
       initial_num: 0
       frequency: 0
       data_path: ""
+      data_task_frequencies_path: ""
 
     # Sampling from a laplace
     laplace:
@@ -40,7 +39,7 @@ tasks_spec:
         constant:
           enabled: false
           num_blocks: 1
-      block_selecting_policy: LatestBlocksFirst # Others: RandomBlocks
+      block_selecting_policy: LatestBlocksFirst
 
     # Sampling from a gaussian
     gaussian:
@@ -89,5 +88,4 @@ scheduler_spec:
   method: basic_scheduler
   metric: fcfs
   n: 100
-  shortest_time_window: 20
-  threshold_update_mechanism: QueueAverageStatic
+  threshold_update_mechanism: NaiveAverage

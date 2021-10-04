@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from privacypacking.budget import (
     Block,
@@ -6,55 +6,68 @@ from privacypacking.budget import (
 )
 
 
-def dominant_shares(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
-    def task_key(task):
-        demand_fractions = []
-        for block_id, demand_budget in task.budget_per_block.items():
-            block = blocks[block_id]
-            block_initial_budget = block.initial_budget
-            # Compute the demand share for each alpha of the block
-            for alpha in block_initial_budget.alphas:
-                # Drop RDP orders that are already negative
-                if block_initial_budget.epsilon(alpha) > 0:
-                    demand_fractions.append(
-                        demand_budget.epsilon(alpha)
-                        / block_initial_budget.epsilon(alpha)
-                    )
-        # Order by highest demand fraction first
-        demand_fractions.sort(reverse=True)
-        return demand_fractions
-
-    return sorted(tasks, key=task_key)
+def dominant_shares(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> List[float]:
+    demand_fractions = []
+    for block_id, demand_budget in task.budget_per_block.items():
+        block = blocks[block_id]
+        block_initial_budget = block.initial_budget
+        # Compute the demand share for each alpha of the block
+        for alpha in block_initial_budget.alphas:
+            # Drop RDP orders that are already negative
+            if block_initial_budget.epsilon(alpha) > 0:
+                demand_fractions.append(
+                    demand_budget.epsilon(alpha) / block_initial_budget.epsilon(alpha)
+                )
+    # Order by highest demand fraction first
+    demand_fractions.sort(reverse=True)
+    return demand_fractions
 
 
-def fcfs(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
-    def task_key(task):
-        return task.id
-
-    return sorted(tasks, key=task_key)
+def fcfs(task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None) -> id:
+    return task.id
 
 
-def flat_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
-    def task_key(task):
-        cost = 0
-        for block_id, budget in task.budget_per_block.items():
-            for alpha in budget.alphas:
-                demand = budget.epsilon(alpha)
-                capacity = blocks[block_id].initial_budget.epsilon(alpha)
-                if capacity > 0:
-                    cost += demand / capacity
-        # While sorting keep the costs
-        task.cost = cost
-        return cost
-
-    return sorted(tasks, key=task_key)
+def flat_relevance(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> float:
+    cost = 0
+    for block_id, budget in task.budget_per_block.items():
+        for alpha in budget.alphas:
+            demand = budget.epsilon(alpha)
+            capacity = blocks[block_id].initial_budget.epsilon(alpha)
+            if capacity > 0:
+                cost += demand / capacity
+    task.cost = cost
+    return cost
 
 
-def round_robins(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
+def online_flat_relevance(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> float:
+    cost = 0
+    for block_id, budget in task.budget_per_block.items():
+        for alpha in budget.alphas:
+            demand = budget.epsilon(alpha)
+            remaining_capacity = blocks[block_id].initial_budget.epsilon(
+                alpha
+            ) - blocks[block_id].budget.epsilon(alpha)
+            if remaining_capacity > 0:
+                cost += demand / remaining_capacity
+    task.cost = cost
+    return cost
+
+
+def round_robins(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> float:
     pass
 
 
-def overflow_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task]:
+def overflow_relevance(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> float:
     overflow_b_a = {}
     for task in tasks:
         for block_id, block_demand in task.budget_per_block.items():
@@ -67,17 +80,13 @@ def overflow_relevance(tasks: List[Task], blocks: Dict[int, Block]) -> List[Task
                     ].initial_budget.epsilon(a)
                 overflow_b_a[block_id][a] += block_demand.epsilon(a)
 
-    def task_key(task):
-        cost = 0
-        for block_id_, block_demand_ in task.budget_per_block.items():
-            for alpha in block_demand_.alphas:
-                demand = block_demand_.epsilon(alpha)
-                overflow = overflow_b_a[block_id_][alpha]
-                cost += demand / overflow
-                if overflow < 0:
-                    cost = 0
-        # While sorting keep the costs
-        task.cost = cost
-        return cost
-
-    return sorted(tasks, key=task_key)
+    cost = 0
+    for block_id_, block_demand_ in task.budget_per_block.items():
+        for alpha in block_demand_.alphas:
+            demand = block_demand_.epsilon(alpha)
+            overflow = overflow_b_a[block_id_][alpha]
+            cost += demand / overflow
+            if overflow < 0:
+                cost = 0
+    task.cost = cost
+    return cost

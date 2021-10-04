@@ -1,5 +1,4 @@
 log_file: "budget_unlocking_flat_relevance"
-scheduling_mode: "P_based"
 
 blocks_spec:
   initial_num: 10

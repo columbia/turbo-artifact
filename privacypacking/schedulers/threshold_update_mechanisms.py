@@ -18,34 +18,26 @@ class ThresholdUpdateMechanism:
             )
 
     @staticmethod
-    def update_threshold(queue: TaskQueue, cost: float, can_run: bool):
+    def update_threshold(queue: TaskQueue, efficiency: float, passed_threshold: bool):
         pass
 
 
 class NaiveAverage(ThresholdUpdateMechanism):
     @staticmethod
-    def update_threshold(queue: TaskQueue, cost: float, can_run: bool) -> None:
-        queue.cost_threshold = (queue.cost_threshold + cost) / 2
-
-
-class QueueAverageDynamic(ThresholdUpdateMechanism):
-    @staticmethod
-    def update_threshold(queue: TaskQueue, cost: float, can_run: bool) -> None:
-        queue.cost_threshold = 0
-        for task in queue.tasks:
-            queue.cost_threshold += task.cost
-        if can_run:
-            queue.cost_threshold -= cost
-        queue.cost_threshold /= len(queue.tasks) - 1
-
-
-class QueueAverageStatic(ThresholdUpdateMechanism):
-    @staticmethod
     def update_threshold(
-        queue: TaskQueue, cost: float = None, can_run: bool = None
+            queue: TaskQueue, efficiency: float, passed_threshold: bool
     ) -> None:
-        queue.cost_threshold = 0
-        for task in queue.tasks:
-            print(task.cost)
-            queue.cost_threshold += task.cost
-        queue.cost_threshold /= len(queue.tasks)
+        queue.efficiency_threshold = (queue.efficiency_threshold + efficiency) / 2
+
+# class QueueAverageDynamic(ThresholdUpdateMechanism):
+#     past_efficiencies = []
+#
+#     @staticmethod
+#     def update_threshold(queue: TaskQueue, efficiency: float, passed_threshold: bool) -> None:
+#         QueueAverageDynamic.past_efficiencies.append(efficiency)
+#         queue.efficiency_threshold = 0
+#         r = min(len(QueueAverageDynamic.past_efficiencies), 1)
+#         for i in range(r):        # See ten last efficiencies
+#             queue.efficiency_threshold += QueueAverageDynamic.past_efficiencies[r-i-1]
+#         # if r>0:
+#         queue.efficiency_threshold /= r
