@@ -72,7 +72,7 @@ class Scheduler:
         # Task sorted by 'metric'
         sorted_tasks = self.order(
             self.task_queue.tasks
-        )  # todo: no need to order, just assign costs and try to schedule
+        )
         # Try and schedule tasks
         for task in sorted_tasks:
             if self.can_run(task):
