@@ -3,7 +3,6 @@ PENDING = "pending"
 ALLOCATED = "allocated"
 
 NAIVE_AVERAGE = "NaiveAverage"
-QUEUE_AVERAGE_STATIC = "QueueAverageStatic"
 QUEUE_AVERAGE_DYNAMIC = "QueueAverageDynamic"
 
 # Schedulers

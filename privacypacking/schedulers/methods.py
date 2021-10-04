@@ -17,6 +17,7 @@ from privacypacking.schedulers.metrics import (
     dominant_shares,
     fcfs,
     flat_relevance,
+    online_flat_relevance,
     overflow_relevance,
     round_robins,
 )
@@ -35,7 +36,6 @@ def get_scheduler(config) -> Scheduler:
         metric = None
         if config.scheduler_metric in globals():
             metric = globals()[config.scheduler_metric]
-            print(metric)
         assert metric is not None
 
         # Some schedulers might need custom arguments

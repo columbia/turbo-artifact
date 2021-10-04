@@ -21,6 +21,7 @@ class Task:
         self.n_blocks = n_blocks
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
+        self.cost = 0
 
     def get_efficiency(self, cost):
         efficiency = 0

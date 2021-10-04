@@ -88,4 +88,4 @@ scheduler_spec:
   method: basic_scheduler
   metric: fcfs
   n: 100
-  threshold_update_mechanism: QueueAverageStatic
+  threshold_update_mechanism: NaiveAverage

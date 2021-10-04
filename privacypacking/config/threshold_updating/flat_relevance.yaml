@@ -23,4 +23,4 @@ scheduler_spec:
   method: threshold_updating
   metric: flat_relevance
   shortest_time_window: 120
-  threshold_update_mechanism: QueueAverageStatic
+  threshold_update_mechanism: NaiveAverage

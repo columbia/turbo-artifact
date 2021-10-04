@@ -31,15 +31,14 @@ def run_and_report(config: dict) -> None:
 def grid():
     scheduler_methods = [THRESHOLD_UPDATING]
     scheduler_metrics = [FLAT_RELEVANCE]
-    # N_list = [120]
+    # N_list = [12, 120, 1200]
     threshold_update_mechanisms = [NAIVE_AVERAGE]
-    data_task_frequencies_path = ["mice_40.yaml", "mice_60.yaml", "mice_80.yaml"]
+    # data_task_frequencies_path = ["mice_40.yaml", "mice_60.yaml", "mice_80.yaml"]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
     # config[SCHEDULER_SPEC][N] = tune.grid_search(N_list)
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_TASK_FREQUENCIES_PATH] = tune.grid_search(
-        data_task_frequencies_path)
+    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_TASK_FREQUENCIES_PATH] = tune.grid_search(data_task_frequencies_path)
     config[THRESHOLD_UPDATE_MECHANISM] = tune.grid_search(threshold_update_mechanisms)
     tune.run(
         run_and_report,

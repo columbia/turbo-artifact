@@ -102,11 +102,18 @@ def global_metrics(logs: dict) -> dict:
             realized_profit += task["profit"]
     datapoint = {
         "scheduler": logs["simulator_config"]["scheduler_spec"]["method"],
-        "n_allocated_tasks": n_allocated_tasks,
+        "scheduler_N": logs["simulator_config"]["scheduler_spec"]["n"],
+        "scheduler_metric": logs["simulator_config"]["scheduler_spec"]["metric"],
+        "frequency_file": logs["simulator_config"]["tasks_spec"]["curve_distributions"]["custom"][
+            "data_task_frequencies_path"],
+        "n_allocated_tasks": logs["num_scheduled_tasks"],
+        "total_tasks": logs["total_tasks"],
         "realized_profit": realized_profit,
         "n_tasks": n_tasks,
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
+        "task_scheduling_times": logs["tasks_scheduling_times"],
+
     }
 
     return datapoint

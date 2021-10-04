@@ -39,6 +39,23 @@ def flat_relevance(
             capacity = blocks[block_id].initial_budget.epsilon(alpha)
             if capacity > 0:
                 cost += demand / capacity
+    task.cost = cost
+    return cost
+
+
+def online_flat_relevance(
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+) -> float:
+    cost = 0
+    for block_id, budget in task.budget_per_block.items():
+        for alpha in budget.alphas:
+            demand = budget.epsilon(alpha)
+            remaining_capacity = blocks[block_id].initial_budget.epsilon(
+                alpha
+            ) - blocks[block_id].budget.epsilon(alpha)
+            if remaining_capacity > 0:
+                cost += demand / remaining_capacity
+    task.cost = cost
     return cost
 
 
@@ -71,4 +88,5 @@ def overflow_relevance(
             cost += demand / overflow
             if overflow < 0:
                 cost = 0
+    task.cost = cost
     return cost

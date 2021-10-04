@@ -18,9 +18,9 @@ tasks_spec:
 
   task_arrival_frequency:
     enabled: true
-    constant:
+    poisson:
       enabled: true
-      task_arrival_interval: 5
+      task_arrival_interval: 0.004264781
 
 scheduler_spec:
   method: budget_unlocking

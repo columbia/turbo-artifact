@@ -2,9 +2,9 @@ import json
 
 
 class Logger:
-    def __init__(self, file, scheduler_name):
+    def __init__(self, file, scheduler_method):
         self.file = file
-        self.scheduler_name = scheduler_name
+        self.scheduler_method = scheduler_method
 
     # todo: do some housekeeping here
 
@@ -35,7 +35,7 @@ class Logger:
         for block in blocks.values():
             log["blocks"].append(block.dump())
 
-        log["scheduler_name"] = self.scheduler_name
+        log["scheduler_method"] = self.scheduler_method
         log["num_scheduled_tasks"] = num_scheduled
         log["total_tasks"] = len(tasks)
         tasks_info = tasks_info.dump()

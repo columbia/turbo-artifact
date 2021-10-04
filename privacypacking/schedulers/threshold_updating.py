@@ -3,8 +3,7 @@ from typing import List
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.schedulers.threshold_update_mechanisms import (
     NaiveAverage,
-    QueueAverageDynamic,
-    QueueAverageStatic,
+    # QueueAverageDynamic,
 )
 
 """
@@ -21,22 +20,20 @@ class ThresholdUpdating(Scheduler):
             self,
     ) -> List[int]:
         allocated_task_ids = []
-        # # Do some static pre-calculation of queue's threshold before trying to schedule
-        # self.pre_update_queue_threshold()
         # Try and schedule tasks
         tasks = self.task_queue.tasks
         for task in tasks:
             task_cost = self.metric(task, self.blocks, tasks)
-            print(
-                "Exceeds threshold?",
-                self.task_queue.efficiency_threshold,
-                task.get_efficiency(task_cost),
-                "\n",
-                task.budget,
-            )
+            # print(
+            #     "Exceeds threshold?",
+            #     self.task_queue.efficiency_threshold,
+            #     task.get_efficiency(task_cost),
+            #     "\n",
+            #     task.budget,
+            # )
             passed_threshold = False
             if self.task_queue.efficiency_threshold <= task.get_efficiency(task_cost):
-                print("Yes! :-)")
+                # print("Yes! :-)")
                 passed_threshold = True
                 if super().can_run(task):
                     self.allocate_task(task)
@@ -46,17 +43,12 @@ class ThresholdUpdating(Scheduler):
             self.post_update_queue_threshold(
                 task.get_efficiency(task_cost), passed_threshold
             )
-            print("\nUpdate", self.task_queue.efficiency_threshold)
-            print("\n\n")
+            # print("\nUpdate", self.task_queue.efficiency_threshold)
+            # print("\n\n")
 
         return allocated_task_ids
 
-    # def pre_update_queue_threshold(self,) -> None:
-    #     if self.scheduler_threshold_update_mechanism == QueueAverageStatic:
-    #         self.scheduler_threshold_update_mechanism.update_threshold(self.task_queue)
-
-    def post_update_queue_threshold(self, cost: float, can_run: bool) -> None:
-        if self.scheduler_threshold_update_mechanism != QueueAverageStatic:
-            self.scheduler_threshold_update_mechanism.update_threshold(
-                self.task_queue, cost, can_run
-            )
+    def post_update_queue_threshold(self, efficiency: float, can_run: bool) -> None:
+        self.scheduler_threshold_update_mechanism.update_threshold(
+            self.task_queue, efficiency, can_run
+        )
