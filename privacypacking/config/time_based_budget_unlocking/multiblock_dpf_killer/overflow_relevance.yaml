@@ -1,0 +1,30 @@
+log_file: "multiblock_dpf_killer_t_budget_unlocking_overflow_relevance"
+
+blocks_spec:
+  initial_num: 10
+  block_arrival_frequency:
+    enabled: true
+    constant:
+      enabled: true
+      block_arrival_interval: 1
+
+tasks_spec:
+  curve_distributions:
+    custom:
+      sampling: true
+      frequency: 1
+      data_path: "multiblock_dpf_killer"
+      data_task_frequencies_path: "frequencies.yaml"
+
+  task_arrival_frequency:
+    enabled: true
+    constant:
+      enabled: true
+      task_arrival_interval: 5
+
+scheduler_spec:
+  method: time_based_budget_unlocking
+  scheduling_wait_time: 0.25
+  budget_unlocking_time: 0.25
+  metric: OverflowRelevance
+  n: 125

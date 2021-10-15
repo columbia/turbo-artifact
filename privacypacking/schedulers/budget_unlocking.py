@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 from simpy import Event
 
@@ -27,6 +27,9 @@ class UnlockingBlock(Block):
         # print("\nUpdate budget\n", self.budget)
         # print("\nTotal budget capacity\n", self.block.initial_budget)
         # print("\n\n")
+
+    def is_unlocked(self):
+        return self.unlocked_budget == self.initial_budget
 
 
 class NBudgetUnlocking(Scheduler):
@@ -62,4 +65,47 @@ class NBudgetUnlocking(Scheduler):
         return True
 
 
-# TODO: Write a T-Unlocking scheduler too
+###########################################################################################
+class TimeUnlockingBlock(UnlockingBlock):
+    def __init__(self, id: int, budget: Budget, env, block_unlock_time, n: int = 1):
+        super().__init__(id, budget, n)
+        self.block_unlock_time = block_unlock_time
+        self.env = env
+
+    def wait_and_unlock(self):
+        while not self.is_unlocked():
+            yield self.env.timeout(self.block_unlock_time)
+            self.unlock_budget()
+
+
+class TBudgetUnlocking(Scheduler):
+    """T-unlocking: unlocks some budget every time T units of time pass."""
+
+    def __init__(self, metric, n, budget_unlocking_time, scheduling_wait_time, env):
+        super().__init__(metric)
+        self.n = n
+        self.budget_unlocking_time = budget_unlocking_time
+        self.scheduling_wait_time = scheduling_wait_time
+        self.env = env
+        self.env.process(self.schedule_queue())
+
+    def add_block(self, block: Block) -> None:
+        unlocking_block = TimeUnlockingBlock(
+            block.id, block.budget, self.env, self.budget_unlocking_time, self.n
+        )
+        super().add_block(unlocking_block)
+        self.env.process(unlocking_block.wait_and_unlock())
+
+    def schedule_queue(self) -> List[int]:
+        while True:
+            yield self.env.timeout(self.scheduling_wait_time)
+            super().schedule_queue()
+
+    def can_run(self, task):
+        for block_id, demand_budget in task.budget_per_block.items():
+            block = self.blocks[block_id]
+            allocated_budget = block.initial_budget - block.budget
+            available_budget = block.unlocked_budget - allocated_budget
+            if not available_budget.can_allocate(demand_budget):
+                return False
+        return True

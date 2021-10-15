@@ -10,7 +10,7 @@ from privacypacking.schedulers.utils import PENDING, ALLOCATED
 class TaskQueue:
     def __init__(self):
         self.tasks = []
-        self.efficiency_threshold = 0.01
+        self.efficiency_threshold = 100
 
 
 class TasksInfo:
@@ -69,15 +69,18 @@ class Scheduler:
             List[int]: the ids of the tasks that were scheduled
         """
         allocated_task_ids = []
-        # Task sorted by 'metric'
-        sorted_tasks = self.order(
-            self.task_queue.tasks
-        )
-        # Try and schedule tasks
-        for task in sorted_tasks:
-            if self.can_run(task):
-                self.allocate_task(task)
-                allocated_task_ids.append(task.id)
+        # Run until scheduling cycle ends
+        converged = False
+        while not converged:
+            sorted_tasks = self.order(self.task_queue.tasks)
+            converged = True
+            for task in sorted_tasks:
+                if self.can_run(task):
+                    self.allocate_task(task)
+                    allocated_task_ids.append(task.id)
+                    if self.metric().is_dynamic():
+                        converged = False
+                        break
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
@@ -103,7 +106,7 @@ class Scheduler:
         """Sorts the tasks by metric"""
 
         def task_key(task):
-            return self.metric(task, self.blocks, tasks)
+            return self.metric.apply(task, self.blocks, tasks)
 
         return sorted(tasks, key=task_key)
 

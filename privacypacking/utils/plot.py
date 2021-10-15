@@ -6,7 +6,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.missing_ipywidgets import FigureWidget
 
-from privacypacking import budget
 from privacypacking.budget import Budget
 
 

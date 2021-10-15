@@ -6,4 +6,5 @@ tasks_spec:
   initial_num: 10
   data_path: "single_block_dpf_killer"
 scheduler_spec:
-  name: OfflineDPF
+  method: basic_scheduler
+  metric: DominantShares

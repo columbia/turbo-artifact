@@ -1,5 +1,6 @@
 import simpy
 from privacypacking.schedulers.methods import get_scheduler
+from loguru import logger
 
 
 class ResourceManager:
@@ -16,11 +17,18 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        self.scheduler = get_scheduler(self.config)
+        self.scheduler = get_scheduler(self.config, self.env)
         self.blocks_initialized = self.env.event()
-
+        self.task_production_terminated = False
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
+
+        self.env.process(self.daemon_clock())
+
+    def daemon_clock(self):
+        while True:
+            yield self.env.timeout(1)
+            # logger.debug(f"Simulation Time is: {self.env.now}")
 
     def block_consumer(self):
         def consume():
@@ -63,8 +71,8 @@ class ResourceManager:
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
-            (scheduling_iteration == 0)
-            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+                (scheduling_iteration == 0)
+                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
         ):
             all_tasks = []
             for queue in self.scheduler.task_queue.values():

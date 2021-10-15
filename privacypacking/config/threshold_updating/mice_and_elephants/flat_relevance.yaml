@@ -25,7 +25,11 @@ tasks_spec:
       enabled: true
       task_arrival_interval: 0.004264781
 
+  max_tasks:
+    enabled: true
+    num: 2000
+
 scheduler_spec:
   method: threshold_updating
-  metric: flat_relevance
+  metric: FlatRelevance
   threshold_update_mechanism: NaiveAverage

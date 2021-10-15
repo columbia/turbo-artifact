@@ -24,7 +24,7 @@ class Blocks:
             self.env.process(self.block(next(self.blocks_count)))
 
         if self.config.block_arrival_frequency_enabled:
-            while True:
+            while not self.resource_manager.task_production_terminated:
                 block_arrival_interval = self.config.set_block_arrival_time()
                 self.env.process(self.block(next(self.blocks_count)))
                 yield self.env.timeout(block_arrival_interval)

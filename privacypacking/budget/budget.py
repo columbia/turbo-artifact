@@ -147,6 +147,12 @@ class Budget:
             orders2[alpha] = budget2.epsilon(alpha)
         return (cls(orders1), cls(orders2))
 
+    def __eq__(self, other):
+        for alpha in self.alphas:
+            if other.epsilon(alpha) != self.epsilon(alpha):
+                return False
+        return True
+
     def __sub__(self, other):
         a, b = Budget.same_support(self, other)
         return Budget(

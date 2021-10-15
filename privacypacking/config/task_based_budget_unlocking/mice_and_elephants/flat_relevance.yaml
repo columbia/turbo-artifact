@@ -1,0 +1,34 @@
+log_file: "mice_and_elephants_n_budget_unlocking_flat_relevance"
+epsilon: 10
+delta: 1.0e-3
+
+blocks_spec:
+  initial_num: 10
+  block_arrival_frequency:
+    enabled: true
+    constant:
+      enabled: true
+      block_arrival_interval: 1
+
+tasks_spec:
+  curve_distributions:
+    custom:
+      sampling: true
+      frequency: 1
+      data_path: "mice_and_elephants"
+      data_task_frequencies_path: "mice_80.yaml"
+
+  task_arrival_frequency:
+    enabled: true
+    poisson:
+      enabled: true
+      task_arrival_interval: 0.004264781
+
+  max_tasks:
+    enabled: true
+    num: 2000
+
+scheduler_spec:
+  method: task_based_budget_unlocking
+  metric: FlatRelevance
+  n: 125

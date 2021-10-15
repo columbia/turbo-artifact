@@ -32,4 +32,4 @@ tasks_spec:
 
 scheduler_spec:
   method: basic_scheduler
-  metric: dominant_shares
+  metric: DominantShares

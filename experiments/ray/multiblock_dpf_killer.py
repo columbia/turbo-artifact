@@ -33,7 +33,7 @@ def grid():
     scheduler_metrics = [FLAT_RELEVANCE]
     # N_list = [12, 120, 1200]
     threshold_update_mechanisms = [NAIVE_AVERAGE]
-    # data_task_frequencies_path = ["mice_40.yaml", "mice_60.yaml", "mice_80.yaml"]
+    # data_task_frequencies_path = ["frequencies.yaml", "mice_60.yaml", "mice_80.yaml"]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)

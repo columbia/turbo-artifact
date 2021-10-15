@@ -20,7 +20,7 @@ class Plotter:
         self.file = file
         with open(self.file, "r") as fp:
             log = json.load(fp)
-            self.scheduler_name = log["scheduler_name"]
+            self.scheduler_method = log["scheduler_method"]
             self.num_scheduled_tasks = log["num_scheduled_tasks"]
             self.tasks = log["tasks"]
             self.blocks = log["blocks"]
@@ -31,7 +31,7 @@ class Plotter:
             figs.append(go.FigureWidget(self.stack_jobs_under_block_curve(block)))
         objs = [
             html.Div(
-                html.H1(f"Scheduler: {self.scheduler_name}"), className="six columns"
+                html.H1(f"Scheduler: {self.scheduler_method}"), className="six columns"
             )
         ]
         for i, fig in enumerate(figs):

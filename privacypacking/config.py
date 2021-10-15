@@ -12,7 +12,11 @@ from privacypacking.budget.curves import (
 )
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
-from privacypacking.schedulers.utils import THRESHOLD_UPDATING
+from privacypacking.schedulers.utils import (
+    THRESHOLD_UPDATING,
+    TASK_BASED_BUDGET_UNLOCKING,
+    TIME_BASED_BUDGET_UNLOCKING,
+)
 from privacypacking.utils.utils import *
 
 
@@ -34,16 +38,23 @@ class Config:
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
         self.scheduler_metric = self.scheduler[METRIC]
-        # TODO: define method, metric
-        # TODO: encapsulate all the rest in kwargs
         self.scheduler_N = self.scheduler[N]
+        self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
-        self.new_task_driven_scheduling = True
+        self.new_task_driven_scheduling = False
+        self.time_based_scheduling = False
         self.new_block_driven_scheduling = False
         if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_task_driven_scheduling = True
             self.new_block_driven_scheduling = True
+        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+            self.time_based_scheduling = True
+        else:
+            self.new_task_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -133,10 +144,14 @@ class Config:
                     TASK_ARRIVAL_INTERVAL
                 ]
             assert (
-                self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
+                    self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
             )
         else:
             self.task_arrival_frequency_enabled = False
+
+        self.max_tasks = None
+        if self.tasks_spec[MAX_TASKS][ENABLED]:
+            self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
 
         # Log file
         if LOG_FILE in config:

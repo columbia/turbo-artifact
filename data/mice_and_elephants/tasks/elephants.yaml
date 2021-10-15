@@ -11,9 +11,9 @@ alphas:
   - 16
   - 32
   - 64
-n_blocks: "1:0.75, 10:0.25"
+n_blocks: "1:0.5, 5:0.3, 10:0.2"
 
-block_selection_policy: LatestBlocksFirst
+block_selection_policy: BiasedRandomBlocks
 rdp_epsilons:
   - 0.05258804099236053
   - 0.06135271449108728

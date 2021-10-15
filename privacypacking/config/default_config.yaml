@@ -1,6 +1,6 @@
 epsilon: 10
 delta: 0.001
-global_seed: 44
+global_seed: 64
 deterministic: true
 log_every_n_iterations: 0
 profit: 1
@@ -83,9 +83,14 @@ tasks_spec:
       enabled: false
       task_arrival_interval: 2
 
+  max_tasks:
+    enabled: false
+    num: 1500
 
 scheduler_spec:
-  method: basic_scheduler
-  metric: fcfs
+  method: n_budget_unlocking
+  metric: dominant_shares
   n: 100
+  scheduling_wait_time: 1
+  budget_unlocking_time: 1
   threshold_update_mechanism: NaiveAverage

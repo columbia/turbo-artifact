@@ -8,4 +8,4 @@ tasks_spec:
       initial_num: 100
       data_path: "multiblock_dpf_killer"
 scheduler_spec:
-  name: simplex
+  method: simplex

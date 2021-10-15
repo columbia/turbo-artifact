@@ -21,7 +21,7 @@ from privacypacking.utils.utils import *
 def run_and_report(config: dict) -> None:
     os.environ["LOGURU_LEVEL"] = "INFO"
     metrics = run(config)
-    # metrics = Simulator(Config(config)).run()
+    # metrics = Simulator(Config(config)).run_and_report()
     logger.info(metrics)
     tune.report(**metrics)
 

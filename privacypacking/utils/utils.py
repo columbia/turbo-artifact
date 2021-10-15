@@ -39,7 +39,7 @@ LOG_FILE = "log_file"
 FREQUENCY = "frequency"
 TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
 BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
-
+MAX_TASKS = "max_tasks"
 GLOBAL_SEED = "global_seed"
 DETERMINISTIC = "deterministic"
 LOG_EVERY_N_ITERATIONS = "log_every_n_iterations"
@@ -54,6 +54,8 @@ NUM_BLOCKS = "num_blocks"
 INITIAL_NUM = "initial_num"
 SAMPLING = "sampling"
 BLOCK_SELECTING_POLICY = "block_selecting_policy"
+SCHEDULING_WAIT_TIME = "scheduling_wait_time"
+BUDGET_UNLOCKING_TIME = "budget_unlocking_time"
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -102,10 +104,17 @@ def global_metrics(logs: dict) -> dict:
             realized_profit += task["profit"]
     datapoint = {
         "scheduler": logs["simulator_config"]["scheduler_spec"]["method"],
-        "scheduler_N": logs["simulator_config"]["scheduler_spec"]["n"],
+        "scheduler_n": logs["simulator_config"]["scheduler_spec"]["n"],
         "scheduler_metric": logs["simulator_config"]["scheduler_spec"]["metric"],
-        "frequency_file": logs["simulator_config"]["tasks_spec"]["curve_distributions"]["custom"][
-            "data_task_frequencies_path"],
+        "scheduler_budget_unlocking_time": logs["simulator_config"]["scheduler_spec"][
+            "budget_unlocking_time"
+        ],
+        "scheduler_scheduling_wait_time": logs["simulator_config"]["scheduler_spec"][
+            "scheduling_wait_time"
+        ],
+        "frequency_file": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
+            "custom"
+        ]["data_task_frequencies_path"],
         "n_allocated_tasks": logs["num_scheduled_tasks"],
         "total_tasks": logs["total_tasks"],
         "realized_profit": realized_profit,
@@ -113,7 +122,6 @@ def global_metrics(logs: dict) -> dict:
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
         "task_scheduling_times": logs["tasks_scheduling_times"],
-
     }
 
     return datapoint

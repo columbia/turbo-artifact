@@ -20,17 +20,23 @@ class Tasks:
         """
         # Wait till blocks initialization is completed
         yield self.resource_manager.blocks_initialized
-
         # Produce initial tasks
         initial_curves = self.config.get_initial_task_curves()
         for curve in initial_curves:
             self.env.process(self.task(next(self.task_count), curve))
 
         if self.config.task_arrival_frequency_enabled:
-            while True:
+            while not self.resource_manager.task_production_terminated:
                 task_arrival_interval = self.config.set_task_arrival_time()
-                self.env.process(self.task(next(self.task_count)))
+                task_id = next(self.task_count)
+                self.env.process(self.task(task_id))
                 yield self.env.timeout(task_arrival_interval)
+
+                if (
+                        self.config.max_tasks is not None
+                        and self.config.max_tasks == task_id
+                ):
+                    self.resource_manager.task_production_terminated = True
 
     def task(self, task_id: int, curve_distribution=None) -> None:
         """
