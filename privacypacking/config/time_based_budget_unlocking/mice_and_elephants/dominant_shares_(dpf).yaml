@@ -31,7 +31,6 @@ tasks_spec:
 
 scheduler_spec:
   method: time_based_budget_unlocking
-  scheduling_wait_time: 0.25
   budget_unlocking_time: 0.025
   metric: DominantShares
   n: 125

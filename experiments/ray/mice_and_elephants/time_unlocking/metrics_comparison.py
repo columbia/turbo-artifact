@@ -41,14 +41,12 @@ def grid():
         SQUARED_DYNAMIC_FLAT_RELEVANCE,
         TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
     ]
-    scheduling_wait_time = [0.25]
     budget_unlocking_time = [0.025]
-    n = [125, 500, 1000]
+    n = [500]
 
     # threshold_update_mechanisms = [NAIVE_AVERAGE]
     data_task_frequencies_path = ["mice_0.yaml", "mice_20.yaml", "mice_40.yaml", "mice_60.yaml", "mice_80.yaml",
                                   "mice_100.yaml"]
-    config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduling_wait_time)
     config[BUDGET_UNLOCKING_TIME] = tune.grid_search(budget_unlocking_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)

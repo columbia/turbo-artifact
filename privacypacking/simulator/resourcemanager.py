@@ -44,8 +44,8 @@ class ResourceManager:
 
         while True:
             yield self.env.process(consume())
-            if self.config.new_block_driven_scheduling:
-                self.scheduler.schedule_queue()
+            # if self.config.new_block_driven_scheduling:
+            #     self.scheduler.schedule_queue()
 
     def task_consumer(self):
         scheduling_iteration = 0
