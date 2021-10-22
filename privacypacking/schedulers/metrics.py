@@ -34,7 +34,7 @@ class Metric:
 class DominantShares(Metric):
     @staticmethod
     def apply(
-            task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
     ) -> List[float]:
         demand_fractions = []
         for block_id, demand_budget in task.budget_per_block.items():
@@ -56,7 +56,7 @@ class DominantShares(Metric):
 class Fcfs(Metric):
     @staticmethod
     def apply(
-            task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
+        task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
     ) -> id:
         return task.id
 

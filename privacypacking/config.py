@@ -45,15 +45,6 @@ class Config:
             THRESHOLD_UPDATE_MECHANISM
         ]
         self.new_task_driven_scheduling = True
-        # self.time_based_scheduling = False
-        # self.new_block_driven_scheduling = False
-        # if self.scheduler_method == THRESHOLD_UPDATING:
-        #     self.new_task_driven_scheduling = True
-            # self.new_block_driven_scheduling = True
-        # elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-        #     self.time_based_scheduling = True
-        # else:
-        #     self.new_task_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -88,6 +79,13 @@ class Config:
         self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
         self.custom_tasks_frequency = self.curve_distributions[CUSTOM][FREQUENCY]
         self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
+
+        self.custom_read_block_selection_policy_from_config = False
+        if self.curve_distributions[CUSTOM][READ_BLOCK_SELECTION_POLICY_FROM_CONFIG][
+            ENABLED
+        ]:
+            self.custom_read_block_selection_policy_from_config = True
+
         self.task_frequencies_file = None
 
         if self.data_path != "":
@@ -143,7 +141,7 @@ class Config:
                     TASK_ARRIVAL_INTERVAL
                 ]
             assert (
-                    self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
+                self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
             )
         else:
             self.task_arrival_frequency_enabled = False
@@ -220,10 +218,19 @@ class Config:
                 )[0]
 
                 task_spec = load_task_spec_from_file(file)
+                if self.custom_read_block_selection_policy_from_config:
+                    block_selection_policy = BlockSelectionPolicy.from_str(
+                        self.curve_distributions[curve_distribution][
+                            READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+                        ][BLOCK_SELECTING_POLICY]
+                    )
+                else:
+                    block_selection_policy = task_spec.block_selection_policy
+
                 task = UniformTask(
                     id=task_id,
                     profit=task_spec.profit,
-                    block_selection_policy=task_spec.block_selection_policy,
+                    block_selection_policy=block_selection_policy,
                     n_blocks=task_spec.n_blocks,
                     budget=task_spec.budget,
                 )

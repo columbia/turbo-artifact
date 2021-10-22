@@ -11,7 +11,10 @@ alphas:
 - 16
 - 32
 - 64
-n_blocks: 1
+
+n_blocks: "1:1"
+block_selection_policy: RandomBlocks
+
 rdp_epsilons:
 - 0.0313023396305879
 - 0.03640957567004681

@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 import argparse
 from loguru import logger
 from ray import tune
@@ -8,18 +8,8 @@ from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
 from privacypacking.schedulers.utils import (
     BASIC_SCHEDULER,
-    TIME_BASED_BUDGET_UNLOCKING,
-    TASK_BASED_BUDGET_UNLOCKING,
     SIMPLEX,
-    THRESHOLD_UPDATING,
     DOMINANT_SHARES,
-    FLAT_RELEVANCE,
-    DYNAMIC_FLAT_RELEVANCE,
-    SQUARED_DYNAMIC_FLAT_RELEVANCE,
-    TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
-    OVERFLOW_RELEVANCE,
-    FCFS,
-    NAIVE_AVERAGE,
 )
 from privacypacking.config import Config
 
@@ -33,35 +23,19 @@ def run_and_report(config: dict) -> None:
 
 
 def grid():
-    scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
-    scheduler_metrics = [
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        SQUARED_DYNAMIC_FLAT_RELEVANCE,
-        TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
-    ]
-    budget_unlocking_time = [0.025]
-    n = [500]
+    scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
+    scheduler_metrics = [DOMINANT_SHARES]
+    block_selection_policies = ["RandomBlocks"]
 
-    # threshold_update_mechanisms = [NAIVE_AVERAGE]
-    data_task_frequencies_path = [
-        "mice_0.yaml",
-        "mice_20.yaml",
-        "mice_40.yaml",
-        "mice_60.yaml",
-        "mice_80.yaml",
-        "mice_100.yaml",
-    ]
-    config[BUDGET_UNLOCKING_TIME] = tune.grid_search(budget_unlocking_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
-    config[SCHEDULER_SPEC][N] = tune.grid_search(n)
-
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
+        np.arange(1, 500, step=1, dtype=int).tolist()
+    )
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-        DATA_TASK_FREQUENCIES_PATH
-    ] = tune.grid_search(data_task_frequencies_path)
-    # config[THRESHOLD_UPDATE_MECHANISM] = tune.grid_search(threshold_update_mechanisms)
+        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+    ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+
     tune.run(
         run_and_report,
         config=config,

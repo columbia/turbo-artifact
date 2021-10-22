@@ -33,8 +33,8 @@ class Tasks:
                 yield self.env.timeout(task_arrival_interval)
 
                 if (
-                        self.config.max_tasks is not None
-                        and self.config.max_tasks == task_id
+                    self.config.max_tasks is not None
+                    and self.config.max_tasks == task_id
                 ):
                     self.resource_manager.task_production_terminated = True
 

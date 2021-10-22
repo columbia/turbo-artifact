@@ -71,8 +71,8 @@ class ResourceManager:
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
-                (scheduling_iteration == 0)
-                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+            (scheduling_iteration == 0)
+            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
         ):
             all_tasks = []
             for queue in self.scheduler.task_queue.values():

@@ -27,6 +27,7 @@ class NaiveAverage(ThresholdUpdateMechanism):
     def update_threshold(queue: TaskQueue, efficiency: float) -> None:
         queue.efficiency_threshold = (queue.efficiency_threshold + efficiency) / 2
 
+
 # class QueueAverageDynamic(ThresholdUpdateMechanism):
 #     past_efficiencies = []
 #

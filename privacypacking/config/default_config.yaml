@@ -25,6 +25,13 @@ tasks_spec:
       frequency: 0
       data_path: ""
       data_task_frequencies_path: ""
+      read_num_blocks_from_config:
+        enabled: false
+        num_blocks: 1
+      read_block_selecting_policy_from_config:
+        enabled: false
+        block_selecting_policy: RandomBlocks
+
 
     # Sampling from a laplace
     laplace:
@@ -89,8 +96,7 @@ tasks_spec:
 
 scheduler_spec:
   method: n_budget_unlocking
-  metric: dominant_shares
+  metric: DominantShares
   n: 100
-  scheduling_wait_time: 1
   budget_unlocking_time: 1
   threshold_update_mechanism: NaiveAverage

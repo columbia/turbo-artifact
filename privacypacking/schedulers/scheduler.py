@@ -56,7 +56,7 @@ class Scheduler:
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
         self.tasks_info.tasks_scheduling_time[task.id] = (
-                time.time() - self.tasks_info.tasks_scheduling_time[task.id]
+            time.time() - self.tasks_info.tasks_scheduling_time[task.id]
         )
         self.tasks_info.allocated_tasks[task.id] = task
         self.task_queue.tasks.remove(task)  # Todo: this takes linear time -> optimize
