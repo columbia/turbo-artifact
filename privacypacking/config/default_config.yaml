@@ -25,9 +25,6 @@ tasks_spec:
       frequency: 0
       data_path: ""
       data_task_frequencies_path: ""
-      read_num_blocks_from_config:
-        enabled: false
-        num_blocks: 1
       read_block_selecting_policy_from_config:
         enabled: false
         block_selecting_policy: RandomBlocks
