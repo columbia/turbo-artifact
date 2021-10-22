@@ -81,11 +81,10 @@ class TimeUnlockingBlock(UnlockingBlock):
 class TBudgetUnlocking(Scheduler):
     """T-unlocking: unlocks some budget every time T units of time pass."""
 
-    def __init__(self, metric, n, budget_unlocking_time, scheduling_wait_time, env):
+    def __init__(self, metric, n, budget_unlocking_time, env):
         super().__init__(metric)
         self.n = n
         self.budget_unlocking_time = budget_unlocking_time
-        self.scheduling_wait_time = scheduling_wait_time
         self.env = env
         self.env.process(self.schedule_queue())
 
@@ -98,7 +97,7 @@ class TBudgetUnlocking(Scheduler):
 
     def schedule_queue(self) -> List[int]:
         while True:
-            yield self.env.timeout(self.scheduling_wait_time)
+            yield self.env.timeout(self.budget_unlocking_time)
             super().schedule_queue()
 
     def can_run(self, task):

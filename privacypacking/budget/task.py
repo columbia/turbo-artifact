@@ -9,11 +9,11 @@ from privacypacking.budget.block_selection import BlockSelectionPolicy
 
 class Task:
     def __init__(
-            self,
-            id: int,
-            profit: float,
-            block_selection_policy: BlockSelectionPolicy,
-            n_blocks: int,
+        self,
+        id: int,
+        profit: float,
+        block_selection_policy: BlockSelectionPolicy,
+        n_blocks: int,
     ):
         self.id = id
         self.profit = profit
@@ -61,12 +61,12 @@ class Task:
 
 class UniformTask(Task):
     def __init__(
-            self,
-            id: int,
-            profit: float,
-            block_selection_policy: Any,
-            n_blocks: int,
-            budget: Budget,
+        self,
+        id: int,
+        profit: float,
+        block_selection_policy: Any,
+        n_blocks: int,
+        budget: Budget,
     ):
         """
         A Task that requires (the same) `budget` for all blocks in `block_ids`

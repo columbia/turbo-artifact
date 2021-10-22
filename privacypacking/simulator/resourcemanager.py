@@ -44,8 +44,8 @@ class ResourceManager:
 
         while True:
             yield self.env.process(consume())
-            if self.config.new_block_driven_scheduling:
-                self.scheduler.schedule_queue()
+            # if self.config.new_block_driven_scheduling:
+            #     self.scheduler.schedule_queue()
 
     def task_consumer(self):
         scheduling_iteration = 0
@@ -71,8 +71,8 @@ class ResourceManager:
     def update_logs(self, scheduling_iteration):
         # TODO: improve the log period + perfs (it definitely is a bottleneck)
         if self.config.log_every_n_iterations and (
-                (scheduling_iteration == 0)
-                or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+            (scheduling_iteration == 0)
+            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
         ):
             all_tasks = []
             for queue in self.scheduler.task_queue.values():

@@ -46,7 +46,7 @@ def get_scheduler(config, env) -> Scheduler:
 
         # Some schedulers might need custom arguments
         if config.scheduler_method == BASIC_SCHEDULER:
-            return schedulers[config.scheduler_method]()
+            return schedulers[config.scheduler_method](metric)
         elif config.scheduler_method == TASK_BASED_BUDGET_UNLOCKING:
             return schedulers[config.scheduler_method](metric, config.scheduler_N)
         elif config.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
@@ -54,7 +54,6 @@ def get_scheduler(config, env) -> Scheduler:
                 metric,
                 config.scheduler_N,
                 config.scheduler_budget_unlocking_time,
-                config.scheduler_scheduling_wait_time,
                 env,
             )
         elif config.scheduler_method == THRESHOLD_UPDATING:

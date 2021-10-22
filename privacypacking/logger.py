@@ -9,13 +9,13 @@ class Logger:
     # todo: do some housekeeping here
 
     def get_log_dict(
-            self,
-            tasks,
-            blocks,
-            tasks_info,
-            allocated_task_ids,
-            simulator_config,
-            **kwargs,
+        self,
+        tasks,
+        blocks,
+        tasks_info,
+        allocated_task_ids,
+        simulator_config,
+        **kwargs,
     ) -> dict:
         log = {"tasks": []}
         num_scheduled = 0
@@ -53,14 +53,14 @@ class Logger:
         return log
 
     def log(
-            self,
-            tasks,
-            blocks,
-            tasks_info,
-            allocated_task_ids,
-            simulator_config,
-            compact=False,
-            **kwargs,
+        self,
+        tasks,
+        blocks,
+        tasks_info,
+        allocated_task_ids,
+        simulator_config,
+        compact=False,
+        **kwargs,
     ):
         with open(self.file, "w") as fp:
 
