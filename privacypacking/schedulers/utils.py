@@ -13,6 +13,7 @@ TIME_BASED_BUDGET_UNLOCKING = "time_based_budget_unlocking"
 BASIC_SCHEDULER = "basic_scheduler"
 
 DOMINANT_SHARES = "DominantShares"
+AVAILABLE_DOMINANT_SHARES = "AvailableDominantShares"
 FLAT_RELEVANCE = "FlatRelevance"
 DYNAMIC_FLAT_RELEVANCE = "DynamicFlatRelevance"
 SQUARED_DYNAMIC_FLAT_RELEVANCE = "SquaredDynamicFlatRelevance"
