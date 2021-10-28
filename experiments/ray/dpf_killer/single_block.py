@@ -10,6 +10,8 @@ from privacypacking.schedulers.utils import (
     BASIC_SCHEDULER,
     SIMPLEX,
     DOMINANT_SHARES,
+    FLAT_RELEVANCE,
+    OVERFLOW_RELEVANCE
 )
 from privacypacking.config import Config
 
@@ -23,8 +25,8 @@ def run_and_report(config: dict) -> None:
 
 
 def grid():
-    scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
-    scheduler_metrics = [DOMINANT_SHARES]
+    scheduler_methods = [BASIC_SCHEDULER]
+    scheduler_metrics = [DOMINANT_SHARES, FLAT_RELEVANCE, OVERFLOW_RELEVANCE]
     block_selection_policies = ["RandomBlocks"]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)

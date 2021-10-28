@@ -26,6 +26,7 @@ def grid():
     scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
     scheduler_metrics = [DOMINANT_SHARES]
     block_selection_policies = ["RandomBlocks"]
+    num_blocks = [10, 20, 30, 40, 50]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
@@ -33,6 +34,8 @@ def grid():
     #     np.arange(1, 500, step=1, dtype=int).tolist()
     # )
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search([100])
+    config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
+
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)

@@ -12,7 +12,7 @@ tasks_spec:
       sampling: true
       initial_num: 1000
       frequency: 1
-      data_path: "mice_and_elephants"
+      data_path: "laplace_mice_and_elephants"
       data_task_frequencies_path: "mice_80.yaml"
 
 scheduler_spec:

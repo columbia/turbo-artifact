@@ -2,7 +2,7 @@ import math
 import argparse
 
 
-def compute_demands(epsilon, delta):
+def compute_gaussian_demands(epsilon, delta):
     alphas = [
         1.5,
         1.75,
@@ -33,7 +33,7 @@ def main():
     parser.add_argument("--delta", dest="delta", type=float)
     args = parser.parse_args()
 
-    return compute_demands(args.epsilon, args.delta)
+    return compute_gaussian_demands(args.epsilon, args.delta)
 
 
 if __name__ == "__main__":
