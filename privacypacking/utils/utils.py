@@ -1,8 +1,10 @@
-import yaml
 import json
-import numpy as np
-from pathlib import Path
 from collections import namedtuple
+from pathlib import Path
+
+import numpy as np
+import yaml
+
 from privacypacking.budget import Budget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 
@@ -121,6 +123,7 @@ def global_metrics(logs: dict) -> dict:
         "total_tasks": logs["total_tasks"],
         "realized_profit": realized_profit,
         "n_tasks": n_tasks,
+        "n_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
         "task_scheduling_times": logs["tasks_scheduling_times"],
