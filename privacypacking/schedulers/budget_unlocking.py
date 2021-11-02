@@ -11,15 +11,17 @@ For all schedulers based on gradually unlocking budget
 
 
 class UnlockingBlock(Block):
-    def __init__(self, id: int, budget: Budget, n: int = 1):
+    def __init__(self, id: int, budget: Budget, n: int):
         super().__init__(id, budget)
+        self.n = n
+        self.fair_share = None
         self.unlocked_budget = (
             ZeroCurve()
-        )  # Will be gradually unlocking budget till we reach full capacity
-        self.fair_share = self.initial_budget / n
+        )
 
-    def unlock_budget(self, budget: Budget = None):
+    def unlock_budget(self, budget: Budget = None, profit: int = 1):
         """Updates `self.unlocked_budget`. Fair share by default, but can use dynamic values too."""
+        self.fair_share = (self.initial_budget * profit) / self.n
         self.unlocked_budget = self.unlocked_budget.add_with_threshold(
             budget if budget else self.fair_share, self.initial_budget
         )
