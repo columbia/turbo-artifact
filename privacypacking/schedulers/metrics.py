@@ -46,7 +46,7 @@ class DominantShares(Metric):
                 if block_initial_budget.epsilon(alpha) > 0:
                     demand_fractions.append(
                         demand_budget.epsilon(alpha)
-                        / block_initial_budget.epsilon(alpha)
+                        / (block_initial_budget.epsilon(alpha) * task.profit)
                     )
         # Order by highest demand fraction first
         demand_fractions.sort(reverse=True)

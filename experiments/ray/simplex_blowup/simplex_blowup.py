@@ -7,9 +7,7 @@ from ray import tune
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
 from privacypacking.schedulers.utils import (
-    BASIC_SCHEDULER,
     SIMPLEX,
-    DOMINANT_SHARES,
 )
 from privacypacking.config import Config
 
@@ -24,7 +22,6 @@ def run_and_report(config: dict) -> None:
 
 def grid():
     scheduler_methods = [SIMPLEX]
-    # scheduler_metrics = [DOMINANT_SHARES]
     block_selection_policies = ["RandomBlocks"]
     num_blocks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
 
@@ -43,7 +40,7 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,
     )
