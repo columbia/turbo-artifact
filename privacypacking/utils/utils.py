@@ -38,6 +38,7 @@ PROFIT = "profit"
 THRESHOLD_UPDATE_MECHANISM = "threshold_update_mechanism"
 PLOT_FILE = "plot_file"
 LOG_FILE = "log_file"
+
 FREQUENCY = "frequency"
 TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
 BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
@@ -58,6 +59,7 @@ SAMPLING = "sampling"
 BLOCK_SELECTING_POLICY = "block_selecting_policy"
 SCHEDULING_WAIT_TIME = "scheduling_wait_time"
 BUDGET_UNLOCKING_TIME = "budget_unlocking_time"
+CUSTOM_LOG_PREFIX = "custom_log_prefix"
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 

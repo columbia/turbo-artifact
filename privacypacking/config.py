@@ -1,5 +1,6 @@
 import math
 import random
+import uuid
 from datetime import datetime
 from functools import partial
 from typing import List
@@ -13,8 +14,8 @@ from privacypacking.budget.curves import (
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
 from privacypacking.schedulers.utils import (
-    THRESHOLD_UPDATING,
     TASK_BASED_BUDGET_UNLOCKING,
+    THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
 )
 from privacypacking.utils.utils import *
@@ -154,8 +155,14 @@ class Config:
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
-            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
-        self.log_path = LOGS_PATH.joinpath(self.log_file)
+            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+
+        if CUSTOM_LOG_PREFIX in config:
+            self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
+                self.log_file
+            )
+        else:
+            self.log_path = LOGS_PATH.joinpath(self.log_file)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger = Logger(
             self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}"

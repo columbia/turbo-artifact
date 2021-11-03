@@ -1,5 +1,6 @@
 import argparse
 import os
+from datetime import datetime
 
 import numpy as np
 from loguru import logger
@@ -59,6 +60,8 @@ def grid():
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+
+    config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
 
     tune.run(
         run_and_report,
