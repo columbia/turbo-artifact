@@ -28,7 +28,7 @@ def grid():
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
-        np.arange(1, 500, step=1, dtype=int).tolist()
+        np.arange(0, 1100, step=100, dtype=int).tolist()
     )
     # config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
