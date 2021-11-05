@@ -169,3 +169,6 @@ def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
         )
     assert task_spec is not None
     return task_spec
+
+
+# def save_gnuplot_csv(df, suffix):

@@ -25,6 +25,7 @@ def grid():
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
     with open(
+        # TODO: use a more complex config here if necessary
         DEFAULT_CONFIG_FILE.parent.joinpath(
             "offline_dpf_killer/multi_block/gap_base.yaml"
         ),
@@ -43,8 +44,8 @@ def grid():
         # "ContiguousBlocksRandomOffset",
     ]
 
-    num_tasks = [50, 100, 150, 200]
-    num_blocks = [5, 10, 15, 20]
+    num_tasks = [500]
+    num_blocks = [5 * i for i in range(1, 10)]
     # num_blocks = [5, 10]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
