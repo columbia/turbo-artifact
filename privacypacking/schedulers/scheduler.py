@@ -108,7 +108,7 @@ class Scheduler:
         def task_key(task):
             return self.metric.apply(task, self.blocks, tasks)
 
-        return sorted(tasks, key=task_key)
+        return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, task: Task) -> bool:
         """

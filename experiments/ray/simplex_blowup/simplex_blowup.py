@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 from loguru import logger
 from ray import tune
+import yaml
 
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
@@ -23,15 +24,13 @@ def run_and_report(config: dict) -> None:
 def grid():
     scheduler_methods = [SIMPLEX]
     block_selection_policies = ["RandomBlocks"]
-    num_blocks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
+    # num_blocks = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
-    # config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
-    #     np.arange(1, 500, step=1, dtype=int).tolist()
-    # )
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search([100])
-    config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
+        np.arange(0, 1100, step=100, dtype=int).tolist()
+    )
+    # config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG

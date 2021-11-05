@@ -224,7 +224,7 @@ class Config:
                     p=frequencies,
                 )[0]
 
-                task_spec = load_task_spec_from_file(file)
+                task_spec = self.load_task_spec_from_file(file)
                 if self.custom_read_block_selection_policy_from_config:
                     block_selection_policy = BlockSelectionPolicy.from_str(
                         self.curve_distributions[curve_distribution][
@@ -338,3 +338,55 @@ class Config:
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num
+
+    # todo: transferred here temporarily so that fixed seed applies for those random choices as well
+    def load_task_spec_from_file(self, path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
+
+        with open(path, "r") as f:
+            demand_dict = yaml.safe_load(f)
+            orders = {}
+            for i, alpha in enumerate(demand_dict["alphas"]):
+                orders[alpha] = demand_dict["rdp_epsilons"][i]
+            block_selection_policy = None
+            if "block_selection_policy" in demand_dict:
+                block_selection_policy = BlockSelectionPolicy.from_str(
+                    demand_dict["block_selection_policy"]
+                )
+            assert block_selection_policy is not None
+
+            # Select num of blocks
+            n_blocks_requests = demand_dict["n_blocks"].split(",")
+            num_blocks = [
+                n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests
+            ]
+            frequencies = [
+                n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests
+            ]
+            n_blocks = np.random.choice(
+                num_blocks,
+                1,
+                p=frequencies,
+            )[0]
+
+            # Select profit
+            profit_requests = demand_dict["profit"].split(",")
+            profits = [
+                profit_request.split(":")[0] for profit_request in profit_requests
+            ]
+            frequencies = [
+                profit_request.split(":")[1] for profit_request in profit_requests
+            ]
+            profit = np.random.choice(
+                profits,
+                1,
+                p=frequencies,
+            )[0]
+
+            task_spec = TaskSpec(
+                profit=float(profit),
+                block_selection_policy=block_selection_policy,
+                n_blocks=int(n_blocks),
+                budget=Budget(orders),
+            )
+        assert task_spec is not None
+        return task_spec

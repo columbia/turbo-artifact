@@ -1,4 +1,5 @@
 import json
+import random
 from collections import namedtuple
 from pathlib import Path
 
@@ -132,43 +133,3 @@ def global_metrics(logs: dict) -> dict:
     }
 
     return datapoint
-
-
-def load_task_spec_from_file(path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
-    with open(path, "r") as f:
-        demand_dict = yaml.safe_load(f)
-        orders = {}
-        for i, alpha in enumerate(demand_dict["alphas"]):
-            orders[alpha] = demand_dict["rdp_epsilons"][i]
-        profit = demand_dict.get("profit", 1)
-        block_selection_policy = None
-        if "block_selection_policy" in demand_dict:
-            block_selection_policy = BlockSelectionPolicy.from_str(
-                demand_dict["block_selection_policy"]
-            )
-        assert block_selection_policy is not None
-
-        n_blocks_requests = demand_dict["n_blocks"].split(",")
-        num_blocks = [
-            n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests
-        ]
-        frequencies = [
-            n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests
-        ]
-        n_blocks = np.random.choice(
-            num_blocks,
-            1,
-            p=frequencies,
-        )[0]
-
-        task_spec = TaskSpec(
-            profit=profit,
-            block_selection_policy=block_selection_policy,
-            n_blocks=int(n_blocks),
-            budget=Budget(orders),
-        )
-    assert task_spec is not None
-    return task_spec
-
-
-# def save_gnuplot_csv(df, suffix):
