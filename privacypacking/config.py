@@ -369,18 +369,21 @@ class Config:
             )[0]
 
             # Select profit
-            profit_requests = demand_dict["profit"].split(",")
-            profits = [
-                profit_request.split(":")[0] for profit_request in profit_requests
-            ]
-            frequencies = [
-                profit_request.split(":")[1] for profit_request in profit_requests
-            ]
-            profit = np.random.choice(
-                profits,
-                1,
-                p=frequencies,
-            )[0]
+            if "profit" in demand_dict:
+                profit_requests = demand_dict["profit"].split(",")
+                profits = [
+                    profit_request.split(":")[0] for profit_request in profit_requests
+                ]
+                frequencies = [
+                    profit_request.split(":")[1] for profit_request in profit_requests
+                ]
+                profit = np.random.choice(
+                    profits,
+                    1,
+                    p=frequencies,
+                )[0]
+            else:
+                profit = 1
 
             task_spec = TaskSpec(
                 profit=float(profit),
