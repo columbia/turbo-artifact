@@ -111,9 +111,6 @@ def global_metrics(logs: dict) -> dict:
         "scheduler": logs["simulator_config"]["scheduler_spec"]["method"],
         "scheduler_n": logs["simulator_config"]["scheduler_spec"]["n"],
         "scheduler_metric": logs["simulator_config"]["scheduler_spec"]["metric"],
-        "scheduler_budget_unlocking_time": logs["simulator_config"]["scheduler_spec"][
-            "budget_unlocking_time"
-        ],
         "block_selecting_policy": logs["simulator_config"]["tasks_spec"][
             "curve_distributions"
         ]["custom"]["read_block_selecting_policy_from_config"][

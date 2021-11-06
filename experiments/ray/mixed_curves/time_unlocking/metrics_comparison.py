@@ -36,28 +36,20 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         DOMINANT_SHARES,
-        # FLAT_RELEVANCE,
-        # DYNAMIC_FLAT_RELEVANCE,
+        FLAT_RELEVANCE,
+        DYNAMIC_FLAT_RELEVANCE,
     ]
-    budget_unlocking_time = [0.025]
+    scheduler_budget_unlocking_time = [0.025]
+    scheduler_scheduling_time = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     n = [500]
 
-    data_task_frequencies_path = [
-        # "mice_0.yaml",
-        "mice_20.yaml",
-        # "mice_40.yaml",
-        # "mice_60.yaml",
-        # "mice_80.yaml",
-        # "mice_100.yaml",
-    ]
-    config[BUDGET_UNLOCKING_TIME] = tune.grid_search(budget_unlocking_time)
+    config[BUDGET_UNLOCKING_TIME] = tune.grid_search(scheduler_budget_unlocking_time)
+    config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduler_scheduling_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
     config[SCHEDULER_SPEC][N] = tune.grid_search(n)
+    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(np.arange(0, 5100, step=100, dtype=int).tolist())
 
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-        DATA_TASK_FREQUENCIES_PATH
-    ] = tune.grid_search(data_task_frequencies_path)
     tune.run(
         run_and_report,
         config=config,

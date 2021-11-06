@@ -28,7 +28,7 @@ class ResourceManager:
     def daemon_clock(self):
         while True:
             yield self.env.timeout(1)
-            # logger.debug(f"Simulation Time is: {self.env.now}")
+            logger.debug(f"Simulation Time is: {self.env.now}")
 
     def block_consumer(self):
         def consume():

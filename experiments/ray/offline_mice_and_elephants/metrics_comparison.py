@@ -26,22 +26,26 @@ def run_and_report(config: dict) -> None:
 
 def grid():
     scheduler_methods = [BASIC_SCHEDULER]
-    scheduler_metrics = [DOMINANT_SHARES, FLAT_RELEVANCE, OVERFLOW_RELEVANCE]
+    scheduler_metrics = [OVERFLOW_RELEVANCE]
     block_selection_policies = ["RandomBlocks"]
     data_task_frequencies_path = [
-        "mice_0.yaml",
-        "mice_20.yaml",
-        "mice_40.yaml",
-        "mice_60.yaml",
-        "mice_80.yaml",
-        "mice_100.yaml",
+        "frequencies.yaml"
+    #     "mice_0.yaml",
+    #     "mice_20.yaml",
+    #     "mice_40.yaml",
+    #     "mice_60.yaml",
+    #     "mice_80.yaml",
+    #     "mice_100.yaml",
     ]
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search([5000])
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(np.arange(0, 5100, step=100, dtype=int).tolist())
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
+    DATA_PATH
+    ] = tune.grid_search(["mixed_curves"])
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         DATA_TASK_FREQUENCIES_PATH
     ] = tune.grid_search(data_task_frequencies_path)

@@ -10,9 +10,9 @@ tasks_spec:
   curve_distributions:
     custom:
       sampling: true
-      initial_num: 1000
+      initial_num: 10
       frequency: 1
-      data_path: "laplace_mice_and_elephants"
+      data_path: "mice_and_elephants"
       data_task_frequencies_path: "mice_80.yaml"
 
 

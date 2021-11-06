@@ -96,4 +96,5 @@ scheduler_spec:
   metric: DominantShares
   n: 100
   budget_unlocking_time: 1
+  scheduling_wait_time: 1
   threshold_update_mechanism: NaiveAverage

@@ -54,6 +54,7 @@ def get_scheduler(config, env) -> Scheduler:
                 metric,
                 config.scheduler_N,
                 config.scheduler_budget_unlocking_time,
+                config.scheduler_scheduling_wait_time,
                 env,
             )
         elif config.scheduler_method == THRESHOLD_UPDATING:
