@@ -29,13 +29,12 @@ def grid():
     scheduler_metrics = [OVERFLOW_RELEVANCE]
     block_selection_policies = ["RandomBlocks"]
     data_task_frequencies_path = [
-        "frequencies.yaml"
-    #     "mice_0.yaml",
-    #     "mice_20.yaml",
-    #     "mice_40.yaml",
-    #     "mice_60.yaml",
-    #     "mice_80.yaml",
-    #     "mice_100.yaml",
+        "mice_0.yaml",
+        "mice_20.yaml",
+        "mice_40.yaml",
+        "mice_60.yaml",
+        "mice_80.yaml",
+        "mice_100.yaml",
     ]
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
@@ -45,7 +44,7 @@ def grid():
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
     DATA_PATH
-    ] = tune.grid_search(["mixed_curves"])
+    ] = tune.grid_search(["mice_and_elephants"])
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         DATA_TASK_FREQUENCIES_PATH
     ] = tune.grid_search(data_task_frequencies_path)

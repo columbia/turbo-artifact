@@ -13,6 +13,7 @@ alphas:
 - 64
 
 n_blocks: "1:0.3, 5:0.4, 10:0.3"
+#profit: "0.1:0.3, 0.5:0.4, 1:0.3"
 block_selection_policy: RandomBlocks
 
 rdp_epsilons:

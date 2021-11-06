@@ -40,9 +40,14 @@ def grid():
         DYNAMIC_FLAT_RELEVANCE,
     ]
     scheduler_budget_unlocking_time = [0.025]
-    scheduler_scheduling_time = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
-    n = [500]
+    # scheduler_scheduling_time = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    scheduler_scheduling_time = [0.25]
+    n = [100, 500, 1000, 1500, 2000]
+    block_selection_policies = ["RandomBlocks", "LatestBlocksFirst"]
 
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
+        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+    ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
     config[BUDGET_UNLOCKING_TIME] = tune.grid_search(scheduler_budget_unlocking_time)
     config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduler_scheduling_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
