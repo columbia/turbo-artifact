@@ -244,6 +244,8 @@ class Config:
                 else:
                     block_selection_policy = task_spec.block_selection_policy
 
+                assert block_selection_policy is not None
+
                 task = UniformTask(
                     id=task_id,
                     profit=task_spec.profit,
@@ -362,7 +364,6 @@ class Config:
                 block_selection_policy = BlockSelectionPolicy.from_str(
                     demand_dict["block_selection_policy"]
                 )
-            assert block_selection_policy is not None
 
             # Select num of blocks
             n_blocks_requests = demand_dict["n_blocks"].split(",")

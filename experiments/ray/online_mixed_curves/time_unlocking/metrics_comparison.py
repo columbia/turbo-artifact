@@ -47,7 +47,11 @@ def grid():
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+    ][ENABLED] = True
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
+        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+
     config[BUDGET_UNLOCKING_TIME] = tune.grid_search(scheduler_budget_unlocking_time)
     config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduler_scheduling_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
