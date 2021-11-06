@@ -97,3 +97,4 @@ scheduler_spec:
   n: 100
   budget_unlocking_time: 1
   threshold_update_mechanism: NaiveAverage
+  solver: mip

@@ -1,15 +1,18 @@
 from typing import List
+
 import gurobipy as gp
 from gurobipy import GRB
-from mip import Model, BINARY, maximize, xsum
+from mip import BINARY, Model, maximize, xsum
 
 from privacypacking.budget import ALPHAS
 from privacypacking.schedulers.scheduler import Scheduler
+from privacypacking.utils.utils import GUROBI, MIP
 
 
 class Simplex(Scheduler):
-    def __init__(self):
+    def __init__(self, solver=MIP):
         super().__init__()
+        self.solver = solver
 
     def solve_allocation_cbc(self, tasks) -> List[bool]:
         m = Model("pack")
@@ -36,15 +39,18 @@ class Simplex(Scheduler):
 
         for k, block in self.blocks.items():
             for alpha in block.budget.alphas:
-                prod = xsum(t.get_budget(k).epsilon(alpha) * x[i] for i, t in enumerate(tasks))
-                m += prod - (1 - a[k][alpha]) *  demands_upper_bound[(k, alpha)] <= block.budget.epsilon(alpha)
+                prod = xsum(
+                    t.get_budget(k).epsilon(alpha) * x[i] for i, t in enumerate(tasks)
+                )
+                m += prod - (1 - a[k][alpha]) * demands_upper_bound[
+                    (k, alpha)
+                ] <= block.budget.epsilon(alpha)
 
         # Objective function
         m.objective = maximize(xsum(t.profit * x[i] for i, t in enumerate(tasks)))
         m.optimize()
 
         return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
-
 
     def solve_allocation_gurobi(self, tasks) -> List[bool]:
 
@@ -99,7 +105,11 @@ class Simplex(Scheduler):
     def schedule_queue(self) -> List[int]:
         tasks = self.task_queue.tasks
         allocated_tasks = []
-        allocation = self.solve_allocation_cbc(tasks)
+        if self.solver == MIP:
+            allocation = self.solve_allocation_cbc(tasks)
+        else:
+            allocation = self.solve_allocation_gurobi(tasks)
+
         for i, allocated in enumerate(allocation):
             if allocated:
                 allocated_tasks.append(tasks[i])

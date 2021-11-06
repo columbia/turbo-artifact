@@ -34,7 +34,8 @@ def grid():
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
 
-    scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
+    # scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
+    scheduler_methods = [SIMPLEX]
     scheduler_metrics = [DOMINANT_SHARES]
     # block_selection_policies = ["RandomBlocks", "Pareto_1"]
     block_selection_policies = [
@@ -44,12 +45,17 @@ def grid():
         # "ContiguousBlocksRandomOffset",
     ]
 
-    num_tasks = [500]
-    num_blocks = [5 * i for i in range(1, 10)]
+    num_tasks = [40, 60, 80, 100, 120]
+    # num_tasks = [10 * i for i in range(1, 8)]
+    # num_blocks = [5 * i for i in range(1, 10)]
+    num_blocks = [20]
     # num_blocks = [5, 10]
+    config[SCHEDULER_SPEC][SOLVER] = tune.grid_search([GUROBI, SIMPLEX])
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
+    config[GLOBAL_SEED] = tune.grid_search(list(range(5)))
+
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
     #     np.arange(1, 500, step=1, dtype=int).tolist()
     # )
