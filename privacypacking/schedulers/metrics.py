@@ -38,9 +38,9 @@ class DominantShares(Metric):
             for alpha in block_initial_budget.alphas:
                 # Drop RDP orders that are already negative
                 if block_initial_budget.epsilon(alpha) > 0:
-                    demand_fractions.append(
-                        demand_budget.epsilon(alpha)
-                        / (block_initial_budget.epsilon(alpha) * task.profit)
+                    demand_fractions.append(1 /
+                                            (demand_budget.epsilon(alpha)
+                        / (block_initial_budget.epsilon(alpha) * task.profit))
                     )
         # Order by highest demand fraction first
         demand_fractions.sort()
@@ -151,17 +151,23 @@ class OverflowRelevance(Metric):
                     overflow_b_a[block_id][a] += block_demand.epsilon(a)
 
         # print(overflow_b_a)
-
-        cost = 0.0
+        costs = {}
         for block_id_, block_demand_ in task.budget_per_block.items():
+            costs[block_id_] = 0
             for alpha in block_demand_.alphas:
                 demand = block_demand_.epsilon(alpha)
                 # print(f"demand: {demand}")
                 overflow = overflow_b_a[block_id_][alpha]
-                cost += demand / overflow
                 # print(f"cost +=: {demand/ overflow}")
-
-                if overflow < 0:
-                    cost = 0
-        task.cost = cost
-        return task.profit / cost
+                if overflow > 0:
+                    costs[block_id_] += demand / overflow
+                else:
+                    costs[block_id_] = 0
+                    break
+        total_cost = 0
+        for cost in costs.values():
+            total_cost += cost
+        task.cost = total_cost
+        if total_cost <= 0:
+            return float('inf')
+        return task.profit / total_cost
