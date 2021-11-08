@@ -36,22 +36,19 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        SQUARED_DYNAMIC_FLAT_RELEVANCE,
-        TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
+        # FLAT_RELEVANCE,
+        # DYNAMIC_FLAT_RELEVANCE,
     ]
     budget_unlocking_time = [0.025]
     n = [500]
 
-    # threshold_update_mechanisms = [NAIVE_AVERAGE]
     data_task_frequencies_path = [
-        "mice_0.yaml",
+        # "mice_0.yaml",
         "mice_20.yaml",
-        "mice_40.yaml",
-        "mice_60.yaml",
-        "mice_80.yaml",
-        "mice_100.yaml",
+        # "mice_40.yaml",
+        # "mice_60.yaml",
+        # "mice_80.yaml",
+        # "mice_100.yaml",
     ]
     config[BUDGET_UNLOCKING_TIME] = tune.grid_search(budget_unlocking_time)
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
@@ -61,7 +58,6 @@ def grid():
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         DATA_TASK_FREQUENCIES_PATH
     ] = tune.grid_search(data_task_frequencies_path)
-    # config[THRESHOLD_UPDATE_MECHANISM] = tune.grid_search(threshold_update_mechanisms)
     tune.run(
         run_and_report,
         config=config,

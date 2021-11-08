@@ -1,4 +1,5 @@
-log_file: "long_short_elephants_t_budget_unlocking_dynamic_flat_relevance"
+log_file: "mixed_curves_t_budget_unlocking_dominant_shares_DPF"
+
 epsilon: 10
 delta: 1.0e-3
 
@@ -15,7 +16,7 @@ tasks_spec:
     custom:
       sampling: true
       frequency: 1
-      data_path: "long_short_elephants"
+      data_path: "mixed_curves"
       data_task_frequencies_path: "frequencies.yaml"
 
   task_arrival_frequency:
@@ -26,11 +27,10 @@ tasks_spec:
 
   max_tasks:
     enabled: true
-    num: 2000
+    num: 5000
 
 scheduler_spec:
   method: time_based_budget_unlocking
-  scheduling_wait_time: 0.25
-  budget_unlocking_time: 0.25
-  metric: DynamicFlatRelevance
+  budget_unlocking_time: 0.025
+  metric: DominantShares
   n: 125

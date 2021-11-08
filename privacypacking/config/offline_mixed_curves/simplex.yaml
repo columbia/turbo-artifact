@@ -12,8 +12,8 @@ tasks_spec:
       sampling: true
       initial_num: 10
       frequency: 1
-      data_path: "mice_and_elephants"
-      data_task_frequencies_path: "mice_80.yaml"
+      data_path: "mixed_curves"
+      data_task_frequencies_path: "frequencies.yaml"
 
 
 scheduler_spec:

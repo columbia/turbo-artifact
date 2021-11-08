@@ -1,22 +1,21 @@
 alphas:
-  - 1.5
-  - 1.75
-  - 2
-  - 2.5
-  - 3
-  - 4
-  - 5
-  - 6
-  - 8
-  - 16
-  - 32
-  - 64
+- 1.5
+- 1.75
+- 2
+- 2.5
+- 3
+- 4
+- 5
+- 6
+- 8
+- 16
+- 32
+- 64
 
-n_blocks: "1:0.5, 10:0.5"
+n_blocks: "1:0.3, 5:0.4, 10:0.3"
 #profit: "0.1:0.3, 0.5:0.4, 1:0.3"
-#profit: "1:1"
-
 block_selection_policy: RandomBlocks
+
 rdp_epsilons:
 -  0.03
 -  0.035
@@ -31,5 +30,4 @@ rdp_epsilons:
 -  0.64
 -  1.28
 
-# sigma: 5
-# Gaussian distribution
+  # sigma: 5

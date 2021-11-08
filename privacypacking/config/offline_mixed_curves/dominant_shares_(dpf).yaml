@@ -1,4 +1,4 @@
-log_file: "simplex_offline_mice_and_elephants"
+log_file: "dpf_offline_mice_and_elephants"
 
 epsilon: 10
 delta: 0.001
@@ -12,9 +12,9 @@ tasks_spec:
       sampling: true
       initial_num: 10
       frequency: 1
-      data_path: "mice_and_elephants"
-      data_task_frequencies_path: "mice_80.yaml"
-
+      data_path: "mixed_curves"
+      data_task_frequencies_path: "frequencies.yaml"
 
 scheduler_spec:
-  method: simplex
+  method: basic_scheduler
+  metric: DominantShares

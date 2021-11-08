@@ -41,15 +41,27 @@ class Config:
         self.scheduler_metric = self.scheduler[METRIC]
         self.scheduler_N = self.scheduler[N]
         self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+
         if SOLVER in self.scheduler:
             self.scheduler_solver = self.scheduler[SOLVER]
         else:
             self.scheduler_solver = None
+        
 
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
-        self.new_task_driven_scheduling = True
+        self.new_task_driven_scheduling = False
+        self.time_based_scheduling = False
+        self.new_block_driven_scheduling = False
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_task_driven_scheduling = True
+            self.new_block_driven_scheduling = True
+        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+            self.time_based_scheduling = True
+        else:
+            self.new_task_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -238,6 +250,8 @@ class Config:
                 else:
                     block_selection_policy = task_spec.block_selection_policy
 
+                assert block_selection_policy is not None
+
                 task = UniformTask(
                     id=task_id,
                     profit=task_spec.profit,
@@ -358,7 +372,6 @@ class Config:
                 block_selection_policy = BlockSelectionPolicy.from_str(
                     demand_dict["block_selection_policy"]
                 )
-            assert block_selection_policy is not None
 
             # Select num of blocks
             n_blocks_requests = demand_dict["n_blocks"].split(",")
