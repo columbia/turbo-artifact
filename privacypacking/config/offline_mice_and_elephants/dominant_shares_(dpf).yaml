@@ -1,0 +1,20 @@
+log_file: "dpf_offline_mice_and_elephants"
+
+epsilon: 10
+delta: 0.001
+
+blocks_spec:
+  initial_num: 10
+
+tasks_spec:
+  curve_distributions:
+    custom:
+      sampling: true
+      initial_num: 10
+      frequency: 1
+      data_path: "mice_and_elephants"
+      data_task_frequencies_path: "mice_80.yaml"
+
+scheduler_spec:
+  method: basic_scheduler
+  metric: DominantShares

@@ -1,6 +1,8 @@
 import random
-from typing import List, Dict, Type
+from typing import Dict, List, Type
+
 import numpy as np
+
 from privacypacking.budget import Block
 
 
@@ -8,9 +10,16 @@ class BlockSelectionException(Exception):
     pass
 
 
+# TODO: static methods are ill-suited for policies with parameters
+
+
 class BlockSelectionPolicy:
     @staticmethod
     def from_str(policy_name: str) -> Type["BlockSelectionPolicy"]:
+        # TODO: use a proper configuration file if we need more parameters
+        if "Zeta" in policy_name:
+            alpha = float(policy_name.split("_")[1])
+            return Zeta(alpha)
         if policy_name in globals():
             return globals()[policy_name]
         else:
@@ -92,3 +101,21 @@ class ContiguousBlocksRandomOffset(BlockSelectionPolicy):
         offset = random.randint(0, n_blocks - task_blocks_num)
 
         return range(offset, offset + task_blocks_num)
+
+
+class Zeta(BlockSelectionPolicy):
+    def __init__(self, s: float) -> None:
+        self.s = s
+
+    def select_blocks(self, blocks, task_blocks_num):
+        n_blocks = len(blocks)
+        if task_blocks_num > n_blocks:
+            raise BlockSelectionException(
+                f"Requested {task_blocks_num} blocks but there are only {n_blocks} blocks available."
+            )
+        density = np.array([(k + 1) ** (-self.s) for k in range(n_blocks)])
+        density /= sum(density)
+
+        return np.random.choice(
+            n_blocks, task_blocks_num, replace=False, p=density
+        ).tolist()

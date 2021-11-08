@@ -1,5 +1,6 @@
 import math
 import random
+import uuid
 from datetime import datetime
 from functools import partial
 from typing import List
@@ -13,8 +14,8 @@ from privacypacking.budget.curves import (
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
 from privacypacking.schedulers.utils import (
-    THRESHOLD_UPDATING,
     TASK_BASED_BUDGET_UNLOCKING,
+    THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
 )
 from privacypacking.utils.utils import *
@@ -40,11 +41,21 @@ class Config:
         self.scheduler_metric = self.scheduler[METRIC]
         self.scheduler_N = self.scheduler[N]
         self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
 
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
-        self.new_task_driven_scheduling = True
+        self.new_task_driven_scheduling = False
+        self.time_based_scheduling = False
+        self.new_block_driven_scheduling = False
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_task_driven_scheduling = True
+            self.new_block_driven_scheduling = True
+        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+            self.time_based_scheduling = True
+        else:
+            self.new_task_driven_scheduling = True
 
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
@@ -154,8 +165,14 @@ class Config:
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
-            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}.json"
-        self.log_path = LOGS_PATH.joinpath(self.log_file)
+            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+
+        if CUSTOM_LOG_PREFIX in config:
+            self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
+                self.log_file
+            )
+        else:
+            self.log_path = LOGS_PATH.joinpath(self.log_file)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.logger = Logger(
             self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}"
@@ -217,7 +234,7 @@ class Config:
                     p=frequencies,
                 )[0]
 
-                task_spec = load_task_spec_from_file(file)
+                task_spec = self.load_task_spec_from_file(file)
                 if self.custom_read_block_selection_policy_from_config:
                     block_selection_policy = BlockSelectionPolicy.from_str(
                         self.curve_distributions[curve_distribution][
@@ -226,6 +243,8 @@ class Config:
                     )
                 else:
                     block_selection_policy = task_spec.block_selection_policy
+
+                assert block_selection_policy is not None
 
                 task = UniformTask(
                     id=task_id,
@@ -331,3 +350,57 @@ class Config:
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num
+
+    # todo: transferred here temporarily so that fixed seed applies for those random choices as well
+    def load_task_spec_from_file(self, path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
+
+        with open(path, "r") as f:
+            demand_dict = yaml.safe_load(f)
+            orders = {}
+            for i, alpha in enumerate(demand_dict["alphas"]):
+                orders[alpha] = demand_dict["rdp_epsilons"][i]
+            block_selection_policy = None
+            if "block_selection_policy" in demand_dict:
+                block_selection_policy = BlockSelectionPolicy.from_str(
+                    demand_dict["block_selection_policy"]
+                )
+
+            # Select num of blocks
+            n_blocks_requests = demand_dict["n_blocks"].split(",")
+            num_blocks = [
+                n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests
+            ]
+            frequencies = [
+                n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests
+            ]
+            n_blocks = np.random.choice(
+                num_blocks,
+                1,
+                p=frequencies,
+            )[0]
+
+            # Select profit
+            if "profit" in demand_dict:
+                profit_requests = demand_dict["profit"].split(",")
+                profits = [
+                    profit_request.split(":")[0] for profit_request in profit_requests
+                ]
+                frequencies = [
+                    profit_request.split(":")[1] for profit_request in profit_requests
+                ]
+                profit = np.random.choice(
+                    profits,
+                    1,
+                    p=frequencies,
+                )[0]
+            else:
+                profit = 1
+
+            task_spec = TaskSpec(
+                profit=float(profit),
+                block_selection_policy=block_selection_policy,
+                n_blocks=int(n_blocks),
+                budget=Budget(orders),
+            )
+        assert task_spec is not None
+        return task_spec

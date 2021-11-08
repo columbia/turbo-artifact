@@ -1,0 +1,19 @@
+log_file: "simplex_blowup"
+
+#epsilon: 10
+#delta: 0.00001
+
+blocks_spec:
+  initial_num: 10
+
+tasks_spec:
+  curve_distributions:
+    custom:
+      sampling: true
+      initial_num: 10
+      frequency: 1
+      data_path: "simplex_blowup"
+      data_task_frequencies_path: "frequencies.yaml"
+
+scheduler_spec:
+  method: simplex
