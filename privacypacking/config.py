@@ -43,6 +43,12 @@ class Config:
         self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
         self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
 
+        if SOLVER in self.scheduler:
+            self.scheduler_solver = self.scheduler[SOLVER]
+        else:
+            self.scheduler_solver = None
+        
+
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
         ]
@@ -352,7 +358,9 @@ class Config:
         return self.initial_blocks_num
 
     # todo: transferred here temporarily so that fixed seed applies for those random choices as well
-    def load_task_spec_from_file(self, path: Path = PRIVATEKUBE_DEMANDS_PATH) -> TaskSpec:
+    def load_task_spec_from_file(
+        self, path: Path = PRIVATEKUBE_DEMANDS_PATH
+    ) -> TaskSpec:
 
         with open(path, "r") as f:
             demand_dict = yaml.safe_load(f)

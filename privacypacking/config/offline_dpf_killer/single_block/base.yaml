@@ -1,4 +1,4 @@
-log_file: "dominant_shares_offline_single_block_dpf_killer"
+log_file: "simplex_offline_single_block_dpf_killer"
 
 epsilon: 10
 delta: 0.00001
@@ -12,9 +12,9 @@ tasks_spec:
       sampling: true
       initial_num: 10
       frequency: 1
-      data_path: "single_block_dpf_killer_small"
+      data_path: "single_block_dpf_killer"
       data_task_frequencies_path: "frequencies.yaml"
 
+
 scheduler_spec:
-  method: basic_scheduler
-  metric: DominantShares
+  method: simplex

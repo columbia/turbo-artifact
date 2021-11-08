@@ -127,6 +127,14 @@ class Budget:
             return True
         return False
 
+    def approx_epsilon_bound(self, delta: float) -> "Budget":
+        return Budget(
+            {
+                alpha: epsilon - np.log(delta) / (alpha - 1)
+                for alpha, epsilon in zip(self.alphas, self.epsilons)
+            }
+        )
+
     @classmethod
     def same_support(
         cls, budget1: "Budget", budget2: "Budget"
@@ -164,6 +172,19 @@ class Budget:
         return Budget(
             {alpha: a.epsilon(alpha) + b.epsilon(alpha) for alpha in a.alphas}
         )
+
+    def normalize_by(self, other: "Budget"):
+        a, b = Budget.same_support(self, other)
+        return Budget(
+            {
+                alpha: a.epsilon(alpha) / b.epsilon(alpha)
+                for alpha in a.alphas
+                if b.epsilon(alpha) > 0
+            }
+        )
+
+    def __mul__(self, n: float):
+        return Budget({alpha: self.epsilon(alpha) * n for alpha in self.alphas})
 
     def __truediv__(self, n: int):
         return Budget({alpha: self.epsilon(alpha) / n for alpha in self.alphas})

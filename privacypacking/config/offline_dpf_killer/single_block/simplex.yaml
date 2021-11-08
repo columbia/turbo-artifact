@@ -12,7 +12,7 @@ tasks_spec:
       sampling: true
       initial_num: 10
       frequency: 1
-      data_path: "single_block_dpf_killer"
+      data_path: "single_block_dpf_killer_small"
       data_task_frequencies_path: "frequencies.yaml"
 
 

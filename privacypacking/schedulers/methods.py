@@ -1,32 +1,32 @@
-from privacypacking.schedulers import simplex
 from loguru import logger
 
+from privacypacking.schedulers import simplex
 from privacypacking.schedulers.budget_unlocking import (
     NBudgetUnlocking,
     TBudgetUnlocking,
-)
-from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.schedulers.threshold_update_mechanisms import (
-    ThresholdUpdateMechanism,
-)
-from privacypacking.schedulers.metrics import Metric
-from privacypacking.schedulers.threshold_updating import ThresholdUpdating
-from privacypacking.schedulers.utils import (
-    BASIC_SCHEDULER,
-    TASK_BASED_BUDGET_UNLOCKING,
-    TIME_BASED_BUDGET_UNLOCKING,
-    THRESHOLD_UPDATING,
-    SIMPLEX,
 )
 
 # Loading them so that they get stored in globals()
 from privacypacking.schedulers.metrics import (
     DominantShares,
+    DynamicFlatRelevance,
     Fcfs,
     FlatRelevance,
-    DynamicFlatRelevance,
-    SquaredDynamicFlatRelevance,
+    Metric,
     OverflowRelevance,
+    SquaredDynamicFlatRelevance,
+)
+from privacypacking.schedulers.scheduler import Scheduler
+from privacypacking.schedulers.threshold_update_mechanisms import (
+    ThresholdUpdateMechanism,
+)
+from privacypacking.schedulers.threshold_updating import ThresholdUpdating
+from privacypacking.schedulers.utils import (
+    BASIC_SCHEDULER,
+    SIMPLEX,
+    TASK_BASED_BUDGET_UNLOCKING,
+    THRESHOLD_UPDATING,
+    TIME_BASED_BUDGET_UNLOCKING,
 )
 
 
@@ -39,7 +39,10 @@ def get_scheduler(config, env) -> Scheduler:
         SIMPLEX: simplex.Simplex,
     }
     if config.scheduler_method == SIMPLEX:
-        return schedulers[config.scheduler_method]()
+        if config.scheduler_solver:
+            return schedulers[config.scheduler_method](solver=config.scheduler_solver)
+        else:
+            schedulers[config.scheduler_method]()
     else:
         metric = Metric.from_str(config.scheduler_metric)
         assert metric is not None
