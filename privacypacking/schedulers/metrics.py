@@ -1,12 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Type
 
-from privacypacking.budget import (
-    Block,
-    Task,
-)
-
-from typing import Type
-
+from privacypacking.budget import Block, Task
 from privacypacking.schedulers.scheduler import TaskQueue
 
 
@@ -30,6 +24,7 @@ class Metric:
     def is_dynamic():
         return False
 
+
 class DominantShares(Metric):
     @staticmethod
     def apply(
@@ -51,6 +46,7 @@ class DominantShares(Metric):
         demand_fractions.sort()
         return demand_fractions
 
+
 # class AvailableDominantShares(Metric):
 #     @staticmethod
 #     def apply(
@@ -71,6 +67,7 @@ class DominantShares(Metric):
 #         # Order by highest demand fraction first
 #         demand_fractions.sort(reverse=True)
 #         return demand_fractions
+
 
 class Fcfs(Metric):
     @staticmethod
@@ -142,8 +139,8 @@ class OverflowRelevance(Metric):
     @staticmethod
     def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
         overflow_b_a = {}
-        for task in tasks:
-            for block_id, block_demand in task.budget_per_block.items():
+        for t in tasks:
+            for block_id, block_demand in t.budget_per_block.items():
                 for a in block_demand.alphas:
                     if block_id not in overflow_b_a:
                         overflow_b_a[block_id] = {}
@@ -153,12 +150,17 @@ class OverflowRelevance(Metric):
                         ].initial_budget.epsilon(a)
                     overflow_b_a[block_id][a] += block_demand.epsilon(a)
 
+        # print(overflow_b_a)
+
         cost = 0.0
         for block_id_, block_demand_ in task.budget_per_block.items():
             for alpha in block_demand_.alphas:
                 demand = block_demand_.epsilon(alpha)
+                # print(f"demand: {demand}")
                 overflow = overflow_b_a[block_id_][alpha]
                 cost += demand / overflow
+                # print(f"cost +=: {demand/ overflow}")
+
                 if overflow < 0:
                     cost = 0
         task.cost = cost

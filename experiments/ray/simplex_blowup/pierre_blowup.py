@@ -24,14 +24,23 @@ def grid():
 
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
+
+    # with open(
+    #     # TODO: use a more complex config here if necessary
+    #     DEFAULT_CONFIG_FILE.parent.joinpath(
+    #         "offline_dpf_killer/multi_block/gap_base.yaml"
+    #     ),
+    #     "r",
+    # ) as user_config:
+    #     user_config = yaml.safe_load(user_config)
+
     with open(
         # TODO: use a more complex config here if necessary
-        DEFAULT_CONFIG_FILE.parent.joinpath(
-            "offline_dpf_killer/multi_block/gap_base.yaml"
-        ),
+        DEFAULT_CONFIG_FILE.parent.joinpath("simplex_blowup/simplex.yaml"),
         "r",
     ) as user_config:
         user_config = yaml.safe_load(user_config)
+
     update_dict(user_config, config)
 
     # scheduler_methods = [BASIC_SCHEDULER, SIMPLEX]
@@ -45,12 +54,13 @@ def grid():
         # "ContiguousBlocksRandomOffset",
     ]
 
-    num_tasks = [40, 60, 80, 100, 120]
-    # num_tasks = [10 * i for i in range(1, 8)]
+    # num_tasks = [40, 60, 80, 100, 120]
+
+    num_tasks = [100 * i for i in range(1, 5)]
     # num_blocks = [5 * i for i in range(1, 10)]
     num_blocks = [20]
     # num_blocks = [5, 10]
-    config[SCHEDULER_SPEC][SOLVER] = tune.grid_search([GUROBI, SIMPLEX])
+    config[SCHEDULER_SPEC][SOLVER] = tune.grid_search([GUROBI, MIP])
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
