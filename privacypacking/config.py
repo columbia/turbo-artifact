@@ -5,6 +5,8 @@ from datetime import datetime
 from functools import partial
 from typing import List
 
+from numpy.lib.arraysetops import isin
+
 from privacypacking.budget import Block, Task
 from privacypacking.budget.curves import (
     GaussianCurve,
@@ -47,7 +49,6 @@ class Config:
             self.scheduler_solver = self.scheduler[SOLVER]
         else:
             self.scheduler_solver = None
-        
 
         self.scheduler_threshold_update_mechanism = self.scheduler[
             THRESHOLD_UPDATE_MECHANISM
@@ -374,33 +375,43 @@ class Config:
                 )
 
             # Select num of blocks
-            n_blocks_requests = demand_dict["n_blocks"].split(",")
-            num_blocks = [
-                n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests
-            ]
-            frequencies = [
-                n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests
-            ]
-            n_blocks = np.random.choice(
-                num_blocks,
-                1,
-                p=frequencies,
-            )[0]
-
-            # Select profit
-            if "profit" in demand_dict:
-                profit_requests = demand_dict["profit"].split(",")
-                profits = [
-                    profit_request.split(":")[0] for profit_request in profit_requests
+            if isinstance(demand_dict["n_blocks"], int):
+                n_blocks = demand_dict["n_blocks"]
+            elif isinstance(demand_dict["n_blocks"], str):
+                n_blocks_requests = demand_dict["n_blocks"].split(",")
+                num_blocks = [
+                    n_blocks_request.split(":")[0]
+                    for n_blocks_request in n_blocks_requests
                 ]
                 frequencies = [
-                    profit_request.split(":")[1] for profit_request in profit_requests
+                    n_blocks_request.split(":")[1]
+                    for n_blocks_request in n_blocks_requests
                 ]
-                profit = np.random.choice(
-                    profits,
+                n_blocks = np.random.choice(
+                    num_blocks,
                     1,
                     p=frequencies,
                 )[0]
+
+            # Select profit
+            if "profit" in demand_dict:
+                if isinstance(demand_dict["profit"], int):
+                    profit = demand_dict["profit"]
+                elif isinstance(demand_dict["profit"], str):
+                    profit_requests = demand_dict["profit"].split(",")
+                    profits = [
+                        profit_request.split(":")[0]
+                        for profit_request in profit_requests
+                    ]
+                    frequencies = [
+                        profit_request.split(":")[1]
+                        for profit_request in profit_requests
+                    ]
+                    profit = np.random.choice(
+                        profits,
+                        1,
+                        p=frequencies,
+                    )[0]
             else:
                 profit = 1
 

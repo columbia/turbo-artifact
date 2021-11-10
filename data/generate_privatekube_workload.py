@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from pathlib import Path
 
 import typer
@@ -30,6 +31,10 @@ def main(
         help="Block policy: `RandomBlocks`, `LatestBlocksFirst`, `Mix`",
         show_default=True,
     ),
+    divide_original_block_number_by: int = typer.Option(
+        default=10,
+        help="The PrivateKube workload has block requests from 100 to 2000. 1 day of the Amazon data was split into 100 blocks, with 100 user id buckets.",
+    ),
 ):
 
     privatekube_demands = (
@@ -48,13 +53,15 @@ def main(
     for task_category in ["elephants", "mice-gaussian", "mice-laplace"]:
         task_category_names[task_category] = []
         for task_path in privatekube_demands.joinpath(task_category).glob("*.yaml"):
-            task_name = task_path.name
+            task_name = f"{task_category}-{task_path.name}"
             raw_task_dict = yaml.safe_load(task_path.read_text())
 
             task_dict = {}
             task_dict["alphas"] = raw_task_dict["alphas"]
             task_dict["rdp_epsilons"] = raw_task_dict["rdp_epsilons"]
-            task_dict["n_blocks"] = raw_task_dict["n_blocks"]
+            task_dict["n_blocks"] = (
+                raw_task_dict["n_blocks"] // divide_original_block_number_by
+            )
 
             # WARNING: Important logic and arbitrary decisions in there!
             if profits:
@@ -63,7 +70,7 @@ def main(
                 else:
                     profit = "2:0.5, 1:0.5"
             else:
-                profit = "1"
+                profit = 1
 
             if block_policy == "RandomBlocks":
                 block_selection_policy = "RandomBlocks"
@@ -96,11 +103,20 @@ def main(
         "mice-laplace": laplace_mice_fraction,
         "elephants": 1 - gaussian_mice_fraction - laplace_mice_fraction,
     }
+    sum_frequencies = 0
     for category, task_names in task_category_names.items():
         n = len(task_names)
-        for task_name in task_names:
-            task_frequencies[task_name] = category_frequencies[category] / n
+        logger.info(f"{category}, {task_names}, {n}")
 
+        for task_name in task_names:
+            # cat_task_name = f"{category}-{task_name}"
+            task_frequencies[task_name] = category_frequencies[category] / n
+            sum_frequencies += task_frequencies[task_name]
+    # Ensure that the frequencies add up to 1 even with rounding errors
+    logger.info(sum_frequencies)
+    last_task_name, last_task_frequency = task_frequencies.popitem()
+    task_frequencies[last_task_name] = last_task_frequency + 1 - sum_frequencies
+    logger.info(sum(list(task_frequencies.values())))
     logger.info(task_frequencies)
     output_frequencies_path = output_dir.joinpath("task_frequencies").joinpath(
         "frequencies.yaml"

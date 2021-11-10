@@ -43,11 +43,14 @@ def grid():
     # scheduler_scheduling_time = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     scheduler_scheduling_time = [0.25]
     # n = [100, 500, 1000, 1500, 2000]
-    n = [200]
+    n = [100]
+
+    # TODO: change task frequency as average number of task per block, and stop simulation after number of blocks
+    # TODO: warm up and wind down period?
 
     block_selection_policies = ["LatestBlocksFirst"]
 
-    config[TASKS_SPEC][MAX_TASKS][NUM] = 100
+    config[TASKS_SPEC][MAX_TASKS][NUM] = 5000
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
@@ -55,7 +58,9 @@ def grid():
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_PATH] = 
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
+        DATA_PATH
+    ] = "privatekube_event_g0.3_l0.3_p=1"
 
     config[BUDGET_UNLOCKING_TIME] = tune.grid_search(scheduler_budget_unlocking_time)
     config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduler_scheduling_time)
@@ -67,7 +72,7 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        # resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 10},
         local_dir=RAY_LOGS,
         resume=False,
     )
