@@ -1,5 +1,6 @@
-from typing import Tuple, List
+from typing import List, Tuple
 
+from loguru import logger
 from simpy import Event
 
 from privacypacking.budget import Block, Budget, Task, ZeroCurve
@@ -75,7 +76,12 @@ class TimeUnlockingBlock(UnlockingBlock):
     def wait_and_unlock(self):
         while not self.is_unlocked():
             yield self.env.timeout(self.block_unlock_time)
-            print("Unlock Block ", self.id, "locked", (self.initial_budget - self.unlocked_budget).epsilons)
+            logger.debug(
+                "Unlock Block ",
+                self.id,
+                "locked",
+                (self.initial_budget - self.unlocked_budget).epsilons,
+            )
             self.unlock_budget()
 
 

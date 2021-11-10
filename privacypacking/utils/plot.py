@@ -9,7 +9,9 @@ from plotly.missing_ipywidgets import FigureWidget
 from privacypacking.budget import Budget
 
 
-def plot_budgets(budgets: Union[List[Budget], Budget]) -> FigureWidget:
+def plot_budgets(
+    budgets: Union[List[Budget], Budget], log_x=False, log_y=False
+) -> FigureWidget:
     if isinstance(budgets, Budget):
         budgets = [budgets]
 
@@ -27,13 +29,13 @@ def plot_budgets(budgets: Union[List[Budget], Budget]) -> FigureWidget:
             x="alpha",
             y="epsilon",
             color="id",
-            log_x=False,
-            log_y=True,
+            log_x=log_x,
+            log_y=log_y,
         )
     else:
         fig = px.area(
-            log_x=False,
-            log_y=True,
+            log_x=log_x,
+            log_y=log_y,
         )
 
     return fig

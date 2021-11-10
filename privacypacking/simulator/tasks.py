@@ -1,4 +1,5 @@
 from itertools import count
+
 from loguru import logger
 
 
@@ -34,7 +35,7 @@ class Tasks:
 
                 if (
                     self.config.max_tasks is not None
-                    and self.config.max_tasks == task_id
+                    and task_id == self.config.max_tasks - 1
                 ):
                     self.resource_manager.task_production_terminated = True
 
