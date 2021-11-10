@@ -1089,6 +1089,17 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "nb-clean"
+version = "2.1.0"
+description = "Clean Jupyter notebooks for versioning"
+category = "dev"
+optional = false
+python-versions = ">=3.6,<4.0"
+
+[package.dependencies]
+nbformat = ">=5.1.2,<6.0.0"
+
+[[package]]
 name = "nbclassic"
 version = "0.3.1"
 description = "Jupyter Notebook as a Jupyter Server Extension."
@@ -2101,7 +2112,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "eb9facb58d07310f7018c5a7a9e6cc67a04c8da7d50fd8c80c40c8d0b9bd533d"
+content-hash = "e2b3bd0b1ffd0a437dbb485f26b58105d25c5096bf898383d67f63f6310a9870"
 
 [metadata.files]
 absl-py = [
@@ -2897,6 +2908,10 @@ multidict = [
 mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
     {file = "mypy_extensions-0.4.3.tar.gz", hash = "sha256:2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8"},
+]
+nb-clean = [
+    {file = "nb-clean-2.1.0.tar.gz", hash = "sha256:2474ddec68b9520a517585a1e00decbef1c257920bd521186c25f47c6c9a1b07"},
+    {file = "nb_clean-2.1.0-py3-none-any.whl", hash = "sha256:dece76b1c7c26388c6c4c1f74fa7822034afff70096dfbc4e920c9c6815e3f5e"},
 ]
 nbclassic = [
     {file = "nbclassic-0.3.1-py3-none-any.whl", hash = "sha256:a7437c90a0bffcce172a4540cc53e140ea5987280c87c31a0cfa6e5d315eb907"},

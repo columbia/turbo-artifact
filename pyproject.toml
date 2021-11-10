@@ -33,6 +33,7 @@ pytest = "^5.2"
 black = "^21.6b0"
 flake8 = "^3.9.2"
 isort = "^5.9.2"
+nb-clean = "^2.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
