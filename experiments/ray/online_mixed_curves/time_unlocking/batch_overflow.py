@@ -7,6 +7,7 @@ from ray import tune
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     BASIC_SCHEDULER,
+    BATCH_OVERFLOW_RELEVANCE,
     DOMINANT_SHARES,
     DYNAMIC_FLAT_RELEVANCE,
     FCFS,
@@ -35,6 +36,7 @@ def run_and_report(config: dict) -> None:
 def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
+        BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         DYNAMIC_FLAT_RELEVANCE,
@@ -44,13 +46,14 @@ def grid():
     scheduler_scheduling_time = [0.25]
     # n = [100, 500, 1000, 1500, 2000]
     n = [100]
+    data_lifetime = 60
 
     # TODO: change task frequency as average number of task per block, and stop simulation after number of blocks
     # TODO: warm up and wind down period?
 
     block_selection_policies = ["LatestBlocksFirst"]
 
-    config[TASKS_SPEC][MAX_TASKS][NUM] = 5000
+    config[TASKS_SPEC][MAX_TASKS][NUM] = 10000
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG

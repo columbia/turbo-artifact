@@ -38,9 +38,12 @@ class DominantShares(Metric):
             for alpha in block_initial_budget.alphas:
                 # Drop RDP orders that are already negative
                 if block_initial_budget.epsilon(alpha) > 0:
-                    demand_fractions.append(1 /
-                                            (demand_budget.epsilon(alpha)
-                        / (block_initial_budget.epsilon(alpha) * task.profit))
+                    demand_fractions.append(
+                        1
+                        / (
+                            demand_budget.epsilon(alpha)
+                            / (block_initial_budget.epsilon(alpha) * task.profit)
+                        )
                     )
         # Order by highest demand fraction first
         demand_fractions.sort()
@@ -141,24 +144,21 @@ class OverflowRelevance(Metric):
         overflow_b_a = {}
         for t in tasks:
             for block_id, block_demand in t.budget_per_block.items():
+                if block_id not in overflow_b_a:
+                    overflow_b_a[block_id] = {}
                 for a in block_demand.alphas:
-                    if block_id not in overflow_b_a:
-                        overflow_b_a[block_id] = {}
                     if a not in overflow_b_a[block_id]:
                         overflow_b_a[block_id][a] = -blocks[
                             block_id
                         ].initial_budget.epsilon(a)
                     overflow_b_a[block_id][a] += block_demand.epsilon(a)
 
-        # print(overflow_b_a)
         costs = {}
         for block_id_, block_demand_ in task.budget_per_block.items():
             costs[block_id_] = 0
             for alpha in block_demand_.alphas:
                 demand = block_demand_.epsilon(alpha)
-                # print(f"demand: {demand}")
                 overflow = overflow_b_a[block_id_][alpha]
-                # print(f"cost +=: {demand/ overflow}")
                 if overflow > 0:
                     costs[block_id_] += demand / overflow
                 else:
@@ -169,5 +169,68 @@ class OverflowRelevance(Metric):
             total_cost += cost
         task.cost = total_cost
         if total_cost <= 0:
-            return float('inf')
+            return float("inf")
         return task.profit / total_cost
+
+
+# TODO: vectorize and cache things to speed up
+
+
+class BatchOverflowRelevance(Metric):
+    @staticmethod
+    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+        overflow_b_a = {}
+        for t in tasks:
+            for block_id, block_demand in t.budget_per_block.items():
+                if block_id not in overflow_b_a:
+                    overflow_b_a[block_id] = {}
+                for a in block_demand.alphas:
+                    if a not in overflow_b_a[block_id]:
+                        # NOTE: This is the only difference with (offline) OverflowRelevance
+                        # overflow_b_a[block_id][a] = -blocks[
+                        #     block_id
+                        # ].initial_budget.epsilon(a)
+                        overflow_b_a[block_id][a] = -blocks[
+                            block_id
+                        ].available_unlocked_budget.epsilon(a)
+
+                        # NOTE: what should we do with negative available unlocked budget?
+                        # We could drop these orders in the computation, but they might become relevant
+                        # again if we unlock more budget later.
+                        # OverflowRelevance can still penalize a bit tasks that negative orders (high overflow but non-zero relevance)
+
+                    overflow_b_a[block_id][a] += block_demand.epsilon(a)
+
+        costs = {}
+        for block_id_, block_demand_ in task.budget_per_block.items():
+            costs[block_id_] = 0
+            for alpha in block_demand_.alphas:
+                demand = block_demand_.epsilon(alpha)
+                overflow = overflow_b_a[block_id_][alpha]
+                if overflow > 0:
+                    costs[block_id_] += demand / overflow
+                else:
+                    costs[block_id_] = 0
+                    break
+        total_cost = 0
+        for cost in costs.values():
+            total_cost += cost
+        task.cost = total_cost
+        if total_cost <= 0:
+            return float("inf")
+        return task.profit / total_cost
+
+    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+        cost = 0.0
+        for block_id, budget in task.budget_per_block.items():
+            for alpha in budget.alphas:
+                demand = budget.epsilon(alpha)
+                remaining_budget = blocks[block_id].budget.epsilon(alpha)
+                if remaining_budget > 0:
+                    cost += demand / remaining_budget
+        task.cost = cost
+        return task.profit / cost
+
+    @staticmethod
+    def is_dynamic():
+        return True

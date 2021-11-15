@@ -37,33 +37,6 @@ class Config:
             random.seed(self.global_seed)
             np.random.seed(self.global_seed)
 
-        # SCHEDULER
-        self.scheduler = config[SCHEDULER_SPEC]
-        self.scheduler_method = self.scheduler[METHOD]
-        self.scheduler_metric = self.scheduler[METRIC]
-        self.scheduler_N = self.scheduler[N]
-        self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
-        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
-
-        if SOLVER in self.scheduler:
-            self.scheduler_solver = self.scheduler[SOLVER]
-        else:
-            self.scheduler_solver = None
-
-        self.scheduler_threshold_update_mechanism = self.scheduler[
-            THRESHOLD_UPDATE_MECHANISM
-        ]
-        self.new_task_driven_scheduling = False
-        self.time_based_scheduling = False
-        self.new_block_driven_scheduling = False
-        if self.scheduler_method == THRESHOLD_UPDATING:
-            self.new_task_driven_scheduling = True
-            self.new_block_driven_scheduling = True
-        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-            self.time_based_scheduling = True
-        else:
-            self.new_task_driven_scheduling = True
-
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
         self.initial_blocks_num = self.blocks_spec[INITIAL_NUM]
@@ -148,16 +121,34 @@ class Config:
             if self.task_arrival_frequency[POISSON][ENABLED]:
                 self.task_arrival_poisson_enabled = True
                 self.task_arrival_constant_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[POISSON][
-                    TASK_ARRIVAL_INTERVAL
-                ]
+                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[POISSON]:
+                    self.task_arrival_interval = (
+                        self.block_arrival_interval
+                        / self.task_arrival_frequency[POISSON][
+                            AVG_NUMBER_TASKS_PER_BLOCK
+                        ]
+                    )
+                else:
+                    self.task_arrival_interval = self.task_arrival_frequency[POISSON][
+                        TASK_ARRIVAL_INTERVAL
+                    ]
 
             elif self.task_arrival_frequency[CONSTANT][ENABLED]:
                 self.task_arrival_constant_enabled = True
                 self.task_arrival_poisson_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
-                    TASK_ARRIVAL_INTERVAL
-                ]
+
+                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[CONSTANT]:
+                    self.task_arrival_interval = (
+                        self.block_arrival_interval
+                        / self.task_arrival_frequency[CONSTANT][
+                            AVG_NUMBER_TASKS_PER_BLOCK
+                        ]
+                    )
+                else:
+                    self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
+                        TASK_ARRIVAL_INTERVAL
+                    ]
+
             assert (
                 self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
             )
@@ -166,9 +157,48 @@ class Config:
 
         self.max_tasks = None
         if self.tasks_spec[MAX_TASKS][ENABLED]:
-            self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
+            if FROM_MAX_BLOCKS in self.tasks_spec[MAX_TASKS]:
+                self.max_tasks = (
+                    self.tasks_spec[MAX_TASKS][FROM_MAX_BLOCKS]
+                    * self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
+                )
+            else:
+                self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
 
-        # Log file
+        # SCHEDULER
+        self.scheduler = config[SCHEDULER_SPEC]
+        self.scheduler_method = self.scheduler[METHOD]
+        self.scheduler_metric = self.scheduler[METRIC]
+        self.scheduler_N = self.scheduler[N]
+        if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
+            self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
+            self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
+                self.scheduler_N
+            )
+        else:
+            self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+
+        if SOLVER in self.scheduler:
+            self.scheduler_solver = self.scheduler[SOLVER]
+        else:
+            self.scheduler_solver = None
+
+        self.scheduler_threshold_update_mechanism = self.scheduler[
+            THRESHOLD_UPDATE_MECHANISM
+        ]
+        self.new_task_driven_scheduling = False
+        self.time_based_scheduling = False
+        self.new_block_driven_scheduling = False
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_task_driven_scheduling = True
+            self.new_block_driven_scheduling = True
+        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+            self.time_based_scheduling = True
+        else:
+            self.new_task_driven_scheduling = True
+
+        # LOGS
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:

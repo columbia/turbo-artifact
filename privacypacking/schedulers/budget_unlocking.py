@@ -32,6 +32,13 @@ class UnlockingBlock(Block):
     def is_unlocked(self):
         return self.unlocked_budget == self.initial_budget
 
+    @property
+    def available_unlocked_budget(self) -> Budget:
+        """Unlocked budget that is available for scheduling.
+        available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
+        """
+        return self.unlocked_budget + self.budget - self.initial_budget
+
 
 class NBudgetUnlocking(Scheduler):
     """N-unlocking: unlocks some budget every time a new task arrives."""

@@ -1,10 +1,10 @@
-log_file: "mixed_curves_t_budget_unlocking_dominant_shares_DPF"
+log_file: "privatekube_batch_overflow"
 
-epsilon: 10
-delta: 1.0e-3
+epsilon: 1
+delta: 1.0e-5
 
 blocks_spec:
-  initial_num: 200
+  initial_num: 0
   block_arrival_frequency:
     enabled: true
     constant:
@@ -23,14 +23,15 @@ tasks_spec:
     enabled: true
     poisson:
       enabled: true
-      task_arrival_interval: 0.004264781
+      avg_number_tasks_per_block: 10
 
   max_tasks:
     enabled: true
-    num: 5000
+    # num: 5000
+    from_max_blocks: 10
 
 scheduler_spec:
   method: time_based_budget_unlocking
-  budget_unlocking_time: 0.025
+  data_lifetime: 60
   metric: DominantShares
   n: 125

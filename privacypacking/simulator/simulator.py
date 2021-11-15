@@ -2,6 +2,7 @@ from datetime import datetime
 
 # import simpy.rt
 import simpy
+
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import *
 
@@ -17,6 +18,8 @@ class Simulator:
 
     def run(self):
         start = datetime.now()
+
+        # TODO: make this configurable
         self.env.run(until=200)
         # self.env.run()
 
