@@ -1,10 +1,12 @@
 import time
 from typing import List, Tuple
 
+from loguru import logger
 from simpy import Event
 
 from privacypacking.budget import Block, Task
-from privacypacking.schedulers.utils import PENDING, ALLOCATED
+from privacypacking.budget.block_selection import NotEnoughBlocks
+from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 
 
 class TaskQueue:
@@ -85,7 +87,14 @@ class Scheduler:
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
-        self.task_set_block_ids(task)
+        try:
+            self.task_set_block_ids(task)
+        except NotEnoughBlocks as e:
+            logger.warning(
+                f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
+            )
+            self.tasks_info.tasks_status[task.id] = FAILED
+            return
 
         # Update tasks_info
         self.tasks_info.tasks_status[task.id] = PENDING
@@ -125,8 +134,15 @@ class Scheduler:
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
+        # try:
         selected_block_ids = task.block_selection_policy.select_blocks(
             blocks=self.blocks, task_blocks_num=task.n_blocks
         )
+        # except NotEnoughBlocks as e:
+        #     logger.warning(e)
+        #     logger.warning(
+        #         "Setting block ids to -1, the task will never be allocated.\n Should we count it in the total number of tasks?"
+        #     )
+        #     selected_block_ids = [-1]
         assert selected_block_ids is not None
         task.set_budget_per_block(selected_block_ids)

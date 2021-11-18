@@ -1,4 +1,5 @@
 import argparse
+
 from privacypacking.budget import SubsampledGaussianCurve
 
 
@@ -8,10 +9,7 @@ def main():
     args = parser.parse_args()
 
     return SubsampledGaussianCurve.from_training_parameters(
-        dataset_size=60_000,
-        batch_size=64,
-        epochs=10,
-        sigma=args.sigma
+        dataset_size=50_000, batch_size=100, epochs=100, sigma=args.sigma
     ).epsilons
 
 

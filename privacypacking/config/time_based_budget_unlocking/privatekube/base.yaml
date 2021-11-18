@@ -1,10 +1,10 @@
-log_file: "privatekube_batch_overflow"
+# log_file: "privatekube_batch_overflow"
 
-epsilon: 1
+epsilon: 10
 delta: 1.0e-5
 
 blocks_spec:
-  initial_num: 0
+  initial_num: 10
   block_arrival_frequency:
     enabled: true
     constant:
@@ -23,12 +23,12 @@ tasks_spec:
     enabled: true
     poisson:
       enabled: true
-      avg_number_tasks_per_block: 10
+      avg_number_tasks_per_block: 250
 
   max_tasks:
     enabled: true
     # num: 5000
-    from_max_blocks: 10
+    from_max_blocks: 20
 
 scheduler_spec:
   method: time_based_budget_unlocking
