@@ -53,6 +53,7 @@ class Scheduler:
         self.task_queue = TaskQueue()
         self.blocks = {}
         self.tasks_info = TasksInfo()
+        self.simulation_terminated = False
 
     def consume_budgets(self, task):
         """

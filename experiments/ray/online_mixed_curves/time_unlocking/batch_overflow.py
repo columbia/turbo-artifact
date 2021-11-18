@@ -48,7 +48,7 @@ def grid():
     n = [1]
     data_lifetime = [1]
     avg_number_tasks_per_block = [10]
-    max_blocks = [10]
+    max_blocks = [20]
     initial_blocks = [5]
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
@@ -65,7 +65,8 @@ def grid():
 
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
 
-    config[TASKS_SPEC][MAX_TASKS][FROM_MAX_BLOCKS] = tune.grid_search(max_blocks)
+    # config[TASKS_SPEC][MAX_TASKS][FROM_MAX_BLOCKS] = tune.grid_search(max_blocks)
+    config[BLOCKS_SPEC][MAX_BLOCKS] = tune.grid_search(max_blocks)
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
@@ -79,13 +80,17 @@ def grid():
         AVG_NUMBER_TASKS_PER_BLOCK
     ] = tune.grid_search(avg_number_tasks_per_block)
 
-    config[DATA_LIFETIME] = tune.grid_search(data_lifetime)
-    config[SCHEDULING_WAIT_TIME] = tune.grid_search(scheduler_scheduling_time)
+    config[SCHEDULER_SPEC][DATA_LIFETIME] = tune.grid_search(data_lifetime)
+    config[SCHEDULER_SPEC][SCHEDULING_WAIT_TIME] = tune.grid_search(
+        scheduler_scheduling_time
+    )
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
     config[SCHEDULER_SPEC][N] = tune.grid_search(n)
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(np.arange(0, 5100, step=100, dtype=int).tolist())
     config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
+
+    logger.info(f"Tune config: {config}")
 
     tune.run(
         run_and_report,

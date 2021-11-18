@@ -5,6 +5,7 @@ delta: 1.0e-5
 
 blocks_spec:
   initial_num: 10
+  max_blocks: 20
   block_arrival_frequency:
     enabled: true
     constant:
@@ -25,13 +26,13 @@ tasks_spec:
       enabled: true
       avg_number_tasks_per_block: 250
 
-  max_tasks:
-    enabled: true
-    # num: 5000
-    from_max_blocks: 20
+  # max_tasks:
+  #   enabled: true
+  #   # num: 5000
+  #   from_max_blocks: 20
 
 scheduler_spec:
   method: time_based_budget_unlocking
-  data_lifetime: 60
+  data_lifetime: 5
   metric: DominantShares
   n: 125

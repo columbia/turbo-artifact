@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import partial
 from typing import List
 
+from loguru import logger
 from numpy.lib.arraysetops import isin
 
 from privacypacking.budget import Block, Task
@@ -26,6 +27,9 @@ from privacypacking.utils.utils import *
 # Configuration Reading Logic
 class Config:
     def __init__(self, config):
+
+        logger.info(f"Initializing config: {config}")
+
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
@@ -40,6 +44,8 @@ class Config:
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
         self.initial_blocks_num = self.blocks_spec[INITIAL_NUM]
+        self.max_blocks = self.blocks_spec[MAX_BLOCKS]
+
         self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
         if self.block_arrival_frequency[ENABLED]:
             self.block_arrival_frequency_enabled = True

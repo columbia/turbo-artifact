@@ -2,6 +2,8 @@ from itertools import count
 
 from loguru import logger
 
+from privacypacking.simulator.resourcemanager import LastItem
+
 
 class Tasks:
     """
@@ -33,11 +35,14 @@ class Tasks:
                 self.env.process(self.task(task_id))
                 yield self.env.timeout(task_arrival_interval)
 
-                if (
-                    self.config.max_tasks is not None
-                    and task_id == self.config.max_tasks - 1
-                ):
-                    self.resource_manager.task_production_terminated = True
+                # if (
+                #     self.config.max_tasks is not None
+                #     and task_id == self.config.max_tasks - 1
+                # ):
+                #     self.resource_manager.task_production_terminated = True
+
+            # Send a special message to close the channel
+            self.resource_manager.new_tasks_queue.put(LastItem())
 
     def task(self, task_id: int, curve_distribution=None) -> None:
         """

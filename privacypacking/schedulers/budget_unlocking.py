@@ -111,7 +111,8 @@ class TBudgetUnlocking(Scheduler):
         self.env.process(unlocking_block.wait_and_unlock())
 
     def schedule_queue(self) -> List[int]:
-        while True:
+        # TODO: this guy doesn't terminate
+        while not self.simulation_terminated:
             yield self.env.timeout(self.scheduling_wait_time)
             super().schedule_queue()
 
