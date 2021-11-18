@@ -1,6 +1,6 @@
 # log_file: "privatekube_batch_overflow"
 
-epsilon: 10
+epsilon: 6
 delta: 1.0e-5
 
 blocks_spec:

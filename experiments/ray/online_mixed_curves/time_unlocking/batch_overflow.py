@@ -40,22 +40,23 @@ def grid():
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         DYNAMIC_FLAT_RELEVANCE,
+        FCFS,
     ]
 
-    scheduler_scheduling_time = [1]
+    scheduler_scheduling_time = [0.1]
     # n = [100, 500, 1000, 1500, 2000]
-    n = [100]
-    data_lifetime = [3]
-    avg_number_tasks_per_block = [400]
-    max_blocks = [20]
-    initial_blocks = [10]
+    n = [1]
+    data_lifetime = [1]
+    avg_number_tasks_per_block = [10]
+    max_blocks = [10]
+    initial_blocks = [5]
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
     # data_path = "privatekube_event_g0.3_l0.3_p=1"
-    data_path = "mixed_curves"
+    # data_path = "mixed_curves"
+    data_path = "mixed_curves_large"
 
-    # TODO: change task frequency as average number of task per block, and stop simulation after number of blocks
     # TODO: warm up and wind down period?
 
     # TODO: Try to create initial blocks already unlocked?
@@ -89,7 +90,7 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 10},
+        resources_per_trial={"cpu": 3},
         local_dir=RAY_LOGS,
         resume=False,
     )

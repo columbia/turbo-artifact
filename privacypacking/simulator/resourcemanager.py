@@ -1,6 +1,7 @@
 import simpy
-from privacypacking.schedulers.methods import get_scheduler
 from loguru import logger
+
+from privacypacking.schedulers.methods import get_scheduler
 
 
 class ResourceManager:
@@ -20,9 +21,10 @@ class ResourceManager:
         self.scheduler = get_scheduler(self.config, self.env)
         self.blocks_initialized = self.env.event()
         self.task_production_terminated = False
+
+        # Start the processes
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
-
         self.env.process(self.daemon_clock())
 
     def daemon_clock(self):

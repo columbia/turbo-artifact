@@ -1,4 +1,5 @@
 from itertools import count
+
 from loguru import logger
 
 
@@ -23,6 +24,7 @@ class Blocks:
         for _ in range(initial_blocks_num):
             self.env.process(self.block(next(self.blocks_count)))
 
+        # TODO: fixed number of blocks instead?
         if self.config.block_arrival_frequency_enabled:
             while not self.resource_manager.task_production_terminated:
                 block_arrival_interval = self.config.set_block_arrival_time()

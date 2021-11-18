@@ -12,7 +12,11 @@ class Simulator:
         # self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         self.env = simpy.Environment()
         self.config = config
+
+        # Start the block and tasks consumers
         self.rm = ResourceManager(self.env, self.config)
+
+        # Start the block and tasks producers
         Blocks(self.env, self.rm)
         Tasks(self.env, self.rm)
 
@@ -20,8 +24,8 @@ class Simulator:
         start = datetime.now()
 
         # TODO: make this configurable
-        self.env.run(until=200)
-        # self.env.run()
+        # self.env.run(until=200)
+        self.env.run()
 
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
