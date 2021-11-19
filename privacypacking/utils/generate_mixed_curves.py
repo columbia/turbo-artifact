@@ -19,7 +19,7 @@ DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data/mixed_c
 def main(
     epsilon_1: float = typer.Option(0.5, help="Low budget tasks"),
     epsilon_2: float = typer.Option(1.0, help="High budget tasks"),
-    delta: float = typer.Option(1e-5, help="Delta"),
+    delta: float = typer.Option(1e-7, help="Delta"),
     n_1: int = typer.Option(1, help="Low number of blocks"),
     n_2: int = typer.Option(10, help="High number of blocks"),
     block_selection_policy: str = typer.Option(
@@ -44,7 +44,7 @@ def main(
 
                 # Typical values for MNIST-like datasets
                 dataset_size = 50_000
-                batch_size = 100
+                batch_size = 50
                 epochs = 50
 
                 sigma = compute_noise_from_target_epsilon(

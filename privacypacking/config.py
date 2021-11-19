@@ -17,6 +17,7 @@ from privacypacking.budget.curves import (
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
 from privacypacking.schedulers.utils import (
+    DOMINANT_SHARES,
     TASK_BASED_BUDGET_UNLOCKING,
     THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
@@ -63,6 +64,8 @@ class Config:
                 ]
         else:
             self.block_arrival_frequency_enabled = False
+            self.block_arrival_constant_enabled = False
+            self.block_arrival_poisson_enabled = False
 
         # TASKS
         self.tasks_spec = config[TASKS_SPEC]
@@ -201,6 +204,10 @@ class Config:
             self.new_block_driven_scheduling = True
         elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
             self.time_based_scheduling = True
+            if self.scheduler_metric == DOMINANT_SHARES:
+                logger.warning(
+                    f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
+                )
         else:
             self.new_task_driven_scheduling = True
 

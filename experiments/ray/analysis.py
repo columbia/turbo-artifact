@@ -94,7 +94,7 @@ def load_scheduling_dumps_alphas(
             for block_id, block_budget in t["budget_per_block"].items():
                 orders = t["budget_per_block"][block_id]["orders"]
 
-                for alpha in [0, 3, 5, 8, 64]:
+                for alpha in [0, 4, 6, 8, 64]:
                     d["alpha"].append(alpha)
                     d["blockid_alpha"].append(f"{int(block_id):03}-{alpha:02}")
 
@@ -117,6 +117,9 @@ def load_scheduling_dumps_alphas(
                     )
                     d["total_blocks"].append(len(run_dict["blocks"]))
                     d["n_blocks"].append(len(t["budget_per_block"]))
+                    d["creation_time"].append(t["creation_time"])
+                    d["scheduling_time"].append(t["scheduling_time"])
+                    d["scheduling_delay"].append(t["scheduling_delay"])
 
                     d["block"].append(int(block_id))
                     d["block_selection"].append(

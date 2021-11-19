@@ -17,7 +17,6 @@ class ResourceManager:
     def __init__(self, environment, configuration):
         self.env = environment
         self.config = configuration
-        self.block_arrival_interval = self.config.set_block_arrival_time()
 
         # To store the incoming tasks and blocks
         self.new_tasks_queue = simpy.Store(self.env)
@@ -35,8 +34,15 @@ class ResourceManager:
         # Start the processes
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
-        self.env.process(self.daemon_clock())
-        self.env.process(self.termination_clock())
+
+        # In the online case, start a clock to terminate the simulation
+        if self.config.block_arrival_frequency_enabled:
+            self.block_arrival_interval = self.config.set_block_arrival_time()
+            self.env.process(self.daemon_clock())
+            self.env.process(self.termination_clock())
+        else:
+            self.block_production_terminated = True
+            # self.task_production_terminated = True
 
     def termination_clock(self):
 

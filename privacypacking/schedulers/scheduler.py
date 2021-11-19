@@ -64,7 +64,7 @@ class Scheduler:
             block.budget -= demand_budget
 
     def now(self) -> Optional[float]:
-        return self.env.now if hasattr(self, "env") else None
+        return self.env.now if hasattr(self, "env") else 0
 
     def allocate_task(self, task: Task) -> None:
         """

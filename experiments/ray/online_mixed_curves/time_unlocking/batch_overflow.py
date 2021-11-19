@@ -43,19 +43,19 @@ def grid():
         FCFS,
     ]
 
-    scheduler_scheduling_time = [0.1]
+    scheduler_scheduling_time = [5]
     # n = [100, 500, 1000, 1500, 2000]
-    n = [1]
-    data_lifetime = [1]
-    avg_number_tasks_per_block = [10]
-    max_blocks = [20]
-    initial_blocks = [5]
+    n = [100]
+    data_lifetime = [10]
+    avg_number_tasks_per_block = [30]
+    max_blocks = [30]
+    initial_blocks = [0]
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
     # data_path = "privatekube_event_g0.3_l0.3_p=1"
-    # data_path = "mixed_curves"
-    data_path = "mixed_curves_large"
+    data_path = "mixed_curves"
+    # data_path = "mixed_curves_large"
 
     # TODO: warm up and wind down period?
 

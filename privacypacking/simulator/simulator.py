@@ -1,7 +1,7 @@
 from datetime import datetime
 
-# import simpy.rt
 import simpy
+from loguru import logger
 
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import *

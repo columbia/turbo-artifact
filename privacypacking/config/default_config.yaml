@@ -1,5 +1,5 @@
 epsilon: 10
-delta: 0.001
+delta: 0.00001
 global_seed: 64
 deterministic: true
 log_every_n_iterations: 0
