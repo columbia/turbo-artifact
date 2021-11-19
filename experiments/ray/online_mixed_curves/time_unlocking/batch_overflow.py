@@ -43,12 +43,12 @@ def grid():
         FCFS,
     ]
 
-    scheduler_scheduling_time = [5]
+    scheduler_scheduling_time = [20]
     # n = [100, 500, 1000, 1500, 2000]
     n = [100]
     data_lifetime = [10]
-    avg_number_tasks_per_block = [30]
-    max_blocks = [30]
+    avg_number_tasks_per_block = [100]
+    max_blocks = [20]
     initial_blocks = [0]
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
