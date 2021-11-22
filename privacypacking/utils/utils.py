@@ -134,6 +134,8 @@ def global_metrics(logs: dict) -> dict:
         "n_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
+        "T": logs["simulator_config"]["scheduler_spec"]["scheduling_wait_time"],
+        "data_lifetime": logs["simulator_config"]["scheduler_spec"]["data_lifetime"]
         # "tasks_scheduling_times": logs["tasks_scheduling_times"],
     }
 

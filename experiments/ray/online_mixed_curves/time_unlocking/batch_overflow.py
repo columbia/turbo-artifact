@@ -43,13 +43,21 @@ def grid():
         FCFS,
     ]
 
-    scheduler_scheduling_time = [20]
+    scheduler_scheduling_time = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 10, 15, 20]
     # n = [100, 500, 1000, 1500, 2000]
-    n = [100]
-    data_lifetime = [10]
+
+    # NOTE: if we agree that N is purely an implementation detail, we can even change the implementation to
+    # have some continuous time unlocking? E.g. with lazy unlocking, update the budget only at the last minute (when a new scheduling step happens)
+    # But maybe not close to the PrivateKube implem.
+    # Also, it doesn't affect the performance much. Can be great to remove one parameter and avoid some correctness issues.
+    n = [10_000]
+    data_lifetime = [1]
     avg_number_tasks_per_block = [100]
     max_blocks = [20]
+
+    # TODO: re-add the initial blocks
     initial_blocks = [0]
+    seeds = [0]
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
@@ -57,12 +65,9 @@ def grid():
     data_path = "mixed_curves"
     # data_path = "mixed_curves_large"
 
-    # TODO: warm up and wind down period?
-
-    # TODO: Try to create initial blocks already unlocked?
-
     block_selection_policies = ["LatestBlocksFirst"]
 
+    config[GLOBAL_SEED] = tune.grid_search(seeds)
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
 
     # config[TASKS_SPEC][MAX_TASKS][FROM_MAX_BLOCKS] = tune.grid_search(max_blocks)

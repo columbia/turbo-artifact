@@ -98,6 +98,7 @@ class Scheduler:
         # Run until scheduling cycle ends
         converged = False
         while not converged:
+            # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
             for task in sorted_tasks:
@@ -105,6 +106,7 @@ class Scheduler:
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
                     if self.metric().is_dynamic():
+                        # We go back to the beginning of the while loop
                         converged = False
                         break
         return allocated_task_ids

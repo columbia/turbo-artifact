@@ -138,6 +138,15 @@ def load_scheduling_dumps_alphas(
                     d["nblocks_maxeps"].append(
                         f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
                     )
+                    d["T"].append(
+                        run_dict["simulator_config"]["scheduler_spec"][
+                            "scheduling_wait_time"
+                        ]
+                    ),
+                    d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                    d["data_lifetime"].append(
+                        run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                    )
 
     df = pd.DataFrame(d).sort_values(
         ["blockid_alpha", "id", "allocated"], ascending=[True, True, False]
