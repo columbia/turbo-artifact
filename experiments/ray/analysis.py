@@ -5,6 +5,7 @@ from typing import Iterable, Union
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from privacypacking.budget.budget import Budget
 from privacypacking.utils.utils import LOGS_PATH
@@ -19,7 +20,10 @@ def load_ray_experiment(logs: Union[Path, str]) -> pd.DataFrame:
             results.append(d)
         except Exception:
             pass
-    return pd.DataFrame(results)
+
+    df = pd.DataFrame(results)
+
+    return df
 
 
 def load_latest_ray_experiment() -> pd.DataFrame:
@@ -79,7 +83,7 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
 
 
 def load_scheduling_dumps_alphas(
-    json_log_paths: Iterable[Union[Path, str]]
+    json_log_paths: Iterable[Union[Path, str]],
 ) -> pd.DataFrame:
     d = defaultdict(list)
 
@@ -155,7 +159,11 @@ def load_scheduling_dumps_alphas(
     return df
 
 
-def load_latest_scheduling_results(alphas=False, expname="") -> pd.DataFrame:
+def load_latest_scheduling_results(
+    alphas=False,
+    expname="",
+    tasks_dir="",
+) -> pd.DataFrame:
 
     if not expname:
         exp_dirs = list(LOGS_PATH.glob("exp_*"))
@@ -164,5 +172,21 @@ def load_latest_scheduling_results(alphas=False, expname="") -> pd.DataFrame:
         latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
-        return load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
-    return load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
+    else:
+        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+
+    if tasks_dir:
+        maxeps = {}
+        for task_file in Path(tasks_dir).glob("*.yaml"):
+            task_dict = yaml.safe_load(task_file.open("r"))
+            maxeps[f"{task_dict['rdp_epsilons'][-1]:.3f}"] = task_file.stem
+        maxeps
+
+        def get_task_name(s):
+            n, m = s.split("-")
+            return f"{n}-{maxeps[m]}"
+
+        df["task"] = df["nblocks_maxeps"].apply(get_task_name)
+
+    return df
