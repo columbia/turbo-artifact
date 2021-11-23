@@ -155,10 +155,13 @@ def load_scheduling_dumps_alphas(
     return df
 
 
-def load_latest_scheduling_results(alphas=False) -> pd.DataFrame:
-    exp_dirs = list(LOGS_PATH.glob("exp_*"))
+def load_latest_scheduling_results(alphas=False, expname="") -> pd.DataFrame:
 
-    latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    if not expname:
+        exp_dirs = list(LOGS_PATH.glob("exp_*"))
+        latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    else:
+        latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
         return load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))

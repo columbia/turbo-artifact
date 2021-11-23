@@ -101,6 +101,10 @@ class Scheduler:
             # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
+
+            # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
+            # time.sleep(1)
+
             for task in sorted_tasks:
                 if self.can_run(task):
                     self.allocate_task(task)

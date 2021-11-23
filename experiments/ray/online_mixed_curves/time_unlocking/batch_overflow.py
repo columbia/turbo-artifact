@@ -44,6 +44,8 @@ def grid():
     ]
 
     scheduler_scheduling_time = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 10, 15, 20]
+    # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
+
     # n = [100, 500, 1000, 1500, 2000]
 
     # NOTE: if we agree that N is purely an implementation detail, we can even change the implementation to
@@ -51,8 +53,13 @@ def grid():
     # But maybe not close to the PrivateKube implem.
     # Also, it doesn't affect the performance much. Can be great to remove one parameter and avoid some correctness issues.
     n = [10_000]
-    data_lifetime = [1]
+    data_lifetime = [5]
+
+    # n = [1]
+    # data_lifetime = [0.001]
+
     avg_number_tasks_per_block = [100]
+
     max_blocks = [20]
 
     # TODO: re-add the initial blocks
@@ -63,6 +70,8 @@ def grid():
 
     # data_path = "privatekube_event_g0.3_l0.3_p=1"
     data_path = "mixed_curves"
+    # data_path = "mixed_curves_killer"
+
     # data_path = "mixed_curves_large"
 
     block_selection_policies = ["LatestBlocksFirst"]

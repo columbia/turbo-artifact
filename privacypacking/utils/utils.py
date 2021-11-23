@@ -135,7 +135,9 @@ def global_metrics(logs: dict) -> dict:
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
         "T": logs["simulator_config"]["scheduler_spec"]["scheduling_wait_time"],
-        "data_lifetime": logs["simulator_config"]["scheduler_spec"]["data_lifetime"]
+        "data_lifetime": logs["simulator_config"]["scheduler_spec"].get(
+            "data_lifetime", None
+        )
         # "tasks_scheduling_times": logs["tasks_scheduling_times"],
     }
 

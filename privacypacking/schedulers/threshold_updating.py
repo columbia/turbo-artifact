@@ -1,11 +1,13 @@
+import time
 from typing import List, Tuple
-from simpy import Event
-from privacypacking.budget import Task
 
+from loguru import logger
+from simpy import Event
+
+from privacypacking.budget import Task
 from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.schedulers.threshold_update_mechanisms import (
+from privacypacking.schedulers.threshold_update_mechanisms import (  # QueueAverageDynamic,
     NaiveAverage,
-    # QueueAverageDynamic,
 )
 
 """
@@ -26,6 +28,7 @@ class ThresholdUpdating(Scheduler):
         converged = False
         while not converged:
             sorted_tasks = self.order(self.task_queue.tasks)
+
             # print("sorting...")
             converged = True
             for task in sorted_tasks:

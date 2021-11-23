@@ -77,7 +77,9 @@ class Fcfs(Metric):
     def apply(
         task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
     ) -> id:
-        return task.id
+        # return task.id
+        # The smallest id has the highest priority
+        return 1 / (task.id + 1)
 
 
 class FlatRelevance(Metric):

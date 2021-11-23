@@ -64,6 +64,17 @@ python-versions = ">=3.6"
 frozenlist = ">=1.1.0"
 
 [[package]]
+name = "amazon.ion"
+version = "0.7.0"
+description = "A Python implementation of Amazon Ion."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "ansicon"
 version = "1.89.0"
 description = "Python wrapper for loading Jason Hood's ANSICON"
@@ -2175,7 +2186,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "9919a79961decdbdcfb373b8d0ed35bb21705c11b0b17fe9cdfe5b635f9cb924"
+content-hash = "5644a44545733ae7b434371ed9fe78acb897b8275627e886bd360fb8b018601e"
 
 [metadata.files]
 absl-py = [
@@ -2267,6 +2278,9 @@ aioredis = [
 aiosignal = [
     {file = "aiosignal-1.2.0-py3-none-any.whl", hash = "sha256:26e62109036cd181df6e6ad646f91f0dcfd05fe16d0cb924138ff2ab75d64e3a"},
     {file = "aiosignal-1.2.0.tar.gz", hash = "sha256:78ed67db6c7b7ced4f98e495e572106d5c432a93e1ddd1bf475e1dc05f5b7df2"},
+]
+"amazon.ion" = [
+    {file = "amazon.ion-0.7.0.tar.gz", hash = "sha256:4b5f7af82508eac9952eea48b6745c85a5b9e6b1dd6ebeb72eee4f8ed4847364"},
 ]
 ansicon = [
     {file = "ansicon-1.89.0-py2.py3-none-any.whl", hash = "sha256:f1def52d17f65c2c9682cf8370c03f541f410c1752d6a14029f97318e4b9dfec"},

@@ -2,8 +2,11 @@ import argparse
 import os
 from datetime import datetime
 
+import loguru
 from loguru import logger
 from ray import tune
+from ray.tune import Stopper
+from ray.tune.stopper import TimeoutStopper
 
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
@@ -24,6 +27,20 @@ from privacypacking.schedulers.utils import (
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
+
+
+class TrialStopper(Stopper):
+    def __init__(self, max_seconds=10):
+        self._deadline = max_seconds
+
+    def __call__(self, trial_id, result):
+        logger.warning(
+            f"Trial {trial_id} has been running for {result['time_total_s']} seconds"
+        )
+        return result["time_total_s"] > self._deadline
+
+    def stop_all(self):
+        return False
 
 
 def run_and_report(config: dict) -> None:
@@ -55,24 +72,21 @@ def grid():
     update_dict(user_config, config)
 
     # Conditonal parameter
-    # method_and_metric = [(SIMPLEX, DOMINANT_SHARES)]
-    method_and_metric = []
+    method_and_metric = [(SIMPLEX, DOMINANT_SHARES)]
+    # method_and_metric = []
     for metric in [
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         OVERFLOW_RELEVANCE,
+        FCFS,
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
-    num_tasks = [100, 200, 300, 400]
+    num_tasks = [50, 100, 200, 300, 400, 500, 750, 1000, 1500, 2000]
     num_blocks = [10]
     data_path = "mixed_curves"
     block_selection_policies = ["RandomBlocks"]
-
-    # TODO: warm up and wind down period?
-
-    # TODO: Try to create initial blocks already unlocked?
 
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
@@ -116,6 +130,8 @@ def grid():
         resources_per_trial={"cpu": 3},
         local_dir=RAY_LOGS,
         resume=False,
+        # stop=TrialStopper(max_seconds=30),
+        stop=TimeoutStopper(timeout=3 * 60),
     )
 
 
