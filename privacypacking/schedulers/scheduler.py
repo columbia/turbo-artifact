@@ -1,12 +1,15 @@
 import time
-from typing import List, Tuple
+from typing import List, Optional, Tuple, Union
 
+from loguru import logger
 from simpy import Event
 
 from privacypacking.budget import Block, Task
-from privacypacking.schedulers.utils import PENDING, ALLOCATED
+from privacypacking.budget.block_selection import NotEnoughBlocks
+from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 
 
+# TODO: efficient data structure here? (We have indices)
 class TaskQueue:
     def __init__(self):
         self.tasks = []
@@ -18,15 +21,29 @@ class TasksInfo:
         self.allocated_tasks = {}
         self.allocated_resources_events = {}
         self.tasks_status = {}
-        self.tasks_scheduling_time = {}
+        self.scheduling_time = {}
+        self.creation_time = {}
+        self.scheduling_delay = {}
 
     def dump(self):
-        tasks_info = {"allocated_tasks": {}, "tasks_scheduling_time": {}}
-        for task_id, task in self.allocated_tasks.items():
-            tasks_info["allocated_tasks"][task_id] = task
-            tasks_info["tasks_scheduling_time"][task_id] = self.tasks_scheduling_time[
-                task_id
-            ]
+        tasks_info = {
+            "status": self.tasks_status,
+            "scheduling_delay": self.scheduling_delay,
+            "creation_time": self.creation_time,
+            "scheduling_time": self.scheduling_time,
+        }
+
+        # # Why only dumping the metadata for allocated tasks?
+        # for task_id, task in self.allocated_tasks.items():
+        #     # tasks_info["allocated_tasks"][task_id] = task
+
+        #     # No need to store the task object
+        #     tasks_info["allocated_tasks"][task_id] = True
+
+        #     tasks_info["scheduling_delay"][task_id] = self.scheduling_delay[task_id]
+        #     tasks_info["creation_time"][task_id] = self.creation_time[task_id]
+        #     tasks_info["scheduling_time"][task_id] = self.scheduling_time[task_id]
+
         return tasks_info
 
 
@@ -36,6 +53,7 @@ class Scheduler:
         self.task_queue = TaskQueue()
         self.blocks = {}
         self.tasks_info = TasksInfo()
+        self.simulation_terminated = False
 
     def consume_budgets(self, task):
         """
@@ -44,6 +62,9 @@ class Scheduler:
         for block_id, demand_budget in task.budget_per_block.items():
             block = self.blocks[block_id]
             block.budget -= demand_budget
+
+    def now(self) -> Optional[float]:
+        return self.env.now if hasattr(self, "env") else 0
 
     def allocate_task(self, task: Task) -> None:
         """
@@ -55,10 +76,15 @@ class Scheduler:
         self.tasks_info.tasks_status[task.id] = ALLOCATED
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
-        self.tasks_info.tasks_scheduling_time[task.id] = (
-            time.time() - self.tasks_info.tasks_scheduling_time[task.id]
+        self.tasks_info.scheduling_time[task.id] = self.now()
+        self.tasks_info.scheduling_delay[task.id] = (
+            self.tasks_info.scheduling_time[task.id]
+            - self.tasks_info.creation_time[task.id]
         )
+
+        # TODO: do we really need to keep the whole task object?
         self.tasks_info.allocated_tasks[task.id] = task
+
         self.task_queue.tasks.remove(task)  # Todo: this takes linear time -> optimize
 
     def schedule_queue(self) -> List[int]:
@@ -72,25 +98,38 @@ class Scheduler:
         # Run until scheduling cycle ends
         converged = False
         while not converged:
+            # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
+
+            # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
+            # time.sleep(1)
+
             for task in sorted_tasks:
                 if self.can_run(task):
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
                     if self.metric().is_dynamic():
+                        # We go back to the beginning of the while loop
                         converged = False
                         break
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
-        self.task_set_block_ids(task)
+        try:
+            self.task_set_block_ids(task)
+        except NotEnoughBlocks as e:
+            logger.warning(
+                f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
+            )
+            self.tasks_info.tasks_status[task.id] = FAILED
+            return
 
         # Update tasks_info
         self.tasks_info.tasks_status[task.id] = PENDING
         self.tasks_info.allocated_resources_events[task.id] = allocated_resources_event
-        self.tasks_info.tasks_scheduling_time[task.id] = time.time()
+        self.tasks_info.creation_time[task.id] = self.now()
         self.task_queue.tasks.append(task)
 
     def add_block(self, block: Block) -> None:
@@ -125,8 +164,15 @@ class Scheduler:
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
+        # try:
         selected_block_ids = task.block_selection_policy.select_blocks(
             blocks=self.blocks, task_blocks_num=task.n_blocks
         )
+        # except NotEnoughBlocks as e:
+        #     logger.warning(e)
+        #     logger.warning(
+        #         "Setting block ids to -1, the task will never be allocated.\n Should we count it in the total number of tasks?"
+        #     )
+        #     selected_block_ids = [-1]
         assert selected_block_ids is not None
         task.set_budget_per_block(selected_block_ids)

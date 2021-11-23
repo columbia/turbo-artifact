@@ -1,10 +1,8 @@
-from typing import Iterable, Any
+from typing import Any, Iterable
 
-from privacypacking.budget.budget import Budget
-from privacypacking.budget.curves import (
-    ZeroCurve,
-)
 from privacypacking.budget.block_selection import BlockSelectionPolicy
+from privacypacking.budget.budget import Budget
+from privacypacking.budget.curves import ZeroCurve
 
 
 class Task:
@@ -52,6 +50,8 @@ class Task:
         return {
             "id": self.id,
             "profit": self.profit,
+            "start_time": None,
+            "allocation_time": None,
             "budget_per_block": {
                 block_id: budget.dump()
                 for block_id, budget in self.budget_per_block.items()

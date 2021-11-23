@@ -32,6 +32,13 @@ class UnlockingBlock(Block):
     def is_unlocked(self):
         return self.unlocked_budget == self.initial_budget
 
+    @property
+    def available_unlocked_budget(self) -> Budget:
+        """Unlocked budget that is available for scheduling.
+        available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
+        """
+        return self.unlocked_budget + self.budget - self.initial_budget
+
 
 class NBudgetUnlocking(Scheduler):
     """N-unlocking: unlocks some budget every time a new task arrives."""
@@ -94,6 +101,8 @@ class TBudgetUnlocking(Scheduler):
         self.budget_unlocking_time = budget_unlocking_time
         self.scheduling_wait_time = scheduling_wait_time
         self.env = env
+
+        # TODO: why do we launch this as a process?
         self.env.process(self.schedule_queue())
 
     def add_block(self, block: Block) -> None:
@@ -104,7 +113,7 @@ class TBudgetUnlocking(Scheduler):
         self.env.process(unlocking_block.wait_and_unlock())
 
     def schedule_queue(self) -> List[int]:
-        while True:
+        while not self.simulation_terminated:
             yield self.env.timeout(self.scheduling_wait_time)
             super().schedule_queue()
 

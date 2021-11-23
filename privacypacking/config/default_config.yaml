@@ -1,5 +1,5 @@
 epsilon: 10
-delta: 0.001
+delta: 0.00001
 global_seed: 64
 deterministic: true
 log_every_n_iterations: 0
@@ -7,6 +7,7 @@ profit: 1
 
 blocks_spec:
   initial_num: 1
+  max_blocks: 10
   block_arrival_frequency:
     enabled: false    # no online blocks
     poisson:

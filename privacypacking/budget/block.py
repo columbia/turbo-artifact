@@ -18,3 +18,11 @@ class Block:
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
         }
+
+    @property
+    def remaining_budget(self) -> Budget:
+        return self.budget
+
+    @property
+    def allocated_budget(self) -> Budget:
+        return self.initial_budget - self.budget

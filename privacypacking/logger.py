@@ -1,5 +1,7 @@
 import json
 
+from privacypacking.schedulers.utils import ALLOCATED
+
 
 class Logger:
     def __init__(self, file, scheduler_method):
@@ -17,19 +19,39 @@ class Logger:
         simulator_config,
         **kwargs,
     ) -> dict:
+
+        # TODO: remove allocating_task_id from args
+
         log = {"tasks": []}
         num_scheduled = 0
+        # info = tasks_info.dump()
+        tasks_scheduling_times = []
+
         for task in tasks:
             task_dump = task.dump()
-            if task.id in allocated_task_ids:
+
+            if tasks_info.tasks_status[task.id] == ALLOCATED:
                 num_scheduled += 1
                 allocated = True
+                tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
             else:
                 allocated = False
-            task_dump.update({"allocated": allocated})
+
+            task_dump.update(
+                {
+                    # "allocated": allocated,
+                    "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                    "status": tasks_info.tasks_status[task.id],
+                    "creation_time": tasks_info.creation_time[task.id],
+                    "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                    "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                }
+            )
             log["tasks"].append(
                 task_dump
             )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+
+        # TODO: Store scheduling times into the tasks directly?
 
         log["blocks"] = []
         for block in blocks.values():
@@ -38,11 +60,11 @@ class Logger:
         log["scheduler_method"] = self.scheduler_method
         log["num_scheduled_tasks"] = num_scheduled
         log["total_tasks"] = len(tasks)
-        tasks_info = tasks_info.dump()
-        # tasks_info["allocated_tasks"]
-        log["tasks_scheduling_times"] = sorted(
-            tasks_info["tasks_scheduling_time"].values()
-        )
+        log["tasks_info"] = tasks_info.dump()
+
+        # tasks_info = tasks_info.dump()
+        # # tasks_info["allocated_tasks"]
+        log["tasks_scheduling_times"] = sorted(tasks_scheduling_times)
 
         log["simulator_config"] = simulator_config.dump()
 

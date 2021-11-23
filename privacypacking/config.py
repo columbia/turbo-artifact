@@ -5,6 +5,9 @@ from datetime import datetime
 from functools import partial
 from typing import List
 
+from loguru import logger
+from numpy.lib.arraysetops import isin
+
 from privacypacking.budget import Block, Task
 from privacypacking.budget.curves import (
     GaussianCurve,
@@ -14,6 +17,7 @@ from privacypacking.budget.curves import (
 from privacypacking.budget.task import UniformTask
 from privacypacking.logger import Logger
 from privacypacking.schedulers.utils import (
+    DOMINANT_SHARES,
     TASK_BASED_BUDGET_UNLOCKING,
     THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
@@ -24,6 +28,9 @@ from privacypacking.utils.utils import *
 # Configuration Reading Logic
 class Config:
     def __init__(self, config):
+
+        logger.info(f"Initializing config: {config}")
+
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
@@ -35,37 +42,11 @@ class Config:
             random.seed(self.global_seed)
             np.random.seed(self.global_seed)
 
-        # SCHEDULER
-        self.scheduler = config[SCHEDULER_SPEC]
-        self.scheduler_method = self.scheduler[METHOD]
-        self.scheduler_metric = self.scheduler[METRIC]
-        self.scheduler_N = self.scheduler[N]
-        self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
-        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
-
-        if SOLVER in self.scheduler:
-            self.scheduler_solver = self.scheduler[SOLVER]
-        else:
-            self.scheduler_solver = None
-        
-
-        self.scheduler_threshold_update_mechanism = self.scheduler[
-            THRESHOLD_UPDATE_MECHANISM
-        ]
-        self.new_task_driven_scheduling = False
-        self.time_based_scheduling = False
-        self.new_block_driven_scheduling = False
-        if self.scheduler_method == THRESHOLD_UPDATING:
-            self.new_task_driven_scheduling = True
-            self.new_block_driven_scheduling = True
-        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-            self.time_based_scheduling = True
-        else:
-            self.new_task_driven_scheduling = True
-
         # BLOCKS
         self.blocks_spec = config[BLOCKS_SPEC]
         self.initial_blocks_num = self.blocks_spec[INITIAL_NUM]
+        self.max_blocks = self.blocks_spec[MAX_BLOCKS]
+
         self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
         if self.block_arrival_frequency[ENABLED]:
             self.block_arrival_frequency_enabled = True
@@ -83,6 +64,8 @@ class Config:
                 ]
         else:
             self.block_arrival_frequency_enabled = False
+            self.block_arrival_constant_enabled = False
+            self.block_arrival_poisson_enabled = False
 
         # TASKS
         self.tasks_spec = config[TASKS_SPEC]
@@ -147,16 +130,34 @@ class Config:
             if self.task_arrival_frequency[POISSON][ENABLED]:
                 self.task_arrival_poisson_enabled = True
                 self.task_arrival_constant_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[POISSON][
-                    TASK_ARRIVAL_INTERVAL
-                ]
+                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[POISSON]:
+                    self.task_arrival_interval = (
+                        self.block_arrival_interval
+                        / self.task_arrival_frequency[POISSON][
+                            AVG_NUMBER_TASKS_PER_BLOCK
+                        ]
+                    )
+                else:
+                    self.task_arrival_interval = self.task_arrival_frequency[POISSON][
+                        TASK_ARRIVAL_INTERVAL
+                    ]
 
             elif self.task_arrival_frequency[CONSTANT][ENABLED]:
                 self.task_arrival_constant_enabled = True
                 self.task_arrival_poisson_enabled = False
-                self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
-                    TASK_ARRIVAL_INTERVAL
-                ]
+
+                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[CONSTANT]:
+                    self.task_arrival_interval = (
+                        self.block_arrival_interval
+                        / self.task_arrival_frequency[CONSTANT][
+                            AVG_NUMBER_TASKS_PER_BLOCK
+                        ]
+                    )
+                else:
+                    self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
+                        TASK_ARRIVAL_INTERVAL
+                    ]
+
             assert (
                 self.task_arrival_poisson_enabled != self.task_arrival_constant_enabled
             )
@@ -165,9 +166,52 @@ class Config:
 
         self.max_tasks = None
         if self.tasks_spec[MAX_TASKS][ENABLED]:
-            self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
+            if FROM_MAX_BLOCKS in self.tasks_spec[MAX_TASKS]:
+                self.max_tasks = (
+                    self.tasks_spec[MAX_TASKS][FROM_MAX_BLOCKS]
+                    * self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
+                )
+            else:
+                self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
 
-        # Log file
+        # SCHEDULER
+        self.scheduler = config[SCHEDULER_SPEC]
+        self.scheduler_method = self.scheduler[METHOD]
+        self.scheduler_metric = self.scheduler[METRIC]
+        self.scheduler_N = self.scheduler[N]
+        if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
+            self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
+            self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
+                self.scheduler_N
+            )
+        else:
+            self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+
+        if SOLVER in self.scheduler:
+            self.scheduler_solver = self.scheduler[SOLVER]
+        else:
+            self.scheduler_solver = None
+
+        self.scheduler_threshold_update_mechanism = self.scheduler[
+            THRESHOLD_UPDATE_MECHANISM
+        ]
+        self.new_task_driven_scheduling = False
+        self.time_based_scheduling = False
+        self.new_block_driven_scheduling = False
+        if self.scheduler_method == THRESHOLD_UPDATING:
+            self.new_task_driven_scheduling = True
+            self.new_block_driven_scheduling = True
+        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+            self.time_based_scheduling = True
+            if self.scheduler_metric == DOMINANT_SHARES:
+                logger.warning(
+                    f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
+                )
+        else:
+            self.new_task_driven_scheduling = True
+
+        # LOGS
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
@@ -374,33 +418,43 @@ class Config:
                 )
 
             # Select num of blocks
-            n_blocks_requests = demand_dict["n_blocks"].split(",")
-            num_blocks = [
-                n_blocks_request.split(":")[0] for n_blocks_request in n_blocks_requests
-            ]
-            frequencies = [
-                n_blocks_request.split(":")[1] for n_blocks_request in n_blocks_requests
-            ]
-            n_blocks = np.random.choice(
-                num_blocks,
-                1,
-                p=frequencies,
-            )[0]
-
-            # Select profit
-            if "profit" in demand_dict:
-                profit_requests = demand_dict["profit"].split(",")
-                profits = [
-                    profit_request.split(":")[0] for profit_request in profit_requests
+            if isinstance(demand_dict["n_blocks"], int):
+                n_blocks = demand_dict["n_blocks"]
+            elif isinstance(demand_dict["n_blocks"], str):
+                n_blocks_requests = demand_dict["n_blocks"].split(",")
+                num_blocks = [
+                    n_blocks_request.split(":")[0]
+                    for n_blocks_request in n_blocks_requests
                 ]
                 frequencies = [
-                    profit_request.split(":")[1] for profit_request in profit_requests
+                    n_blocks_request.split(":")[1]
+                    for n_blocks_request in n_blocks_requests
                 ]
-                profit = np.random.choice(
-                    profits,
+                n_blocks = np.random.choice(
+                    num_blocks,
                     1,
                     p=frequencies,
                 )[0]
+
+            # Select profit
+            if "profit" in demand_dict:
+                if isinstance(demand_dict["profit"], int):
+                    profit = demand_dict["profit"]
+                elif isinstance(demand_dict["profit"], str):
+                    profit_requests = demand_dict["profit"].split(",")
+                    profits = [
+                        profit_request.split(":")[0]
+                        for profit_request in profit_requests
+                    ]
+                    frequencies = [
+                        profit_request.split(":")[1]
+                        for profit_request in profit_requests
+                    ]
+                    profit = np.random.choice(
+                        profits,
+                        1,
+                        p=frequencies,
+                    )[0]
             else:
                 profit = 1
 

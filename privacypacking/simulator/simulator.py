@@ -1,7 +1,8 @@
 from datetime import datetime
 
-# import simpy.rt
 import simpy
+from loguru import logger
+
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import *
 
@@ -11,14 +12,20 @@ class Simulator:
         # self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         self.env = simpy.Environment()
         self.config = config
+
+        # Start the block and tasks consumers
         self.rm = ResourceManager(self.env, self.config)
+
+        # Start the block and tasks producers
         Blocks(self.env, self.rm)
         Tasks(self.env, self.rm)
 
     def run(self):
         start = datetime.now()
-        self.env.run(until=200)
-        # self.env.run()
+
+        # TODO: make this configurable
+        # self.env.run(until=200)
+        self.env.run()
 
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()

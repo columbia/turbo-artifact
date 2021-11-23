@@ -70,6 +70,12 @@ class Budget:
                 return True
         return False
 
+    def is_positive_all_alphas(self) -> bool:
+        for epsilon in self.epsilons:
+            if epsilon < 0:
+                return False
+        return True
+
     @property
     def alphas(self) -> list:
         return list(self.__orders.keys())
@@ -120,7 +126,11 @@ class Budget:
         """
         There must exist at least one order in the block's budget
         that is smaller or equal to the corresponding order of the demand budget.
+
+        Assumes that the demand_budget is positive for all alphas.
         """
+        # TODO: remove if this is too slow
+        assert demand_budget.is_positive_all_alphas()
         diff = self - demand_budget
         max_order = max(diff.epsilons)
         if max_order >= 0:

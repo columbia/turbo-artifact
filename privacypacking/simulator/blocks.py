@@ -1,5 +1,8 @@
 from itertools import count
+
 from loguru import logger
+
+from privacypacking.simulator.resourcemanager import LastItem
 
 
 class Blocks:
@@ -24,10 +27,21 @@ class Blocks:
             self.env.process(self.block(next(self.blocks_count)))
 
         if self.config.block_arrival_frequency_enabled:
-            while not self.resource_manager.task_production_terminated:
+            while not self.resource_manager.block_production_terminated:
                 block_arrival_interval = self.config.set_block_arrival_time()
-                self.env.process(self.block(next(self.blocks_count)))
+                block_id = next(self.blocks_count)
+                self.env.process(self.block(block_id))
+
                 yield self.env.timeout(block_arrival_interval)
+
+                if (
+                    self.config.max_blocks is not None
+                    and block_id == self.config.max_blocks - 1
+                ):
+                    self.resource_manager.block_production_terminated = True
+
+            # Send a special message to close the channel
+            self.resource_manager.new_blocks_queue.put(LastItem())
 
     def block(self, block_id):
         """

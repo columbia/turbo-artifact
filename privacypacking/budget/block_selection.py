@@ -10,6 +10,10 @@ class BlockSelectionException(Exception):
     pass
 
 
+class NotEnoughBlocks(BlockSelectionException):
+    pass
+
+
 # TODO: static methods are ill-suited for policies with parameters
 
 
@@ -36,7 +40,7 @@ class RandomBlocks(BlockSelectionPolicy):
         n_blocks = len(blocks)
         blocks_num = range(n_blocks)
         if task_blocks_num > n_blocks:
-            raise BlockSelectionException(
+            raise NotEnoughBlocks(
                 f"Requested {task_blocks_num} random blocks but there are only {n_blocks} blocks available."
             )
         return random.sample(blocks_num, task_blocks_num)
@@ -47,7 +51,7 @@ class LatestBlocksFirst(BlockSelectionPolicy):
     def select_blocks(blocks, task_blocks_num):
         n_blocks = len(blocks)
         if task_blocks_num > n_blocks:
-            raise BlockSelectionException(
+            raise NotEnoughBlocks(
                 f"Requested {task_blocks_num} blocks but there are only {n_blocks} blocks available."
             )
         return reversed(range(n_blocks - task_blocks_num, n_blocks))
@@ -59,7 +63,7 @@ class BiasedRandomBlocks(BlockSelectionPolicy):
         n_blocks = len(blocks)
         blocks_num = range(n_blocks)
         if task_blocks_num > n_blocks:
-            raise BlockSelectionException(
+            raise NotEnoughBlocks(
                 f"Requested {task_blocks_num} random blocks but there are only {n_blocks} blocks available."
             )
 
@@ -95,7 +99,7 @@ class ContiguousBlocksRandomOffset(BlockSelectionPolicy):
     def select_blocks(blocks, task_blocks_num):
         n_blocks = len(blocks)
         if task_blocks_num > n_blocks:
-            raise BlockSelectionException(
+            raise NotEnoughBlocks(
                 f"Requested {task_blocks_num}  blocks but there are only {n_blocks} blocks available."
             )
         offset = random.randint(0, n_blocks - task_blocks_num)
@@ -110,7 +114,7 @@ class Zeta(BlockSelectionPolicy):
     def select_blocks(self, blocks, task_blocks_num):
         n_blocks = len(blocks)
         if task_blocks_num > n_blocks:
-            raise BlockSelectionException(
+            raise NotEnoughBlocks(
                 f"Requested {task_blocks_num} blocks but there are only {n_blocks} blocks available."
             )
         density = np.array([(k + 1) ** (-self.s) for k in range(n_blocks)])

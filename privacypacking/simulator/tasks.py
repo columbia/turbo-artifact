@@ -2,6 +2,8 @@ from itertools import count
 
 from loguru import logger
 
+from privacypacking.simulator.resourcemanager import LastItem
+
 
 class Tasks:
     """
@@ -21,6 +23,7 @@ class Tasks:
         """
         # Wait till blocks initialization is completed
         yield self.resource_manager.blocks_initialized
+
         # Produce initial tasks
         initial_curves = self.config.get_initial_task_curves()
         for curve in initial_curves:
@@ -38,6 +41,9 @@ class Tasks:
                     and task_id == self.config.max_tasks - 1
                 ):
                     self.resource_manager.task_production_terminated = True
+
+            # Send a special message to close the channel
+            self.resource_manager.new_tasks_queue.put(LastItem())
 
     def task(self, task_id: int, curve_distribution=None) -> None:
         """

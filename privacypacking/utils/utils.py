@@ -34,6 +34,7 @@ READ_BLOCK_SELECTION_POLICY_FROM_CONFIG = "read_block_selecting_policy_from_conf
 METHOD = "method"
 METRIC = "metric"
 N = "n"
+DATA_LIFETIME = "data_lifetime"
 PROFIT = "profit"
 SOLVER = "solver"
 GUROBI = "gurobi"
@@ -45,8 +46,11 @@ LOG_FILE = "log_file"
 
 FREQUENCY = "frequency"
 TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
+AVG_NUMBER_TASKS_PER_BLOCK = "avg_number_tasks_per_block"
 BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
+MAX_BLOCKS = "max_blocks"
 MAX_TASKS = "max_tasks"
+FROM_MAX_BLOCKS = "from_max_blocks"
 GLOBAL_SEED = "global_seed"
 DETERMINISTIC = "deterministic"
 LOG_EVERY_N_ITERATIONS = "log_every_n_iterations"
@@ -130,7 +134,11 @@ def global_metrics(logs: dict) -> dict:
         "n_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
-        "task_scheduling_times": logs["tasks_scheduling_times"],
+        "T": logs["simulator_config"]["scheduler_spec"]["scheduling_wait_time"],
+        "data_lifetime": logs["simulator_config"]["scheduler_spec"].get(
+            "data_lifetime", None
+        )
+        # "tasks_scheduling_times": logs["tasks_scheduling_times"],
     }
 
     return datapoint
