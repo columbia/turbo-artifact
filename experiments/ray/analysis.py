@@ -199,6 +199,56 @@ def load_scheduling_queue(expname="") -> pd.DataFrame:
     return df
 
 
+def load_tasks(expname="", validate=False, tasks_dir="") -> pd.DataFrame:
+    if not expname:
+        exp_dirs = list(LOGS_PATH.glob("exp_*"))
+        latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    else:
+        latest_exp_dir = LOGS_PATH.joinpath(expname)
+    d = defaultdict(list)
+
+    # TODO: other relevant info here?
+    # TODO: task dir from PrivateKube's data path
+    for p in latest_exp_dir.glob("**/*.json"):
+        with open(p) as f:
+            run_dict = json.load(f)
+        for t in run_dict["tasks"]:
+            block_budget = list(t["budget_per_block"].values())[0]
+            d["id"].append(t["id"])
+            d["first_block_id"] = min(t["budget_per_block"].keys())
+            d["n_blocks"].append(len(t["budget_per_block"]))
+            d["profit"].append(t["profit"])
+            d["creation_time"].append(t["creation_time"])
+
+            # NOTE: scheduler dependent
+            # d["scheduling_time"].append(t["scheduling_time"])
+            # d["scheduling_delay"].append(t["scheduling_delay"])
+            # d["allocated"].append(t["allocated"])
+            d["nblocks_maxeps"].append(
+                f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
+            )
+        if not validate:
+            break
+        else:
+            raise NotImplementedError
+    df = pd.DataFrame(d).sort_values("id")
+
+    if tasks_dir:
+        maxeps = {}
+        for task_file in Path(tasks_dir).glob("*.yaml"):
+            task_dict = yaml.safe_load(task_file.open("r"))
+            maxeps[f"{task_dict['rdp_epsilons'][-1]:.3f}"] = task_file.stem
+        maxeps
+
+        def get_task_name(s):
+            n, m = s.split("-")
+            return f"{n}-{maxeps[m]}"
+
+        df["task"] = df["nblocks_maxeps"].apply(get_task_name)
+
+    return df
+
+
 # TODO: load tasks too, add their names, join the dataframe. Double check that tasks are identical in all runs (optional).
 # TODO: add the tasks on the simulation to show the order in the queue. Histogram/colors with slider?
 

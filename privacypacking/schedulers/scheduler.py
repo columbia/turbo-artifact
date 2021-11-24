@@ -162,6 +162,13 @@ class Scheduler:
             def manual_task_key(task):
                 return metrics[task.id]
 
+            def short_manual_task_key(task):
+                # Don't log the whole list for DPF
+                m = metrics[task.id]
+                if isinstance(m, list):
+                    return m[0]
+                return m
+
             sorted_tasks = sorted(tasks, reverse=True, key=manual_task_key)
 
             # TODO: add an option to log only the top k tasks?
