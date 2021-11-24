@@ -38,16 +38,19 @@ class Simulator:
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
+            scheduling_queue_info=self.rm.scheduler.scheduling_queue_info,
         )
 
-        # Saving locally too
-        self.config.logger.log(
-            self.rm.scheduler.task_queue.tasks
-            + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
-            self.rm.scheduler.blocks,
-            self.rm.scheduler.tasks_info,
-            list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
-            self.config,
-            scheduling_time=simulation_duration,
-        )
+        # # Saving locally too
+        # self.config.logger.log(
+        #     self.rm.scheduler.task_queue.tasks
+        #     + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+        #     self.rm.scheduler.blocks,
+        #     self.rm.scheduler.tasks_info,
+        #     list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
+        #     self.config,
+        #     scheduling_time=simulation_duration,
+        # )
+        self.config.logger.save_logs(logs)
+
         return global_metrics(logs)

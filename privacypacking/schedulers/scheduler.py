@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
@@ -48,12 +49,19 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, metric=None):
+    def __init__(self, metric=None, verbose_logs=False):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
         self.tasks_info = TasksInfo()
         self.simulation_terminated = False
+        if verbose_logs:
+            logger.warning("Verbose logs. Might be slow and noisy!")
+            # Counts the number of scheduling passes for each scheduling step (fixpoint)
+            self.iteration_counter = defaultdict(int)
+
+            # Stores metrics every time we recompute the scheduling queue
+            self.scheduling_queue_info = []
 
     def consume_budgets(self, task):
         """
@@ -146,6 +154,33 @@ class Scheduler:
 
         def task_key(task):
             return self.metric.apply(task, self.blocks, tasks)
+
+        if hasattr(self, "scheduling_queue_info"):
+            # Compute the metrics separately to log the result
+            metrics = {task.id: task_key(task) for task in tasks}
+
+            def manual_task_key(task):
+                return metrics[task.id]
+
+            sorted_tasks = sorted(tasks, reverse=True, key=manual_task_key)
+
+            # TODO: add an option to log only the top k tasks?
+            ids_and_metrics = [
+                (task.id, manual_task_key(task)) for task in sorted_tasks
+            ]
+
+            # We might have multiple scheduling passes a the same time step
+            scheduling_time = self.now()
+            self.iteration_counter[scheduling_time] += 1
+            self.scheduling_queue_info.append(
+                {
+                    "scheduling_time": scheduling_time,
+                    "iteration_counter": self.iteration_counter[scheduling_time],
+                    "ids_and_metrics": ids_and_metrics,
+                }
+            )
+
+            return sorted_tasks
 
         return sorted(tasks, reverse=True, key=task_key)
 

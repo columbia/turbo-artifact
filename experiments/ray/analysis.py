@@ -159,6 +159,50 @@ def load_scheduling_dumps_alphas(
     return df
 
 
+def load_scheduling_queue(expname="") -> pd.DataFrame:
+    if not expname:
+        exp_dirs = list(LOGS_PATH.glob("exp_*"))
+        latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    else:
+        latest_exp_dir = LOGS_PATH.joinpath(expname)
+    d = defaultdict(list)
+
+    for p in latest_exp_dir.glob("**/*.json"):
+        print(p)
+        with open(p) as f:
+            run_dict = json.load(f)
+            for step_info in run_dict["scheduling_queue_info"]:
+                d["scheduling_time"].append(step_info["scheduling_time"])
+                d["iteration_counter"].append(step_info["iteration_counter"])
+
+                # Store the raw lists for now
+                d["ids_and_metrics"].append(step_info["ids_and_metrics"])
+
+                # General config info
+                d["metric"].append(
+                    run_dict["simulator_config"]["scheduler_spec"]["metric"]
+                )
+                d["T"].append(
+                    run_dict["simulator_config"]["scheduler_spec"][
+                        "scheduling_wait_time"
+                    ]
+                ),
+                d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                d["data_lifetime"].append(
+                    run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                )
+    df = pd.DataFrame(d).sort_values(
+        ["scheduling_time", "iteration_counter"],
+        ascending=[True, True],
+    )
+
+    return df
+
+
+# TODO: load tasks too, add their names, join the dataframe. Double check that tasks are identical in all runs (optional).
+# TODO: add the tasks on the simulation to show the order in the queue. Histogram/colors with slider?
+
+
 def load_latest_scheduling_results(
     alphas=False,
     expname="",

@@ -212,6 +212,8 @@ class Config:
             self.new_task_driven_scheduling = True
 
         # LOGS
+        # TODO: add option to deactivate this
+        self.verbose_logs = True
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:

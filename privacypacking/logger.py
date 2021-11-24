@@ -1,5 +1,7 @@
 import json
 
+from loguru import logger
+
 from privacypacking.schedulers.utils import ALLOCATED
 
 
@@ -74,6 +76,18 @@ class Logger:
 
         return log
 
+    def save_logs(self, log_dict, compact=False, compressed=False):
+        if compressed:
+            raise NotImplementedError
+        else:
+            with open(self.file, "w") as fp:
+                if compact:
+                    json_object = json.dumps(log_dict, separators=(",", ":"))
+                else:
+                    json_object = json.dumps(log_dict, indent=4)
+
+                fp.write(json_object)
+
     def log(
         self,
         tasks,
@@ -102,3 +116,4 @@ class Logger:
                 json_object = json.dumps(log, indent=4)
 
             fp.write(json_object)
+        logger.info(f"Saved logs to {self.file}")
