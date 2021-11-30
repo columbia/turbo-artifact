@@ -7,15 +7,7 @@ from privacypacking.schedulers.budget_unlocking import (
 )
 
 # Loading them so that they get stored in globals()
-from privacypacking.schedulers.metrics import (
-    DominantShares,
-    DynamicFlatRelevance,
-    Fcfs,
-    FlatRelevance,
-    Metric,
-    OverflowRelevance,
-    SquaredDynamicFlatRelevance,
-)
+from privacypacking.schedulers.metrics import Metric
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.schedulers.threshold_update_mechanisms import (
     ThresholdUpdateMechanism,

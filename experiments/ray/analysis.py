@@ -50,6 +50,8 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
                 d["id"].append(t["id"])
                 d["hashed_id"].append(hash(str(t["id"])) % 100)
                 d["allocated"].append(t["allocated"])
+                d["profit"].append(t["profit"])
+                d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
                 d["scheduler"].append(
                     run_dict["simulator_config"]["scheduler_spec"]["method"]
                 )
@@ -119,6 +121,8 @@ def load_scheduling_dumps_alphas(
                     d["scheduler"].append(
                         run_dict["simulator_config"]["scheduler_spec"]["method"]
                     )
+                    d["profit"].append(t["profit"])
+                    d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
                     d["total_blocks"].append(len(run_dict["blocks"]))
                     d["n_blocks"].append(len(t["budget_per_block"]))
                     d["creation_time"].append(t["creation_time"])

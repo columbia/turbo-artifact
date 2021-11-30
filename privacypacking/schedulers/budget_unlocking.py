@@ -37,7 +37,7 @@ class UnlockingBlock(Block):
         """Unlocked budget that is available for scheduling.
         available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
         """
-        return self.unlocked_budget + self.budget - self.initial_budget
+        return (self.unlocked_budget + self.budget - self.initial_budget).positive()
 
 
 class NBudgetUnlocking(Scheduler):

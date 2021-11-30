@@ -21,6 +21,7 @@ from privacypacking.schedulers.utils import (
     TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
     THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
+    VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
@@ -36,6 +37,7 @@ def run_and_report(config: dict) -> None:
 def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
+        VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
         BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
@@ -44,19 +46,22 @@ def grid():
     ]
 
     # scheduler_scheduling_time = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 10, 15, 20]
-    scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
+    # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
+    scheduler_scheduling_time = [0.1, 1, 10]
 
     # n = [100, 500, 1000, 1500, 2000]
 
     n = [10_000]
-    data_lifetime = [5]
+    data_lifetime = [20]
 
     # n = [1]
     # data_lifetime = [0.001]
 
     avg_number_tasks_per_block = [100]
+    # avg_number_tasks_per_block = [50]
+    # avg_number_tasks_per_block = [10, 25, 50]
 
-    max_blocks = [20]
+    max_blocks = [60]
 
     # TODO: re-add the initial blocks
     initial_blocks = [0]
@@ -105,7 +110,8 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 3},
+        resources_per_trial={"cpu": 1},
+        # resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,
     )
@@ -120,6 +126,7 @@ if __name__ == "__main__":
     with open(args.config_file, "r") as user_config:
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
-    os.environ["LOGURU_LEVEL"] = "INFO"
+    os.environ["LOGURU_LEVEL"] = "WARNING"
+    # os.environ["LOGURU_LEVEL"] = "INFO"
 
     grid()

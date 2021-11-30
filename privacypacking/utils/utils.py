@@ -77,7 +77,7 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default_config.y
 RAY_LOGS = LOGS_PATH.joinpath("ray")
 
 TaskSpec = namedtuple(
-    "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget"]
+    "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
 
 
