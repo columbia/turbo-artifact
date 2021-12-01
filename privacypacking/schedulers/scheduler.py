@@ -48,12 +48,6 @@ class TasksInfo:
         return tasks_info
 
 
-from privacypacking.schedulers.metrics import (
-    BatchOverflowRelevance,
-    VectorizedBatchOverflowRelevance,
-)  # isort:skip
-
-
 class Scheduler:
     def __init__(self, metric=None, verbose_logs=False):
         self.metric = metric
@@ -159,25 +153,21 @@ class Scheduler:
         """Sorts the tasks by metric"""
 
         # The overflow is the same for all the tasks in this sorting pass
-        if self.metric == BatchOverflowRelevance:
+        if hasattr(self.metric, "compute_overflow"):
             logger.info("Precomputing the overflow for the whole batch")
-            overflow = BatchOverflowRelevance.compute_overflow(self.blocks, tasks)
-        elif self.metric == VectorizedBatchOverflowRelevance:
+            overflow = self.metric.compute_overflow(self.blocks, tasks)
+        elif hasattr(self.metric, "compute_relevance_matrix"):
             # TODO: generalize to other relevance heuristics
 
             for t in tasks:
                 # We assume that there are no missing blocks. Otherwise, compute the max block id.
                 t.pad_demand_matrix(n_blocks=self.get_num_blocks())
-            relevance_matrix = (
-                VectorizedBatchOverflowRelevance.compute_relevance_matrix(
-                    self.blocks, tasks
-                )
-            )
+            relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):
-            if self.metric == BatchOverflowRelevance:
+            if hasattr(self.metric, "compute_overflow"):
                 return self.metric.apply(task, self.blocks, tasks, overflow)
-            elif self.metric == VectorizedBatchOverflowRelevance:
+            elif hasattr(self.metric, "compute_relevance_matrix"):
                 return self.metric.apply(task, self.blocks, tasks, relevance_matrix)
             else:
                 return self.metric.apply(task, self.blocks, tasks)

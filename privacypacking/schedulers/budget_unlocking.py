@@ -33,11 +33,19 @@ class UnlockingBlock(Block):
         return self.unlocked_budget == self.initial_budget
 
     @property
-    def available_unlocked_budget(self) -> Budget:
+    def truncated_available_unlocked_budget(self) -> Budget:
         """Unlocked budget that is available for scheduling.
-        available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
+        truncated_available_unlocked_budget = positive [ unlocked_budget - ( initial_budget - remaining_budget) ]
+
         """
         return (self.unlocked_budget + self.budget - self.initial_budget).positive()
+
+    @property
+    def available_unlocked_budget(self) -> Budget:
+        """Unlocked budget that is available for scheduling. Can be negative if the alpha is already consumed!
+        available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
+        """
+        return self.unlocked_budget + self.budget - self.initial_budget
 
 
 class NBudgetUnlocking(Scheduler):

@@ -122,6 +122,8 @@ class DynamicFlatRelevance(Metric):
                 if remaining_budget > 0:
                     cost += demand / remaining_budget
         task.cost = cost
+        if cost == 0:
+            return float("inf")
         logger.info(f"Task {task.id} cost: {cost} profit: {task.profit / cost} ")
         return task.profit / cost
 
@@ -202,10 +204,10 @@ class VectorizedBatchOverflowRelevance(Metric):
     def compute_relevance_matrix(
         blocks: Dict[int, Block],
         tasks: List[Task] = None,
-        drop_blocks_with_no_contention=False,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
     ) -> np.ndarray:
-        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
-        logger.info(f"Sum of demands: {sum_demands}")
+
         # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
@@ -214,27 +216,36 @@ class VectorizedBatchOverflowRelevance(Metric):
         overflow = np.zeros((n_blocks, n_alphas))
         for block_id in range(n_blocks):
             for alpha_index, alpha in enumerate(ALPHAS):
-                eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
-                overflow[block_id, alpha_index] = -eps
-                # NOTE: we could also accept negative available unlocked budget and drop alphas. Maybe not necessary.
-                # if eps >= 0:
-                #     overflow[block_id, alpha] = -eps
-                # else:
-                #     # There is no available budget, so this alpha is not relevant
-                #     overflow[block_id, alpha] = float("inf")
+                if truncate_available_budget:
+                    eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
+                        alpha
+                    )
+                    overflow[block_id, alpha_index] = -eps
+                else:
+                    eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
+                    if eps >= 0:
+                        overflow[block_id, alpha_index] = -eps
+                    else:
+                        # There is no available budget, so this alpha is not relevant
+                        overflow[block_id, alpha_index] = float("inf")
 
+        # Add all the demands
+        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
+        logger.info(f"Sum of demands: {sum_demands}")
         overflow += sum_demands
-
-        relevance = np.reciprocal(overflow)
 
         if drop_blocks_with_no_contention:
             # If a block has an alpha without contention, the relevance should be 0 because we can allocate everything
-            # TODO: do we really need this? It doesn't look neat. I'll deactivate it by default.
+            # TODO: do we really need this? It doesn't look neat.
             for block_id in range(n_blocks):
-                min_overflow = np.min(overflow[block_id, :])
+                min_overflow = np.min(overflow[block_id])
                 if min_overflow <= 0:
-                    overflow[block_id, :] = np.zeros(n_alphas)
+                    overflow[block_id] = np.empty(shape=[1, n_alphas]).fill(
+                        float("inf")
+                    )
 
+        # overflow > 0 or infty (if we drop blocks with no contention)
+        relevance = np.reciprocal(overflow)
         logger.info(f"Relevance: {relevance}")
 
         return relevance
@@ -248,6 +259,10 @@ class VectorizedBatchOverflowRelevance(Metric):
     ) -> float:
         cost = np.multiply(task.demand_matrix.toarray(), relevance_matrix).sum()
         return task.profit / cost if cost > 0 else float("inf")
+
+    @staticmethod
+    def is_dynamic():
+        return True
 
 
 class BatchOverflowRelevance(Metric):

@@ -38,7 +38,9 @@ class Simulator:
             list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
-            scheduling_queue_info=self.rm.scheduler.scheduling_queue_info,
+            scheduling_queue_info=self.rm.scheduler.scheduling_queue_info
+            if hasattr(self.rm.scheduler, "scheduling_queue_info")
+            else None,
         )
 
         # # Saving locally too

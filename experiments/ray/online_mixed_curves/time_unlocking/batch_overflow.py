@@ -45,14 +45,15 @@ def grid():
         FCFS,
     ]
 
-    # scheduler_scheduling_time = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 10, 15, 20]
+    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
     # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
-    scheduler_scheduling_time = [0.1, 1, 10]
+    # scheduler_scheduling_time = [0.1, 1, 10]
 
     # n = [100, 500, 1000, 1500, 2000]
 
     n = [10_000]
-    data_lifetime = [20]
+    # data_lifetime = [20]
+    data_lifetime = [5]
 
     # n = [1]
     # data_lifetime = [0.001]
@@ -61,7 +62,8 @@ def grid():
     # avg_number_tasks_per_block = [50]
     # avg_number_tasks_per_block = [10, 25, 50]
 
-    max_blocks = [60]
+    max_blocks = [20]
+    # max_blocks = [60]
 
     # TODO: re-add the initial blocks
     initial_blocks = [0]
@@ -69,8 +71,8 @@ def grid():
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
-    # data_path = "privatekube_event_g0.3_l0.3_p=1"
-    data_path = "mixed_curves"
+    data_path = "privatekube_event_g0.3_l0.3_p=1"
+    # data_path = "mixed_curves"
     # data_path = "mixed_curves_killer"
 
     # data_path = "mixed_curves_large"
