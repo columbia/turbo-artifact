@@ -5,6 +5,7 @@ from typing import Iterable, Union
 
 import numpy as np
 import pandas as pd
+import yaml
 
 from privacypacking.budget.budget import Budget
 from privacypacking.utils.utils import LOGS_PATH
@@ -19,7 +20,10 @@ def load_ray_experiment(logs: Union[Path, str]) -> pd.DataFrame:
             results.append(d)
         except Exception:
             pass
-    return pd.DataFrame(results)
+
+    df = pd.DataFrame(results)
+
+    return df
 
 
 def load_latest_ray_experiment() -> pd.DataFrame:
@@ -46,6 +50,8 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
                 d["id"].append(t["id"])
                 d["hashed_id"].append(hash(str(t["id"])) % 100)
                 d["allocated"].append(t["allocated"])
+                d["profit"].append(t["profit"])
+                d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
                 d["scheduler"].append(
                     run_dict["simulator_config"]["scheduler_spec"]["method"]
                 )
@@ -79,7 +85,7 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
 
 
 def load_scheduling_dumps_alphas(
-    json_log_paths: Iterable[Union[Path, str]]
+    json_log_paths: Iterable[Union[Path, str]],
 ) -> pd.DataFrame:
     d = defaultdict(list)
 
@@ -115,6 +121,8 @@ def load_scheduling_dumps_alphas(
                     d["scheduler"].append(
                         run_dict["simulator_config"]["scheduler_spec"]["method"]
                     )
+                    d["profit"].append(t["profit"])
+                    d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
                     d["total_blocks"].append(len(run_dict["blocks"]))
                     d["n_blocks"].append(len(t["budget_per_block"]))
                     d["creation_time"].append(t["creation_time"])
@@ -155,7 +163,105 @@ def load_scheduling_dumps_alphas(
     return df
 
 
-def load_latest_scheduling_results(alphas=False, expname="") -> pd.DataFrame:
+def load_scheduling_queue(expname="") -> pd.DataFrame:
+    if not expname:
+        exp_dirs = list(LOGS_PATH.glob("exp_*"))
+        latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    else:
+        latest_exp_dir = LOGS_PATH.joinpath(expname)
+    d = defaultdict(list)
+
+    for p in latest_exp_dir.glob("**/*.json"):
+        print(p)
+        with open(p) as f:
+            run_dict = json.load(f)
+            for step_info in run_dict["scheduling_queue_info"]:
+                d["scheduling_time"].append(step_info["scheduling_time"])
+                d["iteration_counter"].append(step_info["iteration_counter"])
+
+                # Store the raw lists for now
+                d["ids_and_metrics"].append(step_info["ids_and_metrics"])
+
+                # General config info
+                d["metric"].append(
+                    run_dict["simulator_config"]["scheduler_spec"]["metric"]
+                )
+                d["T"].append(
+                    run_dict["simulator_config"]["scheduler_spec"][
+                        "scheduling_wait_time"
+                    ]
+                ),
+                d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                d["data_lifetime"].append(
+                    run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                )
+    df = pd.DataFrame(d).sort_values(
+        ["scheduling_time", "iteration_counter"],
+        ascending=[True, True],
+    )
+
+    return df
+
+
+def load_tasks(expname="", validate=False, tasks_dir="") -> pd.DataFrame:
+    if not expname:
+        exp_dirs = list(LOGS_PATH.glob("exp_*"))
+        latest_exp_dir = max(exp_dirs, key=lambda x: x.name)
+    else:
+        latest_exp_dir = LOGS_PATH.joinpath(expname)
+    d = defaultdict(list)
+
+    # TODO: other relevant info here?
+    # TODO: task dir from PrivateKube's data path
+    for p in latest_exp_dir.glob("**/*.json"):
+        with open(p) as f:
+            run_dict = json.load(f)
+        for t in run_dict["tasks"]:
+            block_budget = list(t["budget_per_block"].values())[0]
+            d["id"].append(t["id"])
+            d["first_block_id"] = min(t["budget_per_block"].keys())
+            d["n_blocks"].append(len(t["budget_per_block"]))
+            d["profit"].append(t["profit"])
+            d["creation_time"].append(t["creation_time"])
+
+            # NOTE: scheduler dependent
+            # d["scheduling_time"].append(t["scheduling_time"])
+            # d["scheduling_delay"].append(t["scheduling_delay"])
+            # d["allocated"].append(t["allocated"])
+            d["nblocks_maxeps"].append(
+                f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
+            )
+        if not validate:
+            break
+        else:
+            raise NotImplementedError
+    df = pd.DataFrame(d).sort_values("id")
+
+    if tasks_dir:
+        maxeps = {}
+        for task_file in Path(tasks_dir).glob("*.yaml"):
+            task_dict = yaml.safe_load(task_file.open("r"))
+            maxeps[f"{task_dict['rdp_epsilons'][-1]:.3f}"] = task_file.stem
+        maxeps
+
+        def get_task_name(s):
+            n, m = s.split("-")
+            return f"{n}-{maxeps[m]}"
+
+        df["task"] = df["nblocks_maxeps"].apply(get_task_name)
+
+    return df
+
+
+# TODO: load tasks too, add their names, join the dataframe. Double check that tasks are identical in all runs (optional).
+# TODO: add the tasks on the simulation to show the order in the queue. Histogram/colors with slider?
+
+
+def load_latest_scheduling_results(
+    alphas=False,
+    expname="",
+    tasks_dir="",
+) -> pd.DataFrame:
 
     if not expname:
         exp_dirs = list(LOGS_PATH.glob("exp_*"))
@@ -164,5 +270,21 @@ def load_latest_scheduling_results(alphas=False, expname="") -> pd.DataFrame:
         latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
-        return load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
-    return load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
+    else:
+        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+
+    if tasks_dir:
+        maxeps = {}
+        for task_file in Path(tasks_dir).glob("*.yaml"):
+            task_dict = yaml.safe_load(task_file.open("r"))
+            maxeps[f"{task_dict['rdp_epsilons'][-1]:.3f}"] = task_file.stem
+        maxeps
+
+        def get_task_name(s):
+            n, m = s.split("-")
+            return f"{n}-{maxeps[m]}"
+
+        df["task"] = df["nblocks_maxeps"].apply(get_task_name)
+
+    return df

@@ -37,7 +37,7 @@ class UnlockingBlock(Block):
         """Unlocked budget that is available for scheduling.
         available_unlocked_budget = unlocked_budget - ( initial_budget - remaining_budget)
         """
-        return self.unlocked_budget + self.budget - self.initial_budget
+        return (self.unlocked_budget + self.budget - self.initial_budget).positive()
 
 
 class NBudgetUnlocking(Scheduler):
@@ -95,8 +95,16 @@ class TimeUnlockingBlock(UnlockingBlock):
 class TBudgetUnlocking(Scheduler):
     """T-unlocking: unlocks some budget every time T units of time pass."""
 
-    def __init__(self, metric, n, budget_unlocking_time, scheduling_wait_time, env):
-        super().__init__(metric)
+    def __init__(
+        self,
+        metric,
+        n,
+        budget_unlocking_time,
+        scheduling_wait_time,
+        env,
+        verbose_logs=False,
+    ):
+        super().__init__(metric, verbose_logs=verbose_logs)
         self.n = n
         self.budget_unlocking_time = budget_unlocking_time
         self.scheduling_wait_time = scheduling_wait_time

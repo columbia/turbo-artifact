@@ -1,4 +1,5 @@
 import math
+import os
 import random
 import uuid
 from datetime import datetime
@@ -212,6 +213,8 @@ class Config:
             self.new_task_driven_scheduling = True
 
         # LOGS
+        # TODO: add option to deactivate this
+        self.verbose_logs = True
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
@@ -302,6 +305,7 @@ class Config:
                     block_selection_policy=block_selection_policy,
                     n_blocks=task_spec.n_blocks,
                     budget=task_spec.budget,
+                    name=task_spec.name,
                 )
         else:
             # Sample the specs of the task
@@ -438,9 +442,10 @@ class Config:
 
             # Select profit
             if "profit" in demand_dict:
-                if isinstance(demand_dict["profit"], int):
+                if isinstance(demand_dict["profit"], (int, float)):
                     profit = demand_dict["profit"]
                 elif isinstance(demand_dict["profit"], str):
+                    # TODO: not sure the typing makes sense here
                     profit_requests = demand_dict["profit"].split(",")
                     profits = [
                         profit_request.split(":")[0]
@@ -463,6 +468,7 @@ class Config:
                 block_selection_policy=block_selection_policy,
                 n_blocks=int(n_blocks),
                 budget=Budget(orders),
+                name=os.path.basename(path),
             )
         assert task_spec is not None
         return task_spec

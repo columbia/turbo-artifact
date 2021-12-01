@@ -7,15 +7,7 @@ from privacypacking.schedulers.budget_unlocking import (
 )
 
 # Loading them so that they get stored in globals()
-from privacypacking.schedulers.metrics import (
-    DominantShares,
-    DynamicFlatRelevance,
-    Fcfs,
-    FlatRelevance,
-    Metric,
-    OverflowRelevance,
-    SquaredDynamicFlatRelevance,
-)
+from privacypacking.schedulers.metrics import Metric
 from privacypacking.schedulers.scheduler import Scheduler
 from privacypacking.schedulers.threshold_update_mechanisms import (
     ThresholdUpdateMechanism,
@@ -59,6 +51,7 @@ def get_scheduler(config, env) -> Scheduler:
                 config.scheduler_budget_unlocking_time,
                 config.scheduler_scheduling_wait_time,
                 env,
+                verbose_logs=config.verbose_logs,
             )
         elif config.scheduler_method == THRESHOLD_UPDATING:
             scheduler_threshold_update_mechanism = ThresholdUpdateMechanism.from_str(

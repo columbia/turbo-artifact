@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
@@ -47,13 +48,26 @@ class TasksInfo:
         return tasks_info
 
 
+from privacypacking.schedulers.metrics import (
+    BatchOverflowRelevance,
+    VectorizedBatchOverflowRelevance,
+)  # isort:skip
+
+
 class Scheduler:
-    def __init__(self, metric=None):
+    def __init__(self, metric=None, verbose_logs=False):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
         self.tasks_info = TasksInfo()
         self.simulation_terminated = False
+        if verbose_logs:
+            logger.warning("Verbose logs. Might be slow and noisy!")
+            # Counts the number of scheduling passes for each scheduling step (fixpoint)
+            self.iteration_counter = defaultdict(int)
+
+            # Stores metrics every time we recompute the scheduling queue
+            self.scheduling_queue_info = []
 
     def consume_budgets(self, task):
         """
@@ -120,9 +134,9 @@ class Scheduler:
         try:
             self.task_set_block_ids(task)
         except NotEnoughBlocks as e:
-            logger.warning(
-                f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
-            )
+            # logger.warning(
+            #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
+            # )
             self.tasks_info.tasks_status[task.id] = FAILED
             return
 
@@ -144,8 +158,65 @@ class Scheduler:
     def order(self, tasks: List[Task]) -> List[Task]:
         """Sorts the tasks by metric"""
 
+        # The overflow is the same for all the tasks in this sorting pass
+        if self.metric == BatchOverflowRelevance:
+            logger.info("Precomputing the overflow for the whole batch")
+            overflow = BatchOverflowRelevance.compute_overflow(self.blocks, tasks)
+        elif self.metric == VectorizedBatchOverflowRelevance:
+            # TODO: generalize to other relevance heuristics
+
+            for t in tasks:
+                # We assume that there are no missing blocks. Otherwise, compute the max block id.
+                t.pad_demand_matrix(n_blocks=self.get_num_blocks())
+            relevance_matrix = (
+                VectorizedBatchOverflowRelevance.compute_relevance_matrix(
+                    self.blocks, tasks
+                )
+            )
+
         def task_key(task):
-            return self.metric.apply(task, self.blocks, tasks)
+            if self.metric == BatchOverflowRelevance:
+                return self.metric.apply(task, self.blocks, tasks, overflow)
+            elif self.metric == VectorizedBatchOverflowRelevance:
+                return self.metric.apply(task, self.blocks, tasks, relevance_matrix)
+            else:
+                return self.metric.apply(task, self.blocks, tasks)
+
+        if hasattr(self, "scheduling_queue_info"):
+            # Compute the metrics separately to log the result
+            metrics = {task.id: task_key(task) for task in tasks}
+
+            def manual_task_key(task):
+                return metrics[task.id]
+
+            def short_manual_task_key(task):
+                # Don't log the whole list for DPF
+                m = metrics[task.id]
+                if isinstance(m, list):
+                    return m[0]
+                return m
+
+            sorted_tasks = sorted(tasks, reverse=True, key=manual_task_key)
+
+            # TODO: add an option to log only the top k tasks?
+            ids_and_metrics = [
+                (task.id, short_manual_task_key(task)) for task in sorted_tasks
+            ]
+
+            # We might have multiple scheduling passes a the same time step
+            scheduling_time = self.now()
+            self.iteration_counter[scheduling_time] += 1
+            self.scheduling_queue_info.append(
+                {
+                    "scheduling_time": scheduling_time,
+                    "iteration_counter": self.iteration_counter[scheduling_time],
+                    "ids_and_metrics": ids_and_metrics,
+                }
+            )
+
+            # raise NotImplementedError
+
+            return sorted_tasks
 
         return sorted(tasks, reverse=True, key=task_key)
 

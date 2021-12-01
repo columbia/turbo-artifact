@@ -145,6 +145,14 @@ class Budget:
             }
         )
 
+    def positive(self) -> "Budget":
+        return Budget(
+            {
+                alpha: max(epsilon, 0.0)
+                for alpha, epsilon in zip(self.alphas, self.epsilons)
+            }
+        )
+
     @classmethod
     def same_support(
         cls, budget1: "Budget", budget2: "Budget"

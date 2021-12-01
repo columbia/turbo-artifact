@@ -1,7 +1,11 @@
 from typing import Any, Iterable
 
+import numpy as np
+from scipy.sparse import bsr_matrix, dok_matrix
+from scipy.sparse.construct import vstack
+
 from privacypacking.budget.block_selection import BlockSelectionPolicy
-from privacypacking.budget.budget import Budget
+from privacypacking.budget.budget import ALPHAS, Budget
 from privacypacking.budget.curves import ZeroCurve
 
 
@@ -12,11 +16,14 @@ class Task:
         profit: float,
         block_selection_policy: BlockSelectionPolicy,
         n_blocks: int,
+        name: str = None,
     ):
         self.id = id
         self.profit = profit
         self.block_selection_policy = block_selection_policy
         self.n_blocks = n_blocks
+        self.name = name
+
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
         self.cost = 0
@@ -58,6 +65,28 @@ class Task:
             },
         }
 
+    def build_demand_matrix(self):
+        # Prepare a sparse matrix of the demand
+        max_block_id = max(self.budget_per_block.keys())
+        n_alphas = len(ALPHAS)
+        temp_matrix = dok_matrix((max_block_id + 1, n_alphas))
+        for block_id, budget in self.budget_per_block.items():
+            for i, alpha in enumerate(ALPHAS):
+                temp_matrix[block_id, i] = budget.epsilon(alpha)
+
+        # Block compressed matrix, since we have chunks of non-zero values
+        self.demand_matrix = bsr_matrix(temp_matrix)
+
+    def pad_demand_matrix(self, n_blocks):
+        if not hasattr(self, "demand_matrix"):
+            self.build_demand_matrix()
+        n_new_rows = n_blocks - self.demand_matrix.shape[0]
+        n_columns = self.demand_matrix.shape[1]
+
+        self.demand_matrix = vstack(
+            [self.demand_matrix, bsr_matrix((n_new_rows, n_columns))]
+        )
+
 
 class UniformTask(Task):
     def __init__(
@@ -67,12 +96,13 @@ class UniformTask(Task):
         block_selection_policy: Any,
         n_blocks: int,
         budget: Budget,
+        name: str = None,
     ):
         """
         A Task that requires (the same) `budget` for all blocks in `block_ids`
         """
         self.budget = budget
-        super().__init__(id, profit, block_selection_policy, n_blocks)
+        super().__init__(id, profit, block_selection_policy, n_blocks, name=name)
 
     def set_budget_per_block(self, block_ids: Iterable[int]):
         for block_id in block_ids:
