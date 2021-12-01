@@ -47,6 +47,7 @@ class Logger:
                     "creation_time": tasks_info.creation_time[task.id],
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
                     "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                    "allocation_index": tasks_info.allocation_index.get(task.id, None),
                 }
             )
             log["tasks"].append(

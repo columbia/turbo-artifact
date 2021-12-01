@@ -25,6 +25,7 @@ class TasksInfo:
         self.scheduling_time = {}
         self.creation_time = {}
         self.scheduling_delay = {}
+        self.allocation_index = {}
 
     def dump(self):
         tasks_info = {
@@ -32,6 +33,7 @@ class TasksInfo:
             "scheduling_delay": self.scheduling_delay,
             "creation_time": self.creation_time,
             "scheduling_time": self.scheduling_time,
+            "allocation_index": self.allocation_index,
         }
 
         # # Why only dumping the metadata for allocated tasks?
@@ -55,6 +57,7 @@ class Scheduler:
         self.blocks = {}
         self.tasks_info = TasksInfo()
         self.simulation_terminated = False
+        self.allocation_counter = 0
         if verbose_logs:
             logger.warning("Verbose logs. Might be slow and noisy!")
             # Counts the number of scheduling passes for each scheduling step (fixpoint)
@@ -110,23 +113,36 @@ class Scheduler:
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
 
+            logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
+
             # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
             # time.sleep(1)
 
             for task in sorted_tasks:
                 if self.can_run(task):
+
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
+                    self.tasks_info.allocation_index[task.id] = self.allocation_counter
+                    self.allocation_counter += 1
+
                     if self.metric().is_dynamic():
                         # We go back to the beginning of the while loop
                         converged = False
                         break
+                else:
+                    logger.debug(
+                        f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
+                    )
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
         try:
             self.task_set_block_ids(task)
+            logger.debug(
+                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+            )
         except NotEnoughBlocks as e:
             # logger.warning(
             #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
@@ -195,7 +211,6 @@ class Scheduler:
 
             # We might have multiple scheduling passes a the same time step
             scheduling_time = self.now()
-            self.iteration_counter[scheduling_time] += 1
             self.scheduling_queue_info.append(
                 {
                     "scheduling_time": scheduling_time,
@@ -204,7 +219,7 @@ class Scheduler:
                 }
             )
 
-            # raise NotImplementedError
+            self.iteration_counter[scheduling_time] += 1
 
             return sorted_tasks
 

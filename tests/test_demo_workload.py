@@ -48,7 +48,7 @@ def grid():
     # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
     # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
     # scheduler_scheduling_time = [0.1, 1, 10]
-    scheduler_scheduling_time = [6]
+    scheduler_scheduling_time = [10]
 
     # n = [100, 500, 1000, 1500, 2000]
 
@@ -59,7 +59,7 @@ def grid():
     # n = [1]
     # data_lifetime = [0.001]
 
-    avg_number_tasks_per_block = [20]
+    avg_number_tasks_per_block = [30]
     # avg_number_tasks_per_block = [50]
     # avg_number_tasks_per_block = [10, 25, 50]
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     with open(args.config_file, "r") as user_config:
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
-    os.environ["LOGURU_LEVEL"] = "WARNING"
-    # os.environ["LOGURU_LEVEL"] = "INFO"
+    # os.environ["LOGURU_LEVEL"] = "WARNING"
+    os.environ["LOGURU_LEVEL"] = "INFO"
 
     grid()

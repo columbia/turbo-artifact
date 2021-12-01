@@ -130,6 +130,7 @@ def load_scheduling_dumps_alphas(
                     d["n_blocks"].append(len(t["budget_per_block"]))
                     d["creation_time"].append(t["creation_time"])
                     d["scheduling_time"].append(t["scheduling_time"])
+                    d["allocation_index"].append(t["allocation_index"])
                     d["scheduling_delay"].append(t["scheduling_delay"])
 
                     d["block"].append(int(block_id))
@@ -226,7 +227,9 @@ def load_tasks(expname="", validate=False, tasks_dir="") -> pd.DataFrame:
         for t in run_dict["tasks"]:
             block_budget = list(t["budget_per_block"].values())[0]
             d["id"].append(t["id"])
-            d["first_block_id"] = min(t["budget_per_block"].keys())
+            d["first_block_id"] = min(
+                [int(block_id) for block_id in t["budget_per_block"].keys()]
+            )
             d["n_blocks"].append(len(t["budget_per_block"]))
             d["profit"].append(t["profit"])
             d["creation_time"].append(t["creation_time"])

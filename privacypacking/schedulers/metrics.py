@@ -231,7 +231,7 @@ class VectorizedBatchOverflowRelevance(Metric):
 
         # Add all the demands
         sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
-        logger.info(f"Sum of demands: {sum_demands}")
+        # logger.info(f"Sum of demands: {sum_demands}")
         overflow += sum_demands
 
         if drop_blocks_with_no_contention:
@@ -246,7 +246,7 @@ class VectorizedBatchOverflowRelevance(Metric):
 
         # overflow > 0 or infty (if we drop blocks with no contention)
         relevance = np.reciprocal(overflow)
-        logger.info(f"Relevance: {relevance}")
+        # logger.info(f"Relevance: {relevance}")
 
         return relevance
 
