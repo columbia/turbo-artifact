@@ -16,6 +16,7 @@ from privacypacking.schedulers.utils import (
     NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
+    SOFTMAX_OVERFLOW,
     SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
     TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
@@ -38,21 +39,23 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
+        # BATCH_OVERFLOW_RELEVANCE,
+        # DOMINANT_SHARES,
+        # FLAT_RELEVANCE,
+        # DYNAMIC_FLAT_RELEVANCE,
+        # FCFS,
+        # SOFTMAX_OVERFLOW,
     ]
 
-    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
+    # TODO: add temperature to config
+    # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
     # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
+    scheduler_scheduling_time = [1]
     # scheduler_scheduling_time = [0.1, 1, 10]
 
     # n = [100, 500, 1000, 1500, 2000]
 
     n = [10_000]
-    # data_lifetime = [20]
     data_lifetime = [5]
 
     # n = [1]
@@ -71,8 +74,8 @@ def grid():
 
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
-    data_path = "privatekube_event_g0.3_l0.3_p=1"
-    # data_path = "mixed_curves"
+    # data_path = "privatekube_event_g0.3_l0.3_p=1"
+    data_path = "mixed_curves"
     # data_path = "mixed_curves_killer"
 
     # data_path = "mixed_curves_large"

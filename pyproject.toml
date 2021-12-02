@@ -29,6 +29,7 @@ tensorflow = "^2.6.0"
 mip = "^1.13.0"
 typer = "^0.4.0"
 "amazon.ion" = "^0.7.0"
+scalene = "^1.3.16"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

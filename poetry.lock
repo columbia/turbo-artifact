@@ -294,6 +294,14 @@ python-versions = ">=3.6"
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cloudpickle"
+version = "2.0.0"
+description = "Extended pickling support for Python objects"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "colorama"
 version = "0.4.4"
 description = "Cross-platform colored terminal text."
@@ -311,6 +319,17 @@ python-versions = "*"
 
 [package.dependencies]
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[[package]]
+name = "commonmark"
+version = "0.9.1"
+description = "Python parser for the CommonMark Markdown spec"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+test = ["flake8 (==3.7.8)", "hypothesis (==3.55.3)"]
 
 [[package]]
 name = "dash"
@@ -1265,6 +1284,14 @@ optional = false
 python-versions = ">=3.7,<3.11"
 
 [[package]]
+name = "nvidia-ml-py"
+version = "11.450.51"
+description = "Python Bindings for the NVIDIA Management Library"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "nvidia-ml-py3"
 version = "7.352.0"
 description = "Python Bindings for the NVIDIA Management Library"
@@ -1803,6 +1830,22 @@ requests = ">=2.0.0"
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
+name = "rich"
+version = "10.15.2"
+description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
+category = "main"
+optional = false
+python-versions = ">=3.6.2,<4.0.0"
+
+[package.dependencies]
+colorama = ">=0.4.0,<0.5.0"
+commonmark = ">=0.9.0,<0.10.0"
+pygments = ">=2.6.0,<3.0.0"
+
+[package.extras]
+jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
+
+[[package]]
 name = "rsa"
 version = "4.7.2"
 description = "Pure-Python RSA implementation"
@@ -1812,6 +1855,20 @@ python-versions = ">=3.5, <4"
 
 [package.dependencies]
 pyasn1 = ">=0.1.3"
+
+[[package]]
+name = "scalene"
+version = "1.3.16"
+description = "Scalene: A high-resolution, low-overhead CPU, GPU, and memory profiler for Python"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+cloudpickle = ">=1.5.0"
+numpy = "*"
+nvidia-ml-py = "11.450.51"
+rich = ">=9.2.0"
 
 [[package]]
 name = "scipy"
@@ -2186,7 +2243,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.10"
-content-hash = "5644a44545733ae7b434371ed9fe78acb897b8275627e886bd360fb8b018601e"
+content-hash = "c4421abdb1f7fe280abd0ccf9929e85366ffc9346a580adfaa95bac79fa7c775"
 
 [metadata.files]
 absl-py = [
@@ -2460,6 +2517,10 @@ click = [
     {file = "click-8.0.3-py3-none-any.whl", hash = "sha256:353f466495adaeb40b6b5f592f9f91cb22372351c84caeb068132442a4518ef3"},
     {file = "click-8.0.3.tar.gz", hash = "sha256:410e932b050f5eed773c4cda94de75971c89cdb3155a72a0831139a79e5ecb5b"},
 ]
+cloudpickle = [
+    {file = "cloudpickle-2.0.0-py3-none-any.whl", hash = "sha256:6b2df9741d06f43839a3275c4e6632f7df6487a1f181f5f46a052d3c917c3d11"},
+    {file = "cloudpickle-2.0.0.tar.gz", hash = "sha256:5cd02f3b417a783ba84a4ec3e290ff7929009fe51f6405423cfccfadd43ba4a4"},
+]
 colorama = [
     {file = "colorama-0.4.4-py2.py3-none-any.whl", hash = "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"},
     {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
@@ -2467,6 +2528,10 @@ colorama = [
 colorful = [
     {file = "colorful-0.5.4-py2.py3-none-any.whl", hash = "sha256:8d264b52a39aae4c0ba3e2a46afbaec81b0559a99be0d2cfe2aba4cf94531348"},
     {file = "colorful-0.5.4.tar.gz", hash = "sha256:86848ad4e2eda60cd2519d8698945d22f6f6551e23e95f3f14dfbb60997807ea"},
+]
+commonmark = [
+    {file = "commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9"},
+    {file = "commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60"},
 ]
 dash = [
     {file = "dash-1.21.0.tar.gz", hash = "sha256:8b03a53e4f7a5f3eded8af099ff54d9981f7879d22d74c7970b9a27c8f698ebb"},
@@ -3141,6 +3206,9 @@ numpy = [
     {file = "numpy-1.21.4-pp37-pypy37_pp73-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:a3deb31bc84f2b42584b8c4001c85d1934dbfb4030827110bc36bfd11509b7bf"},
     {file = "numpy-1.21.4.zip", hash = "sha256:e6c76a87633aa3fa16614b61ccedfae45b91df2767cf097aa9c933932a7ed1e0"},
 ]
+nvidia-ml-py = [
+    {file = "nvidia-ml-py-11.450.51.tar.gz", hash = "sha256:5aa6dd23a140b1ef2314eee5ca154a45397b03e68fd9ebc4f72005979f511c73"},
+]
 nvidia-ml-py3 = [
     {file = "nvidia-ml-py3-7.352.0.tar.gz", hash = "sha256:390f02919ee9d73fe63a98c73101061a6b37fa694a793abf56673320f1f51277"},
 ]
@@ -3589,9 +3657,24 @@ requests-oauthlib = [
     {file = "requests_oauthlib-1.3.0-py2.py3-none-any.whl", hash = "sha256:7f71572defaecd16372f9006f33c2ec8c077c3cfa6f5911a9a90202beb513f3d"},
     {file = "requests_oauthlib-1.3.0-py3.7.egg", hash = "sha256:fa6c47b933f01060936d87ae9327fead68768b69c6c9ea2109c48be30f2d4dbc"},
 ]
+rich = [
+    {file = "rich-10.15.2-py3-none-any.whl", hash = "sha256:43b2c6ad51f46f6c94992aee546f1c177719f4e05aff8f5ea4d2efae3ebdac89"},
+    {file = "rich-10.15.2.tar.gz", hash = "sha256:1dded089b79dd042b3ab5cd63439a338e16652001f0c16e73acdcf4997ad772d"},
+]
 rsa = [
     {file = "rsa-4.7.2-py3-none-any.whl", hash = "sha256:78f9a9bf4e7be0c5ded4583326e7461e3a3c5aae24073648b4bdfa797d78c9d2"},
     {file = "rsa-4.7.2.tar.gz", hash = "sha256:9d689e6ca1b3038bc82bf8d23e944b6b6037bc02301a574935b2dd946e0353b9"},
+]
+scalene = [
+    {file = "scalene-1.3.16-cp310-cp310-macosx_10_14_universal2.whl", hash = "sha256:314d3880cc2df2093118f70cfb1c2913af3307a9989804d031e8035e6b41912d"},
+    {file = "scalene-1.3.16-cp310-cp310-manylinux_2_24_x86_64.whl", hash = "sha256:2f27440a19b0e1f0251b7f536078dde9cd3a6a394e0d53fa0ce0cefd5f58fb25"},
+    {file = "scalene-1.3.16-cp37-cp37m-macosx_10_14_universal2.whl", hash = "sha256:559edb3c77ecff3edeacbd32b248c380389af40931c88b2af4fdfbeed6f4bc28"},
+    {file = "scalene-1.3.16-cp37-cp37m-manylinux_2_24_x86_64.whl", hash = "sha256:3057a29f9562fe6a493d17bfff693c29de6427c9c5147278e0bea7160677e06a"},
+    {file = "scalene-1.3.16-cp38-cp38-macosx_10_14_universal2.whl", hash = "sha256:064242ac8eadcdb13155d0c24d7a6e16a66bf0d6093fc8d5d83cbda73e2270a1"},
+    {file = "scalene-1.3.16-cp38-cp38-manylinux_2_24_x86_64.whl", hash = "sha256:cc3cfa3327f186cfb3a92bb76d8be0856548aaaf62ec8b639d96d3ea911e1a68"},
+    {file = "scalene-1.3.16-cp39-cp39-macosx_10_14_universal2.whl", hash = "sha256:f45f63dd3873cf8ad5adaa6ad189323a1a371293e9608d6766f9b5f924421671"},
+    {file = "scalene-1.3.16-cp39-cp39-manylinux_2_24_x86_64.whl", hash = "sha256:3d920dfe61190c499e9f902082d9d92591dd6556f4550f111d836966c6c6f498"},
+    {file = "scalene-1.3.16.tar.gz", hash = "sha256:3c2fb524b4c611773b147dc889e2d58b48a543d3161ea576ccc0db778e9f5915"},
 ]
 scipy = [
     {file = "scipy-1.7.2-1-cp310-cp310-win_amd64.whl", hash = "sha256:dc2d1bf41294e63c7302bf499973ac0c7f73c93c01763db43055f6525234bf11"},

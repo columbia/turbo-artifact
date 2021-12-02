@@ -16,6 +16,7 @@ from privacypacking.schedulers.utils import (
     NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
+    SOFTMAX_OVERFLOW,
     SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
     TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
@@ -38,11 +39,12 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
+        # BATCH_OVERFLOW_RELEVANCE,
+        # DOMINANT_SHARES,
+        # FLAT_RELEVANCE,
+        # DYNAMIC_FLAT_RELEVANCE,
+        # FCFS,
+        SOFTMAX_OVERFLOW,
     ]
 
     # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]

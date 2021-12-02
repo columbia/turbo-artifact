@@ -265,6 +265,74 @@ class VectorizedBatchOverflowRelevance(Metric):
         return True
 
 
+class SoftmaxOverflow(VectorizedBatchOverflowRelevance):
+    # Instead of dividing by the overflow, we take a softmax. And we normalize.
+    @staticmethod
+    def compute_relevance_matrix(
+        blocks: Dict[int, Block],
+        tasks: List[Task] = None,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
+        temperature=0.1,
+    ) -> np.ndarray:
+
+        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
+
+        # Compute the negative available unlocked budget
+        n_blocks = len(blocks)
+        n_alphas = len(ALPHAS)
+        available_budget = np.zeros((n_blocks, n_alphas))
+        for block_id in range(n_blocks):
+            for alpha_index, alpha in enumerate(ALPHAS):
+                if truncate_available_budget:
+                    eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
+                        alpha
+                    )
+                    available_budget[block_id, alpha_index] = eps
+                else:
+                    eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
+                    if eps >= 0:
+                        available_budget[block_id, alpha_index] = eps
+                    else:
+                        # There is no available budget, so this alpha is not relevant
+                        # TODO: not great, but doesn't seem to matter too much in practice.
+                        available_budget[block_id, alpha_index] = -float("inf")
+
+        # Add all the demands
+        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
+        # logger.info(f"Sum of demands: {sum_demands}")
+        overflow = sum_demands - available_budget
+
+        if drop_blocks_with_no_contention:
+            # If a block has an alpha without contention, the relevance should be 0 because we can allocate everything
+            # TODO: do we really need this? It doesn't look neat.
+            for block_id in range(n_blocks):
+                min_overflow = np.min(overflow[block_id])
+                if min_overflow <= 0:
+                    overflow[block_id] = np.empty(shape=[1, n_alphas]).fill(
+                        float("inf")
+                    )
+
+        # overflow > 0 or infty (if we drop blocks with no contention)
+        exponential_overflow = np.exp(-temperature * overflow)
+        sum_per_block = np.sum(exponential_overflow, axis=1)
+        softmax = np.divide(
+            exponential_overflow,
+            np.broadcast_to(
+                np.expand_dims(sum_per_block, axis=1), (n_blocks, n_alphas)
+            ),
+        )
+
+        logger.info(f"Softmax: {softmax}")
+        time.sleep(2)
+
+        # The softmax returns a probability vector, but different alphas have different scales.
+        relevance = np.divide(softmax, available_budget)
+        # logger.info(f"Relevance: {relevance}")
+
+        return relevance
+
+
 class BatchOverflowRelevance(Metric):
     @staticmethod
     def compute_overflow(blocks: Dict[int, Block], tasks: List[Task] = None) -> dict:
