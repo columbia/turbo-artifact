@@ -36,7 +36,9 @@ def get_scheduler(config, env) -> Scheduler:
         else:
             schedulers[config.scheduler_method]()
     else:
-        metric = Metric.from_str(config.scheduler_metric)
+        metric = Metric.from_str(
+            config.scheduler_metric, metric_config=config.omegaconf.metric
+        )
         assert metric is not None
 
         # Some schedulers might need custom arguments
@@ -45,14 +47,16 @@ def get_scheduler(config, env) -> Scheduler:
         elif config.scheduler_method == TASK_BASED_BUDGET_UNLOCKING:
             return schedulers[config.scheduler_method](metric, config.scheduler_N)
         elif config.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-            return schedulers[config.scheduler_method](
+            s = schedulers[config.scheduler_method](
                 metric,
                 config.scheduler_N,
                 config.scheduler_budget_unlocking_time,
                 config.scheduler_scheduling_wait_time,
                 env,
-                verbose_logs=config.verbose_logs,
+                verbose_logs=config.omegaconf.logs.verbose,
             )
+            s.omegaconf = config.omegaconf.scheduler
+            return s
         elif config.scheduler_method == THRESHOLD_UPDATING:
             scheduler_threshold_update_mechanism = ThresholdUpdateMechanism.from_str(
                 config.scheduler_threshold_update_mechanism

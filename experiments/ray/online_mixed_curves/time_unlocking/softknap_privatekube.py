@@ -43,61 +43,37 @@ def grid():
     # ray.init(log_to_driver=False)
 
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
-    scheduler_metrics = [
-        VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        # BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
-        # SOFTMAX_OVERFLOW,
-        SOFT_KNAPSACK,
-    ]
+    # scheduler_metrics = [SOFT_KNAPSACK]
+    scheduler_metrics = [VECTORIZED_BATCH_OVERFLOW_RELEVANCE, DOMINANT_SHARES]
 
-    # TODO: add temperature to config and explore range
+    # TODO: compare to flat relevance and dynamic flat relevance (by hand on another graph)
 
-    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
-    # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
-    # scheduler_scheduling_time = [1]
-    # scheduler_scheduling_time = [0.1, 1, 10, 25]
+    # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
+    temperature = [1]
+    normalize_by = ["capacity"]
+    # normalize_by = [""]
 
-    # scheduler_scheduling_time = [25]
+    metric_recomputation_period = [10]
 
-    # n = [100, 500, 1000, 1500, 2000]
+    n = [1_000]
+    data_lifetime = [10]
+    scheduler_scheduling_time = [1]
 
-    n = [10_000]
-    data_lifetime = [5]
-
-    # n = [1]
-    # data_lifetime = [0.001]
-
-    avg_number_tasks_per_block = [100]
-    # avg_number_tasks_per_block = [50]
-    # avg_number_tasks_per_block = [10, 25, 50]
-
-    max_blocks = [20]
-    # max_blocks = [60]
-
-    # TODO: re-add the initial blocks
-    initial_blocks = [0]
+    avg_number_tasks_per_block = [500]
+    max_blocks = [30]
+    initial_blocks = [10]
     seeds = [0]
-
-    # TODO: rescale (more tasks?) to separate batch OR and dyn FR
-
-    # data_path = "privatekube_event_g0.3_l0.3_p=1"
-    # data_path = "mixed_curves"
-    data_path = "mixed_curves_profits"
-
-    # data_path = "mixed_curves_killer"
-
-    # data_path = "mixed_curves_large"
-
     block_selection_policies = ["LatestBlocksFirst"]
+
+    # data_path = "privatekube_event_g0.0_l0.5_p=size"
+    data_path = "privatekube_event_g0.0_l0.5_p=1"
+
+    # data_path = "mixed_curves_profits"
+
+    # TODO: plug privatekube path and parameters
 
     config[GLOBAL_SEED] = tune.grid_search(seeds)
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
-
-    # config[TASKS_SPEC][MAX_TASKS][FROM_MAX_BLOCKS] = tune.grid_search(max_blocks)
     config[BLOCKS_SPEC][MAX_BLOCKS] = tune.grid_search(max_blocks)
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
@@ -119,15 +95,17 @@ def grid():
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
     config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
     config[SCHEDULER_SPEC][N] = tune.grid_search(n)
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(np.arange(0, 5100, step=100, dtype=int).tolist())
     config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
 
     config["omegaconf"] = {
         "scheduler": {
-            "metric_recomputation_period": 10,
+            "metric_recomputation_period": tune.grid_search(
+                metric_recomputation_period
+            ),
         },
         "metric": {
-            "normalize_by": "",
+            "normalize_by": tune.grid_search(normalize_by),
+            "temperature": tune.grid_search(temperature),
         },
     }
 
@@ -136,10 +114,19 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 3},
+        resources_per_trial={"cpu": 1},
         # resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,
+        progress_reporter=ray.tune.CLIReporter(
+            metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
+            parameter_columns={
+                "scheduler_spec/scheduling_wait_time": "T",
+                "scheduler_spec/data_lifetime": "lifetime",
+                "scheduler_spec/metric": "metric",
+            },
+            max_report_frequency=60,
+        ),
     )
 
 

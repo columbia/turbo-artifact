@@ -66,6 +66,8 @@ class Scheduler:
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
+        self.omegaconf = None
+
     def consume_budgets(self, task):
         """
         Updates the budgets of each block requested by the task
@@ -118,6 +120,7 @@ class Scheduler:
             # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
             # time.sleep(1)
 
+            n_allocated_tasks = 0
             for task in sorted_tasks:
                 if self.can_run(task):
 
@@ -125,9 +128,24 @@ class Scheduler:
                     allocated_task_ids.append(task.id)
                     self.tasks_info.allocation_index[task.id] = self.allocation_counter
                     self.allocation_counter += 1
+                    n_allocated_tasks += 1
 
-                    if self.metric().is_dynamic():
+                    if self.omegaconf.log_warning_every_n_allocated_tasks and (
+                        self.allocation_counter
+                        % self.omegaconf.log_warning_every_n_allocated_tasks
+                        == 0
+                    ):
+                        logger.warning(
+                            f"Number of allocated tasks: {self.allocation_counter} at time {self.now()}"
+                        )
+                    if (
+                        self.metric.is_dynamic()
+                        and n_allocated_tasks
+                        % self.omegaconf.metric_recomputation_period
+                        == 0
+                    ):
                         # We go back to the beginning of the while loop
+
                         converged = False
                         break
                 else:
@@ -174,7 +192,7 @@ class Scheduler:
             overflow = self.metric.compute_overflow(self.blocks, tasks)
         elif hasattr(self.metric, "compute_relevance_matrix"):
             # TODO: generalize to other relevance heuristics
-
+            logger.info("Precomputing the relevance matrix for the whole batch")
             for t in tasks:
                 # We assume that there are no missing blocks. Otherwise, compute the max block id.
                 t.pad_demand_matrix(n_blocks=self.get_num_blocks())

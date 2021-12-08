@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +26,8 @@ def mixed(
     delta: float = typer.Option(1e-7, help="Delta"),
     n_1: int = typer.Option(1, help="Low number of blocks"),
     n_2: int = typer.Option(10, help="High number of blocks"),
+    p_1: float = typer.Option(1.0, help="Low profit"),
+    p_2: float = typer.Option(1.0, help="High profit"),
     block_selection_policy: str = typer.Option(
         "RandomBlocks", help="Block selection policy"
     ),
@@ -78,6 +81,9 @@ def mixed(
                 "n_blocks": f"{n_1}:0.5, {n_2}:0.5",
                 "block_selection_policy": block_selection_policy,
             }
+
+            if p_1 != p_2:
+                task_dict["profit"] = f"{p_1}:0.5, {p_2}:0.5"
 
             task_name = f"{curve_type}_{epsilon}.yaml"
             task_names.append(task_name)
@@ -179,6 +185,132 @@ def demo(
             frequencies_dict, frequencies_path.joinpath("frequencies.yaml").open("w")
         )
     logger.info("Done.")
+
+
+@app.command()
+def privatekube(
+    privacy_unit: str = typer.Option(
+        default="event",
+        help="Protection unit: `event`, `user`, `user-time`",
+        show_default=True,
+    ),
+    gaussian_mice_fraction: float = typer.Option(
+        default=0.0,
+        help="Percentage of Gaussian mice to generate. The original PrivateKube workload does not use any.",
+        show_default=True,
+    ),
+    laplace_mice_fraction: float = typer.Option(
+        default=0.5,
+        help="Percentage of Laplace mice to generate",
+        show_default=True,
+    ),
+    profits: str = typer.Option(
+        default="1",
+        help="Use profit=1 by default, otherwise some mix. 'size' for p=eps*n_blocks. 'ksize' for int(1000*eps)*n_blocks. 'grid' for an arbitrary grid of profits.",
+    ),
+    block_policy: str = typer.Option(
+        default="RandomBlocks",
+        help="Block policy: `RandomBlocks`, `LatestBlocksFirst`, `Mix`",
+        show_default=True,
+    ),
+    divide_original_block_number_by: int = typer.Option(
+        default=100,
+        help="The PrivateKube workload has block requests from 100 to 2000. 1 day of the Amazon data was split into 100 blocks, with 100 user id buckets.",
+    ),
+):
+
+    workload_data_path = Path(__file__).parent.parent.parent.joinpath("data")
+
+    privatekube_demands = workload_data_path.joinpath("privatekube_demands").joinpath(
+        privacy_unit
+    )
+
+    output_dir = workload_data_path.joinpath(
+        f"privatekube_{privacy_unit}_g{gaussian_mice_fraction}_l{laplace_mice_fraction}_p={profits}"
+    )
+
+    output_tasks_dir = output_dir.joinpath("tasks")
+    output_tasks_dir.mkdir(exist_ok=True, parents=True)
+
+    # Copy the task parameters and add profits/block policy
+    task_category_names = {}
+    for task_category in ["elephants", "mice-gaussian", "mice-laplace"]:
+        task_category_names[task_category] = []
+        for task_path in privatekube_demands.joinpath(task_category).glob("*.yaml"):
+            task_name = f"{task_category}-{task_path.name}"
+            raw_task_dict = yaml.safe_load(task_path.read_text())
+
+            task_dict = {}
+            task_dict["alphas"] = raw_task_dict["alphas"]
+            task_dict["rdp_epsilons"] = raw_task_dict["rdp_epsilons"]
+            task_dict["n_blocks"] = (
+                raw_task_dict["n_blocks"] // divide_original_block_number_by
+            )
+
+            # WARNING: Important logic and arbitrary decisions in there!
+            if profits == "grid":
+                if task_category == "elephants":
+                    profit = "10:0.5, 5:0.5"
+                else:
+                    profit = "2:0.5, 1:0.5"
+            elif profits == "size":
+                profit = raw_task_dict["epsilon"] * task_dict["n_blocks"]
+            elif profits == "ksize":
+                profit = int(1_000 * raw_task_dict["epsilon"]) * task_dict["n_blocks"]
+            else:
+                profit = 1
+
+            if block_policy == "RandomBlocks":
+                block_selection_policy = "RandomBlocks"
+            elif block_policy == "LatestBlocksFirst":
+                block_selection_policy = "LatestBlocksFirst"
+            elif block_policy == "Mix":
+                coin = random.randint(0, 1)
+                if coin:
+                    block_selection_policy = "RandomBlocks"
+                else:
+                    block_selection_policy = "LatestBlocksFirst"
+            # END WARNING
+
+            task_dict["profit"] = profit
+            task_dict["block_selection_policy"] = block_selection_policy
+
+            output_task_path = output_tasks_dir.joinpath(task_name)
+            with open(output_task_path, "w") as f:
+                yaml.dump(task_dict, f)
+
+            task_category_names[task_category].append(task_name)
+
+    logger.info(task_category_names)
+
+    # List the tasks with frequencies
+    task_frequencies = {}
+    category_frequencies = {
+        "mice-gaussian": gaussian_mice_fraction,
+        "mice-laplace": laplace_mice_fraction,
+        "elephants": 1 - gaussian_mice_fraction - laplace_mice_fraction,
+    }
+    sum_frequencies = 0
+    for category, task_names in task_category_names.items():
+        n = len(task_names)
+        logger.info(f"{category}, {task_names}, {n}")
+
+        for task_name in task_names:
+            # cat_task_name = f"{category}-{task_name}"
+            task_frequencies[task_name] = category_frequencies[category] / n
+            sum_frequencies += task_frequencies[task_name]
+    # Ensure that the frequencies add up to 1 even with rounding errors
+    logger.info(sum_frequencies)
+    last_task_name, last_task_frequency = task_frequencies.popitem()
+    task_frequencies[last_task_name] = last_task_frequency + 1 - sum_frequencies
+    logger.info(sum(list(task_frequencies.values())))
+    logger.info(task_frequencies)
+    output_frequencies_path = output_dir.joinpath("task_frequencies").joinpath(
+        "frequencies.yaml"
+    )
+    output_frequencies_path.parent.mkdir(exist_ok=True, parents=True)
+    with open(output_frequencies_path, "w") as f:
+        yaml.dump(task_frequencies, f)
 
 
 if __name__ == "__main__":

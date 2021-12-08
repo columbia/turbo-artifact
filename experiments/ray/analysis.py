@@ -37,11 +37,14 @@ def load_latest_ray_experiment() -> pd.DataFrame:
     return load_ray_experiment(latest_log_dir)
 
 
-def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.DataFrame:
+def load_scheduling_dumps(
+    json_log_paths: Iterable[Union[Path, str]], verbose=False
+) -> pd.DataFrame:
     d = defaultdict(list)
 
     for p in json_log_paths:
-        print(p)
+        if verbose:
+            print(p)
         try:
             with open(p) as f:
                 run_dict = json.load(f)
@@ -89,11 +92,13 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
 
 def load_scheduling_dumps_alphas(
     json_log_paths: Iterable[Union[Path, str]],
+    verbose=False,
 ) -> pd.DataFrame:
     d = defaultdict(list)
 
     for p in json_log_paths:
-        print(p)
+        if verbose:
+            print(p)
         with open(p) as f:
             run_dict = json.load(f)
 
@@ -271,6 +276,7 @@ def load_latest_scheduling_results(
     alphas=False,
     expname="",
     tasks_dir="",
+    verbose=False,
 ) -> pd.DataFrame:
 
     if not expname:
@@ -280,9 +286,9 @@ def load_latest_scheduling_results(
         latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
-        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"), verbose)
     else:
-        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"), verbose)
 
     if tasks_dir:
         maxeps = {}
@@ -298,3 +304,20 @@ def load_latest_scheduling_results(
         df["task"] = df["nblocks_maxeps"].apply(get_task_name)
 
     return df
+
+
+def get_percentiles(delay_df, percentile_list):
+    d = defaultdict(list)
+    delay_df_na = delay_df.dropna()
+    for percentile in percentile_list:
+        for T in delay_df_na["T"].unique():
+            for metric in delay_df_na["metric"].unique():
+                delay_series = delay_df_na.query(f"metric == '{metric}' and T == {T}")[
+                    "scheduling_delay"
+                ]
+                d["delay"].append(np.percentile(delay_series, percentile))
+                d["percentile"].append(percentile)
+                d["T"].append(T)
+                d["scheduler"].append(metric)
+    percentile_df = pd.DataFrame(d).sort_values(["T", "percentile"])
+    return percentile_df

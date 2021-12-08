@@ -1,0 +1,14 @@
+scheduler: 
+  metric_recomputation_period: 1
+  log_warning_every_n_allocated_tasks: 0
+  
+metric:
+  normalize_by: ""
+  temperature: 1
+  gurobi_timeout: 200
+  gurobi_threads: 1
+  rescale_profits: True
+  polynomial_ratio: False
+
+logs:
+  verbose: False

@@ -53,7 +53,7 @@ class ThresholdUpdating(Scheduler):
                     if self.can_run(task):
                         self.allocate_task(task)
                         allocated_task_ids.append(task.id)
-                        if self.metric().is_dynamic():
+                        if self.metric.is_dynamic():
                             converged = False
                             break
         return allocated_task_ids

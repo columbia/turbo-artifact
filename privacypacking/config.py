@@ -8,6 +8,7 @@ from typing import List
 
 from loguru import logger
 from numpy.lib.arraysetops import isin
+from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
 from privacypacking.budget.curves import (
@@ -32,6 +33,15 @@ class Config:
 
         logger.info(f"Initializing config: {config}")
 
+        # Just a basic configuration file that is not Turing-complete...
+        default_omegaconf = OmegaConf.load(
+            Path(__file__).parent.joinpath("conf/default.yaml")
+        )
+        custom_omegaconf = OmegaConf.create(config["omegaconf"])
+        self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
+        logger.info(f"OmegaConf: {self.omegaconf}")
+
+        # Rest of the configuration below
         self.config = config
         self.epsilon = config[EPSILON]
         self.delta = config[DELTA]
@@ -213,8 +223,6 @@ class Config:
             self.new_task_driven_scheduling = True
 
         # LOGS
-        # TODO: add option to deactivate this
-        self.verbose_logs = True
         if LOG_FILE in config:
             self.log_file = f"{config[LOG_FILE]}.json"
         else:
@@ -233,7 +241,9 @@ class Config:
         self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
-        return self.config
+        d = self.config
+        d["omegaconf"] = OmegaConf.to_container(self.omegaconf)
+        return d
 
     # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
     def set_curve_distribution(self) -> str:
