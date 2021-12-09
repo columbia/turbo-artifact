@@ -9,6 +9,7 @@ metric:
   gurobi_threads: 1
   rescale_profits: True
   polynomial_ratio: False
+  clip_demands_in_relevance: False
 
 logs:
   verbose: False

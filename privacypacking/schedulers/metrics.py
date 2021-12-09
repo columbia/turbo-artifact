@@ -207,7 +207,14 @@ class RelevanceMetric(Metric):
         tasks: List[Task] = None,
         relevance_matrix: dict = None,
     ) -> float:
-        cost = np.multiply(task.demand_matrix.toarray(), relevance_matrix).sum()
+        task_demands = task.demand_matrix.toarray()
+        if self.config.clip_demands_in_relevance:
+            # NOTE: we assume each block has the same initial capacity
+            block_capacity = np.array(
+                [blocks[0].initial_budget.epsilon(alpha) for alpha in ALPHAS]
+            )
+            task_demands = np.clip(task_demands, a_min=0, a_max=block_capacity)
+        cost = np.multiply(task_demands, relevance_matrix).sum()
         return task.profit / cost if cost > 0 else float("inf")
 
     def is_dynamic(self):

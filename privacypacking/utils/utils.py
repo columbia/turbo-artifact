@@ -145,7 +145,10 @@ def global_metrics(logs: dict) -> dict:
         ),
         "mean_task_per_block": logs["simulator_config"]["tasks_spec"][
             TASK_ARRIVAL_FREQUENCY
-        ][POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
+        ][POISSON][AVG_NUMBER_TASKS_PER_BLOCK],
+        "data_path": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
+            "custom"
+        ]["data_path"],
         # "tasks_scheduling_times": logs["tasks_scheduling_times"],
     }
 

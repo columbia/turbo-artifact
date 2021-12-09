@@ -250,9 +250,9 @@ def privatekube(
             # WARNING: Important logic and arbitrary decisions in there!
             if profits == "grid":
                 if task_category == "elephants":
-                    profit = "10:0.5, 5:0.5"
+                    profit = "500:0.25, 100:0.25, 50:0.25, 10:0.25"
                 else:
-                    profit = "2:0.5, 1:0.5"
+                    profit = "50:0.25, 10:0.25, 5:0.25, 1:0.25"
             elif profits == "size":
                 profit = raw_task_dict["epsilon"] * task_dict["n_blocks"]
             elif profits == "ksize":

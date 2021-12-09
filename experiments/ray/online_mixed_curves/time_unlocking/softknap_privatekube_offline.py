@@ -44,35 +44,43 @@ def grid():
     scheduler_metrics = [
         SOFT_KNAPSACK,
         BATCH_OVERFLOW_RELEVANCE,
+        # FLAT_RELEVANCE,
         DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
-        VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
+        # FCFS,
+        # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
-    temperature = [0.01, 0.5, 1, 5, 10]
-    # temperature = [1]
-    normalize_by = ["capacity"]
-    # normalize_by = [""]
+    # temperature = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 1, 5, 10]
+    # temperature = [1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1, 10]
 
-    metric_recomputation_period = [1, 10, 50]
+    temperature = [1e-4]
+    normalize_by = ["capacity"]
+    # normalize_by = ["available_budget"]
+    # normalize_by = [""]
+    clip_demands_in_relevance = [True]
+
+    metric_recomputation_period = [50]
 
     n = [1]
     data_lifetime = [0.1]
     scheduler_scheduling_time = [45]
 
-    # avg_number_tasks_per_block = [50]
-    avg_number_tasks_per_block = [100, 250, 500, 1000]
+    avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
+    # avg_number_tasks_per_block = [400]
+
+    # avg_number_tasks_per_block = [100, 250, 500, 1000]
     max_blocks = [30]
     initial_blocks = [10]
-    seeds = [0]
+    seeds = [1]
     block_selection_policies = ["LatestBlocksFirst"]
 
     data_path = [
-        "privatekube_event_g0.0_l0.5_p=size",
-        "privatekube_event_g0.0_l0.5_p=1",
-        "privatekube_event_g0.0_l0.5_p=ksize",
+        "privatekube_event_g0.0_l0.5_p=grid",
+        # "privatekube_event_g0.0_l0.5_p=size",
+        # "privatekube_event_g0.0_l0.5_p=1",
+        # "privatekube_event_g0.0_l0.5_p=ksize",
     ]
 
     config[GLOBAL_SEED] = tune.grid_search(seeds)
@@ -107,10 +115,12 @@ def grid():
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
             ),
+            "log_warning_every_n_allocated_tasks": 100,
         },
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
             "temperature": tune.grid_search(temperature),
+            "clip_demands_in_relevance": tune.grid_search(clip_demands_in_relevance),
         },
     }
 
@@ -129,6 +139,7 @@ def grid():
                 "scheduler_spec/scheduling_wait_time": "T",
                 "scheduler_spec/data_lifetime": "lifetime",
                 "scheduler_spec/metric": "metric",
+                "omegaconf/metric/temperature": "temperature",
             },
             max_report_frequency=60,
         ),
