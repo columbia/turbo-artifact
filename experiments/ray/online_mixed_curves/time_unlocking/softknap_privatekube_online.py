@@ -61,13 +61,13 @@ def grid():
     # normalize_by = [""]
     clip_demands_in_relevance = [True]
 
-    metric_recomputation_period = [5]
+    metric_recomputation_period = [10, 25]
     # metric_recomputation_period = [50]
 
     n = [10_000]
     data_lifetime = [10]
     # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
-    scheduler_scheduling_time = [0.001, 0.01, 0.1, 1, 5, 10, 20, 40]
+    scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 40]
     # scheduler_scheduling_time = [1, 20]
 
     # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
@@ -82,7 +82,7 @@ def grid():
     data_path = [
         "privatekube_event_g0.0_l0.5_p=grid",
         # "privatekube_event_g0.0_l0.5_p=size",
-        # "privatekube_event_g0.0_l0.5_p=1",
+        "privatekube_event_g0.0_l0.5_p=1",
         # "privatekube_event_g0.0_l0.5_p=ksize",
     ]
 
