@@ -149,7 +149,7 @@ def global_metrics(logs: dict) -> dict:
         "data_path": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
             "custom"
         ]["data_path"],
-        # "tasks_scheduling_times": logs["tasks_scheduling_times"],
+        "allocated_tasks_scheduling_delays": logs["allocated_tasks_scheduling_delays"],
     }
 
     omegaconf = OmegaConf.create(logs["simulator_config"]["omegaconf"])
