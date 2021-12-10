@@ -61,17 +61,18 @@ def grid():
     # normalize_by = [""]
     clip_demands_in_relevance = [True]
 
-    metric_recomputation_period = [10, 25]
     # metric_recomputation_period = [50]
+    # metric_recomputation_period = [5, 1]
+    metric_recomputation_period = [50]
 
     n = [10_000]
     data_lifetime = [10]
     # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
-    scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 40]
+    scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
     # scheduler_scheduling_time = [1, 20]
 
     # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
-    avg_number_tasks_per_block = [500]
+    avg_number_tasks_per_block = [1000]
 
     # avg_number_tasks_per_block = [100, 250, 500, 1000]
     max_blocks = [30]

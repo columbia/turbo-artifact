@@ -67,8 +67,8 @@ func Softmax(x []float64, T float64) []float64 {
 	// Substract the max to avoid overflow
 	m := 0.0
 	for i, v := range x {
-		if i==0 || v/T > m {
-			m = v/T
+		if i==0 || v > m {
+			m = v
 		}
 	}
 
