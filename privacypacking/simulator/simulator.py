@@ -53,6 +53,7 @@ class Simulator:
         #     self.config,
         #     scheduling_time=simulation_duration,
         # )
-        self.config.logger.save_logs(logs)
+        if self.config.omegaconf.logs.save:
+            self.config.logger.save_logs(logs)
 
         return global_metrics(logs)
