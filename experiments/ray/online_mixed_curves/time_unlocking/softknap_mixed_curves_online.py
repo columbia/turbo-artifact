@@ -46,9 +46,9 @@ def grid():
     scheduler_metrics = [
          SOFT_KNAPSACK,
          BATCH_OVERFLOW_RELEVANCE,
-         FLAT_RELEVANCE,
+        #  FLAT_RELEVANCE,
          DYNAMIC_FLAT_RELEVANCE,
-         FCFS,
+        #  FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
          DOMINANT_SHARES,
     ]
@@ -64,12 +64,12 @@ def grid():
     metric_recomputation_period = [10]
 
     # Fully unlocked case
-    #n = [1]
-    #data_lifetime = [0.001]
+    n = [1]
+    data_lifetime = [0.001]
 
     # Progressive unlocking
-    n = [1_000]
-    data_lifetime = [5]
+    # n = [1_000]
+    # data_lifetime = [5]
 
     scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
 
