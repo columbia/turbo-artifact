@@ -71,12 +71,12 @@ def grid():
     n = [1_000]
     data_lifetime = [5]
 
-    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10]
+    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
 
     avg_number_tasks_per_block = [100]
     max_blocks = [20]
     initial_blocks = [0]
-    seeds = [1]
+    seeds = [0]
     block_selection_policies = ["LatestBlocksFirst"]
 
     data_path = "mixed_curves"
