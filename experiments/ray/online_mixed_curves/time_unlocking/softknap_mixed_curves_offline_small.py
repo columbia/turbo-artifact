@@ -40,51 +40,44 @@ def run_and_report(config: dict) -> None:
 
 def grid():
 
+    # ray.init(log_to_driver=False)
+
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
-        # SOFT_KNAPSACK,
-        # BATCH_OVERFLOW_RELEVANCE,
-        # # FLAT_RELEVANCE,
-        # DYNAMIC_FLAT_RELEVANCE,
-        # FCFS,
-        # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
+       SOFT_KNAPSACK,
+         BATCH_OVERFLOW_RELEVANCE,
+         FLAT_RELEVANCE,
+         DYNAMIC_FLAT_RELEVANCE,
+        #  FCFS,
+        # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
+         DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
-    # temperature = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 1, 5, 10]
-    # temperature = [1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1, 10]
+    # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
+    temperature = [1]
 
-    temperature = [1e-4]
-    # normalize_by = ["capacity"]
-    normalize_by = ["available_budget"]
+    # normalize_by = ["capacity", "available_budget", ""]
     # normalize_by = [""]
-    clip_demands_in_relevance = [True]
+    normalize_by = ["available_budget"]
 
-    # metric_recomputation_period = [5, 1]
-    metric_recomputation_period = [50]
+    metric_recomputation_period = [10]
 
-    n = [10_000]
-    data_lifetime = [10]
-    # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
-    # scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
-    scheduler_scheduling_time = [0.001]
+    # Fully unlocked case
+    n = [1]
+    data_lifetime = [0.001]
 
-    # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
-    avg_number_tasks_per_block = [1000, 1250, 1500, 750, 250, 500]
+    scheduler_scheduling_time = [1]
 
-    # avg_number_tasks_per_block = [100, 250, 500, 1000]
-    max_blocks = [30]
-    initial_blocks = [10]
+#    avg_number_tasks_per_block = [100] 
+    avg_number_tasks_per_block = [50, 100, 200, 300, 400, 500]
+    max_blocks = [20]
+    initial_blocks = [19]
     seeds = [1]
-    block_selection_policies = ["LatestBlocksFirst"]
+    block_selection_policies = ["RandomBlocks"]
 
-    data_path = [
-        "privatekube_event_g0.0_l0.5_p=grid",
-        # "privatekube_event_g0.0_l0.5_p=size",
-        "privatekube_event_g0.0_l0.5_p=1",
-        # "privatekube_event_g0.0_l0.5_p=ksize",
-    ]
+    data_path = "mixed_curves"
+    # data_path = "mixed_curves_profits_0.5-1.0"
 
     config[GLOBAL_SEED] = tune.grid_search(seeds)
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
@@ -96,9 +89,7 @@ def grid():
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_PATH] = tune.grid_search(
-        data_path
-    )
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_PATH] = data_path
 
     config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
         AVG_NUMBER_TASKS_PER_BLOCK
@@ -118,12 +109,10 @@ def grid():
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
             ),
-            "log_warning_every_n_allocated_tasks": 100,
         },
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
             "temperature": tune.grid_search(temperature),
-            "clip_demands_in_relevance": tune.grid_search(clip_demands_in_relevance),
         },
     }
 
@@ -136,16 +125,6 @@ def grid():
         # resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,
-        progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
-            parameter_columns={
-                "scheduler_spec/scheduling_wait_time": "T",
-                "scheduler_spec/data_lifetime": "lifetime",
-                "scheduler_spec/metric": "metric",
-                "omegaconf/metric/temperature": "temperature",
-            },
-            max_report_frequency=60,
-        ),
     )
 
 

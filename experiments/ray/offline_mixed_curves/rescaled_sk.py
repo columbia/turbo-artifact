@@ -19,6 +19,7 @@ from privacypacking.schedulers.utils import (
     NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
+    SOFT_KNAPSACK,
     SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
     TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
@@ -71,22 +72,27 @@ def grid():
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
 
+    temperature = [1]
+    normalize_by = ["available_budget"]
+    metric_recomputation_period = [10]
+
     # Conditonal parameter
     method_and_metric = []
-    # method_and_metric = []
     for metric in [
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         OVERFLOW_RELEVANCE,
         FCFS,
+        SOFT_KNAPSACK,
+        DYNAMIC_FLAT_RELEVANCE,
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
     method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
 
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
-    num_tasks = [50, 100, 200, 300, 400, 500, 750, 1000, 1500, 2000]
-    num_blocks = [10]
+    num_tasks = [50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000]
+    num_blocks = [20]
     data_path = "mixed_curves"
     block_selection_policies = ["RandomBlocks"]
 
@@ -126,16 +132,31 @@ def grid():
 
     config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
 
+    config["omegaconf"] = {
+        "scheduler": {
+            "metric_recomputation_period": tune.grid_search(
+                metric_recomputation_period
+            ),
+            "log_warning_every_n_allocated_tasks": 0,
+        },
+        "metric": {
+            "normalize_by": tune.grid_search(normalize_by),
+            "temperature": tune.grid_search(temperature),
+            "gurobi_timeout": 1_000,
+        },
+    }
+
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 3},
+        resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
         resume=False,
         # stop=TrialStopper(max_seconds=30),
-        stop=TimeoutStopper(timeout=3 * 60),
+        # stop=TimeoutStopper(timeout=3 * 60),
     )
 
 
 if __name__ == "__main__":
+    os.environ["LOGURU_LEVEL"] = "WARNING"
     grid()
