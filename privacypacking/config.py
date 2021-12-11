@@ -37,7 +37,7 @@ class Config:
         default_omegaconf = OmegaConf.load(
             Path(__file__).parent.joinpath("conf/default.yaml")
         )
-        custom_omegaconf = OmegaConf.create(config["omegaconf"])
+        custom_omegaconf = OmegaConf.create(config.get("omegaconf", {}))
         self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
         logger.info(f"OmegaConf: {self.omegaconf}")
 
