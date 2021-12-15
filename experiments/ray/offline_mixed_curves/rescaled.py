@@ -72,7 +72,7 @@ def grid():
     update_dict(user_config, config)
 
     # Conditonal parameter
-    method_and_metric = [(SIMPLEX, DOMINANT_SHARES)]
+    method_and_metric = []
     # method_and_metric = []
     for metric in [
         DOMINANT_SHARES,
@@ -81,6 +81,8 @@ def grid():
         FCFS,
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
+    method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
+
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
     num_tasks = [50, 100, 200, 300, 400, 500, 750, 1000, 1500, 2000]

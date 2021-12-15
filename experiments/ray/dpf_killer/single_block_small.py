@@ -1,19 +1,21 @@
+import argparse
 import os
 
-import argparse
+import numpy as np
 from loguru import logger
 from ray import tune
-import numpy as np
-from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import *
+
+from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     BASIC_SCHEDULER,
-    SIMPLEX,
     DOMINANT_SHARES,
     FLAT_RELEVANCE,
-    OVERFLOW_RELEVANCE
+    OVERFLOW_RELEVANCE,
+    SIMPLEX,
+    SOFT_KNAPSACK,
 )
-from privacypacking.config import Config
+from privacypacking.simulator.simulator import Simulator
+from privacypacking.utils.utils import *
 
 
 def run_and_report(config: dict) -> None:
@@ -26,7 +28,12 @@ def run_and_report(config: dict) -> None:
 
 def grid():
     scheduler_methods = [BASIC_SCHEDULER]
-    scheduler_metrics = [DOMINANT_SHARES, FLAT_RELEVANCE, OVERFLOW_RELEVANCE]
+    scheduler_metrics = [
+        DOMINANT_SHARES,
+        FLAT_RELEVANCE,
+        OVERFLOW_RELEVANCE,
+        SOFT_KNAPSACK,
+    ]
     block_selection_policies = ["RandomBlocks"]
 
     config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)

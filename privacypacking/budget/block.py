@@ -26,3 +26,8 @@ class Block:
     @property
     def allocated_budget(self) -> Budget:
         return self.initial_budget - self.budget
+
+    # For compatibility with online schedulers
+    @property
+    def available_unlocked_budget(self) -> Budget:
+        return self.budget

@@ -25,6 +25,7 @@ class TasksInfo:
         self.scheduling_time = {}
         self.creation_time = {}
         self.scheduling_delay = {}
+        self.allocation_index = {}
 
     def dump(self):
         tasks_info = {
@@ -32,6 +33,7 @@ class TasksInfo:
             "scheduling_delay": self.scheduling_delay,
             "creation_time": self.creation_time,
             "scheduling_time": self.scheduling_time,
+            "allocation_index": self.allocation_index,
         }
 
         # # Why only dumping the metadata for allocated tasks?
@@ -48,12 +50,6 @@ class TasksInfo:
         return tasks_info
 
 
-from privacypacking.schedulers.metrics import (
-    BatchOverflowRelevance,
-    VectorizedBatchOverflowRelevance,
-)  # isort:skip
-
-
 class Scheduler:
     def __init__(self, metric=None, verbose_logs=False):
         self.metric = metric
@@ -61,6 +57,7 @@ class Scheduler:
         self.blocks = {}
         self.tasks_info = TasksInfo()
         self.simulation_terminated = False
+        self.allocation_counter = 0
         if verbose_logs:
             logger.warning("Verbose logs. Might be slow and noisy!")
             # Counts the number of scheduling passes for each scheduling step (fixpoint)
@@ -68,6 +65,8 @@ class Scheduler:
 
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
+
+        self.omegaconf = None
 
     def consume_budgets(self, task):
         """
@@ -116,23 +115,52 @@ class Scheduler:
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
 
+            logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
+
             # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
             # time.sleep(1)
 
+            n_allocated_tasks = 0
             for task in sorted_tasks:
                 if self.can_run(task):
+
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
-                    if self.metric().is_dynamic():
+                    self.tasks_info.allocation_index[task.id] = self.allocation_counter
+                    self.allocation_counter += 1
+                    n_allocated_tasks += 1
+
+                    if self.omegaconf.log_warning_every_n_allocated_tasks and (
+                        self.allocation_counter
+                        % self.omegaconf.log_warning_every_n_allocated_tasks
+                        == 0
+                    ):
+                        logger.warning(
+                            f"Number of allocated tasks: {self.allocation_counter} at time {self.now()}"
+                        )
+                    if (
+                        self.metric.is_dynamic()
+                        and n_allocated_tasks
+                        % self.omegaconf.metric_recomputation_period
+                        == 0
+                    ):
                         # We go back to the beginning of the while loop
+
                         converged = False
                         break
+                else:
+                    logger.debug(
+                        f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
+                    )
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
         try:
             self.task_set_block_ids(task)
+            logger.debug(
+                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+            )
         except NotEnoughBlocks as e:
             # logger.warning(
             #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
@@ -159,25 +187,21 @@ class Scheduler:
         """Sorts the tasks by metric"""
 
         # The overflow is the same for all the tasks in this sorting pass
-        if self.metric == BatchOverflowRelevance:
+        if hasattr(self.metric, "compute_overflow"):
             logger.info("Precomputing the overflow for the whole batch")
-            overflow = BatchOverflowRelevance.compute_overflow(self.blocks, tasks)
-        elif self.metric == VectorizedBatchOverflowRelevance:
+            overflow = self.metric.compute_overflow(self.blocks, tasks)
+        elif hasattr(self.metric, "compute_relevance_matrix"):
             # TODO: generalize to other relevance heuristics
-
+            logger.info("Precomputing the relevance matrix for the whole batch")
             for t in tasks:
                 # We assume that there are no missing blocks. Otherwise, compute the max block id.
                 t.pad_demand_matrix(n_blocks=self.get_num_blocks())
-            relevance_matrix = (
-                VectorizedBatchOverflowRelevance.compute_relevance_matrix(
-                    self.blocks, tasks
-                )
-            )
+            relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):
-            if self.metric == BatchOverflowRelevance:
+            if hasattr(self.metric, "compute_overflow"):
                 return self.metric.apply(task, self.blocks, tasks, overflow)
-            elif self.metric == VectorizedBatchOverflowRelevance:
+            elif hasattr(self.metric, "compute_relevance_matrix"):
                 return self.metric.apply(task, self.blocks, tasks, relevance_matrix)
             else:
                 return self.metric.apply(task, self.blocks, tasks)
@@ -205,7 +229,6 @@ class Scheduler:
 
             # We might have multiple scheduling passes a the same time step
             scheduling_time = self.now()
-            self.iteration_counter[scheduling_time] += 1
             self.scheduling_queue_info.append(
                 {
                     "scheduling_time": scheduling_time,
@@ -214,7 +237,7 @@ class Scheduler:
                 }
             )
 
-            # raise NotImplementedError
+            self.iteration_counter[scheduling_time] += 1
 
             return sorted_tasks
 

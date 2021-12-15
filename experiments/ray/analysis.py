@@ -37,45 +37,51 @@ def load_latest_ray_experiment() -> pd.DataFrame:
     return load_ray_experiment(latest_log_dir)
 
 
-def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.DataFrame:
+def load_scheduling_dumps(
+    json_log_paths: Iterable[Union[Path, str]], verbose=False
+) -> pd.DataFrame:
     d = defaultdict(list)
 
     for p in json_log_paths:
-        print(p)
-        with open(p) as f:
-            run_dict = json.load(f)
-        for t in run_dict["tasks"]:
-            for block_id, block_budget in t["budget_per_block"].items():
+        if verbose:
+            print(p)
+        try:
+            with open(p) as f:
+                run_dict = json.load(f)
+            for t in run_dict["tasks"]:
+                for block_id, block_budget in t["budget_per_block"].items():
 
-                d["id"].append(t["id"])
-                d["hashed_id"].append(hash(str(t["id"])) % 100)
-                d["allocated"].append(t["allocated"])
-                d["profit"].append(t["profit"])
-                d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
-                d["scheduler"].append(
-                    run_dict["simulator_config"]["scheduler_spec"]["method"]
-                )
-                d["total_blocks"].append(len(run_dict["blocks"]))
-                d["n_blocks"].append(len(t["budget_per_block"]))
+                    d["id"].append(t["id"])
+                    d["hashed_id"].append(hash(str(t["id"])) % 100)
+                    d["allocated"].append(t["allocated"])
+                    d["profit"].append(t["profit"])
+                    d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
+                    d["scheduler"].append(
+                        run_dict["simulator_config"]["scheduler_spec"]["method"]
+                    )
+                    d["total_blocks"].append(len(run_dict["blocks"]))
+                    d["n_blocks"].append(len(t["budget_per_block"]))
 
-                d["block"].append(int(block_id))
-                d["epsilon"].append(block_budget["dp_budget"]["epsilon"])
-                d["block_selection"].append(
-                    run_dict["simulator_config"]["tasks_spec"]["curve_distributions"][
-                        "custom"
-                    ]["read_block_selecting_policy_from_config"][
-                        "block_selecting_policy"
-                    ]
-                )
-                d["totalblocks_scheduler_selection"].append(
-                    f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
-                )
-                d["metric"].append(
-                    run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                )
-                d["nblocks_maxeps"].append(
-                    f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
-                )
+                    d["block"].append(int(block_id))
+                    d["epsilon"].append(block_budget["dp_budget"]["epsilon"])
+                    d["block_selection"].append(
+                        run_dict["simulator_config"]["tasks_spec"][
+                            "curve_distributions"
+                        ]["custom"]["read_block_selecting_policy_from_config"][
+                            "block_selecting_policy"
+                        ]
+                    )
+                    d["totalblocks_scheduler_selection"].append(
+                        f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
+                    )
+                    d["metric"].append(
+                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
+                    )
+                    d["nblocks_maxeps"].append(
+                        f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
+                    )
+        except Exception as e:
+            print(e)
 
     df = pd.DataFrame(d).sort_values(
         ["block", "id", "allocated"], ascending=[True, True, False]
@@ -86,11 +92,13 @@ def load_scheduling_dumps(json_log_paths: Iterable[Union[Path, str]]) -> pd.Data
 
 def load_scheduling_dumps_alphas(
     json_log_paths: Iterable[Union[Path, str]],
+    verbose=False,
 ) -> pd.DataFrame:
     d = defaultdict(list)
 
     for p in json_log_paths:
-        print(p)
+        if verbose:
+            print(p)
         with open(p) as f:
             run_dict = json.load(f)
 
@@ -127,6 +135,7 @@ def load_scheduling_dumps_alphas(
                     d["n_blocks"].append(len(t["budget_per_block"]))
                     d["creation_time"].append(t["creation_time"])
                     d["scheduling_time"].append(t["scheduling_time"])
+                    d["allocation_index"].append(t["allocation_index"])
                     d["scheduling_delay"].append(t["scheduling_delay"])
 
                     d["block"].append(int(block_id))
@@ -173,28 +182,32 @@ def load_scheduling_queue(expname="") -> pd.DataFrame:
 
     for p in latest_exp_dir.glob("**/*.json"):
         print(p)
-        with open(p) as f:
-            run_dict = json.load(f)
-            for step_info in run_dict["scheduling_queue_info"]:
-                d["scheduling_time"].append(step_info["scheduling_time"])
-                d["iteration_counter"].append(step_info["iteration_counter"])
+        try:
+            with open(p) as f:
+                run_dict = json.load(f)
+                for step_info in run_dict["scheduling_queue_info"]:
+                    d["scheduling_time"].append(step_info["scheduling_time"])
+                    d["iteration_counter"].append(step_info["iteration_counter"])
 
-                # Store the raw lists for now
-                d["ids_and_metrics"].append(step_info["ids_and_metrics"])
+                    # Store the raw lists for now
+                    d["ids_and_metrics"].append(step_info["ids_and_metrics"])
 
-                # General config info
-                d["metric"].append(
-                    run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                )
-                d["T"].append(
-                    run_dict["simulator_config"]["scheduler_spec"][
-                        "scheduling_wait_time"
-                    ]
-                ),
-                d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
-                d["data_lifetime"].append(
-                    run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
-                )
+                    # General config info
+                    d["metric"].append(
+                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
+                    )
+                    d["T"].append(
+                        run_dict["simulator_config"]["scheduler_spec"][
+                            "scheduling_wait_time"
+                        ]
+                    ),
+                    d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                    d["data_lifetime"].append(
+                        run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                    )
+        except Exception as e:
+            print(e)
+
     df = pd.DataFrame(d).sort_values(
         ["scheduling_time", "iteration_counter"],
         ascending=[True, True],
@@ -219,7 +232,9 @@ def load_tasks(expname="", validate=False, tasks_dir="") -> pd.DataFrame:
         for t in run_dict["tasks"]:
             block_budget = list(t["budget_per_block"].values())[0]
             d["id"].append(t["id"])
-            d["first_block_id"] = min(t["budget_per_block"].keys())
+            d["first_block_id"] = min(
+                [int(block_id) for block_id in t["budget_per_block"].keys()]
+            )
             d["n_blocks"].append(len(t["budget_per_block"]))
             d["profit"].append(t["profit"])
             d["creation_time"].append(t["creation_time"])
@@ -261,6 +276,7 @@ def load_latest_scheduling_results(
     alphas=False,
     expname="",
     tasks_dir="",
+    verbose=False,
 ) -> pd.DataFrame:
 
     if not expname:
@@ -270,9 +286,9 @@ def load_latest_scheduling_results(
         latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
-        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"), verbose)
     else:
-        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"))
+        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"), verbose)
 
     if tasks_dir:
         maxeps = {}
@@ -288,3 +304,20 @@ def load_latest_scheduling_results(
         df["task"] = df["nblocks_maxeps"].apply(get_task_name)
 
     return df
+
+
+def get_percentiles(delay_df, percentile_list):
+    d = defaultdict(list)
+    delay_df_na = delay_df.dropna()
+    for percentile in percentile_list:
+        for T in delay_df_na["T"].unique():
+            for metric in delay_df_na["metric"].unique():
+                delay_series = delay_df_na.query(f"metric == '{metric}' and T == {T}")[
+                    "scheduling_delay"
+                ]
+                d["delay"].append(np.percentile(delay_series, percentile))
+                d["percentile"].append(percentile)
+                d["T"].append(T)
+                d["scheduler"].append(metric)
+    percentile_df = pd.DataFrame(d).sort_values(["T", "percentile"])
+    return percentile_df

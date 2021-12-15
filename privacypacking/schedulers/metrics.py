@@ -1,13 +1,28 @@
+import os
 import time
+from collections import defaultdict
+
+# from ray.util.multiprocessing import Pool
+from multiprocessing import Pool
 from typing import Dict, List, Type
 
+import gurobipy as gp
 import numpy as np
+from gurobipy import GRB
 from loguru import logger
+from mip import BINARY, Model, maximize, xsum
+from mip.constants import GUROBI
+from omegaconf import DictConfig
 from scipy.sparse import spmatrix
 from scipy.sparse.dok import dok_matrix
+from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Block, Task
-from privacypacking.schedulers.scheduler import TaskQueue
+from privacypacking.schedulers.scheduler import Scheduler, TaskQueue
+from privacypacking.utils.utils import (
+    NORMALIZE_BY_AVAILABLE_BUDGET,
+    NORMALIZE_BY_CAPACITY,
+)
 
 
 class MetricException(Exception):
@@ -16,25 +31,25 @@ class MetricException(Exception):
 
 class Metric:
     @staticmethod
-    def from_str(metric: str) -> Type["Metric"]:
+    def from_str(metric: str, metric_config: DictConfig) -> Type["Metric"]:
         if metric in globals():
-            return globals()[metric]
+            return globals()[metric](config=metric_config)
         else:
             raise MetricException(f"Unknown metric: {metric}")
 
-    @staticmethod
-    def apply(queue: TaskQueue, efficiency: float):
+    def __init__(self, config: DictConfig) -> None:
+        self.config = config
+
+    def apply(self, queue: TaskQueue, efficiency: float):
         pass
 
-    @staticmethod
-    def is_dynamic():
+    def is_dynamic(self):
         return False
 
 
 class DominantShares(Metric):
-    @staticmethod
     def apply(
-        task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
     ) -> List[float]:
         demand_fractions = []
         for block_id, demand_budget in task.budget_per_block.items():
@@ -56,32 +71,9 @@ class DominantShares(Metric):
         return demand_fractions
 
 
-# class AvailableDominantShares(Metric):
-#     @staticmethod
-#     def apply(
-#         task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
-#     ) -> List[float]:
-#         demand_fractions = []
-#         for block_id, demand_budget in task.budget_per_block.items():
-#             block = blocks[block_id]
-#             block_remaining_budget = block.budget
-#             # Compute the demand share for each alpha of the block
-#             for alpha in block_remaining_budget.alphas:
-#                 # Drop RDP orders that are already negative
-#                 if block_remaining_budget.epsilon(alpha) > 0:
-#                     demand_fractions.append(
-#                         demand_budget.epsilon(alpha)
-#                         / block_remaining_budget.epsilon(alpha)
-#                     )
-#         # Order by highest demand fraction first
-#         demand_fractions.sort(reverse=True)
-#         return demand_fractions
-
-
 class Fcfs(Metric):
-    @staticmethod
     def apply(
-        task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
+        self, task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
     ) -> id:
         # return task.id
         # The smallest id has the highest priority
@@ -89,8 +81,9 @@ class Fcfs(Metric):
 
 
 class FlatRelevance(Metric):
-    @staticmethod
-    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+    def apply(
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+    ) -> float:
         logger.info(f"Computing FlatRelevance for task {task.id}.")
         cost = 0.0
         for block_id, budget in task.budget_per_block.items():
@@ -108,8 +101,9 @@ class FlatRelevance(Metric):
 
 
 class DynamicFlatRelevance(Metric):
-    @staticmethod
-    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+    def apply(
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+    ) -> float:
         logger.info(f"Computing DynamicFlatRelevance for task {task.id}.")
         cost = 0.0
         for block_id, budget in task.budget_per_block.items():
@@ -122,17 +116,19 @@ class DynamicFlatRelevance(Metric):
                 if remaining_budget > 0:
                     cost += demand / remaining_budget
         task.cost = cost
+        if cost == 0:
+            return float("inf")
         logger.info(f"Task {task.id} cost: {cost} profit: {task.profit / cost} ")
         return task.profit / cost
 
-    @staticmethod
-    def is_dynamic():
+    def is_dynamic(self):
         return True
 
 
 class SquaredDynamicFlatRelevance(Metric):
-    @staticmethod
-    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+    def apply(
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+    ) -> float:
         total_cost = 0.0
         block_cost = 0
         for block_id, budget in task.budget_per_block.items():
@@ -145,20 +141,19 @@ class SquaredDynamicFlatRelevance(Metric):
         task.cost = total_cost
         return task.profit / total_cost
 
-    @staticmethod
-    def is_dynamic():
+    def is_dynamic(self):
         return True
 
 
 class RoundRobins(Metric):
-    @staticmethod
     def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
         pass
 
 
 class OverflowRelevance(Metric):
-    @staticmethod
-    def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
+    def apply(
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+    ) -> float:
         overflow_b_a = {}
         for t in tasks:
             for block_id, block_demand in t.budget_per_block.items():
@@ -191,21 +186,50 @@ class OverflowRelevance(Metric):
         return task.profit / total_cost
 
 
-# TODO: vectorize and cache things to speed up
+class RelevanceMetric(Metric):
+    def compute_relevance_matrix(
+        self,
+        blocks: Dict[int, Block],
+        tasks: List[Task] = None,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
+    ) -> np.ndarray:
+        n_blocks = len(blocks)
+        n_alphas = len(ALPHAS)
+        relevance = np.zeros((n_blocks, n_alphas))
 
+        return relevance
 
-# class Vectorized
+    def apply(
+        self,
+        task: Task,
+        blocks: Dict[int, Block],
+        tasks: List[Task] = None,
+        relevance_matrix: dict = None,
+    ) -> float:
+        task_demands = task.demand_matrix.toarray()
+        if self.config.clip_demands_in_relevance:
+            # NOTE: we assume each block has the same initial capacity
+            block_capacity = np.array(
+                [blocks[0].initial_budget.epsilon(alpha) for alpha in ALPHAS]
+            )
+            task_demands = np.clip(task_demands, a_min=0, a_max=block_capacity)
+        cost = np.multiply(task_demands, relevance_matrix).sum()
+        return task.profit / cost if cost > 0 else float("inf")
+
+    def is_dynamic(self):
+        return True
 
 
 class VectorizedBatchOverflowRelevance(Metric):
-    @staticmethod
     def compute_relevance_matrix(
+        self,
         blocks: Dict[int, Block],
         tasks: List[Task] = None,
-        drop_blocks_with_no_contention=False,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
     ) -> np.ndarray:
-        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
-        logger.info(f"Sum of demands: {sum_demands}")
+
         # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
@@ -214,33 +238,42 @@ class VectorizedBatchOverflowRelevance(Metric):
         overflow = np.zeros((n_blocks, n_alphas))
         for block_id in range(n_blocks):
             for alpha_index, alpha in enumerate(ALPHAS):
-                eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
-                overflow[block_id, alpha_index] = -eps
-                # NOTE: we could also accept negative available unlocked budget and drop alphas. Maybe not necessary.
-                # if eps >= 0:
-                #     overflow[block_id, alpha] = -eps
-                # else:
-                #     # There is no available budget, so this alpha is not relevant
-                #     overflow[block_id, alpha] = float("inf")
+                if truncate_available_budget:
+                    eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
+                        alpha
+                    )
+                    overflow[block_id, alpha_index] = -eps
+                else:
+                    eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
+                    if eps >= 0:
+                        overflow[block_id, alpha_index] = -eps
+                    else:
+                        # There is no available budget, so this alpha is not relevant
+                        overflow[block_id, alpha_index] = float("inf")
 
+        # Add all the demands
+        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
+        # logger.info(f"Sum of demands: {sum_demands}")
         overflow += sum_demands
-
-        relevance = np.reciprocal(overflow)
 
         if drop_blocks_with_no_contention:
             # If a block has an alpha without contention, the relevance should be 0 because we can allocate everything
-            # TODO: do we really need this? It doesn't look neat. I'll deactivate it by default.
+            # TODO: do we really need this? It doesn't look neat.
             for block_id in range(n_blocks):
-                min_overflow = np.min(overflow[block_id, :])
+                min_overflow = np.min(overflow[block_id])
                 if min_overflow <= 0:
-                    overflow[block_id, :] = np.zeros(n_alphas)
+                    overflow[block_id] = np.empty(shape=[1, n_alphas]).fill(
+                        float("inf")
+                    )
 
-        logger.info(f"Relevance: {relevance}")
+        # overflow > 0 or infty (if we drop blocks with no contention)
+        relevance = np.reciprocal(overflow)
+        # logger.info(f"Relevance: {relevance}")
 
         return relevance
 
-    @staticmethod
     def apply(
+        self,
         task: Task,
         blocks: Dict[int, Block],
         tasks: List[Task] = None,
@@ -249,10 +282,82 @@ class VectorizedBatchOverflowRelevance(Metric):
         cost = np.multiply(task.demand_matrix.toarray(), relevance_matrix).sum()
         return task.profit / cost if cost > 0 else float("inf")
 
+    def is_dynamic(self):
+        return True
+
+
+class SoftmaxOverflow(VectorizedBatchOverflowRelevance):
+    # Instead of dividing by the overflow, we take a softmax. And we normalize.
+    def compute_relevance_matrix(
+        self,
+        blocks: Dict[int, Block],
+        tasks: List[Task] = None,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
+        temperature=0.1,
+    ) -> np.ndarray:
+
+        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
+
+        # Compute the negative available unlocked budget
+        n_blocks = len(blocks)
+        n_alphas = len(ALPHAS)
+        available_budget = np.zeros((n_blocks, n_alphas))
+        for block_id in range(n_blocks):
+            for alpha_index, alpha in enumerate(ALPHAS):
+                if truncate_available_budget:
+                    eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
+                        alpha
+                    )
+                    available_budget[block_id, alpha_index] = eps
+                else:
+                    eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
+                    if eps >= 0:
+                        available_budget[block_id, alpha_index] = eps
+                    else:
+                        # There is no available budget, so this alpha is not relevant
+                        # TODO: not great, but doesn't seem to matter too much in practice.
+                        available_budget[block_id, alpha_index] = -float("inf")
+
+        # Add all the demands
+        sum_demands = sum((task.demand_matrix.toarray() for task in tasks))
+        # logger.info(f"Sum of demands: {sum_demands}")
+        overflow = sum_demands - available_budget
+
+        if drop_blocks_with_no_contention:
+            # If a block has an alpha without contention, the relevance should be 0 because we can allocate everything
+            # TODO: do we really need this? It doesn't look neat.
+            for block_id in range(n_blocks):
+                min_overflow = np.min(overflow[block_id])
+                if min_overflow <= 0:
+                    overflow[block_id] = np.empty(shape=[1, n_alphas]).fill(
+                        float("inf")
+                    )
+
+        # overflow > 0 or infty (if we drop blocks with no contention)
+        exponential_overflow = np.exp(-temperature * overflow)
+        sum_per_block = np.sum(exponential_overflow, axis=1) + 1e-15
+        softmax = np.divide(
+            exponential_overflow,
+            np.broadcast_to(
+                np.expand_dims(sum_per_block, axis=1), (n_blocks, n_alphas)
+            ),
+        )
+
+        logger.info(f"Softmax: {softmax}")
+        time.sleep(2)
+
+        # The softmax returns a probability vector, but different alphas have different scales.
+        relevance = np.divide(softmax, available_budget)
+        # logger.info(f"Relevance: {relevance}")
+
+        return relevance
+
 
 class BatchOverflowRelevance(Metric):
-    @staticmethod
-    def compute_overflow(blocks: Dict[int, Block], tasks: List[Task] = None) -> dict:
+    def compute_overflow(
+        self, blocks: Dict[int, Block], tasks: List[Task] = None
+    ) -> dict:
         overflow_b_a = {}
         for t in tasks:
             for block_id, block_demand in t.budget_per_block.items():
@@ -288,8 +393,8 @@ class BatchOverflowRelevance(Metric):
                     overflow_b_a[block_id][a] += block_demand.epsilon(a)
         return overflow_b_a
 
-    @staticmethod
     def apply(
+        self,
         task: Task,
         blocks: Dict[int, Block],
         tasks: List[Task] = None,
@@ -330,6 +435,166 @@ class BatchOverflowRelevance(Metric):
 
         return task.profit / total_cost
 
-    @staticmethod
-    def is_dynamic():
+    def is_dynamic(self):
         return True
+
+
+class SoftKnapsack(RelevanceMetric):
+
+    # TODO: use a knapsack approx algorithm instead of Gurobi. Maybe just LP relaxation?
+    def solve_local_knapsack(
+        self, capacity, task_ids, task_demands, task_profits
+    ) -> float:
+        if capacity <= 0:
+            return 0
+
+        opt = 0
+
+        os.environ["GRB_LICENSE_FILE"] = "/home/pierre/gurobi.lic"
+        # with gp.Env(empty=True) as env, gp.Model(env=env) as m:
+        #     # Disable Gurobi logs
+        #     env.setParam("OutputFlag", 0)
+        #     env.start()
+
+        with gp.Env(empty=True) as env:
+            env.setParam("OutputFlag", 0)
+            env.start()
+            m = gp.Model(env=env)
+
+            # m.Params.OutputFlag = 0
+            m.Params.TimeLimit = self.config.gurobi_timeout
+            m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
+
+            x = m.addVars(task_ids, vtype=GRB.BINARY, name="x")
+            m.addConstr(x.prod(task_demands) <= capacity)
+            m.setObjective(x.prod(task_profits), GRB.MAXIMIZE)
+            m.optimize()
+
+            opt = m.getObjective().getValue()
+        return opt
+
+    def compute_relevance_matrix(
+        self,
+        blocks: Dict[int, Block],
+        tasks: List[Task] = None,
+        drop_blocks_with_no_contention=True,
+        truncate_available_budget=False,
+    ) -> np.ndarray:
+
+        # TODO: parallelize
+        # TODO: cache task_ids?
+
+        local_tasks_per_block = defaultdict(list)
+        for t in tasks:
+            for block_id in t.budget_per_block.keys():
+                local_tasks_per_block[block_id].append(t)
+
+        # Precompute the available budget in matrix form
+        n_blocks = len(blocks)
+        n_alphas = len(ALPHAS)
+        available_budget = np.zeros((n_blocks, n_alphas))
+        for block_id in range(n_blocks):
+            for alpha_index, alpha in enumerate(ALPHAS):
+                if truncate_available_budget:
+                    eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
+                        alpha
+                    )
+                    available_budget[block_id, alpha_index] = eps
+                else:
+                    eps = blocks[block_id].available_unlocked_budget.epsilon(alpha)
+                    if eps > 0:
+                        # TODO: check other heuristics that have >= 0 instead of >0
+                        available_budget[block_id, alpha_index] = eps
+                    else:
+                        # TODO: not necessary with knapsack?
+                        # There is no available budget, so this alpha is not relevant
+                        # TODO: not great, but doesn't seem to matter too much in practice.
+                        available_budget[block_id, alpha_index] = -float("inf")
+
+        # Solve the knapsack problem for each (block, alpha) pair
+        logger.info(f"Preparing the arguments...")
+        max_profits = np.zeros((n_blocks, n_alphas))
+        args = []
+        for block_id in range(n_blocks):
+            for alpha_index, alpha in enumerate(ALPHAS):
+                local_tasks = local_tasks_per_block[block_id]
+
+                local_capacity = available_budget[block_id, alpha_index]
+                task_ids = [t.id for t in local_tasks]
+                task_demands = {
+                    t.id: t.budget_per_block[block_id].epsilon(alpha)
+                    for t in local_tasks
+                }
+                task_profits = {task.id: task.profit for task in local_tasks}
+                args.append((local_capacity, task_ids, task_demands, task_profits))
+
+        # logger.info(f"Solving the knapsacks in parallel...")
+        # with Pool(processes=NUM_PROCESSES) as pool:
+        #     results = pool.starmap(solve_local_knapsack, args)
+        # logger.info(f"Collecting the results...")
+        logger.info(f"Solving the knapsacks one by one...")
+        i = 0
+        for block_id in range(n_blocks):
+            for alpha_index, alpha in enumerate(ALPHAS):
+                # max_profits[block_id, alpha_index] = results[i]
+                max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
+                i += 1
+
+        logger.info(f"Max profits: {max_profits}")
+
+        # TODO: can we do even better and keep information about *blocks*?
+        #       Maybe not softmax, but small boost for blocks that give good results.
+
+        # Compute the softmax
+        if self.config.polynomial_ratio:
+            # Experimental: use a ratio instead of a softmax. Don't use, not really worth it.
+            max_profits = np.power(max_profits, self.config.temperature)
+            sum_profits = np.sum(max_profits, axis=1)
+            softmax = np.divide(
+                max_profits,
+                np.broadcast_to(
+                    np.expand_dims(sum_profits, axis=1), (n_blocks, n_alphas)
+                ),
+            )
+
+        else:
+            max_profits = self.config.temperature * max_profits
+
+            # if self.config.rescale_profits:
+            # Give a manageable range to the profits, but keep prioritizing relatively higher profits (even across blocks)
+            # max_profits = max_profits / max_profits.max()
+
+            # Substracting doesn't change the softmax. No overflow.
+            max_profits = max_profits - max_profits.max()
+
+            exponential_profits = np.exp(max_profits)
+            sum_per_block = np.sum(exponential_profits, axis=1) + 1e-15
+
+            # TODO: Check for nans?
+
+            softmax = np.divide(
+                exponential_profits,
+                np.broadcast_to(
+                    np.expand_dims(sum_per_block, axis=1), (n_blocks, n_alphas)
+                ),
+            )
+            logger.info(f"softmax: {softmax}")
+
+        # Normalize the relevance values.
+        # The softmax returns a probability vector, but different alphas have different scales.
+        if self.config.normalize_by == "available_budget":
+            relevance = np.divide(softmax, available_budget)
+        elif self.config.normalize_by == "capacity":
+            capacity = np.zeros((n_blocks, n_alphas))
+            for block_id in range(n_blocks):
+                for alpha_index, alpha in enumerate(ALPHAS):
+                    eps = blocks[block_id].initial_budget.epsilon(alpha)
+                    # Empty alphas have relevance 0
+                    capacity[block_id, alpha_index] = eps if eps > 0 else float("inf")
+            relevance = np.divide(softmax, capacity)
+        else:
+            # NOTE: this is the default. The other settings give pretty similar results in my experience.
+            relevance = softmax
+        logger.info(f"relevance: {relevance}")
+
+        return relevance

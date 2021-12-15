@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import yaml
+from omegaconf import OmegaConf
 
 from privacypacking.budget import Budget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
@@ -39,6 +40,9 @@ PROFIT = "profit"
 SOLVER = "solver"
 GUROBI = "gurobi"
 MIP = "mip"
+
+NORMALIZE_BY_AVAILABLE_BUDGET = "normalize_by_available_budget"
+NORMALIZE_BY_CAPACITY = "normalize_by_capacity"
 
 THRESHOLD_UPDATE_MECHANISM = "threshold_update_mechanism"
 PLOT_FILE = "plot_file"
@@ -114,6 +118,7 @@ def global_metrics(logs: dict) -> dict:
         if task["allocated"]:
             n_allocated_tasks += 1
             realized_profit += task["profit"]
+
     datapoint = {
         "scheduler": logs["simulator_config"]["scheduler_spec"]["method"],
         "solver": logs["simulator_config"]["scheduler_spec"]["solver"],
@@ -131,14 +136,27 @@ def global_metrics(logs: dict) -> dict:
         "total_tasks": logs["total_tasks"],
         "realized_profit": realized_profit,
         "n_tasks": n_tasks,
-        "n_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
+        "n_initial_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
         "maximum_profit": maximum_profit,
         "scheduling_time": logs["scheduling_time"],
         "T": logs["simulator_config"]["scheduler_spec"]["scheduling_wait_time"],
         "data_lifetime": logs["simulator_config"]["scheduler_spec"].get(
             "data_lifetime", None
-        )
-        # "tasks_scheduling_times": logs["tasks_scheduling_times"],
+        ),
+        "mean_task_per_block": logs["simulator_config"]["tasks_spec"][
+            TASK_ARRIVAL_FREQUENCY
+        ][POISSON].get(AVG_NUMBER_TASKS_PER_BLOCK, None),
+        "data_path": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
+            "custom"
+        ]["data_path"],
+        "allocated_tasks_scheduling_delays": logs["allocated_tasks_scheduling_delays"],
     }
+
+    omegaconf = OmegaConf.create(logs["simulator_config"]["omegaconf"])
+    datapoint[
+        "metric_recomputation_period"
+    ] = omegaconf.scheduler.metric_recomputation_period
+    datapoint["normalize_by"] = omegaconf.metric.normalize_by
+    datapoint["temperature"] = omegaconf.metric.temperature
 
     return datapoint

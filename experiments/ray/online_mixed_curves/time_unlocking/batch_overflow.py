@@ -2,9 +2,11 @@ import argparse
 import os
 from datetime import datetime
 
+import ray
 from loguru import logger
 from ray import tune
 
+from privacypacking import schedulers
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     BASIC_SCHEDULER,
@@ -16,6 +18,8 @@ from privacypacking.schedulers.utils import (
     NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
+    SOFT_KNAPSACK,
+    SOFTMAX_OVERFLOW,
     SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
     TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
@@ -35,24 +39,34 @@ def run_and_report(config: dict) -> None:
 
 
 def grid():
+
+    # ray.init(log_to_driver=False)
+
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        BATCH_OVERFLOW_RELEVANCE,
+        # BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         DYNAMIC_FLAT_RELEVANCE,
         FCFS,
+        # SOFTMAX_OVERFLOW,
+        SOFT_KNAPSACK,
     ]
 
-    # scheduler_scheduling_time = [0.01, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 5, 10, 15, 20]
+    # TODO: add temperature to config and explore range
+
+    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1, 2, 5, 10, 15, 20, 25]
     # scheduler_scheduling_time = [0.01, 0.5, 1, 5, 10, 20]
-    scheduler_scheduling_time = [0.1, 1, 10]
+    # scheduler_scheduling_time = [1]
+    # scheduler_scheduling_time = [0.1, 1, 10, 25]
+
+    # scheduler_scheduling_time = [25]
 
     # n = [100, 500, 1000, 1500, 2000]
 
     n = [10_000]
-    data_lifetime = [20]
+    data_lifetime = [5]
 
     # n = [1]
     # data_lifetime = [0.001]
@@ -61,7 +75,8 @@ def grid():
     # avg_number_tasks_per_block = [50]
     # avg_number_tasks_per_block = [10, 25, 50]
 
-    max_blocks = [60]
+    max_blocks = [20]
+    # max_blocks = [60]
 
     # TODO: re-add the initial blocks
     initial_blocks = [0]
@@ -70,7 +85,9 @@ def grid():
     # TODO: rescale (more tasks?) to separate batch OR and dyn FR
 
     # data_path = "privatekube_event_g0.3_l0.3_p=1"
-    data_path = "mixed_curves"
+    # data_path = "mixed_curves"
+    data_path = "mixed_curves_profits"
+
     # data_path = "mixed_curves_killer"
 
     # data_path = "mixed_curves_large"
@@ -105,12 +122,21 @@ def grid():
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(np.arange(0, 5100, step=100, dtype=int).tolist())
     config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
 
+    config["omegaconf"] = {
+        "scheduler": {
+            "metric_recomputation_period": 10,
+        },
+        "metric": {
+            "normalize_by": "",
+        },
+    }
+
     logger.info(f"Tune config: {config}")
 
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 3},
         # resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,

@@ -1,7 +1,9 @@
+import time
 from typing import List
 
 import gurobipy as gp
 from gurobipy import GRB
+from loguru import logger
 from mip import BINARY, Model, maximize, xsum
 
 from privacypacking.budget import ALPHAS
@@ -57,50 +59,67 @@ class Simplex(Scheduler):
         """
         Returns a list of booleans corresponding to the tasks that are allocated
         """
-        m = gp.Model("pack")
 
-        # TODO: alphas from which block? Which subset?
-        alphas = ALPHAS
-        task_ids = [t.id for t in tasks]
-        block_ids = [k for k in self.blocks]
+        with gp.Env(empty=True) as env:
+            env.setParam("OutputFlag", 0)
+            env.start()
+            m = gp.Model(env=env)
 
-        demands_upper_bound = {}
-        for k, block in self.blocks.items():
-            for alpha in block.budget.alphas:
-                demands_upper_bound[(k, alpha)] = 0
-                for task in tasks:
-                    if k in task.budget_per_block:
-                        demands_upper_bound[(k, alpha)] += task.budget_per_block[
-                            k
-                        ].epsilon(alpha)
+            # m.Params.OutputFlag = 0
+            m.Params.TimeLimit = self.config.gurobi_timeout
+            # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
 
-        # Variables
-        x = m.addVars(task_ids, vtype=GRB.BINARY, name="x")
-        a = m.addVars(
-            [(k, alpha) for alpha in alphas for k in block_ids],
-            vtype=GRB.BINARY,
-            name="a",
-        )
+            # m = gp.Model("pack")
 
-        # Constraints
-        for k, _ in enumerate(self.blocks):
-            m.addConstr(a.sum(k, "*") >= 1)
+            # TODO: alphas from which block? Which subset?
+            alphas = ALPHAS
+            task_ids = [t.id for t in tasks]
+            block_ids = [k for k in self.blocks]
 
-        for k, block in self.blocks.items():
-            for alpha in block.budget.alphas:
-                demands_k_alpha = {t.id: t.get_budget(k).epsilon(alpha) for t in tasks}
-                m.addConstr(
-                    x.prod(demands_k_alpha)
-                    - (1 - a[k, alpha]) * demands_upper_bound[(k, alpha)]
-                    <= block.budget.epsilon(alpha)
-                )
+            demands_upper_bound = {}
+            for k, block in self.blocks.items():
+                for alpha in block.budget.alphas:
+                    demands_upper_bound[(k, alpha)] = 0
+                    for task in tasks:
+                        if k in task.budget_per_block:
+                            demands_upper_bound[(k, alpha)] += task.budget_per_block[
+                                k
+                            ].epsilon(alpha)
 
-        # Objective function
-        profits = {task.id: task.profit for task in tasks}
-        m.setObjective(x.prod(profits), GRB.MAXIMIZE)
-        m.optimize()
+            # Variables
+            x = m.addVars(task_ids, vtype=GRB.BINARY, name="x")
+            a = m.addVars(
+                [(k, alpha) for alpha in alphas for k in block_ids],
+                vtype=GRB.BINARY,
+                name="a",
+            )
 
-        return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
+            # Constraints
+            for k, _ in enumerate(self.blocks):
+                m.addConstr(a.sum(k, "*") >= 1)
+
+            for k, block in self.blocks.items():
+                for alpha in block.budget.alphas:
+                    demands_k_alpha = {
+                        t.id: t.get_budget(k).epsilon(alpha) for t in tasks
+                    }
+                    m.addConstr(
+                        x.prod(demands_k_alpha)
+                        - (1 - a[k, alpha]) * demands_upper_bound[(k, alpha)]
+                        <= block.budget.epsilon(alpha)
+                    )
+
+            # Objective function
+            profits = {task.id: task.profit for task in tasks}
+            m.setObjective(x.prod(profits), GRB.MAXIMIZE)
+            t = time.time()
+            m.optimize()
+            # logger.warning(f"Optimization took: {time.time() - t}")
+            # logger.warning(f"status: {m.Status} timeout? {m.Status == GRB.TIME_LIMIT}")
+
+            if m.Status == GRB.TIME_LIMIT:
+                raise Exception(f"Solver timeout after {self.config.gurobi_timeout}s")
+            return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
     def schedule_queue(self) -> List[int]:
         tasks = self.task_queue.tasks
