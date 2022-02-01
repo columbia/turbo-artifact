@@ -44,13 +44,13 @@ def grid():
 
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
-#        SOFT_KNAPSACK,
-         BATCH_OVERFLOW_RELEVANCE,
-         FLAT_RELEVANCE,
-         DYNAMIC_FLAT_RELEVANCE,
-         FCFS,
+        #        SOFT_KNAPSACK,
+        BATCH_OVERFLOW_RELEVANCE,
+        FLAT_RELEVANCE,
+        DYNAMIC_FLAT_RELEVANCE,
+        FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-         DOMINANT_SHARES,
+        DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
@@ -69,7 +69,7 @@ def grid():
 
     scheduler_scheduling_time = [35]
 
-#    avg_number_tasks_per_block = [100] 
+    #    avg_number_tasks_per_block = [100]
     avg_number_tasks_per_block = [50, 100, 200, 300, 400, 500]
     max_blocks = [30]
     initial_blocks = [10]
@@ -113,6 +113,10 @@ def grid():
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
             "temperature": tune.grid_search(temperature),
+        },
+        "logs": {
+            "verbose": True,
+            "save": True,
         },
     }
 
