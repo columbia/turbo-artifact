@@ -26,11 +26,6 @@ tasks_spec:
       enabled: true
       avg_number_tasks_per_block: 250
 
-  # max_tasks:
-  #   enabled: true
-  #   # num: 5000
-  #   from_max_blocks: 20
-
 scheduler_spec:
   method: time_based_budget_unlocking
   data_lifetime: 5

@@ -30,55 +30,6 @@ tasks_spec:
         enabled: false
         block_selecting_policy: RandomBlocks
 
-
-    # Sampling from a laplace
-    laplace:
-      initial_num: 0
-      frequency: 0
-      noise_start: 0.1
-      noise_stop: 10
-      blocks_request:
-        random:
-          enabled: false
-          num_blocks_max: 10
-        constant:
-          enabled: false
-          num_blocks: 1
-      block_selecting_policy: LatestBlocksFirst
-
-    # Sampling from a gaussian
-    gaussian:
-      initial_num: 0
-      frequency: 0
-      sigma_start: 1
-      sigma_stop: 10
-      blocks_request:
-        random:
-          enabled: false
-          num_blocks_max: 10
-        constant:
-          enabled: false
-          num_blocks: 1
-      block_selecting_policy: LatestBlocksFirst
-
-    # Sampling from a SubsampledGaussian
-    SubsampledGaussian:
-      initial_num: 0
-      frequency: 0
-      sigma_start: 1
-      sigma_stop: 10
-      dataset_size: 60_000
-      batch_size: 64
-      epochs: 10
-      blocks_request:
-        random:
-          enabled: false
-          num_blocks_max: 10
-        constant:
-          enabled: false
-          num_blocks: 1
-      block_selecting_policy: LatestBlocksFirst
-
   task_arrival_frequency:
     enabled: false  # no online tasks
     poisson:
@@ -88,16 +39,11 @@ tasks_spec:
       enabled: false
       task_arrival_interval: 2
 
-  max_tasks:
-    enabled: false
-    num: 1500
-
 scheduler_spec:
   method: n_budget_unlocking
   metric: DominantShares
   n: 100
   budget_unlocking_time: 1
-  threshold_update_mechanism: NaiveAverage
   solver: gurobi
   scheduling_wait_time: 1
   threshold_update_mechanism: NaiveAverage

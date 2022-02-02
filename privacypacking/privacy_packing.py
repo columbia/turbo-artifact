@@ -1,7 +1,7 @@
 import argparse
-
+import yaml
 from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import update_dict, save_logs, DEFAULT_CONFIG_FILE
 from privacypacking.config import Config
 
 
@@ -18,7 +18,9 @@ def main():
     # Update the config file with the user-config's preferences
     update_dict(user_config, config)
     # pp.pprint(self.config)
-    Simulator(Config(config)).run()
+    conf = Config(config)
+    logs = Simulator(conf).run()
+    save_logs(conf, logs)
 
 
 if __name__ == "__main__":

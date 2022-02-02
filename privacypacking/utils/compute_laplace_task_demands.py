@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 
+
 def compute_laplace_demands(laplace_noise):
     alphas = [
         1.5,
@@ -17,7 +18,6 @@ def compute_laplace_demands(laplace_noise):
         64,
     ]
 
-
     orders = {}
     λ = laplace_noise
     for α in alphas:
@@ -28,7 +28,6 @@ def compute_laplace_demands(laplace_noise):
         orders[α] = float(ε)
 
     return orders.values()
-
 
 
 def main():

@@ -23,6 +23,7 @@ def compute_gaussian_demands(sigma):
 
     return compute_rdp_epsilons_gaussian(sigma)
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--sigma", dest="sigma", type=float)

@@ -5,19 +5,17 @@ import uuid
 from datetime import datetime
 from functools import partial
 from typing import List
+import numpy as np
 
 from loguru import logger
 from numpy.lib.arraysetops import isin
+import yaml
+from privacypacking.budget.block_selection import BlockSelectionPolicy
+from privacypacking.budget.budget import Budget
 from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
-from privacypacking.budget.curves import (
-    GaussianCurve,
-    LaplaceCurve,
-    SubsampledGaussianCurve,
-)
 from privacypacking.budget.task import UniformTask
-from privacypacking.logger import Logger
 from privacypacking.schedulers.utils import (
     DOMINANT_SHARES,
     TASK_BASED_BUDGET_UNLOCKING,
@@ -110,30 +108,6 @@ class Config:
                 self.task_frequencies_file = yaml.safe_load(f)
             assert len(self.task_frequencies_file) > 0
 
-        # Setting config for laplace tasks
-        self.laplace = self.curve_distributions[LAPLACE]
-        self.laplace_init_num = self.laplace[INITIAL_NUM]
-        self.laplace_frequency = self.laplace[FREQUENCY]
-        self.laplace_noise_start = self.laplace[NOISE_START]
-        self.laplace_noise_stop = self.laplace[NOISE_STOP]
-
-        # Setting config for gaussian tasks
-        self.gaussian = self.curve_distributions[GAUSSIAN]
-        self.gaussian_init_num = self.gaussian[INITIAL_NUM]
-        self.gaussian_frequency = self.gaussian[FREQUENCY]
-        self.gaussian_sigma_start = self.gaussian[SIGMA_START]
-        self.gaussian_sigma_stop = self.gaussian[SIGMA_STOP]
-
-        # Setting config for subsampledGaussian tasks
-        self.subsamplegaussian = self.curve_distributions[SUBSAMPLEGAUSSIAN]
-        self.subsamplegaussian_init_num = self.subsamplegaussian[INITIAL_NUM]
-        self.subsamplegaussian_frequency = self.subsamplegaussian[FREQUENCY]
-        self.subsamplegaussian_sigma_start = self.subsamplegaussian[SIGMA_START]
-        self.subsamplegaussian_sigma_stop = self.subsamplegaussian[SIGMA_STOP]
-        self.subsamplegaussian_dataset_size = self.subsamplegaussian[DATASET_SIZE]
-        self.subsamplegaussian_batch_size = self.subsamplegaussian[BATCH_SIZE]
-        self.subsamplegaussian_epochs = self.subsamplegaussian[EPOCHS]
-
         self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
         if self.task_arrival_frequency[ENABLED]:
             self.task_arrival_frequency_enabled = True
@@ -175,16 +149,6 @@ class Config:
         else:
             self.task_arrival_frequency_enabled = False
 
-        self.max_tasks = None
-        if self.tasks_spec[MAX_TASKS][ENABLED]:
-            if FROM_MAX_BLOCKS in self.tasks_spec[MAX_TASKS]:
-                self.max_tasks = (
-                    self.tasks_spec[MAX_TASKS][FROM_MAX_BLOCKS]
-                    * self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
-                )
-            else:
-                self.max_tasks = self.tasks_spec[MAX_TASKS][NUM]
-
         # SCHEDULER
         self.scheduler = config[SCHEDULER_SPEC]
         self.scheduler_method = self.scheduler[METHOD]
@@ -204,9 +168,9 @@ class Config:
         else:
             self.scheduler_solver = None
 
-        self.scheduler_threshold_update_mechanism = self.scheduler[
-            THRESHOLD_UPDATE_MECHANISM
-        ]
+        # self.scheduler_threshold_update_mechanism = self.scheduler[
+        #     THRESHOLD_UPDATE_MECHANISM
+        # ]
         self.new_task_driven_scheduling = False
         self.time_based_scheduling = False
         self.new_block_driven_scheduling = False
@@ -234,10 +198,7 @@ class Config:
             )
         else:
             self.log_path = LOGS_PATH.joinpath(self.log_file)
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(
-            self.log_path, f"{self.scheduler_method}_{self.scheduler_metric}"
-        )
+
         self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
@@ -245,41 +206,11 @@ class Config:
         d["omegaconf"] = OmegaConf.to_container(self.omegaconf)
         return d
 
-    # Utils to initialize tasks and blocks. It only depends on the configuration, not on the simulator.
-    def set_curve_distribution(self) -> str:
-        curve = np.random.choice(
-            [CUSTOM, GAUSSIAN, LAPLACE, SUBSAMPLEGAUSSIAN],
-            1,
-            p=[
-                self.custom_tasks_frequency,
-                self.gaussian_frequency,
-                self.laplace_frequency,
-                self.subsamplegaussian_frequency,
-            ],
-        )
-        return curve[0]
-
-    def set_task_num_blocks(self, curve: str, max_num_blocks: int = math.inf) -> int:
-        task_blocks_num = None
-        block_requests = self.curve_distributions[curve][BLOCKS_REQUEST]
-        if block_requests[RANDOM][ENABLED]:
-            task_blocks_num = random.randint(1, block_requests[RANDOM][NUM_BLOCKS_MAX])
-        elif block_requests[CONSTANT][ENABLED]:
-            task_blocks_num = block_requests[CONSTANT][NUM_BLOCKS]
-        task_blocks_num = max(1, min(task_blocks_num, max_num_blocks))
-        assert task_blocks_num is not None
-        return task_blocks_num
-
     def create_task(
         self, task_id: int, curve_distribution: str, num_blocks: int
     ) -> Task:
 
         task = None
-
-        if curve_distribution is None:
-            # If curve is not pre-specified (as in offline setting) then sample one
-            curve_distribution = self.set_curve_distribution()
-
         if curve_distribution == CUSTOM:
             # Read custom task specs from a file
             if self.custom_tasks_sampling:
@@ -317,52 +248,6 @@ class Config:
                     budget=task_spec.budget,
                     name=task_spec.name,
                 )
-        else:
-            # Sample the specs of the task
-            task_num_blocks = self.set_task_num_blocks(curve_distribution, num_blocks)
-            block_selection_policy = BlockSelectionPolicy.from_str(
-                self.curve_distributions[curve_distribution][BLOCK_SELECTING_POLICY]
-            )
-
-            if curve_distribution == GAUSSIAN:
-                sigma = random.uniform(
-                    self.gaussian_sigma_start, self.gaussian_sigma_stop
-                )
-                task = UniformTask(
-                    id=task_id,
-                    profit=self.set_profit(),
-                    block_selection_policy=block_selection_policy,
-                    n_blocks=task_num_blocks,
-                    budget=GaussianCurve(sigma),
-                )
-            elif curve_distribution == LAPLACE:
-                noise = random.uniform(
-                    self.laplace_noise_start, self.laplace_noise_stop
-                )
-                task = UniformTask(
-                    id=task_id,
-                    profit=self.set_profit(),
-                    block_selection_policy=block_selection_policy,
-                    n_blocks=task_num_blocks,
-                    budget=LaplaceCurve(noise),
-                )
-            elif curve_distribution == SUBSAMPLEGAUSSIAN:
-                sigma = random.uniform(
-                    self.subsamplegaussian_sigma_start,
-                    self.subsamplegaussian_sigma_stop,
-                )
-                task = UniformTask(
-                    id=task_id,
-                    profit=self.set_profit(),
-                    block_selection_policy=block_selection_policy,
-                    n_blocks=task_num_blocks,
-                    budget=SubsampledGaussianCurve.from_training_parameters(
-                        self.subsamplegaussian_dataset_size,
-                        self.subsamplegaussian_batch_size,
-                        self.subsamplegaussian_epochs,
-                        sigma,
-                    ),
-                )
         assert task is not None
         return task
 
@@ -370,9 +255,6 @@ class Config:
         return Block.from_epsilon_delta(
             block_id, self.epsilon, self.delta, alpha_list=self.omegaconf.alphas
         )
-
-    def set_profit(self):
-        return 1
 
     def set_task_arrival_time(self):
         task_arrival_interval = None
@@ -397,27 +279,16 @@ class Config:
         return block_arrival_interval
 
     def get_initial_task_curves(self) -> List[str]:
-        curves = (
-            [LAPLACE] * self.laplace_init_num
-            + [GAUSSIAN] * self.gaussian_init_num
-            + [SUBSAMPLEGAUSSIAN] * self.subsamplegaussian_init_num
-            + [CUSTOM] * self.custom_tasks_init_num
-        )
+        curves = [CUSTOM] * self.custom_tasks_init_num
         random.shuffle(curves)
         return curves
 
     def get_initial_tasks_num(self) -> int:
-        return (
-            self.laplace_init_num
-            + self.gaussian_init_num
-            + self.subsamplegaussian_init_num
-            + self.custom_tasks_init_num
-        )
+        return self.custom_tasks_init_num
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num
 
-    # todo: transferred here temporarily so that fixed seed applies for those random choices as well
     def load_task_spec_from_file(
         self, path: Path = PRIVATEKUBE_DEMANDS_PATH
     ) -> TaskSpec:
