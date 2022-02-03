@@ -94,7 +94,7 @@ def grid():
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
     # num_tasks = [50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000]
-    num_tasks = [500]
+    num_tasks = [1000]
 
     num_blocks = [20]
     data_path = "mixed_curves"
