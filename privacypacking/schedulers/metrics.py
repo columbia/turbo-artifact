@@ -107,7 +107,8 @@ class DynamicFlatRelevance(Metric):
         logger.info(f"Computing DynamicFlatRelevance for task {task.id}.")
         cost = 0.0
         for block_id, budget in task.budget_per_block.items():
-            for alpha in budget.alphas:
+            # TODO: reduce to same support elsewhere?
+            for alpha in blocks[block_id].initial_budget.alphas:
                 demand = budget.epsilon(alpha)
                 remaining_budget = blocks[block_id].budget.epsilon(alpha)
                 logger.info(
@@ -491,10 +492,13 @@ class SoftKnapsack(RelevanceMetric):
 
         # Precompute the available budget in matrix form
         n_blocks = len(blocks)
-        n_alphas = len(ALPHAS)
+
+        alphas = list(blocks.values())[0].initial_budget.alphas
+
+        n_alphas = len(alphas)
         available_budget = np.zeros((n_blocks, n_alphas))
         for block_id in range(n_blocks):
-            for alpha_index, alpha in enumerate(ALPHAS):
+            for alpha_index, alpha in enumerate(alphas):
                 if truncate_available_budget:
                     eps = blocks[block_id].truncated_available_unlocked_budget.epsilon(
                         alpha
@@ -516,7 +520,7 @@ class SoftKnapsack(RelevanceMetric):
         max_profits = np.zeros((n_blocks, n_alphas))
         args = []
         for block_id in range(n_blocks):
-            for alpha_index, alpha in enumerate(ALPHAS):
+            for alpha_index, alpha in enumerate(alphas):
                 local_tasks = local_tasks_per_block[block_id]
 
                 local_capacity = available_budget[block_id, alpha_index]
@@ -535,7 +539,7 @@ class SoftKnapsack(RelevanceMetric):
         logger.info(f"Solving the knapsacks one by one...")
         i = 0
         for block_id in range(n_blocks):
-            for alpha_index, alpha in enumerate(ALPHAS):
+            for alpha_index, alpha in enumerate(alphas):
                 # max_profits[block_id, alpha_index] = results[i]
                 max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
                 i += 1
@@ -587,7 +591,7 @@ class SoftKnapsack(RelevanceMetric):
         elif self.config.normalize_by == "capacity":
             capacity = np.zeros((n_blocks, n_alphas))
             for block_id in range(n_blocks):
-                for alpha_index, alpha in enumerate(ALPHAS):
+                for alpha_index, alpha in enumerate(alphas):
                     eps = blocks[block_id].initial_budget.epsilon(alpha)
                     # Empty alphas have relevance 0
                     capacity[block_id, alpha_index] = eps if eps > 0 else float("inf")

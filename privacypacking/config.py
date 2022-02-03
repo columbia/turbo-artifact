@@ -367,9 +367,6 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        logger.warning(
-            f"Alpha list: {self.omegaconf.alphas}. Type: {type(self.omegaconf.alphas[0])}"
-        )
         return Block.from_epsilon_delta(
             block_id, self.epsilon, self.delta, alpha_list=self.omegaconf.alphas
         )

@@ -76,15 +76,17 @@ def grid():
     normalize_by = ["available_budget"]
     metric_recomputation_period = [10]
 
+    monoalpha = [3, 4, 5, 8, 16, 64]
+
     # Conditonal parameter
     method_and_metric = []
     for metric in [
         DOMINANT_SHARES,
         # FLAT_RELEVANCE,
-        # # OVERFLOW_RELEVANCE,
-        # FCFS,
-        # SOFT_KNAPSACK,
-        # DYNAMIC_FLAT_RELEVANCE,
+        # OVERFLOW_RELEVANCE,
+        FCFS,
+        SOFT_KNAPSACK,
+        DYNAMIC_FLAT_RELEVANCE,
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
     # method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
@@ -150,7 +152,7 @@ def grid():
             "verbose": False,
             "save": True,
         },
-        "alphas": [4.0],
+        "alphas": [tune.grid_search(monoalpha)],
     }
 
     tune.run(
