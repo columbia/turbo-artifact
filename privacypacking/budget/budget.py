@@ -19,6 +19,7 @@ ALPHAS = [
     64,
 ]
 
+
 # Default values for some datasets
 DELTA_MNIST = 1e-5
 DELTA_CIFAR10 = 1e-5
@@ -101,6 +102,8 @@ class Budget:
             rdp=list(self.epsilons),
             delta=delta,
         )
+        epsilon, best_alpha = float(epsilon), float(best_alpha)
+
         # Cache the result
         self.dp_budget_cached = DPBudget(
             epsilon=epsilon, delta=delta, best_alpha=best_alpha
