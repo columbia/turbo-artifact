@@ -41,5 +41,5 @@ class Simulator:
             if hasattr(self.rm.scheduler, "scheduling_queue_info")
             else None,
         )
-        verbose = self.config.omegaconf.logs.save
+        verbose = self.config.omegaconf.logs.save   # Saves tasks and blocks logs too
         return global_metrics(logs, verbose)
