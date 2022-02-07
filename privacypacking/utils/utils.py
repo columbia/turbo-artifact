@@ -1,14 +1,10 @@
 import json
-import random
 from collections import namedtuple
 from pathlib import Path
 
-import numpy as np
-import yaml
 from omegaconf import OmegaConf
 
-from privacypacking.budget import Budget
-from privacypacking.budget.block_selection import BlockSelectionPolicy
+from privacypacking.schedulers.utils import ALLOCATED
 
 EPSILON = "epsilon"
 DELTA = "delta"
@@ -18,19 +14,9 @@ SCHEDULER_SPEC = "scheduler_spec"
 ENABLED = "enabled"
 NUM = "num"
 CURVE_DISTRIBUTIONS = "curve_distributions"
-LAPLACE = "laplace"
-GAUSSIAN = "gaussian"
-SUBSAMPLEGAUSSIAN = "SubsampledGaussian"
 CUSTOM = "custom"
 DATA_PATH = "data_path"
 DATA_TASK_FREQUENCIES_PATH = "data_task_frequencies_path"
-NOISE_START = "noise_start"
-NOISE_STOP = "noise_stop"
-SIGMA_START = "sigma_start"
-SIGMA_STOP = "sigma_stop"
-DATASET_SIZE = "dataset_size"
-BATCH_SIZE = "batch_size"
-EPOCHS = "epochs"
 READ_BLOCK_SELECTION_POLICY_FROM_CONFIG = "read_block_selecting_policy_from_config"
 METHOD = "method"
 METRIC = "metric"
@@ -53,7 +39,7 @@ TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
 AVG_NUMBER_TASKS_PER_BLOCK = "avg_number_tasks_per_block"
 BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
 MAX_BLOCKS = "max_blocks"
-MAX_TASKS = "max_tasks"
+# MAX_TASKS = "max_tasks"
 FROM_MAX_BLOCKS = "from_max_blocks"
 GLOBAL_SEED = "global_seed"
 DETERMINISTIC = "deterministic"
@@ -106,57 +92,120 @@ def load_logs(log_path: str, relative_path=True) -> dict:
     return logs
 
 
-def global_metrics(logs: dict) -> dict:
+def get_logs(
+    tasks,
+    blocks,
+    tasks_info,
+    simulator_config,
+    **kwargs,
+) -> dict:
     n_allocated_tasks = 0
-    realized_profit = 0
-    n_tasks = 0
+    tasks_scheduling_times = []
+    allocated_tasks_scheduling_delays = []
     maximum_profit = 0
+    realized_profit = 0
 
-    for task in logs["tasks"]:
-        n_tasks += 1
-        maximum_profit += task["profit"]
-        if task["allocated"]:
+    log_tasks = []
+    for task in tasks:
+        task_dump = task.dump()
+
+        maximum_profit += task.profit
+        if tasks_info.tasks_status[task.id] == ALLOCATED:
             n_allocated_tasks += 1
-            realized_profit += task["profit"]
+            realized_profit += task.profit
+            tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
+            allocated_tasks_scheduling_delays.append(
+                tasks_info.scheduling_delay.get(task.id, None)
+            )
+
+        task_dump.update(
+            {
+                "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                "status": tasks_info.tasks_status[task.id],
+                "creation_time": tasks_info.creation_time[task.id],
+                "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                "allocation_index": tasks_info.allocation_index.get(task.id, None),
+            }
+        )
+        log_tasks.append(
+            task_dump
+        )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+
+    # TODO: Store scheduling times into the tasks directly?
+
+    log_blocks = []
+    for block in blocks.values():
+        log_blocks.append(block.dump())
+
+    n_allocated_tasks = n_allocated_tasks
+    total_tasks = len(tasks)
+    # tasks_info = tasks_info.dump()
+    # tasks_scheduling_times = sorted(tasks_scheduling_times)
+    allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
+    simulator_config = simulator_config.dump()
 
     datapoint = {
-        "scheduler": logs["simulator_config"]["scheduler_spec"]["method"],
-        "solver": logs["simulator_config"]["scheduler_spec"]["solver"],
-        "scheduler_n": logs["simulator_config"]["scheduler_spec"]["n"],
-        "scheduler_metric": logs["simulator_config"]["scheduler_spec"]["metric"],
-        "block_selecting_policy": logs["simulator_config"]["tasks_spec"][
-            "curve_distributions"
-        ]["custom"]["read_block_selecting_policy_from_config"][
-            "block_selecting_policy"
-        ],
-        "frequency_file": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
+        "scheduler": simulator_config["scheduler_spec"]["method"],
+        "solver": simulator_config["scheduler_spec"]["solver"],
+        "scheduler_n": simulator_config["scheduler_spec"]["n"],
+        "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
+        "block_selecting_policy": simulator_config["tasks_spec"]["curve_distributions"][
+            "custom"
+        ]["read_block_selecting_policy_from_config"]["block_selecting_policy"],
+        "frequency_file": simulator_config["tasks_spec"]["curve_distributions"][
             "custom"
         ]["data_task_frequencies_path"],
-        "n_allocated_tasks": logs["num_scheduled_tasks"],
-        "total_tasks": logs["total_tasks"],
+        "n_allocated_tasks": n_allocated_tasks,
+        "total_tasks": total_tasks,
         "realized_profit": realized_profit,
-        "n_tasks": n_tasks,
-        "n_initial_blocks": logs["simulator_config"]["blocks_spec"]["initial_num"],
+        "n_initial_blocks": simulator_config["blocks_spec"]["initial_num"],
         "maximum_profit": maximum_profit,
-        "scheduling_time": logs["scheduling_time"],
-        "T": logs["simulator_config"]["scheduler_spec"]["scheduling_wait_time"],
-        "data_lifetime": logs["simulator_config"]["scheduler_spec"].get(
-            "data_lifetime", None
-        ),
-        "mean_task_per_block": logs["simulator_config"]["tasks_spec"][
-            TASK_ARRIVAL_FREQUENCY
-        ][POISSON].get(AVG_NUMBER_TASKS_PER_BLOCK, None),
-        "data_path": logs["simulator_config"]["tasks_spec"]["curve_distributions"][
-            "custom"
-        ]["data_path"],
-        "allocated_tasks_scheduling_delays": logs["allocated_tasks_scheduling_delays"],
+        # "scheduling_time": scheduling_time,
+        "T": simulator_config["scheduler_spec"]["scheduling_wait_time"],
+        "data_lifetime": simulator_config["scheduler_spec"].get("data_lifetime", None),
+        "mean_task_per_block": simulator_config["tasks_spec"][TASK_ARRIVAL_FREQUENCY][
+            POISSON
+        ].get(AVG_NUMBER_TASKS_PER_BLOCK, None),
+        "data_path": simulator_config["tasks_spec"]["curve_distributions"]["custom"][
+            "data_path"
+        ],
+        "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
+        "tasks": log_tasks,
+        "blocks": log_blocks,
     }
 
-    omegaconf = OmegaConf.create(logs["simulator_config"]["omegaconf"])
+    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
     datapoint[
         "metric_recomputation_period"
     ] = omegaconf.scheduler.metric_recomputation_period
     datapoint["normalize_by"] = omegaconf.metric.normalize_by
     datapoint["temperature"] = omegaconf.metric.temperature
+    # TODO: remove allocating_task_id from args
+    # TODO: Store scheduling times into the tasks directly?
 
+    # Any other thing to log
+    for key, value in kwargs.items():
+        datapoint[key] = value
     return datapoint
+
+
+def save_logs(config, log_dict, compact=False, compressed=False):
+    config.log_path.parent.mkdir(parents=True, exist_ok=True)
+    if compressed:
+        raise NotImplementedError
+    else:
+        with open(config.log_path, "w") as fp:
+            if compact:
+                json_object = json.dumps(log_dict, separators=(",", ":"))
+            else:
+                json_object = json.dumps(log_dict, indent=4)
+
+            fp.write(json_object)
+
+
+def global_metrics(logs: dict, verbose=False) -> dict:
+    if not verbose:
+        logs["tasks"] = ""
+        logs["blocks"] = ""
+    return logs

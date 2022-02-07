@@ -1,10 +1,9 @@
 from datetime import datetime
 
 import simpy
-from loguru import logger
 
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import get_logs, global_metrics
 
 
 class Simulator:
@@ -30,30 +29,17 @@ class Simulator:
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
 
-        logs = self.config.logger.get_log_dict(
+        logs = get_logs(
             self.rm.scheduler.task_queue.tasks
             + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
             self.rm.scheduler.blocks,
             self.rm.scheduler.tasks_info,
-            list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
+            # list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
             self.config,
             scheduling_time=simulation_duration,
             scheduling_queue_info=self.rm.scheduler.scheduling_queue_info
             if hasattr(self.rm.scheduler, "scheduling_queue_info")
             else None,
         )
-
-        # # Saving locally too
-        # self.config.logger.log(
-        #     self.rm.scheduler.task_queue.tasks
-        #     + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
-        #     self.rm.scheduler.blocks,
-        #     self.rm.scheduler.tasks_info,
-        #     list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
-        #     self.config,
-        #     scheduling_time=simulation_duration,
-        # )
-        if self.config.omegaconf.logs.save:
-            self.config.logger.save_logs(logs)
-
-        return global_metrics(logs)
+        verbose = self.config.omegaconf.logs.save   # Saves tasks and blocks logs too
+        return global_metrics(logs, verbose)

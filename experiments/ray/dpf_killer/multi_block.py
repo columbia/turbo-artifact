@@ -33,7 +33,9 @@ def grid():
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
     #     np.arange(1, 500, step=1, dtype=int).tolist()
     # )
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search([100])
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
+        [100]
+    )
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
