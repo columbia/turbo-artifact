@@ -65,21 +65,22 @@ class Task:
             },
         }
 
-    def build_demand_matrix(self):
+    def build_demand_matrix(self, alphas=ALPHAS):
         # Prepare a sparse matrix of the demand
         max_block_id = max(self.budget_per_block.keys())
-        n_alphas = len(ALPHAS)
+
+        n_alphas = len(alphas)
         temp_matrix = dok_matrix((max_block_id + 1, n_alphas))
         for block_id, budget in self.budget_per_block.items():
-            for i, alpha in enumerate(ALPHAS):
+            for i, alpha in enumerate(alphas):
                 temp_matrix[block_id, i] = budget.epsilon(alpha)
 
         # Block compressed matrix, since we have chunks of non-zero values
         self.demand_matrix = bsr_matrix(temp_matrix)
 
-    def pad_demand_matrix(self, n_blocks):
+    def pad_demand_matrix(self, n_blocks, alphas=ALPHAS):
         if not hasattr(self, "demand_matrix"):
-            self.build_demand_matrix()
+            self.build_demand_matrix(alphas)
         n_new_rows = n_blocks - self.demand_matrix.shape[0]
         n_columns = self.demand_matrix.shape[1]
 

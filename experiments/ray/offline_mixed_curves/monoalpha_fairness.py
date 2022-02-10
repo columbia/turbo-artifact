@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import loguru
+import yaml
 from loguru import logger
 from ray import tune
 from ray.tune import Stopper
@@ -20,11 +21,6 @@ from privacypacking.schedulers.utils import (
     OVERFLOW_RELEVANCE,
     SIMPLEX,
     SOFT_KNAPSACK,
-    SQUARED_DYNAMIC_FLAT_RELEVANCE,
-    TASK_BASED_BUDGET_UNLOCKING,
-    TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
-    THRESHOLD_UPDATING,
-    TIME_BASED_BUDGET_UNLOCKING,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
@@ -76,7 +72,7 @@ def grid():
     normalize_by = ["available_budget"]
     metric_recomputation_period = [10]
 
-    monoalpha = [3, 4, 5, 8, 16, 64]
+    # monoalpha = [3, 4, 5, 8, 16, 64]
 
     # Conditonal parameter
     method_and_metric = []
@@ -95,6 +91,7 @@ def grid():
 
     # num_tasks = [50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000]
     num_tasks = [1000]
+    # num_tasks = [100]
 
     num_blocks = [20]
     data_path = "mixed_curves"
@@ -152,7 +149,7 @@ def grid():
             "verbose": False,
             "save": True,
         },
-        "alphas": [tune.grid_search(monoalpha)],
+        # "alphas": [tune.grid_search(monoalpha)],
     }
 
     tune.run(

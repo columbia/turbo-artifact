@@ -216,6 +216,12 @@ class RelevanceMetric(Metric):
             )
             task_demands = np.clip(task_demands, a_min=0, a_max=block_capacity)
         cost = np.multiply(task_demands, relevance_matrix).sum()
+
+        logger.info(
+            f"{task_demands.shape}  {relevance_matrix.shape}\n {task_demands} {relevance_matrix}"
+        )
+        logger.info(f"Cost for task{task.id}: {cost}")
+
         return task.profit / cost if cost > 0 else float("inf")
 
     def is_dynamic(self):
@@ -540,6 +546,9 @@ class SoftKnapsack(RelevanceMetric):
         i = 0
         for block_id in range(n_blocks):
             for alpha_index, alpha in enumerate(alphas):
+
+                logger.info(f"Solving{i} {block_id} alpha: {alpha}")
+
                 # max_profits[block_id, alpha_index] = results[i]
                 max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
                 i += 1

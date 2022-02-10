@@ -67,6 +67,7 @@ class Scheduler:
             self.scheduling_queue_info = []
 
         self.omegaconf = None
+        self.alphas = None
 
     def consume_budgets(self, task):
         """
@@ -179,6 +180,10 @@ class Scheduler:
             raise Exception("This block id is already present in the scheduler.")
         self.blocks.update({block.id: block})
 
+        # Support blocks with custom support
+        if not self.alphas:
+            self.alphas = block.initial_budget.alphas
+
     def get_num_blocks(self) -> int:
         num_blocks = len(self.blocks)
         return num_blocks
@@ -195,7 +200,7 @@ class Scheduler:
             logger.info("Precomputing the relevance matrix for the whole batch")
             for t in tasks:
                 # We assume that there are no missing blocks. Otherwise, compute the max block id.
-                t.pad_demand_matrix(n_blocks=self.get_num_blocks())
+                t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
             relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):
