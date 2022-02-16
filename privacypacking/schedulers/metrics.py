@@ -217,9 +217,9 @@ class RelevanceMetric(Metric):
             task_demands = np.clip(task_demands, a_min=0, a_max=block_capacity)
         cost = np.multiply(task_demands, relevance_matrix).sum()
 
-        logger.info(
-            f"{task_demands.shape}  {relevance_matrix.shape}\n {task_demands} {relevance_matrix}"
-        )
+        # logger.info(
+        #     f"{task_demands.shape}  {relevance_matrix.shape}\n {task_demands} {relevance_matrix}"
+        # )
         logger.info(f"Cost for task{task.id}: {cost}")
 
         return task.profit / cost if cost > 0 else float("inf")
@@ -538,19 +538,21 @@ class SoftKnapsack(RelevanceMetric):
                 task_profits = {task.id: task.profit for task in local_tasks}
                 args.append((local_capacity, task_ids, task_demands, task_profits))
 
-        # logger.info(f"Solving the knapsacks in parallel...")
-        # with Pool(processes=NUM_PROCESSES) as pool:
-        #     results = pool.starmap(solve_local_knapsack, args)
-        # logger.info(f"Collecting the results...")
-        logger.info(f"Solving the knapsacks one by one...")
+        logger.info(f"Solving the knapsacks in parallel...")
+        with Pool(processes=self.config.n_knapsack_solvers) as pool:
+            results = pool.starmap(self.solve_local_knapsack, args)
+        logger.info(f"Collecting the results...")
+
+        # logger.info(f"Solving the knapsacks one by one...")
         i = 0
         for block_id in range(n_blocks):
+
             for alpha_index, alpha in enumerate(alphas):
 
                 logger.info(f"Solving{i} {block_id} alpha: {alpha}")
 
-                # max_profits[block_id, alpha_index] = results[i]
-                max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
+                max_profits[block_id, alpha_index] = results[i]
+                # max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
                 i += 1
 
         logger.info(f"Max profits: {max_profits}")

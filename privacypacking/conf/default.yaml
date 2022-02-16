@@ -7,6 +7,7 @@ metric:
   temperature: 1
   gurobi_timeout: 200
   gurobi_threads: 1
+  n_knapsack_solvers: 1
   rescale_profits: True
   polynomial_ratio: False
   clip_demands_in_relevance: False
