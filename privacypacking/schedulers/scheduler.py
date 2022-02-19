@@ -1,5 +1,7 @@
+import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
@@ -68,6 +70,7 @@ class Scheduler:
 
         self.omegaconf = None
         self.alphas = None
+        self.start_time = datetime.now()
 
     def consume_budgets(self, task):
         """
@@ -111,7 +114,25 @@ class Scheduler:
         allocated_task_ids = []
         # Run until scheduling cycle ends
         converged = False
+        cycles = 0
         while not converged:
+            cycles += 1
+            # Timeout if the physical time is too long
+            duration_seconds = (datetime.now() - self.start_time).total_seconds()
+            if (
+                self.omegaconf.scheduler_timeout_seconds
+                and self.omegaconf.scheduler_timeout_seconds < duration_seconds
+            ):
+                # raise TimeoutError(
+                #     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
+                # )
+
+                logger.error(
+                    f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
+                )
+
+                sys.exit(1)
+
             # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True

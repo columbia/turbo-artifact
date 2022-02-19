@@ -32,6 +32,7 @@ typer = "^0.4.0"
 scalene = "^1.3.16"
 tqdm = "^4.62.3"
 omegaconf = "^2.1.1"
+mlflow = "^1.23.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

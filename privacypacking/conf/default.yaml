@@ -1,6 +1,7 @@
 scheduler: 
   metric_recomputation_period: 1
   log_warning_every_n_allocated_tasks: 0
+  scheduler_timeout_seconds: 0
   
 metric:
   normalize_by: ""
@@ -11,6 +12,7 @@ metric:
   rescale_profits: True
   polynomial_ratio: False
   clip_demands_in_relevance: False
+  save_profit_matrix: False
 
 logs:
   verbose: False

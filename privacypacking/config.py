@@ -5,16 +5,16 @@ import uuid
 from datetime import datetime
 from functools import partial
 from typing import List
-import numpy as np
 
+import numpy as np
+import yaml
 from loguru import logger
 from numpy.lib.arraysetops import isin
-import yaml
-from privacypacking.budget.block_selection import BlockSelectionPolicy
-from privacypacking.budget.budget import Budget
 from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
+from privacypacking.budget.block_selection import BlockSelectionPolicy
+from privacypacking.budget.budget import Budget
 from privacypacking.budget.task import UniformTask
 from privacypacking.schedulers.utils import (
     DOMINANT_SHARES,
@@ -79,6 +79,7 @@ class Config:
         # TASKS
         self.tasks_spec = config[TASKS_SPEC]
         self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
+        self.max_tasks = None
 
         # Setting config for "custom" tasks
         self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
