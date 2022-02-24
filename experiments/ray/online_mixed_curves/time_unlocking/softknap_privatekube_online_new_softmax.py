@@ -53,21 +53,27 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         SOFT_KNAPSACK,
-        ARGMAX_KNAPSACK,
-        BATCH_OVERFLOW_RELEVANCE,
+        # ARGMAX_KNAPSACK,
+        # BATCH_OVERFLOW_RELEVANCE,
         # FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
+        # DYNAMIC_FLAT_RELEVANCE,
+        # FCFS,
         # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
+        # DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
     # temperature = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 1, 5, 10]
     # temperature = [1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1, 10]
 
-    temperature = [100]
-    # temperature = [10 ** i for i in range(-5, 6)]
+    # temperature = [1000]
+    temperature = [10 ** i for i in range(-5, 10)]
+
+    temperature.extend([50, 75])
+
+    temperature.extend([100 * i for i in range(1, 9)])
+
+    temperature.extend([100 * i for i in range(11, 20)])
 
     # normalize_by = ["capacity"]
     normalize_by = ["available_budget"]
@@ -139,6 +145,7 @@ def grid():
             "normalize_by": tune.grid_search(normalize_by),
             "temperature": tune.grid_search(temperature),
             "clip_demands_in_relevance": tune.grid_search(clip_demands_in_relevance),
+            "save_profit_matrix": False,
         },
     }
 

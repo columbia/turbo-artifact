@@ -1,6 +1,7 @@
 import os
 import time
 from collections import defaultdict
+from email.policy import default
 
 # from ray.util.multiprocessing import Pool
 from multiprocessing import Pool
@@ -9,6 +10,7 @@ from typing import Dict, List, Type
 
 import gurobipy as gp
 import numpy as np
+import torch
 from gurobipy import GRB
 from loguru import logger
 from mip import BINARY, Model, maximize, xsum
@@ -532,10 +534,14 @@ class SoftKnapsack(RelevanceMetric):
 
         if self.config.save_profit_matrix:
             min_profit_per_block = np.zeros(n_blocks)
-            efficiencies_per_block = []
+            efficiencies_per_block_alpha = {}
 
         for block_id in range(n_blocks):
-            current_min_profit = float("inf")
+
+            if self.config.save_profit_matrix:
+                current_min_profit = float("inf")
+                efficiencies_per_block_alpha[block_id] = defaultdict(list)
+
             for alpha_index, alpha in enumerate(alphas):
                 local_tasks = local_tasks_per_block[block_id]
 
@@ -547,18 +553,27 @@ class SoftKnapsack(RelevanceMetric):
                 }
                 task_profits = {task.id: task.profit for task in local_tasks}
 
-                if self.config.save_profit_matrix and alpha_index == 0:
+                if self.config.save_profit_matrix and task_profits:
                     current_min_profit = min(
                         current_min_profit, min(task_profits.values())
                     )
-                    efficiencies_per_block_alpha = []
+                    # efficiencies_per_block_alpha = []
                     for task_id in task_ids:
-                        efficiencies_per_block_alpha.append(
+                        # efficiencies_per_block_alpha.append(
+                        #     task_demands[task_id]
+                        #     / (local_capacity * task_profits[task_id])
+                        # )
+
+                        efficiencies_per_block_alpha[block_id][alpha_index].append(
                             task_demands[task_id]
                             / (local_capacity * task_profits[task_id])
                         )
-                    efficiencies_per_block.append(efficiencies_per_block_alpha)
 
+                        # logger.warning(task_demands[task_id])
+                        # logger.warning(efficiencies_per_block_alpha)
+                    # efficiencies_per_block.append(
+                    #     np.array(efficiencies_per_block_alpha)
+                    # )
                 # TODO: copy?
                 args.append((local_capacity, task_ids, task_demands, task_profits))
 
@@ -587,14 +602,14 @@ class SoftKnapsack(RelevanceMetric):
         # logger.warning(f"Max profits: {max_profits_seq}")
         # logger.warning(f"Max profits: {max_profits}")
 
-        if self.config.save_profit_matrix:
+        if self.config.save_profit_matrix and min_profit_per_block[0] > 0:
 
             log_dir = Path(tune.get_trial_dir())
             np.save(log_dir.joinpath("max_profits.npy"), max_profits)
             np.save(log_dir.joinpath("min_profit_per_block.npy"), min_profit_per_block)
-            np.save(
-                log_dir.joinpath("efficiencies_per_block.npy"),
-                np.array(efficiencies_per_block),
+            torch.save(
+                efficiencies_per_block_alpha,
+                log_dir.joinpath("efficiencies_per_block_alpha.pt"),
             )
 
             # TODO: examine intermediate updates?
@@ -742,7 +757,10 @@ class ArgmaxKnapsack(SoftKnapsack):
                             task_demands[task_id]
                             / (local_capacity * task_profits[task_id])
                         )
-                    efficiencies_per_block.append(efficiencies_per_block_alpha)
+                        logger.warning(efficiencies_per_block_alpha)
+                    efficiencies_per_block.append(
+                        np.array(efficiencies_per_block_alpha)
+                    )
 
                 args.append((local_capacity, task_ids, task_demands, task_profits))
 
