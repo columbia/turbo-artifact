@@ -51,6 +51,10 @@ def grid_offline(
     custom_config: str,
     num_tasks: List[int],
     num_blocks: List[int],
+    data_path: str = "",
+    optimal: bool = False,
+    metric_recomputation_period: int = 10,
+    parallel: bool = True,
 ):
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
@@ -71,7 +75,8 @@ def grid_offline(
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
 
-    method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
+    if optimal:
+        method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
 
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
@@ -89,29 +94,40 @@ def grid_offline(
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
     #     np.arange(1, 500, step=1, dtype=int).tolist()
     # )
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
-        num_tasks
+    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
+    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
+        {
+            SAMPLING: True,
+            INITIAL_NUM: tune.grid_search(num_tasks),
+            DATA_PATH: data_path,
+            DATA_TASK_FREQUENCIES_PATH: "frequencies.yaml",
+            FREQUENCY: 1,
+            READ_BLOCK_SELECTION_POLICY_FROM_CONFIG: {
+                ENABLED: True,
+                BLOCK_SELECTING_POLICY: tune.grid_search(block_selection_policies),
+            },
+        }
     )
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-    ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
+    #     READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+    # ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
 
     config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
 
     config["omegaconf"] = {
         "scheduler": {
-            "metric_recomputation_period": 10,
-            "log_warning_every_n_allocated_tasks": 500,
+            "metric_recomputation_period": metric_recomputation_period,
+            "log_warning_every_n_allocated_tasks": 50,
             "scheduler_timeout_seconds": 20 * 60,
         },
         "metric": {
             "normalize_by": "available_budget",
             "temperature": tune.grid_search(temperature),
-            "n_knapsack_solvers": 16,
+            "n_knapsack_solvers": 16 if parallel else 1,
             "gurobi_timeout": 10 * 60,
-            "gurobi_threads": 8,
+            "gurobi_threads": 8 if parallel else 1,
         },
         "logs": {
             "verbose": False,

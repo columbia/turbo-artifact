@@ -31,6 +31,7 @@ def plot_3a(fig_dir):
         custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
         num_blocks=[5, 10, 15, 20],
         num_tasks=[100],
+        data_path="multiblock_dpf_killer_gap",
     )
 
     all_trial_paths = experiment_analysis._get_trial_paths()
@@ -86,6 +87,7 @@ def plot_3b(fig_dir):
         custom_config="offline_dpf_killer/single_block/base.yaml",
         num_blocks=[1],
         num_tasks=[1] + [5 * i for i in range(1, 6)],
+        data_path="single_block_dpf_killer_subsampled",
     )
 
     all_trial_paths = experiment_analysis._get_trial_paths()
@@ -107,7 +109,7 @@ def plot_3b(fig_dir):
         width=800,
         height=600,
         range_y=[0, 25],
-        title="DPF inefficiency example 2",
+        title="Diverse RDP curves offline",
     )
 
     gnuplot_df = rdf
@@ -136,6 +138,106 @@ def plot_3b(fig_dir):
     )
 
 
+def plot_4(fig_dir):
+    experiment_analysis = grid_offline(
+        custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
+        num_blocks=[20],
+        num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
+        data_path="mixed_curves",
+        metric_recomputation_period=100,
+        parallel=False,  # We care about the runtime here
+    )
+
+    all_trial_paths = experiment_analysis._get_trial_paths()
+    experiment_dir = Path(all_trial_paths[0]).parent
+
+    rdf = load_ray_experiment(experiment_dir)
+    rdf["scheduler_metric"] = rdf.apply(
+        lambda row: row.scheduler_metric
+        if row.scheduler == "basic_scheduler"
+        else "Simplex",
+        axis=1,
+    )
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Diverse RDP curves offline",
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "n_allocated_tasks",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
+    )
+
+    fig_path = fig_dir.joinpath(
+        "offline_mixed_curves/offline_mixed_curves_without_profits.png"
+    )
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+    # Let's plot the runtime now
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="time_total_s",
+        color="scheduler_metric",
+        # log_x=True,
+        width=800,
+        height=600,
+        range_y=[0, 1_000],
+        # title="Number of allocated tasks depending on the scheduling step size<br><sup>Online mixed curves, 20 blocks, no initial blocks, 100 tasks per block on average, lifetime = 5 blocks</sup>"
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "time_total_s",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
+    )
+    fig_path = fig_dir.joinpath(
+        "offline_mixed_curves/offline_mixed_curves_without_profits_runtime.png"
+    )
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+
 @app.command()
 def run(
     fig: str = "3a",
@@ -144,7 +246,7 @@ def run(
     fig_dir: str = "",
 ):
 
-    os.environ["LOGURU_LEVEL"] = "WARNING"
+    os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     if not fig_dir:
@@ -153,10 +255,12 @@ def run(
         fig_dir = Path(fig_dir)
     # fig_dir.mkdir(parents=True, exist_ok=True)
 
-    if fig == "3a":
-        plot_3a(fig_dir)
-    elif fig == "3b":
-        plot_3b(fig_dir)
+    globals()[f"plot_{fig}"](fig_dir)
+
+    # if fig == "3a":
+    #     plot_3a(fig_dir)
+    # elif fig == "3b":
+    #     plot_3b(fig_dir)
 
 
 if __name__ == "__main__":
