@@ -1,6 +1,9 @@
 # Custom files
 .vscode/
 logs
+mlruns/
+experiments/figures/
+data/alibaba/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
