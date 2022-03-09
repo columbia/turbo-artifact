@@ -3,7 +3,6 @@ from itertools import count
 from loguru import logger
 
 from privacypacking.simulator.resourcemanager import LastItem
-from privacypacking.utils.utils import CUSTOM
 
 
 class Tasks:
@@ -26,9 +25,8 @@ class Tasks:
         yield self.resource_manager.blocks_initialized
 
         # Produce initial tasks
-        initial_curves = self.config.get_initial_task_curves()
-        for curve in initial_curves:
-            self.env.process(self.task(next(self.task_count), curve))
+        for _ in self.config.get_initial_tasks_num():
+            self.env.process(self.task(next(self.task_count)))
 
         if self.config.task_arrival_frequency_enabled:
             while not self.resource_manager.task_production_terminated:
@@ -37,6 +35,7 @@ class Tasks:
                 self.env.process(self.task(task_id))
                 yield self.env.timeout(task_arrival_interval)
 
+                #Todo: Is max-tasks ever not-None anymore?
                 if (
                     self.config.max_tasks is not None
                     and task_id == self.config.max_tasks - 1
@@ -46,14 +45,13 @@ class Tasks:
             # Send a special message to close the channel
             self.resource_manager.new_tasks_queue.put(LastItem())
 
-    def task(self, task_id: int, curve_distribution=CUSTOM) -> None:
+    def task(self, task_id: int) -> None:
         """
         Task behavior. Sets its own demand, notifies resource manager of its existence,
         waits till it gets scheduled and then is executed
         """
 
-        num_blocks = self.resource_manager.scheduler.get_num_blocks()
-        task = self.config.create_task(task_id, curve_distribution, num_blocks)
+        task = self.config.create_task(task_id)
 
         logger.debug(
             f"Task: {task_id} generated at {self.env.now}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
