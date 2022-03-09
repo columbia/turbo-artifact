@@ -3,6 +3,7 @@ from itertools import count
 from loguru import logger
 
 from privacypacking.simulator.resourcemanager import LastItem
+from privacypacking.utils.utils import CUSTOM
 
 
 class Tasks:
@@ -45,7 +46,7 @@ class Tasks:
             # Send a special message to close the channel
             self.resource_manager.new_tasks_queue.put(LastItem())
 
-    def task(self, task_id: int, curve_distribution=None) -> None:
+    def task(self, task_id: int, curve_distribution=CUSTOM) -> None:
         """
         Task behavior. Sets its own demand, notifies resource manager of its existence,
         waits till it gets scheduled and then is executed

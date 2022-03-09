@@ -57,7 +57,7 @@ def load_scheduling_dumps(
                     d["profit"].append(t["profit"])
                     d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
                     d["scheduler"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["method"]
+                        run_dict["config"]["scheduler_spec"]["method"]
                     )
                     d["total_blocks"].append(len(run_dict["blocks"]))
                     d["n_blocks"].append(len(t["budget_per_block"]))
@@ -65,18 +65,16 @@ def load_scheduling_dumps(
                     d["block"].append(int(block_id))
                     d["epsilon"].append(block_budget["dp_budget"]["epsilon"])
                     d["block_selection"].append(
-                        run_dict["simulator_config"]["tasks_spec"][
-                            "curve_distributions"
-                        ]["custom"]["read_block_selecting_policy_from_config"][
+                        run_dict["config"]["tasks_spec"]["curve_distributions"][
+                            "custom"
+                        ]["read_block_selecting_policy_from_config"][
                             "block_selecting_policy"
                         ]
                     )
                     d["totalblocks_scheduler_selection"].append(
                         f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
                     )
-                    d["metric"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                    )
+                    d["metric"].append(run_dict["config"]["scheduler_spec"]["metric"])
                     d["nblocks_maxeps"].append(
                         f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
                     )
@@ -130,7 +128,7 @@ def load_scheduling_dumps_monoalpha(
                     d["hashed_id"].append(hash(str(t["id"])) % 100)
                     d["allocated"].append(t["allocated"])
                     d["scheduler"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["method"]
+                        run_dict["config"]["scheduler_spec"]["method"]
                     )
                     d["profit"].append(t["profit"])
                     d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
@@ -143,31 +141,25 @@ def load_scheduling_dumps_monoalpha(
 
                     d["block"].append(int(block_id))
                     d["block_selection"].append(
-                        run_dict["simulator_config"]["tasks_spec"][
-                            "curve_distributions"
-                        ]["custom"]["read_block_selecting_policy_from_config"][
+                        run_dict["config"]["tasks_spec"]["curve_distributions"][
+                            "custom"
+                        ]["read_block_selecting_policy_from_config"][
                             "block_selecting_policy"
                         ]
                     )
                     d["totalblocks_scheduler_selection"].append(
                         f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
                     )
-                    d["metric"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                    )
+                    d["metric"].append(run_dict["config"]["scheduler_spec"]["metric"])
                     d["nblocks_maxeps"].append(
                         f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
                     )
                     d["T"].append(
-                        run_dict["simulator_config"]["scheduler_spec"][
-                            "scheduling_wait_time"
-                        ]
+                        run_dict["config"]["scheduler_spec"]["scheduling_wait_time"]
                     ),
-                    d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                    d["N"].append(run_dict["config"]["scheduler_spec"]["n"])
                     d["data_lifetime"].append(
-                        run_dict["simulator_config"]["scheduler_spec"].get(
-                            "data_lifetime", -1
-                        )
+                        run_dict["config"]["scheduler_spec"].get("data_lifetime", -1)
                     )
 
     df = pd.DataFrame(d).sort_values(
@@ -195,6 +187,11 @@ def load_scheduling_dumps_alphas(
             for block_id, block_budget in t["budget_per_block"].items():
                 orders = t["budget_per_block"][block_id]["orders"]
 
+                # print(orders)
+                # print(block_orders)
+
+                # 1 / 0
+
                 for alpha in [0, 4, 6, 8, 64]:
                     d["alpha"].append(alpha)
                     d["blockid_alpha"].append(f"{int(block_id):03}-{alpha:02}")
@@ -214,7 +211,7 @@ def load_scheduling_dumps_alphas(
                     d["hashed_id"].append(hash(str(t["id"])) % 100)
                     d["allocated"].append(t["allocated"])
                     d["scheduler"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["method"]
+                        run_dict["config"]["scheduler_spec"]["method"]
                     )
                     d["profit"].append(t["profit"])
                     d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
@@ -227,31 +224,26 @@ def load_scheduling_dumps_alphas(
 
                     d["block"].append(int(block_id))
                     d["block_selection"].append(
-                        run_dict["simulator_config"]["tasks_spec"][
-                            "curve_distributions"
-                        ]["custom"]["read_block_selecting_policy_from_config"][
+                        run_dict["config"]["tasks_spec"]["curve_distributions"][
+                            "custom"
+                        ]["read_block_selecting_policy_from_config"][
                             "block_selecting_policy"
                         ]
                     )
                     d["totalblocks_scheduler_selection"].append(
                         f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
                     )
-                    d["metric"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                    )
+                    d["metric"].append(run_dict["config"]["scheduler_spec"]["metric"])
                     d["nblocks_maxeps"].append(
                         f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
                     )
                     d["T"].append(
-                        run_dict["simulator_config"]["scheduler_spec"][
-                            "scheduling_wait_time"
-                        ]
+                        run_dict["config"]["scheduler_spec"]["scheduling_wait_time"]
                     ),
-                    d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                    d["N"].append(run_dict["config"]["scheduler_spec"]["n"])
                     d["data_lifetime"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                        run_dict["config"]["scheduler_spec"].get("data_lifetime", -1)
                     )
-
     df = pd.DataFrame(d).sort_values(
         ["blockid_alpha", "id", "allocated"], ascending=[True, True, False]
     )
@@ -280,17 +272,13 @@ def load_scheduling_queue(expname="") -> pd.DataFrame:
                     d["ids_and_metrics"].append(step_info["ids_and_metrics"])
 
                     # General config info
-                    d["metric"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["metric"]
-                    )
+                    d["metric"].append(run_dict["config"]["scheduler_spec"]["metric"])
                     d["T"].append(
-                        run_dict["simulator_config"]["scheduler_spec"][
-                            "scheduling_wait_time"
-                        ]
+                        run_dict["config"]["scheduler_spec"]["scheduling_wait_time"]
                     ),
-                    d["N"].append(run_dict["simulator_config"]["scheduler_spec"]["n"])
+                    d["N"].append(run_dict["config"]["scheduler_spec"]["n"])
                     d["data_lifetime"].append(
-                        run_dict["simulator_config"]["scheduler_spec"]["data_lifetime"]
+                        run_dict["config"]["scheduler_spec"]["data_lifetime"]
                     )
         except Exception as e:
             print(e)
@@ -373,11 +361,15 @@ def load_latest_scheduling_results(
         latest_exp_dir = LOGS_PATH.joinpath(expname)
 
     if not alphas:
-        df = load_scheduling_dumps(latest_exp_dir.glob("**/*.json"), verbose)
+        df = load_scheduling_dumps(latest_exp_dir.glob("**/result.json"), verbose)
     elif alphas == "monoalpha":
-        df = load_scheduling_dumps_monoalpha(latest_exp_dir.glob("**/*.json"), verbose)
+        df = load_scheduling_dumps_monoalpha(
+            latest_exp_dir.glob("**/result.json"), verbose
+        )
     else:
-        df = load_scheduling_dumps_alphas(latest_exp_dir.glob("**/*.json"), verbose)
+        df = load_scheduling_dumps_alphas(
+            latest_exp_dir.glob("**/result.json"), verbose
+        )
 
     if tasks_dir:
         maxeps = {}

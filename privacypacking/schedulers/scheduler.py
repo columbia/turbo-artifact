@@ -1,5 +1,7 @@
+import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
@@ -67,6 +69,8 @@ class Scheduler:
             self.scheduling_queue_info = []
 
         self.omegaconf = None
+        self.alphas = None
+        self.start_time = datetime.now()
 
     def consume_budgets(self, task):
         """
@@ -110,7 +114,25 @@ class Scheduler:
         allocated_task_ids = []
         # Run until scheduling cycle ends
         converged = False
+        cycles = 0
         while not converged:
+            cycles += 1
+            # Timeout if the physical time is too long
+            duration_seconds = (datetime.now() - self.start_time).total_seconds()
+            if (
+                self.omegaconf.scheduler_timeout_seconds
+                and self.omegaconf.scheduler_timeout_seconds < duration_seconds
+            ):
+                # raise TimeoutError(
+                #     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
+                # )
+
+                logger.error(
+                    f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
+                )
+
+                sys.exit(1)
+
             # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
@@ -179,6 +201,10 @@ class Scheduler:
             raise Exception("This block id is already present in the scheduler.")
         self.blocks.update({block.id: block})
 
+        # Support blocks with custom support
+        if not self.alphas:
+            self.alphas = block.initial_budget.alphas
+
     def get_num_blocks(self) -> int:
         num_blocks = len(self.blocks)
         return num_blocks
@@ -195,7 +221,7 @@ class Scheduler:
             logger.info("Precomputing the relevance matrix for the whole batch")
             for t in tasks:
                 # We assume that there are no missing blocks. Otherwise, compute the max block id.
-                t.pad_demand_matrix(n_blocks=self.get_num_blocks())
+                t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
             relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):

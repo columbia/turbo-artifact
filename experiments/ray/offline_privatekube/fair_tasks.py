@@ -1,6 +1,8 @@
 import argparse
 import os
 from datetime import datetime
+from distutils.log import set_verbosity
+from typing import Any, Dict, List
 
 import loguru
 import yaml
@@ -11,6 +13,7 @@ from ray.tune.stopper import TimeoutStopper
 
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
+    ARGMAX_KNAPSACK,
     BASIC_SCHEDULER,
     BATCH_OVERFLOW_RELEVANCE,
     DOMINANT_SHARES,
@@ -21,6 +24,7 @@ from privacypacking.schedulers.utils import (
     OVERFLOW_RELEVANCE,
     SIMPLEX,
     SOFT_KNAPSACK,
+    TIME_BASED_BUDGET_UNLOCKING,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
@@ -50,7 +54,10 @@ def run_and_report(config: dict) -> None:
 
     sim = Simulator(Config(config))
     metrics = sim.run()
-    logger.info(metrics)
+    # logger.info(metrics)
+
+    logger.info(f"Trial logs: {tune.get_trial_dir()}")
+
     tune.report(**metrics)
 
 
@@ -69,20 +76,53 @@ def grid():
     update_dict(user_config, config)
 
     temperature = [1]
+
+    # temperature = [1, 10, 1e4]
+    # temperature = [2.5e-4, 5e-4, 7.5e-4, 1e-3, 2.5e-3, 5e-3, 7.5e-3, 5e-2]
+    temperature = [
+        # 1e9,
+        # 1e8,
+        # 1e7,
+        # 1e6,
+        # 5e5,
+        # 1e5,
+        # 5e4,
+        # 1e4,
+        # 5e3,
+        # 4e3,
+        # 3e3,
+        # 2e3,
+        1750,
+        1500,
+        1100,
+        1010,
+        1001,
+        1e3,
+        # 1e2,
+        # 1e-1,
+        # 1,
+        # 1e-1,
+        # 1e-2,
+        # 1e-3,
+        # 1e-4,
+        # 1e-5,
+    ]
+
     normalize_by = ["available_budget"]
-    metric_recomputation_period = [10]
+    metric_recomputation_period = [1_000]
 
     # monoalpha = [3, 4, 5, 8, 16, 64]
 
     # Conditonal parameter
     method_and_metric = []
     for metric in [
-        DOMINANT_SHARES,
+        # DOMINANT_SHARES,
         # FLAT_RELEVANCE,
         # OVERFLOW_RELEVANCE,
-        FCFS,
+        # FCFS,
         SOFT_KNAPSACK,
-        DYNAMIC_FLAT_RELEVANCE,
+        # ARGMAX_KNAPSACK,
+        # DYNAMIC_FLAT_RELEVANCE,
     ]:
         method_and_metric.append((BASIC_SCHEDULER, metric))
     # method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
@@ -90,11 +130,11 @@ def grid():
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
     # num_tasks = [50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000]
-    num_tasks = [1000]
+    num_tasks = [20_000]
     # num_tasks = [100]
 
     num_blocks = [20]
-    data_path = "mixed_curves"
+    data_path = "privatekube_event_g0.0_l0.5_p=grid"
     block_selection_policies = ["RandomBlocks"]
 
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
@@ -111,6 +151,7 @@ def grid():
             },
         }
     )
+    # config[SCHEDULER_SPEC][METHOD] = TIME_BASED_BUDGET_UNLOCKING
 
     # config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
     # # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][SAMPLING] = True
@@ -138,12 +179,16 @@ def grid():
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
             ),
-            "log_warning_every_n_allocated_tasks": 0,
+            "log_warning_every_n_allocated_tasks": 1_000,
+            "scheduler_timeout_seconds": 20 * 60,
         },
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
             "temperature": tune.grid_search(temperature),
             "gurobi_timeout": 1_000,
+            "gurobi_threads": 1,
+            "n_knapsack_solvers": 16,
+            "save_profit_matrix": True,
         },
         "logs": {
             "verbose": False,
@@ -155,14 +200,85 @@ def grid():
     tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 3},
         local_dir=RAY_LOGS,
         resume=False,
-        # stop=TrialStopper(max_seconds=30),
-        # stop=TimeoutStopper(timeout=3 * 60),
+        # progress_reporter=CustomReporter(),
+        verbose=0,
+        callbacks=[
+            CustomLoggerCallback(),
+            tune.logger.JsonLoggerCallback(),
+            tune.integration.mlflow.MLflowLoggerCallback(
+                experiment_name="fair_tasks",
+            ),
+        ],
+        # stop=TrialStopper(max_seconds=30), # the stopper isn't triggered unless it returns a result
+        # stop=TimeoutStopper(timeout=10), # the runner doesn't listen to the interupt call
     )
 
 
+class CustomLoggerCallback(tune.logger.LoggerCallback):
+    """Custom logger interface"""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def log_trial_result(self, iteration: int, trial: Any, result: Dict):
+        logger.info(
+            [
+                f"{key}: {result[key]}"
+                for key in ["n_allocated_tasks", "realized_profit", "temperature"]
+            ]
+        )
+        return
+
+    def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
+        return
+
+
+# def __init__(self, filename: str = "log.txt):
+#     self._trial_files = {}
+#     self._filename = filename
+
+# def log_trial_start(self, trial: "Trial"):
+#     trial_logfile = os.path.join(trial.logdir, self._filename)
+#     self._trial_files[trial] = open(trial_logfile, "at")
+
+# def log_trial_result(self, iteration: int, trial: "Trial", result: Dict):
+#     if trial in self._trial_files:
+#         self._trial_files[trial].write(json.dumps(result))
+
+# def on_trial_complete(self, iteration: int, trials: List["Trial"],
+#                       trial: "Trial", **info):
+#     if trial in self._trial_files:
+#         self._trial_files[trial].close()
+#         del self._trial_files[trial]
+
+
+class CustomReporter(tune.CLIReporter):
+    def __init__(self):
+        super().__init__()
+        self.num_terminated = 0
+
+    def should_report(self, trials, done=False):
+        """Reports only on trial termination events."""
+        old_num_terminated = self.num_terminated
+        self.num_terminated = len(
+            [t for t in trials if t.status == tune.trial.Trial.TERMINATED]
+        )
+        return self.num_terminated > old_num_terminated
+
+    def log_result(self, trial: "Trial", result: Dict, error: bool = False):
+        return
+
+    # def report(self, trials, *sys_info):
+    #     print("done")
+    #     # print(*sys_info)
+    #     # print("\n".join([str(trial) for trial in trials]))
+
+
 if __name__ == "__main__":
+    # os.environ["LOGURU_LEVEL"] = "INFO"
     os.environ["LOGURU_LEVEL"] = "WARNING"
+    os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
     grid()
