@@ -238,6 +238,35 @@ def plot_4(fig_dir):
     )
 
 
+def plot_5(fig_dir):
+    raise NotImplementedError(
+        "We're not sure we'll keep this figure in the final paper yet."
+    )
+
+
+def plot_6(fig_dir):
+    raise NotImplementedError(
+        "We're not sure we'll keep this figure in the final paper yet."
+    )
+
+
+def plot_7(fig_dir):
+    raise NotImplementedError(
+        "This CLI only works for the simulator, not the real PrivateKube system."
+    )
+
+
+def plot_fairness(fig_dir):
+    raise NotImplementedError(
+        """We will probably plot this on the Alibaba workload. But for reference, check out the following files:
+            - experiments/ray/offline_privatekube/fair_tasks.py
+            - experiments/ray/offline_mixed_curves/monoalpha_fairness.py
+            - /home/pierre/privacypacking/notebooks/offline_mixed_curves/privatekube_fair_tasks.ipynb
+            - notebooks/offline_mixed_curves/multialpha_fair_tasks.ipynb
+        """
+    )
+
+
 @app.command()
 def run(
     fig: str = "3a",
@@ -245,6 +274,16 @@ def run(
     save_csv: bool = True,
     fig_dir: str = "",
 ):
+    """
+    Command line interface to reproduce the figures from the paper.
+    Usage:
+    `python experiments/figures.cli.py --fig 4`
+
+    Fig can be any of the following:
+        3a, 3b, 4, fairness
+
+    Run `python experiments/figures.cli.py --help` for more information.
+    """
 
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
