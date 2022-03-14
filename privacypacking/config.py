@@ -208,47 +208,45 @@ class Config:
         return d
 
     def create_task(
-        self, task_id: int, curve_distribution: str, num_blocks: int
-    ) -> Task:
+        self, task_id: int) -> Task:
 
         task = None
-        if curve_distribution == CUSTOM:
-            # Read custom task specs from a file
-            if self.custom_tasks_sampling:
-                files = [
-                    f"{self.tasks_path}/{task_file}"
-                    for task_file in self.task_frequencies_file.keys()
-                ]
-                frequencies = [
-                    task_frequency
-                    for task_frequency in self.task_frequencies_file.values()
-                ]
-                file = np.random.choice(
-                    files,
-                    1,
-                    p=frequencies,
-                )[0]
+        # Read custom task specs from a file
+        if self.custom_tasks_sampling:
+            files = [
+                f"{self.tasks_path}/{task_file}"
+                for task_file in self.task_frequencies_file.keys()
+            ]
+            frequencies = [
+                task_frequency
+                for task_frequency in self.task_frequencies_file.values()
+            ]
+            file = np.random.choice(
+                files,
+                1,
+                p=frequencies,
+            )[0]
 
-                task_spec = self.load_task_spec_from_file(file)
-                if self.custom_read_block_selection_policy_from_config:
-                    block_selection_policy = BlockSelectionPolicy.from_str(
-                        self.curve_distributions[curve_distribution][
-                            READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-                        ][BLOCK_SELECTING_POLICY]
-                    )
-                else:
-                    block_selection_policy = task_spec.block_selection_policy
-
-                assert block_selection_policy is not None
-
-                task = UniformTask(
-                    id=task_id,
-                    profit=task_spec.profit,
-                    block_selection_policy=block_selection_policy,
-                    n_blocks=task_spec.n_blocks,
-                    budget=task_spec.budget,
-                    name=task_spec.name,
+            task_spec = self.load_task_spec_from_file(file)
+            if self.custom_read_block_selection_policy_from_config:
+                block_selection_policy = BlockSelectionPolicy.from_str(
+                    self.curve_distributions[CUSTOM][
+                        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
+                    ][BLOCK_SELECTING_POLICY]
                 )
+            else:
+                block_selection_policy = task_spec.block_selection_policy
+
+            assert block_selection_policy is not None
+
+            task = UniformTask(
+                id=task_id,
+                profit=task_spec.profit,
+                block_selection_policy=block_selection_policy,
+                n_blocks=task_spec.n_blocks,
+                budget=task_spec.budget,
+                name=task_spec.name,
+            )
         assert task is not None
         return task
 
@@ -278,11 +276,6 @@ class Config:
             block_arrival_interval = self.block_arrival_interval
         assert block_arrival_interval is not None
         return block_arrival_interval
-
-    def get_initial_task_curves(self) -> List[str]:
-        curves = [CUSTOM] * self.custom_tasks_init_num
-        random.shuffle(curves)
-        return curves
 
     def get_initial_tasks_num(self) -> int:
         return self.custom_tasks_init_num
