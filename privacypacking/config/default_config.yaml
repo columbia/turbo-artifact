@@ -38,6 +38,9 @@ tasks_spec:
     constant:
       enabled: false
       task_arrival_interval: 2
+    actual:       # Actual arrival time of custom tasks
+      enabled: false
+      task_arrival_interval: None
 
 scheduler_spec:
   method: n_budget_unlocking
