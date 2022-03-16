@@ -25,7 +25,7 @@ class Tasks:
         yield self.resource_manager.blocks_initialized
 
         # Produce initial tasks
-        for _ in self.config.get_initial_tasks_num():
+        for _ in range(self.config.get_initial_tasks_num()):
             self.env.process(self.task(next(self.task_count)))
 
         if self.config.task_arrival_frequency_enabled:
