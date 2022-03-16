@@ -23,7 +23,6 @@ tasks_spec:
     custom:
       sampling: false # If true we sample uniformly tasks from the data_path else we read the tasks sequentially
       initial_num: 0
-      frequency: 0
       data_path: ""
       data_task_frequencies_path: ""
       read_block_selecting_policy_from_config:
@@ -40,7 +39,6 @@ tasks_spec:
       task_arrival_interval: 2
     actual:       # Actual arrival time of custom tasks
       enabled: false
-      task_arrival_interval: None
 
 scheduler_spec:
   method: n_budget_unlocking

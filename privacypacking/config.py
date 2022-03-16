@@ -86,7 +86,6 @@ class Config:
             DATA_TASK_FREQUENCIES_PATH
         ]
         self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
-        self.custom_tasks_frequency = self.curve_distributions[CUSTOM][FREQUENCY]
         self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
 
         self.custom_read_block_selection_policy_from_config = False
@@ -176,15 +175,9 @@ class Config:
         else:
             self.scheduler_solver = None
 
-        # self.scheduler_threshold_update_mechanism = self.scheduler[
-        #     THRESHOLD_UPDATE_MECHANISM
-        # ]
         self.new_task_driven_scheduling = False
         self.time_based_scheduling = False
         self.new_block_driven_scheduling = False
-        # if self.scheduler_method == THRESHOLD_UPDATING:
-        #     self.new_task_driven_scheduling = True
-        #     self.new_block_driven_scheduling = True
         if self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
             self.time_based_scheduling = True
             if self.scheduler_metric == DOMINANT_SHARES:
@@ -283,6 +276,7 @@ class Config:
             task_arrival_interval = self.task_arrival_interval
         elif self.task_arrival_actual_enabled:
             task_arrival_interval = self.config.task_arrival_interval_generator.next()
+            print("", task_arrival_interval)
         assert task_arrival_interval is not None
         return task_arrival_interval
 
@@ -302,8 +296,6 @@ class Config:
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num
-
-    def load_task_intervals_from_file(self):
 
     def load_task_spec_from_file(
         self, path: Path = PRIVATEKUBE_DEMANDS_PATH
