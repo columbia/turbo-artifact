@@ -207,27 +207,31 @@ class Config:
         d["omegaconf"] = OmegaConf.to_container(self.omegaconf)
         return d
 
-    def create_task(
-        self, task_id: int) -> Task:
+    def create_task(self, task_id: int) -> Task:
 
         task = None
         # Read custom task specs from a file
         if self.custom_tasks_sampling:
-            files = [
-                f"{self.tasks_path}/{task_file}"
-                for task_file in self.task_frequencies_file.keys()
-            ]
-            frequencies = [
-                task_frequency
-                for task_frequency in self.task_frequencies_file.values()
-            ]
-            file = np.random.choice(
-                files,
+
+            if not hasattr(self, "task_specs"):
+                self.task_specs = [
+                    self.load_task_spec_from_file(f"{self.tasks_path}/{task_file}")
+                    for task_file in self.task_frequencies_file.keys()
+                ]
+
+                self.task_frequencies = [
+                    task_frequency
+                    for task_frequency in self.task_frequencies_file.values()
+                ]
+
+            task_spec_index = np.random.choice(
+                len(self.task_specs),
                 1,
-                p=frequencies,
+                p=self.task_frequencies,
             )[0]
 
-            task_spec = self.load_task_spec_from_file(file)
+            task_spec = self.task_specs[task_spec_index]
+
             if self.custom_read_block_selection_policy_from_config:
                 block_selection_policy = BlockSelectionPolicy.from_str(
                     self.curve_distributions[CUSTOM][
