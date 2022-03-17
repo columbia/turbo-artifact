@@ -33,10 +33,10 @@ tasks_spec:
     enabled: false  # no online tasks
     poisson:
       enabled: false
-      task_arrival_interval: 0.004264781
+      avg_number_tasks_per_block: 100
     constant:
       enabled: false
-      task_arrival_interval: 2
+      avg_number_tasks_per_block: 100
     actual:       # Actual arrival time of custom tasks
       enabled: false
 

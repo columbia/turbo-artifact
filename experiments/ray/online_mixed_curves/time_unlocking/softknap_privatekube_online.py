@@ -1,7 +1,7 @@
 import argparse
 import os
 from datetime import datetime
-
+import yaml
 import ray
 from loguru import logger
 from ray import tune
@@ -20,9 +20,9 @@ from privacypacking.schedulers.utils import (
     SIMPLEX,
     SOFT_KNAPSACK,
     SOFTMAX_OVERFLOW,
-    SQUARED_DYNAMIC_FLAT_RELEVANCE,
+    # SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
-    TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
+    # TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
     THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
     VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
@@ -43,12 +43,12 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         SOFT_KNAPSACK,
-        BATCH_OVERFLOW_RELEVANCE,
+        # BATCH_OVERFLOW_RELEVANCE,
         # FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        FCFS,
+        # DYNAMIC_FLAT_RELEVANCE,
+        # FCFS,
         # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
+        # DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
@@ -68,11 +68,11 @@ def grid():
     n = [10_000]
     data_lifetime = [10]
     # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
-    scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
-    # scheduler_scheduling_time = [1, 20]
+    # scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
+    scheduler_scheduling_time = [1]
 
     # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
-    avg_number_tasks_per_block = [1000]
+    # avg_number_tasks_per_block = [1000]
 
     # avg_number_tasks_per_block = [100, 250, 500, 1000]
     max_blocks = [30]
@@ -81,9 +81,10 @@ def grid():
     block_selection_policies = ["LatestBlocksFirst"]
 
     data_path = [
-        "privatekube_event_g0.0_l0.5_p=grid",
+        "alibaba-privacy-workload/outputs/privacy_tasks.csv",
+        # "privatekube_event_g0.0_l0.5_p=grid",
         # "privatekube_event_g0.0_l0.5_p=size",
-        "privatekube_event_g0.0_l0.5_p=1",
+        # "privatekube_event_g0.0_l0.5_p=1",
         # "privatekube_event_g0.0_l0.5_p=ksize",
     ]
 
@@ -101,9 +102,9 @@ def grid():
         data_path
     )
 
-    config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
-        AVG_NUMBER_TASKS_PER_BLOCK
-    ] = tune.grid_search(avg_number_tasks_per_block)
+    # config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
+    #     AVG_NUMBER_TASKS_PER_BLOCK
+    # ] = tune.grid_search(avg_number_tasks_per_block)
 
     config[SCHEDULER_SPEC][DATA_LIFETIME] = tune.grid_search(data_lifetime)
     config[SCHEDULER_SPEC][SCHEDULING_WAIT_TIME] = tune.grid_search(

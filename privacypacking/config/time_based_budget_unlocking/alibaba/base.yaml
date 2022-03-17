@@ -1,9 +1,9 @@
-epsilon: 10
+epsilon: 5
 delta: 1.0e-5
 
 blocks_spec:
   initial_num: 10
-  max_blocks: 20
+  max_blocks: 30
   block_arrival_frequency:
     enabled: true
     constant:
@@ -14,7 +14,7 @@ tasks_spec:
   curve_distributions:
     custom:
       sampling: False
-      data_path: "alibaba-privacy-workload/outputs/"
+      data_path: "alibaba-privacy-workload/outputs/privacy_tasks.csv"
 
   task_arrival_frequency:
     enabled: true
@@ -23,6 +23,6 @@ tasks_spec:
 
 scheduler_spec:
   method: time_based_budget_unlocking
-  data_lifetime: 5
+  data_lifetime: 10
   metric: DominantShares
   n: 125

@@ -94,25 +94,27 @@ class Config:
         ]:
             self.custom_read_block_selection_policy_from_config = True
 
-        self.task_frequencies_file = None
-        if self.data_path != "":
-            self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-            self.tasks_path = self.data_path.joinpath("tasks")
-            self.task_frequencies_path = self.data_path.joinpath(
-                "task_frequencies"
-            ).joinpath(self.data_task_frequencies_path)
+        if self.custom_tasks_sampling:
+            self.task_frequencies_file = None
+            if self.data_path != "":
+                self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
+                self.tasks_path = self.data_path.joinpath("tasks")
+                self.task_frequencies_path = self.data_path.joinpath(
+                    "task_frequencies"
+                ).joinpath(self.data_task_frequencies_path)
 
-            with open(self.task_frequencies_path, "r") as f:
-                self.task_frequencies_file = yaml.safe_load(f)
-            assert len(self.task_frequencies_file) > 0
+                with open(self.task_frequencies_path, "r") as f:
+                    self.task_frequencies_file = yaml.safe_load(f)
+                assert len(self.task_frequencies_file) > 0
 
         # Read one yaml that contains all tasks
-        if self.custom_tasks_sampling:
+        else:
             if self.data_path != "":
                 self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
                 self.tasks = pd.read_csv(self.data_path)
                 self.tasks_generator = self.tasks.iterrows()
-                self.task_arrival_interval_generator = self.tasks['relative_arrival_time'].iterrows()
+                self.sum_task_interval = self.tasks['relative_submit_time'].sum()
+                self.task_arrival_interval_generator = self.tasks['relative_submit_time'].iteritems()
 
         self.task_arrival_frequency_enabled = False
         self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
@@ -124,36 +126,22 @@ class Config:
 
             if self.task_arrival_frequency[POISSON][ENABLED]:
                 self.task_arrival_poisson_enabled = True
-
-                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[POISSON]:
-                    self.task_arrival_interval = (
-                        self.block_arrival_interval
-                        / self.task_arrival_frequency[POISSON][
-                            AVG_NUMBER_TASKS_PER_BLOCK
-                        ]
-                    )
-                else:
-                    self.task_arrival_interval = self.task_arrival_frequency[POISSON][
-                        TASK_ARRIVAL_INTERVAL
+                self.task_arrival_interval = (
+                    self.block_arrival_interval
+                    / self.task_arrival_frequency[POISSON][
+                        AVG_NUMBER_TASKS_PER_BLOCK
                     ]
-
+                )
             elif self.task_arrival_frequency[CONSTANT][ENABLED]:
                 self.task_arrival_constant_enabled = True
-
-                if AVG_NUMBER_TASKS_PER_BLOCK in self.task_arrival_frequency[CONSTANT]:
-                    self.task_arrival_interval = (
-                        self.block_arrival_interval
-                        / self.task_arrival_frequency[CONSTANT][
-                            AVG_NUMBER_TASKS_PER_BLOCK
-                        ]
-                    )
-                else:
-                    self.task_arrival_interval = self.task_arrival_frequency[CONSTANT][
-                        TASK_ARRIVAL_INTERVAL
+                self.task_arrival_interval = (
+                    self.block_arrival_interval
+                    / self.task_arrival_frequency[CONSTANT][
+                        AVG_NUMBER_TASKS_PER_BLOCK
                     ]
+                )
             elif self.task_arrival_frequency[ACTUAL][ENABLED]:
                 self.task_arrival_actual_enabled = True
-
 
 
         # SCHEDULER
@@ -248,14 +236,23 @@ class Config:
             )
         # Not sampling but reading actual tasks sequentially from one file
         else:
-            task_row = self.config.tasks_generator.next()
+            _, task_row = next(self.tasks_generator)
+            orders = {}
+            parsed_alphas = task_row['alphas'].strip('][').split(', ')
+            parsed_epsilons = task_row['rdp_epsilons'].strip('][').split(', ')
+
+            for i, alpha in enumerate(parsed_alphas):
+                alpha = float(alpha)
+                epsilon = float(parsed_epsilons[i])
+                orders[alpha] = epsilon
+
             task = UniformTask(
                 id=task_id,
-                profit=task_row['profit'],
-                block_selection_policy=task_row['block_selection_policy'],
-                n_blocks=task_row['n_blocks'],
-                budget=task_row['rdp_epsilons'],
-                name=task_row['name'],
+                profit=float(task_row['profit']),
+                block_selection_policy=BlockSelectionPolicy.from_str(task_row['block_selection_policy']),
+                n_blocks=int(task_row['n_blocks']),
+                budget=Budget(orders),
+                name=task_row['task_name'],
             )
 
         assert task is not None
@@ -275,8 +272,10 @@ class Config:
         elif self.task_arrival_constant_enabled:
             task_arrival_interval = self.task_arrival_interval
         elif self.task_arrival_actual_enabled:
-            task_arrival_interval = self.config.task_arrival_interval_generator.next()
-            print("", task_arrival_interval)
+            _, task_arrival_interval = next(self.task_arrival_interval_generator)
+            normalized_task_interval = task_arrival_interval/self.sum_task_interval
+            task_arrival_interval = normalized_task_interval*self.block_arrival_interval*self.max_blocks
+
         assert task_arrival_interval is not None
         return task_arrival_interval
 
