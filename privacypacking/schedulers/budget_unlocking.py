@@ -106,16 +106,16 @@ class TBudgetUnlocking(Scheduler):
     def __init__(
         self,
         metric,
-        n,
-        budget_unlocking_time,
-        scheduling_wait_time,
+        # n,
+        # budget_unlocking_time,
+        # scheduling_wait_time,
         env,
-        verbose_logs=False,
+        simulator_config,
     ):
-        super().__init__(metric, verbose_logs=verbose_logs)
-        self.n = n
-        self.budget_unlocking_time = budget_unlocking_time
-        self.scheduling_wait_time = scheduling_wait_time
+        super().__init__(metric, verbose_logs=simulator_config.logs.verbose)
+        self.n = simulator_config.scheduler.n
+        self.budget_unlocking_time = simulator_config.scheduler.budget_unlocking_time
+        self.scheduling_wait_time = simulator_config.scheduler.scheduling_wait_time
         self.env = env
 
         # TODO: why do we launch this as a process?

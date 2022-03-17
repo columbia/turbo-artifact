@@ -1,7 +1,7 @@
 import simpy
 from loguru import logger
 
-from privacypacking.schedulers.methods import get_scheduler
+from privacypacking.schedulers.methods import initialize_scheduler
 
 
 class LastItem:
@@ -23,7 +23,7 @@ class ResourceManager:
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        self.scheduler = get_scheduler(self.config, self.env)
+        self.scheduler = initialize_scheduler(self.config, self.env)
         self.blocks_initialized = self.env.event()
 
         # Stopping conditions

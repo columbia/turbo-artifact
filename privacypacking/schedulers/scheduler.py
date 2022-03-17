@@ -53,7 +53,7 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, metric=None, verbose_logs=False):
+    def __init__(self, metric=None, verbose_logs=False, simulator_config=None):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
@@ -68,7 +68,8 @@ class Scheduler:
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
-        self.omegaconf = None
+        self.simulator_config = simulator_config
+        self.omegaconf = simulator_config.scheduler if simulator_config else None
         self.alphas = None
         self.start_time = datetime.now()
 
