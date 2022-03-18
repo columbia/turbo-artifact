@@ -12,9 +12,12 @@ from privacypacking.utils.utils import GUROBI, MIP
 
 
 class Simplex(Scheduler):
-    def __init__(self, solver=MIP):
-        super().__init__()
-        self.solver = solver
+    def __init__(self, simulator_config=None):
+        super().__init__(simulator_config=simulator_config)
+        if simulator_config:
+            self.solver = simulator_config.scheduler.solver
+        else:
+            self.solver = MIP
 
     def solve_allocation_cbc(self, tasks) -> List[bool]:
         m = Model("pack")
@@ -66,7 +69,7 @@ class Simplex(Scheduler):
             m = gp.Model(env=env)
 
             # m.Params.OutputFlag = 0
-            m.Params.TimeLimit = self.config.gurobi_timeout
+            m.Params.TimeLimit = self.simulator_config.metric.gurobi_timeout
             # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
 
             # m = gp.Model("pack")
@@ -118,7 +121,9 @@ class Simplex(Scheduler):
             # logger.warning(f"status: {m.Status} timeout? {m.Status == GRB.TIME_LIMIT}")
 
             if m.Status == GRB.TIME_LIMIT:
-                raise Exception(f"Solver timeout after {self.config.gurobi_timeout}s")
+                raise Exception(
+                    f"Solver timeout after {self.simulator_config.metric.gurobi_timeout}s"
+                )
             return [bool((abs(x[i].x - 1) < 1e-4)) for i in task_ids]
 
     def schedule_queue(self) -> List[int]:

@@ -53,6 +53,10 @@ class Config:
         # BLOCKS
         # self.blocks_spec = config[BLOCKS_SPEC]
         self.initial_blocks_num = self.omegaconf.blocks.initial_num
+
+        if self.omegaconf.scheduler.method == "offline":
+            self.omegaconf.blocks.max_num = self.initial_blocks_num
+
         self.max_blocks = self.omegaconf.blocks.max_num
         self.block_arrival_interval = 1
 

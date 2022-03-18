@@ -31,15 +31,7 @@ from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import *
 
 
-def run_and_report(config: dict, packed=False) -> None:
-
-    if packed:
-        # Unpack conditional parameters
-        (
-            config["omegaconf"]["scheduler"]["method"],
-            config["omegaconf"]["scheduler"]["metric"],
-        ) = config.pop("method_and_metric")
-
+def run_and_report(config: dict) -> None:
     sim = Simulator(Config(config))
     metrics = sim.run()
     # logger.info(f"Trial logs: {tune.get_trial_dir()}")
@@ -55,7 +47,7 @@ def grid_offline(
     data_path: str = "",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
-    parallel: bool = True,
+    parallel: bool = False,
 ):
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
@@ -66,24 +58,16 @@ def grid_offline(
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
 
-    # Conditonal parameter
-    method_and_metric = []
-    for metric in [
+    metrics = [
+        SIMPLEX,
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
         OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
-    ]:
-        method_and_metric.append(("offline", metric))
-
-    if optimal:
-        method_and_metric.append(("offline", SIMPLEX))
-
-    config["method_and_metric"] = tune.grid_search(method_and_metric)
-
-    block_selection_policies = [
-        "RandomBlocks",
     ]
+
+    num_blocks = tune.grid_search(num_blocks)
+    block_selection_policies = ["RandomBlocks"]
 
     # num_tasks = [50, 100, 150, 200]
     # num_tasks = [100]
@@ -116,9 +100,11 @@ def grid_offline(
     # ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
 
     # TODO: find good defaults to make Parallel solving work without risks of deadlocks on any machine.
-
+    # TODO: check where the solver gets stuck?
     config["omegaconf"] = {
         "scheduler": {
+            "method": "offline",
+            "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 50,
             "scheduler_timeout_seconds": 20 * 60,
@@ -128,20 +114,20 @@ def grid_offline(
             "temperature": tune.grid_search(temperature),
             "n_knapsack_solvers": 16 if parallel else 1,
             "gurobi_timeout": 10 * 60,
-            "gurobi_threads": 8 if parallel else 1,
+            "gurobi_threads": 8,
         },
         "logs": {
             "verbose": False,
             "save": True,
         },
         "blocks": {
-            "initial_num": tune.grid_search(num_blocks),
-            "max_num": tune.grid_search(num_blocks),
+            "initial_num": num_blocks,
+            "max_num": num_blocks,
         },
     }
 
     experiment_analysis = tune.run(
-        partial(run_and_report, packed=True),
+        run_and_report,
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,

@@ -177,10 +177,10 @@ class Scheduler:
 
                         converged = False
                         break
-                else:
-                    logger.debug(
-                        f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
-                    )
+                # else:
+                #     logger.debug(
+                #         f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
+                #     )
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
