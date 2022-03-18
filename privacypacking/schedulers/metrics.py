@@ -212,7 +212,12 @@ class RelevanceMetric(Metric):
         tasks: List[Task] = None,
         relevance_matrix: dict = None,
     ) -> float:
-        task_demands = task.demand_matrix.toarray()
+
+        # Only keep the blocks that appear in the relevance matrix
+        # NOTE: if blocks don't have increasing IDs, slice by block names
+        # task_demands = task.demand_matrix.toarray()[: len(blocks)]
+        task_demands = task.demand_matrix[: len(blocks)]
+
         if self.config.clip_demands_in_relevance:
             # NOTE: we assume each block has the same initial capacity
             block_capacity = np.array(
@@ -240,8 +245,6 @@ class VectorizedBatchOverflowRelevance(Metric):
         drop_blocks_with_no_contention=True,
         truncate_available_budget=False,
     ) -> np.ndarray:
-
-        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
         n_blocks = len(blocks)
@@ -307,8 +310,6 @@ class SoftmaxOverflow(VectorizedBatchOverflowRelevance):
         truncate_available_budget=False,
         temperature=0.1,
     ) -> np.ndarray:
-
-        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
         n_blocks = len(blocks)

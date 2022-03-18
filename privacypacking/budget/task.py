@@ -76,17 +76,20 @@ class Task:
                 temp_matrix[block_id, i] = budget.epsilon(alpha)
 
         # Block compressed matrix, since we have chunks of non-zero values
-        self.demand_matrix = bsr_matrix(temp_matrix)
+        # self.demand_matrix = bsr_matrix(temp_matrix)
 
-    def pad_demand_matrix(self, n_blocks, alphas=ALPHAS):
-        if not hasattr(self, "demand_matrix"):
-            self.build_demand_matrix(alphas)
-        n_new_rows = n_blocks - self.demand_matrix.shape[0]
-        n_columns = self.demand_matrix.shape[1]
+        # NOTE: Using a dumb matrix is faster, go back to sparse if we have RAM issues.
+        self.demand_matrix = temp_matrix.toarray()
 
-        self.demand_matrix = vstack(
-            [self.demand_matrix, bsr_matrix((n_new_rows, n_columns))]
-        )
+    # def pad_demand_matrix(self, n_blocks, alphas=ALPHAS):
+    #     if not hasattr(self, "demand_matrix"):
+    #         self.build_demand_matrix(alphas)
+    #     n_new_rows = n_blocks - self.demand_matrix.shape[0]
+    #     n_columns = self.demand_matrix.shape[1]
+
+    #     self.demand_matrix = vstack(
+    #         [self.demand_matrix, bsr_matrix((n_new_rows, n_columns))]
+    #     )
 
 
 class UniformTask(Task):

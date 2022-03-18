@@ -203,6 +203,12 @@ class Scheduler:
         self.tasks_info.creation_time[task.id] = self.now()
         self.task_queue.tasks.append(task)
 
+        # Express the demands as a sparse matrix (for relevance metrics)
+        if hasattr(self.metric, "compute_relevance_matrix"):
+            self.task_queue.tasks[-1].build_demand_matrix(
+                max_block_id=self.simulator_config.blocks.max_num
+            )
+
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
@@ -226,9 +232,9 @@ class Scheduler:
         elif hasattr(self.metric, "compute_relevance_matrix"):
             # TODO: generalize to other relevance heuristics
             logger.info("Precomputing the relevance matrix for the whole batch")
-            for t in tasks:
-                # We assume that there are no missing blocks. Otherwise, compute the max block id.
-                t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
+            # for t in tasks:
+            #     # We assume that there are no missing blocks. Otherwise, compute the max block id.
+            #     t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
             relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):
