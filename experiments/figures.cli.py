@@ -3,10 +3,11 @@ from pathlib import Path
 
 import plotly.express as px
 import typer
+from loguru import logger
 from ray import tune
 
 from experiments.ray.analysis import load_ray_experiment
-from experiments.ray_runner import grid_offline
+from experiments.ray_runner import grid_offline, grid_online
 
 app = typer.Typer()
 
@@ -25,6 +26,8 @@ def map_metric_to_id(row):
 # TODO: trigger make directly?
 # TODO: custom option to overwrite makefiles
 
+# TODO: reuse the plotting functions
+
 
 def plot_3a(fig_dir):
     experiment_analysis = grid_offline(
@@ -32,18 +35,19 @@ def plot_3a(fig_dir):
         num_blocks=[5, 10, 15, 20],
         num_tasks=[100],
         data_path="multiblock_dpf_killer_gap",
+        parallel=False,
     )
 
     all_trial_paths = experiment_analysis._get_trial_paths()
     experiment_dir = Path(all_trial_paths[0]).parent
 
     rdf = load_ray_experiment(experiment_dir)
-    rdf["scheduler_metric"] = rdf.apply(
-        lambda row: row.scheduler_metric
-        if row.scheduler == "basic_scheduler"
-        else "Simplex",
-        axis=1,
-    )
+    # rdf["scheduler_metric"] = rdf.apply(
+    #     lambda row: row.scheduler_metric
+    #     if row.scheduler == "basic_scheduler"
+    #     else "Simplex",
+    #     axis=1,
+    # )
 
     fig = px.line(
         rdf.sort_values("n_initial_blocks"),
@@ -94,12 +98,12 @@ def plot_3b(fig_dir):
     experiment_dir = Path(all_trial_paths[0]).parent
 
     rdf = load_ray_experiment(experiment_dir)
-    rdf["scheduler_metric"] = rdf.apply(
-        lambda row: row.scheduler_metric
-        if row.scheduler == "basic_scheduler"
-        else "Simplex",
-        axis=1,
-    )
+    # rdf["scheduler_metric"] = rdf.apply(
+    #     lambda row: row.scheduler_metric
+    #     if row.scheduler == "basic_scheduler"
+    #     else "Simplex",
+    #     axis=1,
+    # )
 
     fig = px.line(
         rdf.sort_values("total_tasks"),
@@ -239,9 +243,16 @@ def plot_4(fig_dir):
 
 
 def plot_5(fig_dir):
-    raise NotImplementedError(
-        "We're not sure we'll keep this figure in the final paper yet."
+
+    experiment_analysis = grid_online(
+        custom_config="time_based_budget_unlocking/privatekube/base.yaml"
     )
+
+    logger.info(experiment_analysis)
+
+    # raise NotImplementedError(
+    #     "We're not sure we'll keep this figure in the final paper yet."
+    # )
 
 
 def plot_6(fig_dir):

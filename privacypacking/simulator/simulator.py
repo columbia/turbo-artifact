@@ -14,6 +14,7 @@ class Simulator:
 
         # Start the block and tasks consumers
         self.rm = ResourceManager(self.env, self.config)
+        self.env.process(self.rm.start())
 
         # Start the block and tasks producers
         Blocks(self.env, self.rm)
@@ -41,5 +42,5 @@ class Simulator:
             if hasattr(self.rm.scheduler, "scheduling_queue_info")
             else None,
         )
-        verbose = self.config.omegaconf.logs.save   # Saves tasks and blocks logs too
+        verbose = self.config.omegaconf.logs.save  # Saves tasks and blocks logs too
         return global_metrics(logs, verbose)

@@ -35,9 +35,10 @@ def run_and_report(config: dict, packed=False) -> None:
 
     if packed:
         # Unpack conditional parameters
-        config[SCHEDULER_SPEC][METHOD], config[SCHEDULER_SPEC][METRIC] = config.pop(
-            "method_and_metric"
-        )
+        (
+            config["omegaconf"]["scheduler"]["method"],
+            config["omegaconf"]["scheduler"]["metric"],
+        ) = config.pop("method_and_metric")
 
     sim = Simulator(Config(config))
     metrics = sim.run()
@@ -73,10 +74,10 @@ def grid_offline(
         OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
     ]:
-        method_and_metric.append((BASIC_SCHEDULER, metric))
+        method_and_metric.append(("offline", metric))
 
     if optimal:
-        method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
+        method_and_metric.append(("offline", SIMPLEX))
 
     config["method_and_metric"] = tune.grid_search(method_and_metric)
 
@@ -114,7 +115,7 @@ def grid_offline(
     #     READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
     # ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
 
-    config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
+    # TODO: find good defaults to make Parallel solving work without risks of deadlocks on any machine.
 
     config["omegaconf"] = {
         "scheduler": {
@@ -156,6 +157,8 @@ def grid_offline(
 
 def grid_online(
     custom_config: str = "time_based_budget_unlocking/privatekube/base.yaml",
+    scheduler_scheduling_time=[1],
+    metric_recomputation_period=100,
 ):
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
@@ -180,14 +183,11 @@ def grid_online(
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
-    temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
-    # temperature = [0.01]
+    # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
+    temperature = [0.01]
 
     # normalize_by = ["capacity", "available_budget", ""]
     # normalize_by = [""]
-    normalize_by = ["available_budget"]
-
-    metric_recomputation_period = [500]
 
     # Fully unlocked case
     # n = [1]
@@ -199,9 +199,8 @@ def grid_online(
 
     # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
     # scheduler_scheduling_time = [0.1, 1.0, 4, 8, 20]
-    scheduler_scheduling_time = [1]
 
-    avg_number_tasks_per_block = [500]
+    avg_number_tasks_per_block = [100]
     # avg_number_tasks_per_block = [500]
     max_blocks = [30]
     initial_blocks = [10]
@@ -227,25 +226,27 @@ def grid_online(
         AVG_NUMBER_TASKS_PER_BLOCK
     ] = tune.grid_search(avg_number_tasks_per_block)
 
-    config[SCHEDULER_SPEC][DATA_LIFETIME] = tune.grid_search(data_lifetime)
-    config[SCHEDULER_SPEC][SCHEDULING_WAIT_TIME] = tune.grid_search(
-        scheduler_scheduling_time
-    )
-    config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
-    config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
-    config[SCHEDULER_SPEC][N] = tune.grid_search(n)
-    config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
+    # config[SCHEDULER_SPEC][DATA_LIFETIME] = tune.grid_search(data_lifetime)
+    # config[SCHEDULER_SPEC][SCHEDULING_WAIT_TIME] = tune.grid_search(
+    #     scheduler_scheduling_time
+    # )
+    # config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
+    # config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
+    # config[SCHEDULER_SPEC][N] = tune.grid_search(n)
 
     config["omegaconf"] = {
         "scheduler": {
-            "metric_recomputation_period": tune.grid_search(
-                metric_recomputation_period
-            ),
+            "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 500,
             "scheduler_timeout_seconds": 20 * 60,
+            DATA_LIFETIME: tune.grid_search(data_lifetime),
+            SCHEDULING_WAIT_TIME: tune.grid_search(scheduler_scheduling_time),
+            METHOD: "batch",
+            METRIC: tune.grid_search(scheduler_metrics),
+            N: tune.grid_search(n),
         },
         "metric": {
-            "normalize_by": tune.grid_search(normalize_by),
+            "normalize_by": "available_budget",
             "temperature": tune.grid_search(temperature),
             "n_knapsack_solvers": 16,
         },

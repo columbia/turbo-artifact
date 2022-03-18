@@ -31,18 +31,32 @@ class ResourceManager:
         self.task_production_terminated = False
         self.simulation_terminated = False
 
+    def start(self):
+
         # Start the processes
         self.env.process(self.block_consumer())
-        self.env.process(self.task_consumer())
+        task_consumed_event = self.env.process(self.task_consumer())
 
         # In the online case, start a clock to terminate the simulation
-        if self.config.block_arrival_frequency_enabled:
+        if self.config.omegaconf.scheduler.method == "batch":
             self.block_arrival_interval = self.config.set_block_arrival_time()
             self.env.process(self.daemon_clock())
             self.env.process(self.termination_clock())
-        else:
+            self.env.process(
+                self.scheduler.run_batch_scheduling(
+                    period=self.config.omegaconf.scheduler.scheduling_wait_time
+                )
+            )
+
+        elif self.config.omegaconf.scheduler.method == "offline":
             self.block_production_terminated = True
-            # self.task_production_terminated = True
+            self.task_production_terminated = True
+
+            yield task_consumed_event
+            logger.info(
+                "The scheduler has consumed all the tasks. Time to allocate them."
+            )
+            self.scheduler.schedule_queue()
 
     def termination_clock(self):
 
@@ -62,7 +76,7 @@ class ResourceManager:
 
         # We even wait a bit longer to ensure that all tasks are allocated (in case we need multiple scheduling steps)
         # TODO: add grace period that depends on T?
-        yield self.env.timeout(self.config.scheduler_data_lifetime)
+        yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
         self.simulation_terminated = True
@@ -104,36 +118,37 @@ class ResourceManager:
 
         # Consume initial tasks
         initial_tasks_num = self.config.get_initial_tasks_num()
-        for _ in range(initial_tasks_num - 1):
+        # for _ in range(initial_tasks_num - 1):
+        for _ in range(initial_tasks_num):
             yield self.env.process(consume())
 
         while not self.task_production_terminated:
             yield self.env.process(consume())
 
-            # All schedulers support "new_task_driven_scheduling";
-            # a new-task-arrival event triggers a new scheduling cycle
-            # TODO: this is launching a new enless scheduling cycle in parallel? Why??
-            if self.config.new_task_driven_scheduling:
-                logger.warning("Running `scheduler.schedule_queue()`")
-                self.scheduler.schedule_queue()
-                self.update_logs(scheduling_iteration)
-                scheduling_iteration += 1
+            # # All schedulers support "new_task_driven_scheduling";
+            # # a new-task-arrival event triggers a new scheduling cycle
+            # # TODO: this is launching a new enless scheduling cycle in parallel? Why??
+            # if self.config.new_task_driven_scheduling:
+            #     logger.warning("Running `scheduler.schedule_queue()`")
+            #     self.scheduler.schedule_queue()
+            #     self.update_logs(scheduling_iteration)
+            #     scheduling_iteration += 1
 
         # Ask the scheduler to stop adding new scheduling steps
         self.scheduler.simulation_terminated = True
 
-    def update_logs(self, scheduling_iteration):
-        # TODO: improve the log period + perfs (it definitely is a bottleneck)
-        if self.config.log_every_n_iterations and (
-            (scheduling_iteration == 0)
-            or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
-        ):
-            all_tasks = []
-            for queue in self.scheduler.task_queue.values():
-                all_tasks += queue.tasks
-            self.config.logger.log(
-                all_tasks + list(self.scheduler.tasks_info.allocated_tasks.values()),
-                self.scheduler.blocks,
-                list(self.scheduler.tasks_info.allocated_tasks.keys()),
-                self.config,
-            )
+    # def update_logs(self, scheduling_iteration):
+    #     # TODO: improve the log period + perfs (it definitely is a bottleneck)
+    #     if self.config.log_every_n_iterations and (
+    #         (scheduling_iteration == 0)
+    #         or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
+    #     ):
+    #         all_tasks = []
+    #         for queue in self.scheduler.task_queue.values():
+    #             all_tasks += queue.tasks
+    #         self.config.logger.log(
+    #             all_tasks + list(self.scheduler.tasks_info.allocated_tasks.values()),
+    #             self.scheduler.blocks,
+    #             list(self.scheduler.tasks_info.allocated_tasks.keys()),
+    #             self.config,
+    #         )

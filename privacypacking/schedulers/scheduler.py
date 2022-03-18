@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
+from omegaconf import DictConfig
 from simpy import Event
 
 from privacypacking.budget import Block, Task
@@ -53,7 +54,12 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, metric=None, verbose_logs=False, simulator_config=None):
+    def __init__(
+        self,
+        metric=None,
+        verbose_logs=False,
+        simulator_config: Optional[DictConfig] = None,
+    ):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}

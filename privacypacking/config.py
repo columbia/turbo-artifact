@@ -150,55 +150,55 @@ class Config:
         else:
             self.task_arrival_frequency_enabled = False
 
-        # SCHEDULER
-        self.scheduler = config[SCHEDULER_SPEC]
-        self.scheduler_method = self.scheduler[METHOD]
-        self.scheduler_metric = self.scheduler[METRIC]
-        self.scheduler_N = self.scheduler[N]
-        if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
-            self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
-            self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
-                self.scheduler_N
-            )
-        else:
-            self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
-        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+        # # SCHEDULER
+        # self.scheduler = config[SCHEDULER_SPEC]
+        # self.scheduler_method = self.scheduler[METHOD]
+        # self.scheduler_metric = self.scheduler[METRIC]
+        # self.scheduler_N = self.scheduler[N]
+        # if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
+        #     self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
+        #     self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
+        #         self.scheduler_N
+        #     )
+        # else:
+        #     self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        # self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
 
-        if SOLVER in self.scheduler:
-            self.scheduler_solver = self.scheduler[SOLVER]
-        else:
-            self.scheduler_solver = None
+        # if SOLVER in self.scheduler:
+        #     self.scheduler_solver = self.scheduler[SOLVER]
+        # else:
+        #     self.scheduler_solver = None
 
-        # self.scheduler_threshold_update_mechanism = self.scheduler[
-        #     THRESHOLD_UPDATE_MECHANISM
-        # ]
-        self.new_task_driven_scheduling = False
-        self.time_based_scheduling = False
-        self.new_block_driven_scheduling = False
-        if self.scheduler_method == THRESHOLD_UPDATING:
-            self.new_task_driven_scheduling = True
-            self.new_block_driven_scheduling = True
-        elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-            self.time_based_scheduling = True
-            if self.scheduler_metric == DOMINANT_SHARES:
-                logger.warning(
-                    f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
-                )
-        else:
-            self.new_task_driven_scheduling = True
+        # # self.scheduler_threshold_update_mechanism = self.scheduler[
+        # #     THRESHOLD_UPDATE_MECHANISM
+        # # ]
+        # self.new_task_driven_scheduling = False
+        # self.time_based_scheduling = False
+        # self.new_block_driven_scheduling = False
+        # if self.scheduler_method == THRESHOLD_UPDATING:
+        #     self.new_task_driven_scheduling = True
+        #     self.new_block_driven_scheduling = True
+        # elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+        #     self.time_based_scheduling = True
+        #     if self.scheduler_metric == DOMINANT_SHARES:
+        #         logger.warning(
+        #             f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
+        #         )
+        # else:
+        #     self.new_task_driven_scheduling = True
 
         # LOGS
-        if LOG_FILE in config:
-            self.log_file = f"{config[LOG_FILE]}.json"
-        else:
-            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+        # if LOG_FILE in config:
+        #     self.log_file = f"{config[LOG_FILE]}.json"
+        # else:
+        #     self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
 
-        if CUSTOM_LOG_PREFIX in config:
-            self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
-                self.log_file
-            )
-        else:
-            self.log_path = LOGS_PATH.joinpath(self.log_file)
+        # if CUSTOM_LOG_PREFIX in config:
+        #     self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
+        #         self.log_file
+        #     )
+        # else:
+        #     self.log_path = LOGS_PATH.joinpath(self.log_file)
 
         self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 

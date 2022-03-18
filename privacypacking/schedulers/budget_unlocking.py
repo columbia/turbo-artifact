@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 from loguru import logger
+from omegaconf import DictConfig
 from simpy import Event
 
 from privacypacking.budget import Block, Budget, Task, ZeroCurve
@@ -81,7 +82,6 @@ class NBudgetUnlocking(Scheduler):
         return True
 
 
-###########################################################################################
 class TimeUnlockingBlock(UnlockingBlock):
     def __init__(self, id: int, budget: Budget, env, block_unlock_time, n: int = 1):
         super().__init__(id, budget, n)
@@ -110,16 +110,22 @@ class TBudgetUnlocking(Scheduler):
         # budget_unlocking_time,
         # scheduling_wait_time,
         env,
-        simulator_config,
+        simulator_config: DictConfig,
     ):
-        super().__init__(metric, verbose_logs=simulator_config.logs.verbose)
+        super().__init__(
+            metric,
+            verbose_logs=simulator_config.logs.verbose,
+            simulator_config=simulator_config,
+        )
         self.n = simulator_config.scheduler.n
-        self.budget_unlocking_time = simulator_config.scheduler.budget_unlocking_time
+        self.budget_unlocking_time = (
+            simulator_config.scheduler.data_lifetime / simulator_config.scheduler.n
+        )
         self.scheduling_wait_time = simulator_config.scheduler.scheduling_wait_time
         self.env = env
 
-        # TODO: why do we launch this as a process?
-        self.env.process(self.schedule_queue())
+        # # TODO: why do we launch this as a process?
+        # self.env.process(self.schedule_queue())
 
     def add_block(self, block: Block) -> None:
         unlocking_block = TimeUnlockingBlock(
@@ -128,9 +134,9 @@ class TBudgetUnlocking(Scheduler):
         super().add_block(unlocking_block)
         self.env.process(unlocking_block.wait_and_unlock())
 
-    def schedule_queue(self) -> List[int]:
+    def run_batch_scheduling(self, period: float) -> List[int]:
         while not self.simulation_terminated:
-            yield self.env.timeout(self.scheduling_wait_time)
+            yield self.env.timeout(period)
             super().schedule_queue()
 
     def can_run(self, task):

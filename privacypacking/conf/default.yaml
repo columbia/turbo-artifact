@@ -25,7 +25,6 @@ logs:
   verbose: False
   save: False
 
-
 alphas:
 - 1.5
 - 1.75

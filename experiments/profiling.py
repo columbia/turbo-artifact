@@ -10,7 +10,7 @@ import ray
 import typer
 import yaml
 
-os.environ["LOGURU_LEVEL"] = "INFO"
+os.environ["LOGURU_LEVEL"] = "DEBUG"
 
 from loguru import logger
 from ray import tune

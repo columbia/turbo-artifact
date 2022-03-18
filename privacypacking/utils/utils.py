@@ -144,12 +144,17 @@ def get_logs(
     # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
     simulator_config = simulator_config.dump()
+    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
 
     datapoint = {
-        "scheduler": simulator_config["scheduler_spec"]["method"],
-        "solver": simulator_config["scheduler_spec"]["solver"],
-        "scheduler_n": simulator_config["scheduler_spec"]["n"],
-        "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
+        # "scheduler": simulator_config["scheduler_spec"]["method"],
+        # "solver": simulator_config["scheduler_spec"]["solver"],
+        # "scheduler_n": simulator_config["scheduler_spec"]["n"],
+        # "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
+        "scheduler": omegaconf.scheduler.method,
+        "solver": omegaconf.scheduler.solver,
+        "scheduler_n": omegaconf.scheduler.n,
+        "scheduler_metric": omegaconf.scheduler.metric,
         "block_selecting_policy": simulator_config["tasks_spec"]["curve_distributions"][
             "custom"
         ]["read_block_selecting_policy_from_config"]["block_selecting_policy"],
@@ -175,7 +180,6 @@ def get_logs(
         "blocks": log_blocks,
     }
 
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
     datapoint[
         "metric_recomputation_period"
     ] = omegaconf.scheduler.metric_recomputation_period
