@@ -10,7 +10,9 @@ import ray
 import typer
 import yaml
 
-os.environ["LOGURU_LEVEL"] = "DEBUG"
+# os.environ["LOGURU_LEVEL"] = "DEBUG"
+os.environ["LOGURU_LEVEL"] = "WARNING"
+
 
 from loguru import logger
 from ray import tune
@@ -46,14 +48,14 @@ def main(
 
     profiler = cProfile.Profile()
     profiler.enable()
-    # main()
 
-    run_one(
-        custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
-        num_blocks=20,
-        num_tasks=1_000,
+    run_online(
+        custom_config="time_based_budget_unlocking/privatekube/base.yaml",
+        initial_blocks=10,
+        max_blocks=20,
+        avg_number_tasks_per_block=500,
         data_path="mixed_curves",
-        metric_recomputation_period=50,
+        metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
     )
     profiler.disable()
@@ -61,10 +63,11 @@ def main(
     stats.dump_stats("logs/out.prof")
 
 
-def run_one(
+def run_online(
     custom_config: str,
-    num_tasks: int,
-    num_blocks: int,
+    avg_number_tasks_per_block: int,
+    initial_blocks: int,
+    max_blocks: int,
     data_path: str = "",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
@@ -79,57 +82,30 @@ def run_one(
         user_config = yaml.safe_load(user_config)
     update_dict(user_config, config)
 
-    # Conditonal parameter
-    method_and_metric = []
-    for metric in [
-        # DOMINANT_SHARES,
-        # FLAT_RELEVANCE,
-        # OVERFLOW_RELEVANCE,
-        ARGMAX_KNAPSACK,
-    ]:
-        method_and_metric.append((BASIC_SCHEDULER, metric))
-
-    if optimal:
-        method_and_metric.append((SIMPLEX, DOMINANT_SHARES))
-
-    config["method_and_metric"] = method_and_metric[0]
-
-    block_selection_policies = "RandomBlocks"
-
-    # num_tasks = [50, 100, 150, 200]
-    # num_tasks = [100]
-    # num_blocks = [5, 10, 15, 20]
-    # num_blocks = [5]
-
     temperature = -1
 
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] =
-    #     np.arange(1, 500, step=1, dtype=int).tolist()
-    # )
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] =
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
         {
-            SAMPLING: True,
-            INITIAL_NUM: num_tasks,
+            # SAMPLING: True,
+            # INITIAL_NUM: num_tasks,
             DATA_PATH: data_path,
             DATA_TASK_FREQUENCIES_PATH: "frequencies.yaml",
             FREQUENCY: 1,
             READ_BLOCK_SELECTION_POLICY_FROM_CONFIG: {
                 ENABLED: True,
-                BLOCK_SELECTING_POLICY: block_selection_policies,
+                BLOCK_SELECTING_POLICY: "LatestBlocksFirst",
             },
         }
     )
-    config[BLOCKS_SPEC][INITIAL_NUM] = num_blocks
 
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-    #     READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-    # ][BLOCK_SELECTING_POLICY] = block_selection_policies)
-
-    config[CUSTOM_LOG_PREFIX] = f"exp_{datetime.now().strftime('%m%d-%H%M%S')}"
+    config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
+        AVG_NUMBER_TASKS_PER_BLOCK
+    ] = avg_number_tasks_per_block
 
     config["omegaconf"] = {
         "scheduler": {
+            "method": "batch",
+            "metric": ARGMAX_KNAPSACK,
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 50,
             "scheduler_timeout_seconds": 20 * 60,
@@ -145,12 +121,11 @@ def run_one(
             "verbose": False,
             "save": True,
         },
+        "blocks": {
+            "initial_num": initial_blocks,
+            "max_num": max_blocks,
+        },
     }
-
-    # Unpack conditional parameters
-    config[SCHEDULER_SPEC][METHOD], config[SCHEDULER_SPEC][METRIC] = config.pop(
-        "method_and_metric"
-    )
 
     sim = Simulator(Config(config))
 

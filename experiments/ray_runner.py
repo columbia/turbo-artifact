@@ -109,7 +109,7 @@ def grid_offline(
             },
         }
     )
-    config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
+    # config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
     # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
     #     READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
@@ -133,6 +133,10 @@ def grid_offline(
         "logs": {
             "verbose": False,
             "save": True,
+        },
+        "blocks": {
+            "initial_num": tune.grid_search(num_blocks),
+            "max_num": tune.grid_search(num_blocks),
         },
     }
 
@@ -186,9 +190,6 @@ def grid_online(
     # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
     temperature = [0.01]
 
-    # normalize_by = ["capacity", "available_budget", ""]
-    # normalize_by = [""]
-
     # Fully unlocked case
     # n = [1]
     # data_lifetime = [0.001]
@@ -197,22 +198,13 @@ def grid_online(
     n = [1_000]
     data_lifetime = [5]
 
-    # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
-    # scheduler_scheduling_time = [0.1, 1.0, 4, 8, 20]
-
     avg_number_tasks_per_block = [100]
-    # avg_number_tasks_per_block = [500]
-    max_blocks = [30]
+    max_blocks = [20]
     initial_blocks = [10]
-    seeds = [0]
     block_selection_policies = ["LatestBlocksFirst"]
 
     # data_path = "mixed_curves"
     data_path = "mixed_curves_profits"
-
-    config[GLOBAL_SEED] = tune.grid_search(seeds)
-    config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
-    config[BLOCKS_SPEC][MAX_BLOCKS] = tune.grid_search(max_blocks)
 
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
         READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
@@ -225,14 +217,6 @@ def grid_online(
     config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
         AVG_NUMBER_TASKS_PER_BLOCK
     ] = tune.grid_search(avg_number_tasks_per_block)
-
-    # config[SCHEDULER_SPEC][DATA_LIFETIME] = tune.grid_search(data_lifetime)
-    # config[SCHEDULER_SPEC][SCHEDULING_WAIT_TIME] = tune.grid_search(
-    #     scheduler_scheduling_time
-    # )
-    # config[SCHEDULER_SPEC][METHOD] = tune.grid_search(scheduler_methods)
-    # config[SCHEDULER_SPEC][METRIC] = tune.grid_search(scheduler_metrics)
-    # config[SCHEDULER_SPEC][N] = tune.grid_search(n)
 
     config["omegaconf"] = {
         "scheduler": {
@@ -248,11 +232,15 @@ def grid_online(
         "metric": {
             "normalize_by": "available_budget",
             "temperature": tune.grid_search(temperature),
-            "n_knapsack_solvers": 16,
+            "n_knapsack_solvers": 1,
         },
         "logs": {
             "verbose": False,
             "save": True,
+        },
+        "blocks": {
+            "initial_num": tune.grid_search(initial_blocks),
+            "max_num": tune.grid_search(max_blocks),
         },
     }
 

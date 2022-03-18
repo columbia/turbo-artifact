@@ -21,6 +21,10 @@ metric:
   clip_demands_in_relevance: False
   save_profit_matrix: False
 
+blocks:
+  initial_num: 1
+  max_num: 10
+
 logs:
   verbose: False
   save: False
@@ -38,3 +42,7 @@ alphas:
 - 16
 - 32
 - 64
+
+epsilon: 10
+delta: 0.00001
+global_seed: 64

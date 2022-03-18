@@ -41,42 +41,43 @@ class Config:
 
         # Rest of the configuration below
         self.config = config
-        self.epsilon = config[EPSILON]
-        self.delta = config[DELTA]
+        self.epsilon = self.omegaconf.epsilon
+        self.delta = self.omegaconf.delta
+        self.global_seed = self.omegaconf.global_seed
+        random.seed(self.global_seed)
+        np.random.seed(self.global_seed)
 
-        # DETERMINISM
-        self.global_seed = config[GLOBAL_SEED]
-        self.deterministic = config[DETERMINISTIC]
-        if self.deterministic:
-            random.seed(self.global_seed)
-            np.random.seed(self.global_seed)
+        # self.deterministic = config[DETERMINISTIC]
+        # if self.deterministic:
 
         # BLOCKS
-        self.blocks_spec = config[BLOCKS_SPEC]
-        self.initial_blocks_num = self.blocks_spec[INITIAL_NUM]
-        self.max_blocks = self.blocks_spec[MAX_BLOCKS]
+        # self.blocks_spec = config[BLOCKS_SPEC]
+        self.initial_blocks_num = self.omegaconf.blocks.initial_num
+        self.max_blocks = self.omegaconf.blocks.max_num
+        self.block_arrival_interval = 1
 
-        self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
-        if self.block_arrival_frequency[ENABLED]:
-            self.block_arrival_frequency_enabled = True
-            if self.block_arrival_frequency[POISSON][ENABLED]:
-                self.block_arrival_poisson_enabled = True
-                self.block_arrival_constant_enabled = False
-                self.block_arrival_interval = self.block_arrival_frequency[POISSON][
-                    BLOCK_ARRIVAL_INTERVAL
-                ]
-            if self.block_arrival_frequency[CONSTANT][ENABLED]:
-                self.block_arrival_constant_enabled = True
-                self.block_arrival_poisson_enabled = False
-                self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
-                    BLOCK_ARRIVAL_INTERVAL
-                ]
-        else:
-            self.block_arrival_frequency_enabled = False
-            self.block_arrival_constant_enabled = False
-            self.block_arrival_poisson_enabled = False
+        # self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
+        # if self.block_arrival_frequency[ENABLED]:
+        #     self.block_arrival_frequency_enabled = True
+        #     if self.block_arrival_frequency[POISSON][ENABLED]:
+        #         self.block_arrival_poisson_enabled = True
+        #         self.block_arrival_constant_enabled = False
+        #         self.block_arrival_interval = self.block_arrival_frequency[POISSON][
+        #             BLOCK_ARRIVAL_INTERVAL
+        #         ]
+        #     if self.block_arrival_frequency[CONSTANT][ENABLED]:
+        #         self.block_arrival_constant_enabled = True
+        #         self.block_arrival_poisson_enabled = False
+        #         self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
+        #             BLOCK_ARRIVAL_INTERVAL
+        #         ]
+        # else:
+        #     self.block_arrival_frequency_enabled = False
+        #     self.block_arrival_constant_enabled = False
+        #     self.block_arrival_poisson_enabled = False
 
         # TASKS
+        # TODO: clean up this part too, after we merge the Alibaba ingestion code
         self.tasks_spec = config[TASKS_SPEC]
         self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
         self.max_tasks = None
@@ -200,7 +201,7 @@ class Config:
         # else:
         #     self.log_path = LOGS_PATH.joinpath(self.log_file)
 
-        self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
+        # self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
         d = self.config
@@ -271,15 +272,15 @@ class Config:
         return task_arrival_interval
 
     def set_block_arrival_time(self):
-        block_arrival_interval = None
-        if self.block_arrival_poisson_enabled:
-            block_arrival_interval = partial(
-                random.expovariate, 1 / self.block_arrival_interval
-            )()
-        elif self.block_arrival_constant_enabled:
-            block_arrival_interval = self.block_arrival_interval
-        assert block_arrival_interval is not None
-        return block_arrival_interval
+        # block_arrival_interval = None
+        # if self.block_arrival_poisson_enabled:
+        #     block_arrival_interval = partial(
+        #         random.expovariate, 1 / self.block_arrival_interval
+        #     )()
+        # elif self.block_arrival_constant_enabled:
+        #     block_arrival_interval = self.block_arrival_interval
+        # assert block_arrival_interval is not None
+        return self.block_arrival_interval
 
     def get_initial_tasks_num(self) -> int:
         return self.custom_tasks_init_num
