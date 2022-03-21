@@ -461,7 +461,6 @@ class SoftKnapsack(RelevanceMetric):
 
         opt = 0
 
-        # os.environ["GRB_LICENSE_FILE"] = "/home/pierre/gurobi.lic"
         # with gp.Env(empty=True) as env, gp.Model(env=env) as m:
         #     # Disable Gurobi logs
         #     env.setParam("OutputFlag", 0)
