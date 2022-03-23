@@ -19,6 +19,7 @@ from privacypacking.schedulers.utils import (
     OVERFLOW_RELEVANCE,
     SIMPLEX,
     SOFT_KNAPSACK,
+    ARGMAX_KNAPSACK,
     SOFTMAX_OVERFLOW,
     # SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
@@ -42,13 +43,14 @@ def grid():
 
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
-        SOFT_KNAPSACK,
+        ARGMAX_KNAPSACK,
+	#OVERFLOW_RELEVANCE,
         # BATCH_OVERFLOW_RELEVANCE,
         # FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
         # FCFS,
         # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        # DOMINANT_SHARES,
+        DOMINANT_SHARES,
     ]
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
@@ -69,7 +71,7 @@ def grid():
     data_lifetime = [10]
     # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
     # scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
-    scheduler_scheduling_time = [1]
+    scheduler_scheduling_time = [5]
 
     # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
     # avg_number_tasks_per_block = [1000]
