@@ -26,7 +26,7 @@ PROFIT = "profit"
 SOLVER = "solver"
 GUROBI = "gurobi"
 MIP = "mip"
-
+ACTUAL = "actual"
 NORMALIZE_BY_AVAILABLE_BUDGET = "normalize_by_available_budget"
 NORMALIZE_BY_CAPACITY = "normalize_by_capacity"
 
