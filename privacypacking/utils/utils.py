@@ -155,6 +155,8 @@ def get_logs(
         "solver": omegaconf.scheduler.solver,
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
+        "T": omegaconf.scheduler.scheduling_wait_time,
+        "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": simulator_config["tasks_spec"]["curve_distributions"][
             "custom"
         ]["read_block_selecting_policy_from_config"]["block_selecting_policy"],
@@ -164,11 +166,8 @@ def get_logs(
         "n_allocated_tasks": n_allocated_tasks,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
-        "n_initial_blocks": simulator_config["blocks_spec"]["initial_num"],
+        "n_initial_blocks": omegaconf.blocks.initial_num,
         "maximum_profit": maximum_profit,
-        # "scheduling_time": scheduling_time,
-        "T": simulator_config["scheduler_spec"]["scheduling_wait_time"],
-        "data_lifetime": simulator_config["scheduler_spec"].get("data_lifetime", None),
         "mean_task_per_block": simulator_config["tasks_spec"][TASK_ARRIVAL_FREQUENCY][
             POISSON
         ].get(AVG_NUMBER_TASKS_PER_BLOCK, None),

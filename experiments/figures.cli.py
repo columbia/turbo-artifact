@@ -6,7 +6,6 @@ import typer
 from loguru import logger
 from ray import tune
 
-from experiments.ray.analysis import load_ray_experiment
 from experiments.ray_runner import grid_offline, grid_online
 
 app = typer.Typer()
@@ -18,7 +17,7 @@ def map_metric_to_id(row):
         "FlatRelevance": 1,
         "OverflowRelevance": 2,
         "ArgmaxKnapsack": 3,
-        "Simplex": 4,
+        "simplex": 4,
     }
     return d[row]
 
@@ -30,24 +29,13 @@ def map_metric_to_id(row):
 
 
 def plot_3a(fig_dir):
-    experiment_analysis = grid_offline(
+    rdf = grid_offline(
         custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
         num_blocks=[5, 10, 15, 20],
         num_tasks=[100],
         data_path="multiblock_dpf_killer_gap",
         parallel=False,
     )
-
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-
-    rdf = load_ray_experiment(experiment_dir)
-    # rdf["scheduler_metric"] = rdf.apply(
-    #     lambda row: row.scheduler_metric
-    #     if row.scheduler == "basic_scheduler"
-    #     else "Simplex",
-    #     axis=1,
-    # )
 
     fig = px.line(
         rdf.sort_values("n_initial_blocks"),
@@ -87,23 +75,12 @@ def plot_3a(fig_dir):
 
 
 def plot_3b(fig_dir):
-    experiment_analysis = grid_offline(
+    rdf = grid_offline(
         custom_config="offline_dpf_killer/single_block/base.yaml",
         num_blocks=[1],
         num_tasks=[1] + [5 * i for i in range(1, 6)],
         data_path="single_block_dpf_killer_subsampled",
     )
-
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-
-    rdf = load_ray_experiment(experiment_dir)
-    # rdf["scheduler_metric"] = rdf.apply(
-    #     lambda row: row.scheduler_metric
-    #     if row.scheduler == "basic_scheduler"
-    #     else "Simplex",
-    #     axis=1,
-    # )
 
     fig = px.line(
         rdf.sort_values("total_tasks"),
@@ -143,24 +120,14 @@ def plot_3b(fig_dir):
 
 
 def plot_4(fig_dir):
-    experiment_analysis = grid_offline(
-        custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
+    rdf = grid_offline(
         num_blocks=[20],
-        num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
+        # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
+        num_tasks=[50, 100, 200, 300, 500],
         data_path="mixed_curves",
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
-    )
-
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-
-    rdf = load_ray_experiment(experiment_dir)
-    rdf["scheduler_metric"] = rdf.apply(
-        lambda row: row.scheduler_metric
-        if row.scheduler == "basic_scheduler"
-        else "Simplex",
-        axis=1,
+        gurobi_timeout_minutes=1,
     )
 
     fig = px.line(

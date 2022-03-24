@@ -9,6 +9,7 @@ import yaml
 from loguru import logger
 from ray import tune
 
+from experiments.ray.analysis import load_ray_experiment
 from privacypacking import schedulers
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
@@ -41,22 +42,17 @@ def run_and_report(config: dict) -> None:
 
 
 def grid_offline(
-    custom_config: str,
     num_tasks: List[int],
     num_blocks: List[int],
     data_path: str = "",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
     parallel: bool = False,
+    gurobi_timeout_minutes: int = 1,
 ):
+    # TODO: remove the remaining stuff in there
     with open(DEFAULT_CONFIG_FILE, "r") as f:
         config = yaml.safe_load(f)
-    with open(
-        DEFAULT_CONFIG_FILE.parent.joinpath(custom_config),
-        "r",
-    ) as user_config:
-        user_config = yaml.safe_load(user_config)
-    update_dict(user_config, config)
 
     metrics = [
         SIMPLEX,
@@ -68,18 +64,8 @@ def grid_offline(
 
     num_blocks = tune.grid_search(num_blocks)
     block_selection_policies = ["RandomBlocks"]
-
-    # num_tasks = [50, 100, 150, 200]
-    # num_tasks = [100]
-    # num_blocks = [5, 10, 15, 20]
-    # num_blocks = [5]
-
     temperature = [-1]
 
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
-    #     np.arange(1, 500, step=1, dtype=int).tolist()
-    # )
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][INITIAL_NUM] = tune.grid_search(
     config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
         {
             SAMPLING: True,
@@ -93,14 +79,10 @@ def grid_offline(
             },
         }
     )
-    # config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(num_blocks)
 
-    # config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-    #     READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-    # ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
+    n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
+    gurobi_threads = os.cpu_count() // 4
 
-    # TODO: find good defaults to make Parallel solving work without risks of deadlocks on any machine.
-    # TODO: check where the solver gets stuck?
     config["omegaconf"] = {
         "scheduler": {
             "method": "offline",
@@ -112,9 +94,9 @@ def grid_offline(
         "metric": {
             "normalize_by": "available_budget",
             "temperature": tune.grid_search(temperature),
-            "n_knapsack_solvers": 16 if parallel else 1,
-            "gurobi_timeout": 10 * 60,
-            "gurobi_threads": 8,
+            "n_knapsack_solvers": n_knapsack_solvers,
+            "gurobi_timeout": 60 * gurobi_timeout_minutes,
+            "gurobi_threads": gurobi_threads,
         },
         "logs": {
             "verbose": False,
@@ -142,7 +124,12 @@ def grid_offline(
         ],
     )
 
-    return experiment_analysis
+    all_trial_paths = experiment_analysis._get_trial_paths()
+    experiment_dir = Path(all_trial_paths[0]).parent
+
+    rdf = load_ray_experiment(experiment_dir)
+
+    return rdf
 
 
 def grid_online(
