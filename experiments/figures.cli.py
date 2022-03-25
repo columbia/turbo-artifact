@@ -222,6 +222,9 @@ def plot_5(fig_dir):
     # )
 
 
+# TODO: remember to update delta if you are using something else than mixed curves.
+
+
 def plot_6(fig_dir):
     raise NotImplementedError(
         "We're not sure we'll keep this figure in the final paper yet."
