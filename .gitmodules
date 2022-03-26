@@ -1,3 +1,6 @@
 [submodule "data/alibaba-privacy-workload"]
 	path = data/alibaba-privacy-workload
 	url = https://github.com/DelphianCalamity/alibaba-privacy-workload.git
+[submodule "autodp"]
+	path = autodp
+	url = git@github.com:yuxiangw/autodp.git
