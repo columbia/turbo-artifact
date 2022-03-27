@@ -28,6 +28,8 @@ class Tasks:
         for _ in range(self.config.get_initial_tasks_num()):
             self.env.process(self.task(next(self.task_count)))
 
+        logger.debug("Done producing all the initial tasks.")
+
         if self.config.task_arrival_frequency_enabled:
             while not self.resource_manager.task_production_terminated:
                 task_arrival_interval = self.config.set_task_arrival_time()
@@ -35,7 +37,7 @@ class Tasks:
                 self.env.process(self.task(task_id))
                 yield self.env.timeout(task_arrival_interval)
 
-                #Todo: Is max-tasks ever not-None anymore?
+                # Todo: Is max-tasks ever not-None anymore?
                 if (
                     self.config.max_tasks is not None
                     and task_id == self.config.max_tasks - 1

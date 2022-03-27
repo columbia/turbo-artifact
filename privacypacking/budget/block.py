@@ -1,6 +1,6 @@
 from typing import List
 
-from privacypacking.budget import Budget
+from privacypacking.budget import ALPHAS, Budget
 
 
 class Block:
@@ -12,7 +12,11 @@ class Block:
 
     @classmethod
     def from_epsilon_delta(
-        cls, block_id: int, epsilon: float, delta: float, alpha_list: List[float]
+        cls,
+        block_id: int,
+        epsilon: float,
+        delta: float,
+        alpha_list: List[float] = ALPHAS,
     ) -> "Block":
         return cls(
             block_id,

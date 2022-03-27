@@ -144,12 +144,19 @@ def get_logs(
     # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
     simulator_config = simulator_config.dump()
+    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
 
     datapoint = {
-        "scheduler": simulator_config["scheduler_spec"]["method"],
-        "solver": simulator_config["scheduler_spec"]["solver"],
-        "scheduler_n": simulator_config["scheduler_spec"]["n"],
-        "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
+        # "scheduler": simulator_config["scheduler_spec"]["method"],
+        # "solver": simulator_config["scheduler_spec"]["solver"],
+        # "scheduler_n": simulator_config["scheduler_spec"]["n"],
+        # "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
+        "scheduler": omegaconf.scheduler.method,
+        "solver": omegaconf.scheduler.solver,
+        "scheduler_n": omegaconf.scheduler.n,
+        "scheduler_metric": omegaconf.scheduler.metric,
+        "T": omegaconf.scheduler.scheduling_wait_time,
+        "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": simulator_config["tasks_spec"]["curve_distributions"][
             "custom"
         ]["read_block_selecting_policy_from_config"]["block_selecting_policy"],
@@ -159,11 +166,8 @@ def get_logs(
         "n_allocated_tasks": n_allocated_tasks,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
-        "n_initial_blocks": simulator_config["blocks_spec"]["initial_num"],
+        "n_initial_blocks": omegaconf.blocks.initial_num,
         "maximum_profit": maximum_profit,
-        # "scheduling_time": scheduling_time,
-        "T": simulator_config["scheduler_spec"]["scheduling_wait_time"],
-        "data_lifetime": simulator_config["scheduler_spec"].get("data_lifetime", None),
         "mean_task_per_block": simulator_config["tasks_spec"][TASK_ARRIVAL_FREQUENCY][
             POISSON
         ].get(AVG_NUMBER_TASKS_PER_BLOCK, None),
@@ -175,7 +179,6 @@ def get_logs(
         "blocks": log_blocks,
     }
 
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
     datapoint[
         "metric_recomputation_period"
     ] = omegaconf.scheduler.metric_recomputation_period

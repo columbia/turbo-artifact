@@ -26,7 +26,7 @@ class Blocks:
         for _ in range(initial_blocks_num):
             self.env.process(self.block(next(self.blocks_count)))
 
-        if self.config.block_arrival_frequency_enabled:
+        if initial_blocks_num != self.config.omegaconf.blocks.max_num:
             while not self.resource_manager.block_production_terminated:
                 block_arrival_interval = self.config.set_block_arrival_time()
                 block_id = next(self.blocks_count)

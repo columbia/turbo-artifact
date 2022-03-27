@@ -43,6 +43,7 @@ class Metric:
 
     def __init__(self, config: DictConfig) -> None:
         self.config = config
+        self.clip_demands_in_relevance = self.config.clip_demands_in_relevance
 
     def apply(self, queue: TaskQueue, efficiency: float):
         pass
@@ -212,8 +213,13 @@ class RelevanceMetric(Metric):
         tasks: List[Task] = None,
         relevance_matrix: dict = None,
     ) -> float:
-        task_demands = task.demand_matrix.toarray()
-        if self.config.clip_demands_in_relevance:
+
+        # Only keep the blocks that appear in the relevance matrix
+        # NOTE: if blocks don't have increasing IDs, slice by block names
+        # task_demands = task.demand_matrix.toarray()[: len(blocks)]
+        task_demands = task.demand_matrix[: len(blocks)]
+
+        if self.clip_demands_in_relevance:
             # NOTE: we assume each block has the same initial capacity
             block_capacity = np.array(
                 [blocks[0].initial_budget.epsilon(alpha) for alpha in ALPHAS]
@@ -224,7 +230,7 @@ class RelevanceMetric(Metric):
         # logger.info(
         #     f"{task_demands.shape}  {relevance_matrix.shape}\n {task_demands} {relevance_matrix}"
         # )
-        logger.info(f"Cost for task{task.id}: {cost}")
+        # logger.info(f"Cost for task{task.id}: {cost}")
 
         return task.profit / cost if cost > 0 else float("inf")
 
@@ -240,8 +246,6 @@ class VectorizedBatchOverflowRelevance(Metric):
         drop_blocks_with_no_contention=True,
         truncate_available_budget=False,
     ) -> np.ndarray:
-
-        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
         n_blocks = len(blocks)
@@ -307,8 +311,6 @@ class SoftmaxOverflow(VectorizedBatchOverflowRelevance):
         truncate_available_budget=False,
         temperature=0.1,
     ) -> np.ndarray:
-
-        # logger.info(f"Task 0 demands: {tasks[0].demand_matrix.toarray()}")
 
         # Compute the negative available unlocked budget
         n_blocks = len(blocks)
@@ -453,6 +455,8 @@ class BatchOverflowRelevance(Metric):
 class SoftKnapsack(RelevanceMetric):
 
     # TODO: use a knapsack approx algorithm instead of Gurobi. Maybe just LP relaxation?
+    # Other ideas to improve speed: Cython prange, or compile a C++ parallel knapsack solver.
+    # (Gurobi or maybe https://developers.google.com/optimization/bin/knapsack after scaling demands to integers)
     def solve_local_knapsack(
         self, capacity, task_ids, task_demands, task_profits
     ) -> float:
@@ -460,11 +464,6 @@ class SoftKnapsack(RelevanceMetric):
             return 0
 
         opt = 0
-
-        # with gp.Env(empty=True) as env, gp.Model(env=env) as m:
-        #     # Disable Gurobi logs
-        #     env.setParam("OutputFlag", 0)
-        #     env.start()
 
         with gp.Env(empty=True) as env:
             env.setParam("OutputFlag", 0)
@@ -490,9 +489,6 @@ class SoftKnapsack(RelevanceMetric):
         drop_blocks_with_no_contention=True,
         truncate_available_budget=False,
     ) -> np.ndarray:
-
-        # TODO: parallelize
-        # TODO: cache task_ids?
 
         local_tasks_per_block = defaultdict(list)
         for t in tasks:
@@ -733,6 +729,7 @@ class ArgmaxKnapsack(SoftKnapsack):
             min_profit_per_block = np.zeros(n_blocks)
             efficiencies_per_block = []
 
+        # TODO: vectorize this with demand matrix
         for block_id in range(n_blocks):
             current_min_profit = float("inf")
             for alpha_index, alpha in enumerate(alphas):
@@ -766,21 +763,27 @@ class ArgmaxKnapsack(SoftKnapsack):
             if self.config.save_profit_matrix:
                 min_profit_per_block[block_id] = current_min_profit
 
-        logger.info(f"Solving the knapsacks in parallel...")
-        with Pool(processes=self.config.n_knapsack_solvers) as pool:
-            results = pool.starmap(self.solve_local_knapsack, args)
-        logger.info(f"Collecting the results...")
+        if self.config.n_knapsack_solvers > 1:
+            # NOTE: you probably don't need to run in parallel.
+            logger.info(f"Solving the knapsacks in parallel...")
+            with Pool(processes=self.config.n_knapsack_solvers) as pool:
+                results = pool.starmap(self.solve_local_knapsack, args)
+            logger.info(f"Collecting the results...")
+        else:
+            logger.info(f"Solving the knapsacks one by one...")
 
-        # logger.info(f"Solving the knapsacks one by one...")
         i = 0
         for block_id in range(n_blocks):
-
             for alpha_index, alpha in enumerate(alphas):
+                if self.config.n_knapsack_solvers > 1:
+                    # We just need to collect from the results
+                    max_profits[block_id, alpha_index] = results[i]
+                else:
+                    logger.info(f"Solving{i} {block_id} alpha: {alpha}")
+                    max_profits[block_id, alpha_index] = self.solve_local_knapsack(
+                        *args[i]
+                    )
 
-                logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-
-                max_profits[block_id, alpha_index] = results[i]
-                # max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
                 i += 1
 
         logger.info(f"Max profits: {max_profits}")

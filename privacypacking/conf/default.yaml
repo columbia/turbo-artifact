@@ -1,4 +1,11 @@
 scheduler: 
+  method: offline
+  metric: DominantShares
+  n: 100
+  budget_unlocking_time: 1
+  solver: gurobi
+  scheduling_wait_time: 1
+  data_lifetime: 10
   metric_recomputation_period: 1
   log_warning_every_n_allocated_tasks: 0
   scheduler_timeout_seconds: 0
@@ -14,10 +21,13 @@ metric:
   clip_demands_in_relevance: False
   save_profit_matrix: False
 
+blocks:
+  initial_num: 1
+  max_num: 10
+
 logs:
   verbose: False
   save: False
-
 
 alphas:
 - 1.5
@@ -32,3 +42,7 @@ alphas:
 - 16
 - 32
 - 64
+
+epsilon: 10
+delta: 0.00001
+global_seed: 64

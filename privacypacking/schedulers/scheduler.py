@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple, Union
 
 from loguru import logger
+from omegaconf import DictConfig
 from simpy import Event
 
 from privacypacking.budget import Block, Task
@@ -53,7 +54,12 @@ class TasksInfo:
 
 
 class Scheduler:
-    def __init__(self, metric=None, verbose_logs=False):
+    def __init__(
+        self,
+        metric=None,
+        verbose_logs=False,
+        simulator_config: Optional[DictConfig] = None,
+    ):
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
@@ -68,7 +74,8 @@ class Scheduler:
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
-        self.omegaconf = None
+        self.simulator_config = simulator_config
+        self.omegaconf = simulator_config.scheduler if simulator_config else None
         self.alphas = None
         self.start_time = datetime.now()
 
@@ -170,10 +177,10 @@ class Scheduler:
 
                         converged = False
                         break
-                else:
-                    logger.debug(
-                        f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
-                    )
+                # else:
+                #     logger.debug(
+                #         f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}"
+                #     )
         return allocated_task_ids
 
     def add_task(self, task_message: Tuple[Task, Event]):
@@ -195,6 +202,12 @@ class Scheduler:
         self.tasks_info.allocated_resources_events[task.id] = allocated_resources_event
         self.tasks_info.creation_time[task.id] = self.now()
         self.task_queue.tasks.append(task)
+
+        # Express the demands as a sparse matrix (for relevance metrics)
+        if hasattr(self.metric, "compute_relevance_matrix"):
+            self.task_queue.tasks[-1].build_demand_matrix(
+                max_block_id=self.simulator_config.blocks.max_num
+            )
 
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
@@ -219,9 +232,9 @@ class Scheduler:
         elif hasattr(self.metric, "compute_relevance_matrix"):
             # TODO: generalize to other relevance heuristics
             logger.info("Precomputing the relevance matrix for the whole batch")
-            for t in tasks:
-                # We assume that there are no missing blocks. Otherwise, compute the max block id.
-                t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
+            # for t in tasks:
+            #     # We assume that there are no missing blocks. Otherwise, compute the max block id.
+            #     t.pad_demand_matrix(n_blocks=self.get_num_blocks(), alphas=self.alphas)
             relevance_matrix = self.metric.compute_relevance_matrix(self.blocks, tasks)
 
         def task_key(task):

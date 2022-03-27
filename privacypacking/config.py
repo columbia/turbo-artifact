@@ -4,10 +4,10 @@ import random
 import uuid
 from datetime import datetime
 from functools import partial
-import pandas as pd
 from typing import List
 
 import numpy as np
+import pandas as pd
 import yaml
 from loguru import logger
 from numpy.lib.arraysetops import isin
@@ -42,40 +42,47 @@ class Config:
 
         # Rest of the configuration below
         self.config = config
-        self.epsilon = config[EPSILON]
-        self.delta = config[DELTA]
+        self.epsilon = self.omegaconf.epsilon
+        self.delta = self.omegaconf.delta
+        self.global_seed = self.omegaconf.global_seed
+        random.seed(self.global_seed)
+        np.random.seed(self.global_seed)
 
-        # DETERMINISM
-        self.global_seed = config[GLOBAL_SEED]
-        self.deterministic = config[DETERMINISTIC]
-        if self.deterministic:
-            random.seed(self.global_seed)
-            np.random.seed(self.global_seed)
+        # self.deterministic = config[DETERMINISTIC]
+        # if self.deterministic:
 
         # BLOCKS
-        self.blocks_spec = config[BLOCKS_SPEC]
-        self.initial_blocks_num = self.blocks_spec[INITIAL_NUM]
-        self.max_blocks = self.blocks_spec[MAX_BLOCKS]
+        # self.blocks_spec = config[BLOCKS_SPEC]
+        self.initial_blocks_num = self.omegaconf.blocks.initial_num
 
-        self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
-        self.block_arrival_frequency_enabled = False
-        if self.block_arrival_frequency[ENABLED]:
-            self.block_arrival_frequency_enabled = True
-            self.block_arrival_constant_enabled = False
-            self.block_arrival_poisson_enabled = False
+        if self.omegaconf.scheduler.method == "offline":
+            self.omegaconf.blocks.max_num = self.initial_blocks_num
 
-            if self.block_arrival_frequency[POISSON][ENABLED]:
-                self.block_arrival_poisson_enabled = True
-                self.block_arrival_interval = self.block_arrival_frequency[POISSON][
-                    BLOCK_ARRIVAL_INTERVAL
-                ]
-            if self.block_arrival_frequency[CONSTANT][ENABLED]:
-                self.block_arrival_constant_enabled = True
-                self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
-                    BLOCK_ARRIVAL_INTERVAL
-                ]
+        self.max_blocks = self.omegaconf.blocks.max_num
+        self.block_arrival_interval = 1
+
+        # self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
+        # if self.block_arrival_frequency[ENABLED]:
+        #     self.block_arrival_frequency_enabled = True
+        #     if self.block_arrival_frequency[POISSON][ENABLED]:
+        #         self.block_arrival_poisson_enabled = True
+        #         self.block_arrival_constant_enabled = False
+        #         self.block_arrival_interval = self.block_arrival_frequency[POISSON][
+        #             BLOCK_ARRIVAL_INTERVAL
+        #         ]
+        #     if self.block_arrival_frequency[CONSTANT][ENABLED]:
+        #         self.block_arrival_constant_enabled = True
+        #         self.block_arrival_poisson_enabled = False
+        #         self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
+        #             BLOCK_ARRIVAL_INTERVAL
+        #         ]
+        # else:
+        #     self.block_arrival_frequency_enabled = False
+        #     self.block_arrival_constant_enabled = False
+        #     self.block_arrival_poisson_enabled = False
 
         # TASKS
+        # TODO: clean up this part too, after we merge the Alibaba ingestion code
         self.tasks_spec = config[TASKS_SPEC]
         self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
         self.max_tasks = None
@@ -113,8 +120,10 @@ class Config:
                 self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
                 self.tasks = pd.read_csv(self.data_path)
                 self.tasks_generator = self.tasks.iterrows()
-                self.sum_task_interval = self.tasks['relative_submit_time'].sum()
-                self.task_arrival_interval_generator = self.tasks['relative_submit_time'].iteritems()
+                self.sum_task_interval = self.tasks["relative_submit_time"].sum()
+                self.task_arrival_interval_generator = self.tasks[
+                    "relative_submit_time"
+                ].iteritems()
 
         self.task_arrival_frequency_enabled = False
         self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
@@ -128,94 +137,99 @@ class Config:
                 self.task_arrival_poisson_enabled = True
                 self.task_arrival_interval = (
                     self.block_arrival_interval
-                    / self.task_arrival_frequency[POISSON][
-                        AVG_NUMBER_TASKS_PER_BLOCK
-                    ]
+                    / self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
                 )
             elif self.task_arrival_frequency[CONSTANT][ENABLED]:
                 self.task_arrival_constant_enabled = True
                 self.task_arrival_interval = (
                     self.block_arrival_interval
-                    / self.task_arrival_frequency[CONSTANT][
-                        AVG_NUMBER_TASKS_PER_BLOCK
-                    ]
+                    / self.task_arrival_frequency[CONSTANT][AVG_NUMBER_TASKS_PER_BLOCK]
                 )
             elif self.task_arrival_frequency[ACTUAL][ENABLED]:
                 self.task_arrival_actual_enabled = True
 
+        # # SCHEDULER
+        # self.scheduler = config[SCHEDULER_SPEC]
+        # self.scheduler_method = self.scheduler[METHOD]
+        # self.scheduler_metric = self.scheduler[METRIC]
+        # self.scheduler_N = self.scheduler[N]
+        # if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
+        #     self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
+        #     self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
+        #         self.scheduler_N
+        #     )
+        # else:
+        #     self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
+        # self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
 
-        # SCHEDULER
-        self.scheduler = config[SCHEDULER_SPEC]
-        self.scheduler_method = self.scheduler[METHOD]
-        self.scheduler_metric = self.scheduler[METRIC]
-        self.scheduler_N = self.scheduler[N]
-        if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
-            self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
-            self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
-                self.scheduler_N
-            )
-        else:
-            self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
-        self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
+        # if SOLVER in self.scheduler:
+        #     self.scheduler_solver = self.scheduler[SOLVER]
+        # else:
+        #     self.scheduler_solver = None
 
-        if SOLVER in self.scheduler:
-            self.scheduler_solver = self.scheduler[SOLVER]
-        else:
-            self.scheduler_solver = None
-
-        self.new_task_driven_scheduling = False
-        self.time_based_scheduling = False
-        self.new_block_driven_scheduling = False
-        if self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-            self.time_based_scheduling = True
-            if self.scheduler_metric == DOMINANT_SHARES:
-                logger.warning(
-                    f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
-                )
-        else:
-            self.new_task_driven_scheduling = True
+        # # self.scheduler_threshold_update_mechanism = self.scheduler[
+        # #     THRESHOLD_UPDATE_MECHANISM
+        # # ]
+        # self.new_task_driven_scheduling = False
+        # self.time_based_scheduling = False
+        # self.new_block_driven_scheduling = False
+        # if self.scheduler_method == THRESHOLD_UPDATING:
+        #     self.new_task_driven_scheduling = True
+        #     self.new_block_driven_scheduling = True
+        # elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
+        #     self.time_based_scheduling = True
+        #     if self.scheduler_metric == DOMINANT_SHARES:
+        #         logger.warning(
+        #             f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
+        #         )
+        # else:
+        #     self.new_task_driven_scheduling = True
 
         # LOGS
-        if LOG_FILE in config:
-            self.log_file = f"{config[LOG_FILE]}.json"
-        else:
-            self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+        # if LOG_FILE in config:
+        #     self.log_file = f"{config[LOG_FILE]}.json"
+        # else:
+        #     self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
 
-        if CUSTOM_LOG_PREFIX in config:
-            self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
-                self.log_file
-            )
-        else:
-            self.log_path = LOGS_PATH.joinpath(self.log_file)
+        # if CUSTOM_LOG_PREFIX in config:
+        #     self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
+        #         self.log_file
+        #     )
+        # else:
+        #     self.log_path = LOGS_PATH.joinpath(self.log_file)
 
-        self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
+        # self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
         d = self.config
         d["omegaconf"] = OmegaConf.to_container(self.omegaconf)
         return d
 
-    def create_task(
-        self, task_id: int) -> Task:
+    def create_task(self, task_id: int) -> Task:
 
         task = None
         # Read custom task specs from files
         if self.custom_tasks_sampling:
-            files = [
-                f"{self.tasks_path}/{task_file}"
-                for task_file in self.task_frequencies_file.keys()
-            ]
-            frequencies = [
-                task_frequency
-                for task_frequency in self.task_frequencies_file.values()
-            ]
-            file = np.random.choice(
-                files,
+
+            if not hasattr(self, "task_specs"):
+                self.task_specs = [
+                    self.load_task_spec_from_file(f"{self.tasks_path}/{task_file}")
+                    for task_file in self.task_frequencies_file.keys()
+                ]
+
+                self.task_frequencies = [
+                    task_frequency
+                    for task_frequency in self.task_frequencies_file.values()
+                ]
+
+            task_spec_index = np.random.choice(
+                len(self.task_specs),
                 1,
-                p=frequencies,
+                p=self.task_frequencies,
             )[0]
 
-            task_spec = self.load_task_spec_from_file(file)
+            task_spec = self.task_specs[task_spec_index]
+
             if self.custom_read_block_selection_policy_from_config:
                 block_selection_policy = BlockSelectionPolicy.from_str(
                     self.curve_distributions[CUSTOM][
@@ -238,8 +252,8 @@ class Config:
         else:
             _, task_row = next(self.tasks_generator)
             orders = {}
-            parsed_alphas = task_row['alphas'].strip('][').split(', ')
-            parsed_epsilons = task_row['rdp_epsilons'].strip('][').split(', ')
+            parsed_alphas = task_row["alphas"].strip("][").split(", ")
+            parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
 
             for i, alpha in enumerate(parsed_alphas):
                 alpha = float(alpha)
@@ -248,11 +262,13 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
-                profit=float(task_row['profit']),
-                block_selection_policy=BlockSelectionPolicy.from_str(task_row['block_selection_policy']),
-                n_blocks=int(task_row['n_blocks']),
+                profit=float(task_row["profit"]),
+                block_selection_policy=BlockSelectionPolicy.from_str(
+                    task_row["block_selection_policy"]
+                ),
+                n_blocks=int(task_row["n_blocks"]),
                 budget=Budget(orders),
-                name=task_row['task_name'],
+                name=task_row["task_name"],
             )
 
         assert task is not None
@@ -273,22 +289,24 @@ class Config:
             task_arrival_interval = self.task_arrival_interval
         elif self.task_arrival_actual_enabled:
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
-            normalized_task_interval = task_arrival_interval/self.sum_task_interval
-            task_arrival_interval = normalized_task_interval*self.block_arrival_interval*self.max_blocks
+            normalized_task_interval = task_arrival_interval / self.sum_task_interval
+            task_arrival_interval = (
+                normalized_task_interval * self.block_arrival_interval * self.max_blocks
+            )
 
         assert task_arrival_interval is not None
         return task_arrival_interval
 
     def set_block_arrival_time(self):
-        block_arrival_interval = None
-        if self.block_arrival_poisson_enabled:
-            block_arrival_interval = partial(
-                random.expovariate, 1 / self.block_arrival_interval
-            )()
-        elif self.block_arrival_constant_enabled:
-            block_arrival_interval = self.block_arrival_interval
-        assert block_arrival_interval is not None
-        return block_arrival_interval
+        # block_arrival_interval = None
+        # if self.block_arrival_poisson_enabled:
+        #     block_arrival_interval = partial(
+        #         random.expovariate, 1 / self.block_arrival_interval
+        #     )()
+        # elif self.block_arrival_constant_enabled:
+        #     block_arrival_interval = self.block_arrival_interval
+        # assert block_arrival_interval is not None
+        return self.block_arrival_interval
 
     def get_initial_tasks_num(self) -> int:
         return self.custom_tasks_init_num

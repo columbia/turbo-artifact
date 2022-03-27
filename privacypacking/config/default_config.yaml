@@ -1,21 +1,21 @@
-epsilon: 10
-delta: 0.00001
-global_seed: 64
-deterministic: true
-log_every_n_iterations: 0
-profit: 1
+# epsilon: 10
+# delta: 0.00001
+# global_seed: 64
+# deterministic: true
+# log_every_n_iterations: 0
+# profit: 1
 
-blocks_spec:
-  initial_num: 1
-  max_blocks: 10
-  block_arrival_frequency:
-    enabled: false    # no online blocks
-    poisson:
-      enabled: false
-      block_arrival_interval: 4
-    constant:
-      enabled: false
-      block_arrival_interval: 4
+# blocks_spec:
+#   initial_num: 1
+#   max_blocks: 10
+#   block_arrival_frequency:
+#     enabled: false    # no online blocks
+#     poisson:
+#       enabled: false
+#       block_arrival_interval: 4
+#     constant:
+#       enabled: false
+#       block_arrival_interval: 4
 
 tasks_spec:
   curve_distributions:
@@ -40,11 +40,11 @@ tasks_spec:
     actual:       # Actual arrival time of custom tasks
       enabled: false
 
-scheduler_spec:
-  method: n_budget_unlocking
-  metric: DominantShares
-  n: 100
-  budget_unlocking_time: 1
-  solver: gurobi
-  scheduling_wait_time: 1
-  threshold_update_mechanism: NaiveAverage
+# scheduler_spec:
+#   method: n_budget_unlocking
+#   metric: DominantShares
+#   n: 100
+#   budget_unlocking_time: 1
+#   solver: gurobi
+#   scheduling_wait_time: 1
+#   threshold_update_mechanism: NaiveAverage

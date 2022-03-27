@@ -28,11 +28,18 @@ class LaplaceCurve(Budget):
         orders = {}
         λ = laplace_noise
         for α in alpha_list:
-            ε = (1 / (α - 1)) * np.log(
-                (α / (2 * α - 1)) * np.exp((α - 1) / λ)
-                + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
-            )
-            orders[α] = float(ε)
+            with np.errstate(over="raise", under="raise"):
+                try:
+                    ε = (1 / (α - 1)) * np.log(
+                        (α / (2 * α - 1)) * np.exp((α - 1) / λ)
+                        + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
+                    )
+                except FloatingPointError:
+                    # It means that alpha/lambda is too large (under or overflow)
+                    # We just drop the negative exponential (≃0) and simplify the log
+                    ε = (1 / (α - 1)) * (np.log(α / (2 * α - 1)) + (α - 1) / λ)
+
+                orders[α] = float(ε)
         super().__init__(orders)
 
 
