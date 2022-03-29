@@ -210,7 +210,6 @@ class Config:
         task = None
         # Read custom task specs from files
         if self.custom_tasks_sampling:
-
             if not hasattr(self, "task_specs"):
                 self.task_specs = [
                     self.load_task_spec_from_file(f"{self.tasks_path}/{task_file}")

@@ -177,6 +177,10 @@ def get_logs(
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
         "tasks": log_tasks,
         "blocks": log_blocks,
+        # TODO: remove this ridiculous number of nested dictionaries
+        "task_frequencies_path": simulator_config[TASKS_SPEC][CURVE_DISTRIBUTIONS][
+            CUSTOM
+        ][DATA_TASK_FREQUENCIES_PATH],
     }
 
     datapoint[
