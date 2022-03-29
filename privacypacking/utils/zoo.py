@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+import scipy
 
 from privacypacking.budget import Budget
 from privacypacking.budget.curves import (
@@ -93,3 +94,21 @@ def geometric_frequencies(tasks_df: pd.DataFrame, n_bins=20, p=0.5) -> pd.DataFr
     df["frequency"] = df["frequency"] / df["frequency"].sum()
 
     return df
+
+
+def gaussian_block_distribution(mu, sigma, max_blocks):
+    f = []
+    for k in range(1, max_blocks + 1):
+        f.append(
+            scipy.stats.norm.pdf(k, mu, sigma)
+            # scipy.special.binom(k + r - 1, k) * (1-p)**r * p**k
+            # k **(alpha - 1) * np.exp(-beta * k) * beta ** alpha / scipy.special.gamma(alpha)
+        )
+    f = np.array(f)
+    f = f / sum(f)
+
+    name_and_freq = []
+    for k, freq in enumerate(f):
+        name_and_freq.append(f"{k+1}:{float(freq)}")
+
+    return ",".join(name_and_freq)

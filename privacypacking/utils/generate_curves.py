@@ -13,7 +13,12 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
-from privacypacking.utils.zoo import build_zoo, geometric_frequencies, zoo_df
+from privacypacking.utils.zoo import (
+    build_zoo,
+    gaussian_block_distribution,
+    geometric_frequencies,
+    zoo_df,
+)
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data")
 P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
@@ -130,6 +135,26 @@ def heterogenous(
         task_name = f"{name}.yaml"
         task_names.append(task_name)
         yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+
+    mu = 10
+    max_blocks = 20
+    for sigma in [1, 2, 4, 6, 10]:
+        tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
+        tasks_path.mkdir(exist_ok=True, parents=True)
+        for name, budget in names_and_curves:
+            task_dict = {
+                "alphas": budget.alphas,
+                # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+                "rdp_epsilons": np.array(budget.epsilons).tolist(),
+                "n_blocks": gaussian_block_distribution(
+                    mu=mu, sigma=sigma, max_blocks=max_blocks
+                ),
+                "block_selection_policy": block_selection_policy,
+                "profit": "1:1",
+            }
+
+            task_name = f"{name}.yaml"
+            yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
     logger.info(f"Saving the frequencies at {frequencies_path}...")
 
