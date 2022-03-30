@@ -97,6 +97,10 @@ def geometric_frequencies(tasks_df: pd.DataFrame, n_bins=20, p=0.5) -> pd.DataFr
 
 
 def gaussian_block_distribution(mu, sigma, max_blocks):
+
+    if sigma == 0:
+        return f"{mu}:1"
+
     f = []
     for k in range(1, max_blocks + 1):
         f.append(

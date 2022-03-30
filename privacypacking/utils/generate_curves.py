@@ -138,7 +138,7 @@ def heterogenous(
 
     mu = 10
     max_blocks = 20
-    for sigma in [1, 2, 4, 6, 10]:
+    for sigma in [0, 1, 2, 4, 6, 10]:
         tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
         tasks_path.mkdir(exist_ok=True, parents=True)
         for name, budget in names_and_curves:

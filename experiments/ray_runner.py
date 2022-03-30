@@ -167,7 +167,7 @@ def grid_offline_heterogeneity_knob(
             "method": "offline",
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
-            "log_warning_every_n_allocated_tasks": 50,
+            "log_warning_every_n_allocated_tasks": 250,
             "scheduler_timeout_seconds": 20 * 60,
         },
         "metric": {
@@ -223,8 +223,13 @@ def grid_offline_heterogeneity_knob(
         p = float(d.replace(".yaml", ""))
         return (1 - p) / p ** 2
 
-    rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    def get_block_std(path):
+        if "sigma" not in path:
+            return 0
+        return float(path.split("sigma")[1])
 
+    rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
     return rdf
     # return experiment_analysis.dataframe()
 

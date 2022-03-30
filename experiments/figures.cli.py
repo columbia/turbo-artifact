@@ -256,7 +256,8 @@ def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
         num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[10_000],
+        # num_tasks=[10_000],
+        num_tasks=[20_000],
         data_path="heterogenous",
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
