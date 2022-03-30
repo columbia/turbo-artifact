@@ -160,20 +160,6 @@ def grid_offline_heterogeneity_knob(
     block_selection_policies = ["RandomBlocks"]
     temperature = [-1]
 
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
-        {
-            SAMPLING: True,
-            INITIAL_NUM: tune.grid_search(num_tasks),
-            DATA_PATH: data_path,
-            DATA_TASK_FREQUENCIES_PATH: tune.grid_search(frequencies),
-            FREQUENCY: 1,
-            READ_BLOCK_SELECTION_POLICY_FROM_CONFIG: {
-                ENABLED: True,
-                BLOCK_SELECTING_POLICY: tune.grid_search(block_selection_policies),
-            },
-        }
-    )
-
     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
     gurobi_threads = os.cpu_count() // 4
 
@@ -199,6 +185,13 @@ def grid_offline_heterogeneity_knob(
         "blocks": {
             "initial_num": num_blocks,
             "max_num": num_blocks,
+        },
+        "tasks": {
+            "data_path": data_path,
+            "frequencies_path": tune.grid_search(frequencies),
+            "block_selection_policy": tune.grid_search(block_selection_policies),
+            "sampling": POISSON,
+            "initial_num": tune.grid_search(num_tasks),
         },
     }
 
