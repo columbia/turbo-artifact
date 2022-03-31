@@ -2,7 +2,7 @@ import os
 import time
 from collections import defaultdict
 from email.policy import default
-
+import threading
 # from ray.util.multiprocessing import Pool
 from multiprocessing import Pool
 from pathlib import Path
@@ -130,25 +130,25 @@ class DynamicFlatRelevance(Metric):
         return True
 
 
-class SquaredDynamicFlatRelevance(Metric):
-    def apply(
-        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
-    ) -> float:
-        total_cost = 0.0
-        block_cost = 0
-        for block_id, budget in task.budget_per_block.items():
-            for alpha in budget.alphas:
-                demand = budget.epsilon(alpha)
-                remaining_budget = blocks[block_id].budget.epsilon(alpha)
-                if remaining_budget > 0:
-                    block_cost += demand / remaining_budget
-            total_cost += block_cost ** 2
-        task.cost = total_cost
-        return task.profit / total_cost
-
-    def is_dynamic(self):
-        return True
-
+# class SquaredDynamicFlatRelevance(Metric):
+#     def apply(
+#         self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+#     ) -> float:
+#         total_cost = 0.0
+#         block_cost = 0
+#         for block_id, budget in task.budget_per_block.items():
+#             for alpha in budget.alphas:
+#                 demand = budget.epsilon(alpha)
+#                 remaining_budget = blocks[block_id].budget.epsilon(alpha)
+#                 if remaining_budget > 0:
+#                     block_cost += demand / remaining_budget
+#             total_cost += block_cost ** 2
+#         task.cost = total_cost
+#         return task.profit / total_cost
+#
+#     def is_dynamic(self):
+#         return True
+#
 
 class RoundRobins(Metric):
     def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
@@ -224,7 +224,7 @@ class RelevanceMetric(Metric):
         # logger.info(
         #     f"{task_demands.shape}  {relevance_matrix.shape}\n {task_demands} {relevance_matrix}"
         # )
-        logger.info(f"Cost for task{task.id}: {cost}")
+        # logger.info(f"Cost for task{task.id}: {cost}")
 
         return task.profit / cost if cost > 0 else float("inf")
 
@@ -454,7 +454,7 @@ class SoftKnapsack(RelevanceMetric):
 
     # TODO: use a knapsack approx algorithm instead of Gurobi. Maybe just LP relaxation?
     def solve_local_knapsack(
-        self, capacity, task_ids, task_demands, task_profits
+        self, results, i, capacity, task_ids, task_demands, task_profits
     ) -> float:
         if capacity <= 0:
             return 0
@@ -481,7 +481,8 @@ class SoftKnapsack(RelevanceMetric):
             m.optimize()
 
             opt = m.getObjective().getValue()
-        return opt
+            results[i] = opt
+        # return opt
 
     def compute_relevance_matrix(
         self,
@@ -725,13 +726,18 @@ class ArgmaxKnapsack(SoftKnapsack):
                         available_budget[block_id, alpha_index] = -float("inf")
 
         # Solve the knapsack problem for each (block, alpha) pair
-        logger.info(f"Preparing the arguments...")
+        # logger.info(f"Preparing the arguments...")
         max_profits = np.zeros((n_blocks, n_alphas))
-        args = []
+        # args = []
 
         if self.config.save_profit_matrix:
             min_profit_per_block = np.zeros(n_blocks)
             efficiencies_per_block = []
+
+        i = 0
+        n_threads = n_blocks*len(alphas)
+        threads = n_threads*[None]
+        results = n_threads*[None]
 
         for block_id in range(n_blocks):
             current_min_profit = float("inf")
@@ -761,32 +767,34 @@ class ArgmaxKnapsack(SoftKnapsack):
                         np.array(efficiencies_per_block_alpha)
                     )
 
-                args.append((local_capacity, task_ids, task_demands, task_profits))
-
+                # args.append((local_capacity, task_ids, task_demands, task_profits))
+                threads[i] = threading.Thread(target=self.solve_local_knapsack, args=(results, i, local_capacity,
+                                                                                      task_ids, task_demands,
+                                                                                      task_profits),
+                                              name=f'knapsack{i}')
+                i += 1
             if self.config.save_profit_matrix:
                 min_profit_per_block[block_id] = current_min_profit
 
-        logger.info(f"Solving the knapsacks in parallel...")
-        with Pool(processes=self.config.n_knapsack_solvers) as pool:
-            results = pool.starmap(self.solve_local_knapsack, args)
-        logger.info(f"Collecting the results...")
-
+        for i in range(n_threads):
+            threads[i].start()
+        for i in range(n_threads):
+            threads[i].join()
+        # logger.info(f"Solving the knapsacks in parallel...")
+        # with Pool(processes=self.config.n_knapsack_solvers) as pool:
+        #     results = pool.starmap(self.solve_local_knapsack, args)
+        # logger.info(f"Collecting the results...")
         # logger.info(f"Solving the knapsacks one by one...")
         i = 0
         for block_id in range(n_blocks):
-
             for alpha_index, alpha in enumerate(alphas):
-
-                logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-
+                # logger.info(f"Solving{i} {block_id} alpha: {alpha}")
                 max_profits[block_id, alpha_index] = results[i]
                 # max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
                 i += 1
-
-        logger.info(f"Max profits: {max_profits}")
+        # logger.info(f"Max profits: {max_profits}")
 
         if self.config.save_profit_matrix:
-
             log_dir = Path(tune.get_trial_dir())
             np.save(log_dir.joinpath("max_profits.npy"), max_profits)
             np.save(log_dir.joinpath("min_profit_per_block.npy"), min_profit_per_block)
@@ -844,6 +852,6 @@ class ArgmaxKnapsack(SoftKnapsack):
         else:
             # NOTE: this is the default. The other settings give pretty similar results in my experience.
             relevance = softmax
-        logger.info(f"relevance: {relevance}")
+        # logger.info(f"relevance: {relevance}")
 
         return relevance
