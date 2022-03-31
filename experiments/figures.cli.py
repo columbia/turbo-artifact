@@ -256,8 +256,8 @@ def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
         num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        # num_tasks=[10_000],
-        num_tasks=[20_000],
+        num_tasks=[10_000],
+        # num_tasks=[20_000],
         data_path="heterogenous",
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
@@ -265,16 +265,19 @@ def plot_temp(fig_dir):
     )
 
     fig = px.line(
-        rdf.sort_values("variance"),
-        x="variance",
+        # rdf.sort_values("variance"),
+        # x="variance",
+        rdf.sort_values("block_std"),
+        x="block_std",
         y="n_allocated_tasks",
         color="scheduler_metric",
         width=800,
         height=600,
         log_x=True,
-        range_y=[0, 2000],
+        # range_y=[0, 3000],
         title="Heterogenous RDP curves offline",
     )
+    fig.update_yaxes(rangemode="tozero")
 
     gnuplot_df = rdf
     gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)

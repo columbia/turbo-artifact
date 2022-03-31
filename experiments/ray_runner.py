@@ -151,8 +151,13 @@ def grid_offline_heterogeneity_knob(
         ARGMAX_KNAPSACK,
     ]
 
+    # tasks_paths = ["tasks"]
+
     # frequencies = [f"frequencies-{p}.yaml" for p in P_GRID]
+    # tasks_paths = [f"tasks-mu10-sigma0"]
+
     frequencies = ["frequencies-0.95.yaml"]
+    tasks_paths = [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
 
     num_blocks = tune.grid_search(num_blocks)
     block_selection_policies = ["RandomBlocks"]
@@ -187,9 +192,7 @@ def grid_offline_heterogeneity_knob(
         },
         "tasks": {
             "data_path": data_path,
-            "tasks_path": tune.grid_search(
-                ["tasks"] + [f"tasks-mu10-sigma{s}" for s in [1, 2, 4, 6, 10]]
-            ),
+            "tasks_path": tune.grid_search(tasks_paths),
             "frequencies_path": tune.grid_search(frequencies),
             "block_selection_policy": tune.grid_search(block_selection_policies),
             "sampling": POISSON,

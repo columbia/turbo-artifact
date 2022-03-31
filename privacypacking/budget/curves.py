@@ -3,6 +3,8 @@ from typing import List
 import numpy as np
 from opacus.privacy_analysis import compute_rdp
 
+from autodp.mechanism_zoo import LaplaceMechanism
+from autodp.transformer_zoo import AmplificationBySampling
 from privacypacking.budget import ALPHAS, Budget
 
 
@@ -81,3 +83,20 @@ class SubsampledGaussianCurve(Budget):
         sampling_probability = batch_size / dataset_size
         steps = (dataset_size * epochs) // batch_size
         return cls(sampling_probability, sigma, steps, alpha_list)
+
+
+class SubsampledLaplaceCurve(Budget):
+    def __init__(
+        self,
+        sampling_probability: float,
+        noise_multiplier: float,
+        steps: int,
+        alpha_list: List[float] = ALPHAS,
+    ) -> None:
+
+        curve = AmplificationBySampling(PoissonSampling=True)(
+            LaplaceMechanism(b=noise_multiplier), sampling_probability
+        )
+
+        orders = {alpha: curve.get_RDP(alpha) * steps for alpha in alpha_list}
+        super().__init__(orders)

@@ -9,6 +9,7 @@ from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
+    SubsampledLaplaceCurve,
 )
 
 
@@ -24,11 +25,11 @@ def build_zoo() -> list:
         curve_zoo.append(LaplaceCurve(laplace_noise=sigma))
         task_names.append(f"laplace-{sigma:.4f}")
 
-    for sigma in np.geomspace(0.01, 10, 10):
+    for sigma in np.geomspace(0.01, 10, 5):
         # for sigma in np.linspace(0.01, 100, 100):
 
-        for sampling in np.geomspace(1e-5, 1, 10):
-            for steps in np.arange(1, 100, step=50):
+        for sampling in np.geomspace(1e-5, 0.5, 5):
+            for steps in [1] + [200 * k for k in range(1, 5)]:
                 curve_zoo.append(
                     SubsampledGaussianCurve(
                         sigma=sigma, sampling_probability=sampling, steps=steps
@@ -36,6 +37,17 @@ def build_zoo() -> list:
                 )
                 task_names.append(
                     f"subsampledgaussian-{sigma:.4f}_{sampling:.6f}_{steps}"
+                )
+
+                curve_zoo.append(
+                    SubsampledLaplaceCurve(
+                        noise_multiplier=sigma,
+                        sampling_probability=sampling,
+                        steps=steps,
+                    )
+                )
+                task_names.append(
+                    f"subsampledlaplace-{sigma:.4f}_{sampling:.6f}_{steps}"
                 )
 
     return list(zip(task_names, curve_zoo))
@@ -69,9 +81,9 @@ def zoo_df(zoo: list, clipped=True, epsilon=10, delta=1e-8) -> pd.DataFrame:
     tasks = tasks.rename(columns={"normalized_epsilons": "epsilon_min"})
     tasks["epsilon_max"] = df.groupby("task_id")["normalized_epsilons"].agg(max)
     tasks["epsilon_range"] = tasks["epsilon_max"] - tasks["epsilon_min"]
+    tasks = tasks.query("epsilon_min < 1 and epsilon_min > 1e-3")
 
-    df = df.merge(tasks)
-    df = df.query("epsilon_min < 1 and epsilon_min > 1e-6")
+    df = df.merge(tasks, on="task_id")
 
     return df, tasks
 

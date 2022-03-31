@@ -215,11 +215,7 @@ class Config:
                     self.load_task_spec_from_file(f"{self.tasks_path}/{task_file}")
                     for task_file in self.task_frequencies_file.keys()
                 ]
-
-                self.task_frequencies = [
-                    task_frequency
-                    for task_frequency in self.task_frequencies_file.values()
-                ]
+                self.task_frequencies = list(self.task_frequencies_file.values())
 
             task_spec_index = np.random.choice(
                 len(self.task_specs),

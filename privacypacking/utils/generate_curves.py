@@ -118,10 +118,14 @@ def heterogenous(
     frequencies_path = output_path.joinpath("task_frequencies")
     frequencies_path.mkdir(exist_ok=True, parents=True)
 
-    task_names = []
+    task_id_to_name = {}
 
     names_and_curves = build_zoo()
-    for name, budget in names_and_curves:
+    _, tasks_df = zoo_df(names_and_curves)
+
+    for task_id in tasks_df.task_id:
+        # for name, budget in names_and_curves:
+        name, budget = names_and_curves[task_id]
         task_dict = {
             "alphas": budget.alphas,
             # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
@@ -133,7 +137,7 @@ def heterogenous(
         }
 
         task_name = f"{name}.yaml"
-        task_names.append(task_name)
+        task_id_to_name[task_id] = task_name
         yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
     mu = 10
@@ -141,7 +145,9 @@ def heterogenous(
     for sigma in [0, 1, 2, 4, 6, 10]:
         tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
         tasks_path.mkdir(exist_ok=True, parents=True)
-        for name, budget in names_and_curves:
+        for task_id in tasks_df.task_id:
+            # for name, budget in names_and_curves:
+            name, budget = names_and_curves[task_id]
             task_dict = {
                 "alphas": budget.alphas,
                 # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
@@ -158,8 +164,6 @@ def heterogenous(
 
     logger.info(f"Saving the frequencies at {frequencies_path}...")
 
-    _, tasks_df = zoo_df(names_and_curves)
-
     for p in P_GRID:
         p_tasks_df = geometric_frequencies(tasks_df, p=p)
 
@@ -173,7 +177,7 @@ def heterogenous(
             frequency = float(row[1]["frequency"])
 
             if frequency > min_frequency:
-                frequencies_dict[task_names[task_id]] = frequency
+                frequencies_dict[task_id_to_name[task_id]] = frequency
                 sum_frequencies += frequency
 
         # Ensure that the frequencies add up to 1 even with rounding errors
