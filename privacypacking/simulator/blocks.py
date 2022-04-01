@@ -52,4 +52,4 @@ class Blocks:
         generated_block_event = self.env.event()
         yield self.resource_manager.new_blocks_queue.put((block, generated_block_event))
         yield generated_block_event
-        logger.debug(f"Block: {block_id} generated at {self.env.now}")
+        # logger.debug(f"Block: {block_id} generated at {self.env.now}")

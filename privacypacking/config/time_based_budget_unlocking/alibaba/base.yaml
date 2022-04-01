@@ -1,4 +1,4 @@
-epsilon: 5
+epsilon: 10
 delta: 1.0e-5
 
 blocks_spec:

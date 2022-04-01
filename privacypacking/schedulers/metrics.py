@@ -2,7 +2,6 @@ import os
 import time
 from collections import defaultdict
 from email.policy import default
-import threading
 # from ray.util.multiprocessing import Pool
 from multiprocessing import Pool
 from pathlib import Path
@@ -128,27 +127,6 @@ class DynamicFlatRelevance(Metric):
 
     def is_dynamic(self):
         return True
-
-
-# class SquaredDynamicFlatRelevance(Metric):
-#     def apply(
-#         self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
-#     ) -> float:
-#         total_cost = 0.0
-#         block_cost = 0
-#         for block_id, budget in task.budget_per_block.items():
-#             for alpha in budget.alphas:
-#                 demand = budget.epsilon(alpha)
-#                 remaining_budget = blocks[block_id].budget.epsilon(alpha)
-#                 if remaining_budget > 0:
-#                     block_cost += demand / remaining_budget
-#             total_cost += block_cost ** 2
-#         task.cost = total_cost
-#         return task.profit / total_cost
-#
-#     def is_dynamic(self):
-#         return True
-#
 
 class RoundRobins(Metric):
     def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
@@ -454,7 +432,7 @@ class SoftKnapsack(RelevanceMetric):
 
     # TODO: use a knapsack approx algorithm instead of Gurobi. Maybe just LP relaxation?
     def solve_local_knapsack(
-        self, results, i, capacity, task_ids, task_demands, task_profits
+        self, capacity, task_ids, task_demands, task_profits
     ) -> float:
         if capacity <= 0:
             return 0
@@ -481,8 +459,18 @@ class SoftKnapsack(RelevanceMetric):
             m.optimize()
 
             opt = m.getObjective().getValue()
-            results[i] = opt
-        # return opt
+        return opt
+
+    def solve_local_knapsack_no_profits(self, capacity, task_demands) -> float:
+        if capacity <= 0:
+            return 0
+        demands = list(task_demands.values())
+        demands.sort()
+        opt = 0
+        for demand in demands:
+            if opt+demand <= capacity:
+                opt += demand
+        return opt
 
     def compute_relevance_matrix(
         self,
@@ -728,22 +716,16 @@ class ArgmaxKnapsack(SoftKnapsack):
         # Solve the knapsack problem for each (block, alpha) pair
         # logger.info(f"Preparing the arguments...")
         max_profits = np.zeros((n_blocks, n_alphas))
-        # args = []
+        args = []
 
         if self.config.save_profit_matrix:
             min_profit_per_block = np.zeros(n_blocks)
             efficiencies_per_block = []
 
-        i = 0
-        n_threads = n_blocks*len(alphas)
-        threads = n_threads*[None]
-        results = n_threads*[None]
-
         for block_id in range(n_blocks):
             current_min_profit = float("inf")
             for alpha_index, alpha in enumerate(alphas):
                 local_tasks = local_tasks_per_block[block_id]
-
                 local_capacity = available_budget[block_id, alpha_index]
                 task_ids = [t.id for t in local_tasks]
                 task_demands = {
@@ -751,7 +733,6 @@ class ArgmaxKnapsack(SoftKnapsack):
                     for t in local_tasks
                 }
                 task_profits = {task.id: task.profit for task in local_tasks}
-
                 if self.config.save_profit_matrix and alpha_index == 0:
                     current_min_profit = min(
                         current_min_profit, min(task_profits.values())
@@ -768,29 +749,24 @@ class ArgmaxKnapsack(SoftKnapsack):
                     )
 
                 # args.append((local_capacity, task_ids, task_demands, task_profits))
-                threads[i] = threading.Thread(target=self.solve_local_knapsack, args=(results, i, local_capacity,
-                                                                                      task_ids, task_demands,
-                                                                                      task_profits),
-                                              name=f'knapsack{i}')
-                i += 1
+                args.append((local_capacity, task_demands))
             if self.config.save_profit_matrix:
                 min_profit_per_block[block_id] = current_min_profit
 
-        for i in range(n_threads):
-            threads[i].start()
-        for i in range(n_threads):
-            threads[i].join()
+
         # logger.info(f"Solving the knapsacks in parallel...")
+        # print(f"Solving the knapsacks in parallel...")
         # with Pool(processes=self.config.n_knapsack_solvers) as pool:
         #     results = pool.starmap(self.solve_local_knapsack, args)
         # logger.info(f"Collecting the results...")
         # logger.info(f"Solving the knapsacks one by one...")
+
         i = 0
         for block_id in range(n_blocks):
             for alpha_index, alpha in enumerate(alphas):
                 # logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-                max_profits[block_id, alpha_index] = results[i]
-                # max_profits[block_id, alpha_index] = self.solve_local_knapsack(*args[i])
+                # max_profits[block_id, alpha_index] = results[i]
+                max_profits[block_id, alpha_index] = self.solve_local_knapsack_no_profits(*args[i])
                 i += 1
         # logger.info(f"Max profits: {max_profits}")
 

@@ -25,10 +25,6 @@ tasks_spec:
       enabled: true
       task_arrival_interval: 0.004264781
 
-  max_tasks:
-    enabled: true
-    num: 5000
-
 scheduler_spec:
   method: time_based_budget_unlocking
   budget_unlocking_time: 0.025
