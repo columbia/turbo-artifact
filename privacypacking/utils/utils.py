@@ -87,7 +87,6 @@ def get_logs(
         "T": omegaconf.scheduler.scheduling_wait_time,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
-        "frequency_file":omegaconf.tasks.data_task_frequencies_path,
         "n_allocated_tasks": n_allocated_tasks,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
@@ -98,6 +97,8 @@ def get_logs(
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
         "tasks": log_tasks,
         "blocks": log_blocks,
+        "task_frequencies_path": omegaconf.tasks.frequencies_path,
+        "tasks_path": omegaconf.tasks.tasks_path,
     }
 
     datapoint[

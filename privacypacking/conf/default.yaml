@@ -26,13 +26,19 @@ blocks:
   max_num: 10
 
 tasks:
-  sampling: True
-  data_path: ""
-  data_task_frequencies_path: "frequencies.yaml"
-  initial_num: 0
-  block_selection_policy: "LatestBlocksFirst"
-  arrival: "Poisson" # alt. "Custom"
+  data_path: "heterogenous"
+  frequencies_path: "frequencies.yaml"
+  tasks_path: "tasks"
+  initial_num: 100
+
+  # One of: poisson, constant. If empty, will attempt to read tasks from a csv file.
+  sampling: "poisson"
   avg_num_tasks_per_block: 100
+
+  # Set to RandomBlocks or LatestBlocksFirst for instance.
+  # Will override the selection given by individual tasks specs.
+  # Leave empty to follow the tasks specs.
+  block_selection_policy: ""
 
 logs:
   verbose: False

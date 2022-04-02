@@ -6,7 +6,11 @@ import typer
 from loguru import logger
 from ray import tune
 
-from experiments.ray_runner import grid_offline, grid_online
+from experiments.ray_runner import (
+    grid_offline,
+    grid_offline_heterogeneity_knob,
+    grid_online,
+)
 
 app = typer.Typer()
 
@@ -244,7 +248,6 @@ def plot_fairness(fig_dir):
         """
     )
 
-
 def plot_alibaba(fig_dir):
     rdf = grid_online(
         scheduler_scheduling_time = [0.01, 0.1, 1, 10],
@@ -274,6 +277,59 @@ def plot_alibaba(fig_dir):
     )
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
+
+
+def plot_temp(fig_dir):
+    rdf = grid_offline_heterogeneity_knob(
+        num_blocks=[20],
+        # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
+        num_tasks=[10_000],
+        # num_tasks=[20_000],
+        data_path="heterogenous",
+        metric_recomputation_period=100,
+        parallel=False,  # We care about the runtime here
+        gurobi_timeout_minutes=1,
+    )
+
+    fig = px.line(
+        # rdf.sort_values("variance"),
+        # x="variance",
+        rdf.sort_values("block_std"),
+        x="block_std",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        log_x=True,
+        # range_y=[0, 3000],
+        title="Heterogenous RDP curves offline",
+    )
+    fig.update_yaxes(rangemode="tozero")
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "n_allocated_tasks",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
+    )
+
+    fig_path = fig_dir.joinpath("temp.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
 
 
 @app.command()
