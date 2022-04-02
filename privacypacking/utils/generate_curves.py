@@ -13,9 +13,15 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
+from privacypacking.utils.zoo import (
+    build_zoo,
+    gaussian_block_distribution,
+    geometric_frequencies,
+    zoo_df,
+)
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data")
-
+P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
 app = typer.Typer()
 
 
@@ -92,6 +98,101 @@ def mixed(
     logger.info(f"Saving the frequencies at {frequencies_path}...")
     frequencies_dict = {task_name: 1 / len(task_names) for task_name in task_names}
     yaml.dump(frequencies_dict, frequencies_path.joinpath("frequencies.yaml").open("w"))
+    logger.info("Done.")
+
+
+@app.command()
+def heterogenous(
+    # p: float = typer.Option(0.5, help="Poisson parameter for bin selection"),
+    block_selection_policy: str = typer.Option(
+        "RandomBlocks", help="Block selection policy"
+    ),
+    output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogenous"))),
+):
+
+    output_path = Path(output_path)
+
+    tasks_path = output_path.joinpath("tasks")
+    tasks_path.mkdir(exist_ok=True, parents=True)
+
+    frequencies_path = output_path.joinpath("task_frequencies")
+    frequencies_path.mkdir(exist_ok=True, parents=True)
+
+    task_id_to_name = {}
+
+    names_and_curves = build_zoo()
+    _, tasks_df = zoo_df(names_and_curves)
+
+    for task_id in tasks_df.task_id:
+        # for name, budget in names_and_curves:
+        name, budget = names_and_curves[task_id]
+        task_dict = {
+            "alphas": budget.alphas,
+            # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+            "rdp_epsilons": np.array(budget.epsilons).tolist(),
+            "n_blocks": f"1:1",
+            # TODO: multiblock version!
+            "block_selection_policy": block_selection_policy,
+            "profit": "1:1",
+        }
+
+        task_name = f"{name}.yaml"
+        task_id_to_name[task_id] = task_name
+        yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+
+    mu = 10
+    max_blocks = 20
+    for sigma in [0, 1, 2, 4, 6, 10]:
+        tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
+        tasks_path.mkdir(exist_ok=True, parents=True)
+        for task_id in tasks_df.task_id:
+            # for name, budget in names_and_curves:
+            name, budget = names_and_curves[task_id]
+            task_dict = {
+                "alphas": budget.alphas,
+                # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+                "rdp_epsilons": np.array(budget.epsilons).tolist(),
+                "n_blocks": gaussian_block_distribution(
+                    mu=mu, sigma=sigma, max_blocks=max_blocks
+                ),
+                "block_selection_policy": block_selection_policy,
+                "profit": "1:1",
+            }
+
+            task_name = f"{name}.yaml"
+            yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+
+    logger.info(f"Saving the frequencies at {frequencies_path}...")
+
+    for p in P_GRID:
+        p_tasks_df = geometric_frequencies(tasks_df, p=p)
+
+        frequencies_dict = {}
+        sum_frequencies = 0
+        min_frequency = (
+            1e-9  # Just ignore low probability tasks that can generate errors
+        )
+        for row in p_tasks_df.iterrows():
+            task_id = int(row[1]["task_id"])
+            frequency = float(row[1]["frequency"])
+
+            if frequency > min_frequency:
+                frequencies_dict[task_id_to_name[task_id]] = frequency
+                sum_frequencies += frequency
+
+        # Ensure that the frequencies add up to 1 even with rounding errors
+        logger.info(f"Original sum: {sum_frequencies}")
+
+        last_task_name, last_task_frequency = frequencies_dict.popitem()
+        frequencies_dict[last_task_name] = last_task_frequency + 1 - sum_frequencies
+
+        logger.info(f"Rectified to: {sum(frequencies_dict.values())}")
+
+        yaml.dump(
+            frequencies_dict,
+            frequencies_path.joinpath(f"frequencies-{p}.yaml").open("w"),
+        )
+
     logger.info("Done.")
 
 

@@ -30,7 +30,7 @@ class Tasks:
 
         logger.debug("Done producing all the initial tasks.")
 
-        if self.config.task_arrival_frequency_enabled:
+        if self.config.omegaconf.scheduler.method != "offline":
             while not self.resource_manager.task_production_terminated:
                 task_arrival_interval = self.config.set_task_arrival_time()
                 task_id = next(self.task_count)

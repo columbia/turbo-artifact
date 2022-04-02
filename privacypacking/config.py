@@ -83,70 +83,70 @@ class Config:
 
         # TASKS
         # TODO: clean up this part too, after we merge the Alibaba ingestion code
-        self.tasks_spec = config[TASKS_SPEC]
-        self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
-        self.max_tasks = None
+        # self.tasks_spec = config[TASKS_SPEC]
+        # self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
+        # self.max_tasks = None
 
-        # Setting config for "custom" tasks
-        self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
-        self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
-            DATA_TASK_FREQUENCIES_PATH
-        ]
-        self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
-        self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
+        # # Setting config for "custom" tasks
+        # self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
+        # self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
+        #     DATA_TASK_FREQUENCIES_PATH
+        # ]
+        # self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
+        # self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
 
-        self.custom_read_block_selection_policy_from_config = False
-        if self.curve_distributions[CUSTOM][READ_BLOCK_SELECTION_POLICY_FROM_CONFIG][
-            ENABLED
-        ]:
-            self.custom_read_block_selection_policy_from_config = True
+        if self.omegaconf.tasks.sampling:
+            self.data_path = REPO_ROOT.joinpath("data").joinpath(
+                self.omegaconf.tasks.data_path
+            )
+            self.tasks_path = self.data_path.joinpath(self.omegaconf.tasks.tasks_path)
+            self.task_frequencies_path = self.data_path.joinpath(
+                "task_frequencies"
+            ).joinpath(self.omegaconf.tasks.frequencies_path)
 
-        if self.custom_tasks_sampling:
-            self.task_frequencies_file = None
-            if self.data_path != "":
-                self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-                self.tasks_path = self.data_path.joinpath("tasks")
-                self.task_frequencies_path = self.data_path.joinpath(
-                    "task_frequencies"
-                ).joinpath(self.data_task_frequencies_path)
+            with open(self.task_frequencies_path, "r") as f:
+                self.task_frequencies_file = yaml.safe_load(f)
+            assert len(self.task_frequencies_file) > 0
 
-                with open(self.task_frequencies_path, "r") as f:
-                    self.task_frequencies_file = yaml.safe_load(f)
-                assert len(self.task_frequencies_file) > 0
+            self.task_arrival_interval = (
+                self.block_arrival_interval
+                / self.omegaconf.tasks.avg_num_tasks_per_block
+            )
 
-        # Read one yaml that contains all tasks
         else:
-            if self.data_path != "":
-                self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
-                self.tasks = pd.read_csv(self.data_path)
-                self.tasks_generator = self.tasks.iterrows()
-                self.sum_task_interval = self.tasks["relative_submit_time"].sum()
-                self.task_arrival_interval_generator = self.tasks[
-                    "relative_submit_time"
-                ].iteritems()
+            # Read one CSV that contains all tasks
+            self.data_path = REPO_ROOT.joinpath("data").joinpath(
+                self.omegaconf.tasks.data_path
+            )
+            self.tasks = pd.read_csv(self.data_path)
+            self.tasks_generator = self.tasks.iterrows()
+            self.sum_task_interval = self.tasks["relative_submit_time"].sum()
+            self.task_arrival_interval_generator = self.tasks[
+                "relative_submit_time"
+            ].iteritems()
 
-        self.task_arrival_frequency_enabled = False
-        self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
-        if self.task_arrival_frequency[ENABLED]:
-            self.task_arrival_frequency_enabled = True
-            self.task_arrival_poisson_enabled = False
-            self.task_arrival_constant_enabled = False
-            self.task_arrival_actual_enabled = False
+        # self.task_arrival_frequency_enabled = False
+        # self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
+        # if self.task_arrival_frequency[ENABLED]:
+        #     self.task_arrival_frequency_enabled = True
+        #     self.task_arrival_poisson_enabled = False
+        #     self.task_arrival_constant_enabled = False
+        #     self.task_arrival_actual_enabled = False
 
-            if self.task_arrival_frequency[POISSON][ENABLED]:
-                self.task_arrival_poisson_enabled = True
-                self.task_arrival_interval = (
-                    self.block_arrival_interval
-                    / self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
-                )
-            elif self.task_arrival_frequency[CONSTANT][ENABLED]:
-                self.task_arrival_constant_enabled = True
-                self.task_arrival_interval = (
-                    self.block_arrival_interval
-                    / self.task_arrival_frequency[CONSTANT][AVG_NUMBER_TASKS_PER_BLOCK]
-                )
-            elif self.task_arrival_frequency[ACTUAL][ENABLED]:
-                self.task_arrival_actual_enabled = True
+        #     if self.task_arrival_frequency[POISSON][ENABLED]:
+        #         self.task_arrival_poisson_enabled = True
+        #         self.task_arrival_interval = (
+        #             self.block_arrival_interval
+        #             / self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
+        #         )
+        #     elif self.task_arrival_frequency[CONSTANT][ENABLED]:
+        #         self.task_arrival_constant_enabled = True
+        #         self.task_arrival_interval = (
+        #             self.block_arrival_interval
+        #             / self.task_arrival_frequency[CONSTANT][AVG_NUMBER_TASKS_PER_BLOCK]
+        #         )
+        #     elif self.task_arrival_frequency[ACTUAL][ENABLED]:
+        #         self.task_arrival_actual_enabled = True
 
         # # SCHEDULER
         # self.scheduler = config[SCHEDULER_SPEC]
@@ -209,18 +209,13 @@ class Config:
 
         task = None
         # Read custom task specs from files
-        if self.custom_tasks_sampling:
-
+        if self.omegaconf.tasks.sampling:
             if not hasattr(self, "task_specs"):
                 self.task_specs = [
                     self.load_task_spec_from_file(f"{self.tasks_path}/{task_file}")
                     for task_file in self.task_frequencies_file.keys()
                 ]
-
-                self.task_frequencies = [
-                    task_frequency
-                    for task_frequency in self.task_frequencies_file.values()
-                ]
+                self.task_frequencies = list(self.task_frequencies_file.values())
 
             task_spec_index = np.random.choice(
                 len(self.task_specs),
@@ -230,11 +225,9 @@ class Config:
 
             task_spec = self.task_specs[task_spec_index]
 
-            if self.custom_read_block_selection_policy_from_config:
+            if self.omegaconf.tasks.block_selection_policy:
                 block_selection_policy = BlockSelectionPolicy.from_str(
-                    self.curve_distributions[CUSTOM][
-                        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-                    ][BLOCK_SELECTING_POLICY]
+                    self.omegaconf.tasks.block_selection_policy
                 )
             else:
                 block_selection_policy = task_spec.block_selection_policy
@@ -280,36 +273,26 @@ class Config:
         )
 
     def set_task_arrival_time(self):
-        task_arrival_interval = None
-        if self.task_arrival_poisson_enabled:
+        if self.omegaconf.tasks.sampling == POISSON:
             task_arrival_interval = partial(
                 random.expovariate, 1 / self.task_arrival_interval
             )()
-        elif self.task_arrival_constant_enabled:
+        elif self.omegaconf.tasks.sampling == CONSTANT:
             task_arrival_interval = self.task_arrival_interval
-        elif self.task_arrival_actual_enabled:
+
+        else:
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
             normalized_task_interval = task_arrival_interval / self.sum_task_interval
             task_arrival_interval = (
                 normalized_task_interval * self.block_arrival_interval * self.max_blocks
             )
-
-        assert task_arrival_interval is not None
         return task_arrival_interval
 
     def set_block_arrival_time(self):
-        # block_arrival_interval = None
-        # if self.block_arrival_poisson_enabled:
-        #     block_arrival_interval = partial(
-        #         random.expovariate, 1 / self.block_arrival_interval
-        #     )()
-        # elif self.block_arrival_constant_enabled:
-        #     block_arrival_interval = self.block_arrival_interval
-        # assert block_arrival_interval is not None
         return self.block_arrival_interval
 
     def get_initial_tasks_num(self) -> int:
-        return self.custom_tasks_init_num
+        return self.omegaconf.tasks.initial_num
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num

@@ -157,26 +157,19 @@ def get_logs(
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
-        "block_selecting_policy": simulator_config["tasks_spec"]["curve_distributions"][
-            "custom"
-        ]["read_block_selecting_policy_from_config"]["block_selecting_policy"],
-        "frequency_file": simulator_config["tasks_spec"]["curve_distributions"][
-            "custom"
-        ]["data_task_frequencies_path"],
+        "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,
         "maximum_profit": maximum_profit,
-        "mean_task_per_block": simulator_config["tasks_spec"][TASK_ARRIVAL_FREQUENCY][
-            POISSON
-        ].get(AVG_NUMBER_TASKS_PER_BLOCK, None),
-        "data_path": simulator_config["tasks_spec"]["curve_distributions"]["custom"][
-            "data_path"
-        ],
+        "mean_task_per_block": omegaconf.tasks.avg_num_tasks_per_block,
+        "data_path": omegaconf.tasks.data_path,
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
         "tasks": log_tasks,
         "blocks": log_blocks,
+        "task_frequencies_path": omegaconf.tasks.frequencies_path,
+        "tasks_path": omegaconf.tasks.tasks_path,
     }
 
     datapoint[
