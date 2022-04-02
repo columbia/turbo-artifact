@@ -104,12 +104,8 @@ class ResourceManager:
 
         while not self.block_production_terminated:
             yield self.env.process(consume())
-            # if self.config.new_block_driven_scheduling:
-            #     self.scheduler.schedule_queue()
 
     def task_consumer(self):
-        scheduling_iteration = 0
-
         def consume():
             task_message = yield self.new_tasks_queue.get()
             if isinstance(task_message, LastItem):
@@ -124,31 +120,5 @@ class ResourceManager:
 
         while not self.task_production_terminated:
             yield self.env.process(consume())
-
-            # # All schedulers support "new_task_driven_scheduling";
-            # # a new-task-arrival event triggers a new scheduling cycle
-            # # TODO: this is launching a new enless scheduling cycle in parallel? Why??
-            # if self.config.new_task_driven_scheduling:
-            #     logger.warning("Running `scheduler.schedule_queue()`")
-            #     self.scheduler.schedule_queue()
-            #     self.update_logs(scheduling_iteration)
-            #     scheduling_iteration += 1
-
         # Ask the scheduler to stop adding new scheduling steps
         self.scheduler.simulation_terminated = True
-
-    # def update_logs(self, scheduling_iteration):
-    #     # TODO: improve the log period + perfs (it definitely is a bottleneck)
-    #     if self.config.log_every_n_iterations and (
-    #         (scheduling_iteration == 0)
-    #         or (((scheduling_iteration + 1) % self.config.log_every_n_iterations) == 0)
-    #     ):
-    #         all_tasks = []
-    #         for queue in self.scheduler.task_queue.values():
-    #             all_tasks += queue.tasks
-    #         self.config.logger.log(
-    #             all_tasks + list(self.scheduler.tasks_info.allocated_tasks.values()),
-    #             self.scheduler.blocks,
-    #             list(self.scheduler.tasks_info.allocated_tasks.keys()),
-    #             self.config,
-    #         )

@@ -17,7 +17,6 @@ from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 class TaskQueue:
     def __init__(self):
         self.tasks = []
-        self.efficiency_threshold = 100
 
 
 class TasksInfo:
@@ -38,18 +37,6 @@ class TasksInfo:
             "scheduling_time": self.scheduling_time,
             "allocation_index": self.allocation_index,
         }
-
-        # # Why only dumping the metadata for allocated tasks?
-        # for task_id, task in self.allocated_tasks.items():
-        #     # tasks_info["allocated_tasks"][task_id] = task
-
-        #     # No need to store the task object
-        #     tasks_info["allocated_tasks"][task_id] = True
-
-        #     tasks_info["scheduling_delay"][task_id] = self.scheduling_delay[task_id]
-        #     tasks_info["creation_time"][task_id] = self.creation_time[task_id]
-        #     tasks_info["scheduling_time"][task_id] = self.scheduling_time[task_id]
-
         return tasks_info
 
 
@@ -133,11 +120,9 @@ class Scheduler:
                 # raise TimeoutError(
                 #     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
                 # )
-
                 logger.error(
                     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
                 )
-
                 sys.exit(1)
 
             # Sort the remaining tasks and try to allocate the first one
@@ -174,7 +159,6 @@ class Scheduler:
                         == 0
                     ):
                         # We go back to the beginning of the while loop
-
                         converged = False
                         break
                 # else:

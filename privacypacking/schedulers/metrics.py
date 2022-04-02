@@ -80,7 +80,6 @@ class Fcfs(Metric):
     def apply(
         self, task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
     ) -> id:
-        # return task.id
         # The smallest id has the highest priority
         return 1 / (task.id + 1)
 
@@ -130,25 +129,6 @@ class DynamicFlatRelevance(Metric):
     def is_dynamic(self):
         return True
 
-
-class SquaredDynamicFlatRelevance(Metric):
-    def apply(
-        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
-    ) -> float:
-        total_cost = 0.0
-        block_cost = 0
-        for block_id, budget in task.budget_per_block.items():
-            for alpha in budget.alphas:
-                demand = budget.epsilon(alpha)
-                remaining_budget = blocks[block_id].budget.epsilon(alpha)
-                if remaining_budget > 0:
-                    block_cost += demand / remaining_budget
-            total_cost += block_cost ** 2
-        task.cost = total_cost
-        return task.profit / total_cost
-
-    def is_dynamic(self):
-        return True
 
 
 class RoundRobins(Metric):
@@ -281,7 +261,7 @@ class VectorizedBatchOverflowRelevance(Metric):
                         float("inf")
                     )
 
-        # overflow > 0 or infty (if we drop blocks with no contention)
+        # overflow > 0 or infinity (if we drop blocks with no contention)
         relevance = np.reciprocal(overflow)
         # logger.info(f"Relevance: {relevance}")
 

@@ -17,12 +17,6 @@ from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.task import UniformTask
-from privacypacking.schedulers.utils import (
-    DOMINANT_SHARES,
-    TASK_BASED_BUDGET_UNLOCKING,
-    THRESHOLD_UPDATING,
-    TIME_BASED_BUDGET_UNLOCKING,
-)
 from privacypacking.utils.utils import *
 
 
@@ -48,11 +42,7 @@ class Config:
         random.seed(self.global_seed)
         np.random.seed(self.global_seed)
 
-        # self.deterministic = config[DETERMINISTIC]
-        # if self.deterministic:
-
         # BLOCKS
-        # self.blocks_spec = config[BLOCKS_SPEC]
         self.initial_blocks_num = self.omegaconf.blocks.initial_num
 
         if self.omegaconf.scheduler.method == "offline":
@@ -61,47 +51,21 @@ class Config:
         self.max_blocks = self.omegaconf.blocks.max_num
         self.block_arrival_interval = 1
 
-        # self.block_arrival_frequency = self.blocks_spec[BLOCK_ARRIVAL_FRQUENCY]
-        # if self.block_arrival_frequency[ENABLED]:
-        #     self.block_arrival_frequency_enabled = True
-        #     if self.block_arrival_frequency[POISSON][ENABLED]:
-        #         self.block_arrival_poisson_enabled = True
-        #         self.block_arrival_constant_enabled = False
-        #         self.block_arrival_interval = self.block_arrival_frequency[POISSON][
-        #             BLOCK_ARRIVAL_INTERVAL
-        #         ]
-        #     if self.block_arrival_frequency[CONSTANT][ENABLED]:
-        #         self.block_arrival_constant_enabled = True
-        #         self.block_arrival_poisson_enabled = False
-        #         self.block_arrival_interval = self.block_arrival_frequency[CONSTANT][
-        #             BLOCK_ARRIVAL_INTERVAL
-        #         ]
-        # else:
-        #     self.block_arrival_frequency_enabled = False
-        #     self.block_arrival_constant_enabled = False
-        #     self.block_arrival_poisson_enabled = False
-
         # TASKS
-        # TODO: clean up this part too, after we merge the Alibaba ingestion code
-        self.tasks_spec = config[TASKS_SPEC]
-        self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
         self.max_tasks = None
+        self.data_path = self.omegaconf.tasks.data_path
+        self.data_task_frequencies_path = self.omegaconf.tasks.data_task_frequencies_path
+        self.tasks_init_num = self.omegaconf.tasks.intiial_num
+        self.tasks_sampling = self.omegaconf.tasks.sampling
+        self.block_selection_policy = self.omegaconf.tasks.block_selection_policy
+        self.task_arrival = self.omegaconf.tasks.arrival
+        self.task_arrival_interval = (
+                self.block_arrival_interval
+                / self.omegaconf.avg_num_tasks_per_block
+        )
 
-        # Setting config for "custom" tasks
-        self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
-        self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
-            DATA_TASK_FREQUENCIES_PATH
-        ]
-        self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
-        self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
-
-        self.custom_read_block_selection_policy_from_config = False
-        if self.curve_distributions[CUSTOM][READ_BLOCK_SELECTION_POLICY_FROM_CONFIG][
-            ENABLED
-        ]:
-            self.custom_read_block_selection_policy_from_config = True
-
-        if self.custom_tasks_sampling:
+        # TODO: clean up this part too, after we merge the Alibaba ingestion code
+        if self.tasks_sampling:
             self.task_frequencies_file = None
             if self.data_path != "":
                 self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
@@ -114,7 +78,7 @@ class Config:
                     self.task_frequencies_file = yaml.safe_load(f)
                 assert len(self.task_frequencies_file) > 0
 
-        # Read one yaml that contains all tasks
+        # Read one csv that contains all tasks
         else:
             if self.data_path != "":
                 self.data_path = REPO_ROOT.joinpath("data").joinpath(self.data_path)
@@ -125,80 +89,7 @@ class Config:
                     "relative_submit_time"
                 ].iteritems()
 
-        self.task_arrival_frequency_enabled = False
-        self.task_arrival_frequency = self.tasks_spec[TASK_ARRIVAL_FREQUENCY]
-        if self.task_arrival_frequency[ENABLED]:
-            self.task_arrival_frequency_enabled = True
-            self.task_arrival_poisson_enabled = False
-            self.task_arrival_constant_enabled = False
-            self.task_arrival_actual_enabled = False
 
-            if self.task_arrival_frequency[POISSON][ENABLED]:
-                self.task_arrival_poisson_enabled = True
-                self.task_arrival_interval = (
-                    self.block_arrival_interval
-                    / self.task_arrival_frequency[POISSON][AVG_NUMBER_TASKS_PER_BLOCK]
-                )
-            elif self.task_arrival_frequency[CONSTANT][ENABLED]:
-                self.task_arrival_constant_enabled = True
-                self.task_arrival_interval = (
-                    self.block_arrival_interval
-                    / self.task_arrival_frequency[CONSTANT][AVG_NUMBER_TASKS_PER_BLOCK]
-                )
-            elif self.task_arrival_frequency[ACTUAL][ENABLED]:
-                self.task_arrival_actual_enabled = True
-
-        # # SCHEDULER
-        # self.scheduler = config[SCHEDULER_SPEC]
-        # self.scheduler_method = self.scheduler[METHOD]
-        # self.scheduler_metric = self.scheduler[METRIC]
-        # self.scheduler_N = self.scheduler[N]
-        # if DATA_LIFETIME in self.scheduler and self.block_arrival_constant_enabled:
-        #     self.scheduler_data_lifetime = self.scheduler[DATA_LIFETIME]
-        #     self.scheduler_budget_unlocking_time = self.scheduler_data_lifetime / (
-        #         self.scheduler_N
-        #     )
-        # else:
-        #     self.scheduler_budget_unlocking_time = self.scheduler[BUDGET_UNLOCKING_TIME]
-        # self.scheduler_scheduling_wait_time = self.scheduler[SCHEDULING_WAIT_TIME]
-
-        # if SOLVER in self.scheduler:
-        #     self.scheduler_solver = self.scheduler[SOLVER]
-        # else:
-        #     self.scheduler_solver = None
-
-        # # self.scheduler_threshold_update_mechanism = self.scheduler[
-        # #     THRESHOLD_UPDATE_MECHANISM
-        # # ]
-        # self.new_task_driven_scheduling = False
-        # self.time_based_scheduling = False
-        # self.new_block_driven_scheduling = False
-        # if self.scheduler_method == THRESHOLD_UPDATING:
-        #     self.new_task_driven_scheduling = True
-        #     self.new_block_driven_scheduling = True
-        # elif self.scheduler_method == TIME_BASED_BUDGET_UNLOCKING:
-        #     self.time_based_scheduling = True
-        #     if self.scheduler_metric == DOMINANT_SHARES:
-        #         logger.warning(
-        #             f"Using DPF in batch scheduler mode with {self.scheduler_scheduling_wait_time}.\n This is not the original DPF algorithm unless T << expected_task_interarrival_time "
-        #         )
-        # else:
-        #     self.new_task_driven_scheduling = True
-
-        # LOGS
-        # if LOG_FILE in config:
-        #     self.log_file = f"{config[LOG_FILE]}.json"
-        # else:
-        #     self.log_file = f"{self.scheduler_method}_{self.scheduler_metric}/{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
-
-        # if CUSTOM_LOG_PREFIX in config:
-        #     self.log_path = LOGS_PATH.joinpath(config[CUSTOM_LOG_PREFIX]).joinpath(
-        #         self.log_file
-        #     )
-        # else:
-        #     self.log_path = LOGS_PATH.joinpath(self.log_file)
-
-        # self.log_every_n_iterations = config[LOG_EVERY_N_ITERATIONS]
 
     def dump(self) -> dict:
         d = self.config
@@ -209,7 +100,7 @@ class Config:
 
         task = None
         # Read custom task specs from files
-        if self.custom_tasks_sampling:
+        if self.tasks_sampling:
 
             if not hasattr(self, "task_specs"):
                 self.task_specs = [
@@ -230,12 +121,8 @@ class Config:
 
             task_spec = self.task_specs[task_spec_index]
 
-            if self.custom_read_block_selection_policy_from_config:
-                block_selection_policy = BlockSelectionPolicy.from_str(
-                    self.curve_distributions[CUSTOM][
-                        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-                    ][BLOCK_SELECTING_POLICY]
-                )
+            if self.block_selection_policy != "":
+                block_selection_policy = BlockSelectionPolicy.from_str(self.block_selection_policy)
             else:
                 block_selection_policy = task_spec.block_selection_policy
             assert block_selection_policy is not None
@@ -281,35 +168,24 @@ class Config:
 
     def set_task_arrival_time(self):
         task_arrival_interval = None
-        if self.task_arrival_poisson_enabled:
+        if self.task_arrival == "Poisson":
             task_arrival_interval = partial(
                 random.expovariate, 1 / self.task_arrival_interval
             )()
-        elif self.task_arrival_constant_enabled:
-            task_arrival_interval = self.task_arrival_interval
-        elif self.task_arrival_actual_enabled:
+        elif self.task_arrival == "Custom":
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
             normalized_task_interval = task_arrival_interval / self.sum_task_interval
             task_arrival_interval = (
                 normalized_task_interval * self.block_arrival_interval * self.max_blocks
             )
-
         assert task_arrival_interval is not None
         return task_arrival_interval
 
     def set_block_arrival_time(self):
-        # block_arrival_interval = None
-        # if self.block_arrival_poisson_enabled:
-        #     block_arrival_interval = partial(
-        #         random.expovariate, 1 / self.block_arrival_interval
-        #     )()
-        # elif self.block_arrival_constant_enabled:
-        #     block_arrival_interval = self.block_arrival_interval
-        # assert block_arrival_interval is not None
         return self.block_arrival_interval
 
     def get_initial_tasks_num(self) -> int:
-        return self.custom_tasks_init_num
+        return self.tasks_init_num
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num

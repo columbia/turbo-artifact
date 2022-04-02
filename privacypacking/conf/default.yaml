@@ -25,6 +25,15 @@ blocks:
   initial_num: 1
   max_num: 10
 
+tasks:
+  sampling: True
+  data_path: ""
+  data_task_frequencies_path: "frequencies.yaml"
+  initial_num: 0
+  block_selection_policy: "LatestBlocksFirst"
+  arrival: "Poisson" # alt. "Custom"
+  avg_num_tasks_per_block: 100
+
 logs:
   verbose: False
   save: False

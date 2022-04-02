@@ -30,10 +30,9 @@ def map_metric_to_id(row):
 
 def plot_3a(fig_dir):
     rdf = grid_offline(
-        custom_config="offline_dpf_killer/multi_block/gap_base.yaml",
         num_blocks=[5, 10, 15, 20],
         num_tasks=[100],
-        data_path="multiblock_dpf_killer_gap",
+        data_path=["multiblock_dpf_killer_gap"],
         parallel=False,
     )
 
@@ -76,10 +75,9 @@ def plot_3a(fig_dir):
 
 def plot_3b(fig_dir):
     rdf = grid_offline(
-        custom_config="offline_dpf_killer/single_block/base.yaml",
         num_blocks=[1],
         num_tasks=[1] + [5 * i for i in range(1, 6)],
-        data_path="single_block_dpf_killer_subsampled",
+        data_path=["single_block_dpf_killer_subsampled"],
     )
 
     fig = px.line(
@@ -124,7 +122,7 @@ def plot_4(fig_dir):
         num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
         num_tasks=[50, 100, 200, 300, 500],
-        data_path="mixed_curves",
+        data_path=["mixed_curves"],
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
@@ -212,7 +210,6 @@ def plot_4(fig_dir):
 def plot_5(fig_dir):
 
     experiment_analysis = grid_online(
-        custom_config="time_based_budget_unlocking/privatekube/base.yaml"
     )
 
     logger.info(experiment_analysis)
@@ -246,6 +243,37 @@ def plot_fairness(fig_dir):
             - notebooks/offline_mixed_curves/multialpha_fair_tasks.ipynb
         """
     )
+
+
+def plot_alibaba(fig_dir):
+    rdf = grid_online(
+        scheduler_scheduling_time = [0.01, 0.1, 1, 10],
+        metric_recomputation_period=[50],
+        initial_blocks=[10],
+        max_blocks=[20],
+        data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
+        tasks_sampling=True,
+        tasks_arrival_mode="Poisson",
+        avg_num_tasks_per_block=[100],
+        data_lifetime=[5]
+    )
+
+    fig = px.line(
+        rdf.sort_values(["T"]),
+        x="Τ",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Alibaba",
+    )
+
+    fig_path = fig_dir.joinpath(
+        "alibaba/alibaba.png"
+    )
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
 
 
 @app.command()
@@ -285,11 +313,3 @@ def run(
 
 if __name__ == "__main__":
     app()
-
-    # rdf = load_ray_experiment(
-    #     Path("/home/pierre/privacypacking/logs/ray/DEFAULT_2022-03-02_11-03-24")
-    # )
-
-    # print(rdf)
-    # print(rdf.columns)
-    # rdf.sort_values("n_initial_blocks")
