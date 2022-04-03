@@ -55,9 +55,9 @@ class Tasks:
 
         task = self.config.create_task(task_id)
 
-        # logger.debug(
-        #     f"Task: {task_id} generated at {self.env.now}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
-        # )
+        logger.debug(
+            f"Task: {task_id} generated at {self.env.now}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+        )
 
         allocated_resources_event = self.env.event()
         yield self.resource_manager.new_tasks_queue.put(
@@ -65,4 +65,4 @@ class Tasks:
         )
 
         yield allocated_resources_event
-        # logger.debug(f"Task: {task_id} scheduled at {self.env.now}")
+        logger.debug(f"Task: {task_id} scheduled at {self.env.now}")

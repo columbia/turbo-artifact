@@ -172,9 +172,9 @@ class Scheduler:
         (task, allocated_resources_event) = task_message
         try:
             self.task_set_block_ids(task)
-            # logger.debug(
-            #     f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
-            # )
+            logger.debug(
+                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+            )
         except NotEnoughBlocks as e:
             # logger.warning(
             #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
