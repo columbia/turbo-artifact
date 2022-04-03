@@ -754,7 +754,7 @@ class ArgmaxKnapsack(SoftKnapsack):
             # NOTE: you probably don't need to run in parallel.
             logger.info(f"Solving the knapsacks in parallel...")
             with Pool(processes=self.config.n_knapsack_solvers) as pool:
-                results = pool.starmap(self.solve_local_knapsack, args)
+                results = pool.starmap(self.solve_local_knapsack_no_profits, args)
             logger.info(f"Collecting the results...")
         else:
             logger.info(f"Solving the knapsacks one by one...")
