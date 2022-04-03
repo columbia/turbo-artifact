@@ -33,6 +33,28 @@ def map_metric_to_id(row):
 
 
 def plot_3a(fig_dir):
+    plot_multiblock_dpf_killer(fig_dir)
+
+
+def plot_4(fig_dir):
+    plot_mixed_curves_offline(fig_dir)
+
+
+def plot_5(fig_dir):
+    plot_mixed_curves_online(fig_dir)
+
+
+def plot_6(fig_dir):
+    plot_alibaba(fig_dir)
+
+
+def plot_7(fig_dir):
+    raise NotImplementedError(
+        "This CLI only works for the simulator, not the real PrivateKube system."
+    )
+
+
+def plot_multiblock_dpf_killer(fig_dir):
     rdf = grid_offline(
         num_blocks=[5, 10, 15, 20],
         num_tasks=[100],
@@ -77,7 +99,7 @@ def plot_3a(fig_dir):
     )
 
 
-def plot_3b(fig_dir):
+def plot_single_block_dpf_killer(fig_dir):
     rdf = grid_offline(
         num_blocks=[1],
         num_tasks=[1] + [5 * i for i in range(1, 6)],
@@ -121,11 +143,12 @@ def plot_3b(fig_dir):
     )
 
 
-def plot_4(fig_dir):
+def plot_mixed_curves_offline(fig_dir):
     rdf = grid_offline(
         num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[50, 100, 200, 300, 500],
+        # num_tasks=[50, 100, 200, 300, 500],
+        num_tasks=[500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
         data_path=["mixed_curves"],
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
@@ -211,30 +234,35 @@ def plot_4(fig_dir):
     )
 
 
-def plot_5(fig_dir):
-    pass
-    # experiment_analysis = grid_online()
+def plot_mixed_curves_online(fig_dir):
+    rdf = grid_online(
+        scheduler_scheduling_time=[0.01, 0.1, 1, 10],
+        metric_recomputation_period=[50],
+        initial_blocks=[10],
+        max_blocks=[30],
+        data_path=["mixed_curves"],
+        tasks_sampling="poisson",
+        data_lifetime=[10],
+        avg_num_tasks_per_block=[500]
+    )
 
-    # logger.info(experiment_analysis)
+    fig = px.line(
+        rdf.sort_values("T"),
+        x="T",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Mixed curves online",
+    )
 
-    # raise NotImplementedError(
-    #     "We're not sure we'll keep this figure in the final paper yet."
-    # )
+    fig_path = fig_dir.joinpath("mixed-curves/online.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
 
 
 # TODO: remember to update delta if you are using something else than mixed curves.
-
-
-def plot_6(fig_dir):
-    raise NotImplementedError(
-        "We're not sure we'll keep this figure in the final paper yet."
-    )
-
-
-def plot_7(fig_dir):
-    raise NotImplementedError(
-        "This CLI only works for the simulator, not the real PrivateKube system."
-    )
 
 
 def plot_fairness(fig_dir):
@@ -250,14 +278,13 @@ def plot_fairness(fig_dir):
 
 def plot_alibaba(fig_dir):
     rdf = grid_online(
-        scheduler_scheduling_time=[1],  # [0.01, 0.1, 1, 10],
+        scheduler_scheduling_time=[0.01, 0.1, 1, 10],
         metric_recomputation_period=[50],
         initial_blocks=[10],
-        max_blocks=[20],
+        max_blocks=[50],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
         tasks_sampling="",
-        avg_num_tasks_per_block=[100],
-        data_lifetime=[5],
+        data_lifetime=[10],
     )
 
     fig = px.line(

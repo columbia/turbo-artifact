@@ -221,13 +221,13 @@ def grid_online(
     metric_recomputation_period: List[int],
     data_path: List[str],
     tasks_sampling: str,
-    avg_num_tasks_per_block: List[int],
     data_lifetime: List[int],
+    avg_num_tasks_per_block: List[int] = [100],
 ):
     # ray.init(log_to_driver=False)
     scheduler_metrics = [
         # SOFT_KNAPSACK,
-        # ARGMAX_KNAPSACK,
+        ARGMAX_KNAPSACK,
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
@@ -236,8 +236,6 @@ def grid_online(
         DOMINANT_SHARES,
     ]
 
-    # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
-    # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
     temperature = [0.01]
 
     # Fully unlocked case
@@ -280,7 +278,7 @@ def grid_online(
         "tasks": {
             "sampling": tasks_sampling,
             "data_path": tune.grid_search(data_path),
-            "block_selection_policy": block_selection_policy,
+            "block_selection_policy": tune.grid_search(block_selection_policy),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
         },
     }
@@ -328,7 +326,7 @@ class CustomLoggerCallback(tune.logger.LoggerCallback):
         logger.info(
             [
                 f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit", "temperature"]
+                for key in ["n_allocated_tasks", "realized_profit"]
             ]
         )
         return
