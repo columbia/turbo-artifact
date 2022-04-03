@@ -458,6 +458,17 @@ class SoftKnapsack(RelevanceMetric):
             opt = m.getObjective().getValue()
         return opt
 
+    def solve_local_knapsack_no_profits(self, capacity, task_demands) -> float:
+        if capacity <= 0:
+            return 0
+        demands = list(task_demands.values())
+        demands.sort()
+        opt = 0
+        for demand in demands:
+            if opt+demand <= capacity:
+                opt += demand
+        return opt
+
     def compute_relevance_matrix(
         self,
         blocks: Dict[int, Block],
@@ -734,8 +745,8 @@ class ArgmaxKnapsack(SoftKnapsack):
                         np.array(efficiencies_per_block_alpha)
                     )
 
-                args.append((local_capacity, task_ids, task_demands, task_profits))
-
+                # args.append((local_capacity, task_ids, task_demands, task_profits))
+                args.append((local_capacity, task_demands))
             if self.config.save_profit_matrix:
                 min_profit_per_block[block_id] = current_min_profit
 
@@ -756,7 +767,7 @@ class ArgmaxKnapsack(SoftKnapsack):
                     max_profits[block_id, alpha_index] = results[i]
                 else:
                     logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-                    max_profits[block_id, alpha_index] = self.solve_local_knapsack(
+                    max_profits[block_id, alpha_index] = self.solve_local_knapsack_no_profits(
                         *args[i]
                     )
 

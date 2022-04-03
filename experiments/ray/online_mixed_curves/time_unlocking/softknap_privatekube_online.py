@@ -44,7 +44,7 @@ def grid():
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
         ARGMAX_KNAPSACK,
-	#OVERFLOW_RELEVANCE,
+        # OVERFLOW_RELEVANCE,
         # BATCH_OVERFLOW_RELEVANCE,
         # FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
@@ -57,7 +57,7 @@ def grid():
     # temperature = [1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 0.5, 1, 5, 10]
     # temperature = [1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1, 10]
 
-    temperature = [1e-4]
+    # temperature = [1e-4]
     # normalize_by = ["capacity"]
     normalize_by = ["available_budget"]
     # normalize_by = [""]
@@ -70,14 +70,14 @@ def grid():
     n = [10_000]
     data_lifetime = [10]
     # scheduler_scheduling_time = [0.1, 1, 5, 10, 20, 30, 40, 50, 60]
-    # scheduler_scheduling_time = [0.01, 0.1, 1, 5, 10, 25, 50]
-    scheduler_scheduling_time = [5]
+    # scheduler_scheduling_time = [0.01, 0.1, 1, 10]
+    scheduler_scheduling_time = [1]
 
     # avg_number_tasks_per_block = [100, 200, 400, 600, 800, 1000]
-    # avg_number_tasks_per_block = [1000]
+    # avg_number_tasks_per_block = [500]
 
     # avg_number_tasks_per_block = [100, 250, 500, 1000]
-    max_blocks = [30]
+    max_blocks = [50, 100, 150, 200]
     initial_blocks = [10]
     seeds = [1]
     block_selection_policies = ["LatestBlocksFirst"]
@@ -126,7 +126,7 @@ def grid():
         },
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
-            "temperature": tune.grid_search(temperature),
+            # "temperature": tune.grid_search(temperature),
             "clip_demands_in_relevance": tune.grid_search(clip_demands_in_relevance),
         },
     }

@@ -129,7 +129,7 @@ class Scheduler:
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
 
-            logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
+            # logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
 
             # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
             # time.sleep(1)
@@ -137,6 +137,7 @@ class Scheduler:
             n_allocated_tasks = 0
             for task in sorted_tasks:
                 if self.can_run(task):
+                    # print("Allocated:", task.name, " - with blocks", task.n_blocks)
 
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
@@ -171,9 +172,9 @@ class Scheduler:
         (task, allocated_resources_event) = task_message
         try:
             self.task_set_block_ids(task)
-            logger.debug(
-                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
-            )
+            # logger.debug(
+            #     f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+            # )
         except NotEnoughBlocks as e:
             # logger.warning(
             #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
@@ -263,7 +264,6 @@ class Scheduler:
             self.iteration_counter[scheduling_time] += 1
 
             return sorted_tasks
-
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, task: Task) -> bool:

@@ -1,7 +1,7 @@
 import argparse
 import os
 from datetime import datetime
-
+import yaml
 import ray
 from loguru import logger
 from ray import tune
@@ -18,11 +18,9 @@ from privacypacking.schedulers.utils import (
     NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
-    SOFT_KNAPSACK,
+    ARGMAX_KNAPSACK,
     SOFTMAX_OVERFLOW,
-    SQUARED_DYNAMIC_FLAT_RELEVANCE,
     TASK_BASED_BUDGET_UNLOCKING,
-    TESSERACTED_DYNAMIC_FLAT_RELEVANCE,
     THRESHOLD_UPDATING,
     TIME_BASED_BUDGET_UNLOCKING,
     VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
@@ -44,10 +42,10 @@ def grid():
 
     scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
-        SOFT_KNAPSACK,
-        BATCH_OVERFLOW_RELEVANCE,
+        ARGMAX_KNAPSACK,
+        OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
+        # DYNAMIC_FLAT_RELEVANCE,
         #  FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
@@ -55,7 +53,7 @@ def grid():
 
     # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
     # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
-    temperature = [0.01]
+    # temperature = [0.01]
 
     # normalize_by = ["capacity", "available_budget", ""]
     # normalize_by = [""]
@@ -71,8 +69,9 @@ def grid():
     n = [1_000]
     data_lifetime = [5]
 
-    # scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
-    scheduler_scheduling_time = [0.1, 1.0, 4, 8, 20]
+    scheduler_scheduling_time = [0.01, 0.1, 0.5, 1.0, 2.0, 4, 6, 8, 10, 20, 30]
+    # scheduler_scheduling_time = [0.1, 1.0, 4, 8, 20]
+    # scheduler_scheduling_time = [1.0]
 
     #    avg_number_tasks_per_block = [100]
     avg_number_tasks_per_block = [500]
@@ -81,8 +80,8 @@ def grid():
     seeds = [0]
     block_selection_policies = ["LatestBlocksFirst"]
 
-    # data_path = "mixed_curves"
-    data_path = "mixed_curves_profits"
+    data_path = "mixed_curves"
+    # data_path = "mixed_curves_profits"
 
     config[GLOBAL_SEED] = tune.grid_search(seeds)
     config[BLOCKS_SPEC][INITIAL_NUM] = tune.grid_search(initial_blocks)
@@ -117,7 +116,7 @@ def grid():
         },
         "metric": {
             "normalize_by": tune.grid_search(normalize_by),
-            "temperature": tune.grid_search(temperature),
+            # "temperature": tune.grid_search(temperature),
         },
         "logs": {
             "verbose": False,
