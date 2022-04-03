@@ -33,19 +33,14 @@ class Config:
         self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
 
         # Rest of the configuration below
-        self.config = config
-        self.epsilon = self.omegaconf.epsilon
-        self.delta = self.omegaconf.delta
         self.global_seed = self.omegaconf.global_seed
         random.seed(self.global_seed)
         np.random.seed(self.global_seed)
 
         # BLOCKS
         self.initial_blocks_num = self.omegaconf.blocks.initial_num
-
         if self.omegaconf.scheduler.method == "offline":
             self.omegaconf.blocks.max_num = self.initial_blocks_num
-
         self.max_blocks = self.omegaconf.blocks.max_num
         self.max_tasks = None
         self.block_arrival_interval = 1
@@ -148,7 +143,7 @@ class Config:
 
     def create_block(self, block_id: int) -> Block:
         return Block.from_epsilon_delta(
-            block_id, self.epsilon, self.delta, alpha_list=self.omegaconf.alphas
+            block_id, self.omegaconf.epsilon, self.omegaconf.delta, alpha_list=self.omegaconf.alphas
         )
 
     def set_task_arrival_time(self):
