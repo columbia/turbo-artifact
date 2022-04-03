@@ -10,6 +10,7 @@ CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
 LOGS_PATH = REPO_ROOT.joinpath("logs")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
+DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
@@ -95,17 +96,17 @@ def get_logs(
         "mean_task_per_block": omegaconf.tasks.avg_num_tasks_per_block,
         "data_path": omegaconf.tasks.data_path,
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
+        "initial_blocks": omegaconf.blocks.initial_num,
+        "max_blocks": omegaconf.blocks.max_num,
         "tasks": log_tasks,
         "blocks": log_blocks,
         "task_frequencies_path": omegaconf.tasks.frequencies_path,
         "tasks_path": omegaconf.tasks.tasks_path,
+        "metric_recomputation_period": omegaconf.scheduler.metric_recomputation_period,
+        "normalize_by": omegaconf.metric.normalize_by,
+        "temperature": omegaconf.metric.temperature,
     }
 
-    datapoint[
-        "metric_recomputation_period"
-    ] = omegaconf.scheduler.metric_recomputation_period
-    datapoint["normalize_by"] = omegaconf.metric.normalize_by
-    datapoint["temperature"] = omegaconf.metric.temperature
     # TODO: remove allocating_task_id from args
     # TODO: Store scheduling times into the tasks directly?
 

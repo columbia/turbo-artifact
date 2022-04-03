@@ -212,11 +212,10 @@ def plot_4(fig_dir):
 
 
 def plot_5(fig_dir):
+    pass
+    # experiment_analysis = grid_online()
 
-    experiment_analysis = grid_online(
-    )
-
-    logger.info(experiment_analysis)
+    # logger.info(experiment_analysis)
 
     # raise NotImplementedError(
     #     "We're not sure we'll keep this figure in the final paper yet."
@@ -248,22 +247,22 @@ def plot_fairness(fig_dir):
         """
     )
 
+
 def plot_alibaba(fig_dir):
     rdf = grid_online(
-        scheduler_scheduling_time = [0.01, 0.1, 1, 10],
+        scheduler_scheduling_time=[1], #[0.01, 0.1, 1, 10],
         metric_recomputation_period=[50],
         initial_blocks=[10],
         max_blocks=[20],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
-        tasks_sampling=True,
-        tasks_arrival_mode="Poisson",
+        tasks_sampling="",
         avg_num_tasks_per_block=[100],
         data_lifetime=[5]
     )
 
     fig = px.line(
-        rdf.sort_values(["T"]),
-        x="Τ",
+        rdf.sort_values("T"),
+        x="T",
         y="n_allocated_tasks",
         color="scheduler_metric",
         width=800,
@@ -285,7 +284,7 @@ def plot_temp(fig_dir):
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
         num_tasks=[10_000],
         # num_tasks=[20_000],
-        data_path="heterogenous",
+        data_path="heterogeneous",
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
@@ -302,7 +301,7 @@ def plot_temp(fig_dir):
         height=600,
         log_x=True,
         # range_y=[0, 3000],
-        title="Heterogenous RDP curves offline",
+        title="Heterogeneous RDP curves offline",
     )
     fig.update_yaxes(rangemode="tozero")
 

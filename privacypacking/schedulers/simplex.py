@@ -8,7 +8,6 @@ from mip import BINARY, Model, maximize, xsum
 
 from privacypacking.budget import ALPHAS
 from privacypacking.schedulers.scheduler import Scheduler
-from privacypacking.utils.utils import GUROBI, MIP
 
 
 class Simplex(Scheduler):
@@ -17,7 +16,7 @@ class Simplex(Scheduler):
         if simulator_config:
             self.solver = simulator_config.scheduler.solver
         else:
-            self.solver = MIP
+            self.solver = "mip"
 
     def solve_allocation_cbc(self, tasks) -> List[bool]:
         m = Model("pack")
@@ -129,7 +128,7 @@ class Simplex(Scheduler):
     def schedule_queue(self) -> List[int]:
         tasks = self.task_queue.tasks
         allocated_tasks = []
-        if self.solver == MIP:
+        if self.solver == "mip":
             allocation = self.solve_allocation_cbc(tasks)
         else:
             allocation = self.solve_allocation_gurobi(tasks)

@@ -102,12 +102,12 @@ def mixed(
 
 
 @app.command()
-def heterogenous(
+def heterogeneous(
     # p: float = typer.Option(0.5, help="Poisson parameter for bin selection"),
     block_selection_policy: str = typer.Option(
         "RandomBlocks", help="Block selection policy"
     ),
-    output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogenous"))),
+    output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
 ):
 
     output_path = Path(output_path)

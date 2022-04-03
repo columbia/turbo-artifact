@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 from functools import partial
 from typing import List
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,7 +18,7 @@ from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.task import UniformTask
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import REPO_ROOT, DEFAULT_CONFIG_FILE, TaskSpec
 
 
 # Configuration Reading Logic
@@ -27,12 +28,9 @@ class Config:
         logger.info(f"Initializing config: {config}")
 
         # Just a basic configuration file that is not Turing-complete...
-        default_omegaconf = OmegaConf.load(
-            Path(__file__).parent.joinpath("conf/default.yaml")
-        )
+        default_omegaconf = OmegaConf.load(DEFAULT_CONFIG_FILE)
         custom_omegaconf = OmegaConf.create(config.get("omegaconf", {}))
         self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
-        logger.info(f"OmegaConf: {self.omegaconf}")
 
         # Rest of the configuration below
         self.config = config
@@ -49,22 +47,10 @@ class Config:
             self.omegaconf.blocks.max_num = self.initial_blocks_num
 
         self.max_blocks = self.omegaconf.blocks.max_num
+        self.max_tasks = None
         self.block_arrival_interval = 1
 
         # TASKS
-        # TODO: clean up this part too, after we merge the Alibaba ingestion code
-        # self.tasks_spec = config[TASKS_SPEC]
-        # self.curve_distributions = self.tasks_spec[CURVE_DISTRIBUTIONS]
-        # self.max_tasks = None
-
-        # # Setting config for "custom" tasks
-        # self.data_path = self.curve_distributions[CUSTOM][DATA_PATH]
-        # self.data_task_frequencies_path = self.curve_distributions[CUSTOM][
-        #     DATA_TASK_FREQUENCIES_PATH
-        # ]
-        # self.custom_tasks_init_num = self.curve_distributions[CUSTOM][INITIAL_NUM]
-        # self.custom_tasks_sampling = self.curve_distributions[CUSTOM][SAMPLING]
-
         if self.omegaconf.tasks.sampling:
             self.data_path = REPO_ROOT.joinpath("data").joinpath(
                 self.omegaconf.tasks.data_path
@@ -96,9 +82,7 @@ class Config:
             ].iteritems()
 
     def dump(self) -> dict:
-        d = self.config
-        d["omegaconf"] = OmegaConf.to_container(self.omegaconf)
-        return d
+        return {'omegaconf': OmegaConf.to_container(self.omegaconf)}
 
     def create_task(self, task_id: int) -> Task:
 
@@ -168,11 +152,11 @@ class Config:
         )
 
     def set_task_arrival_time(self):
-        if self.omegaconf.tasks.sampling == POISSON:
+        if self.omegaconf.tasks.sampling == "poisson":
             task_arrival_interval = partial(
                 random.expovariate, 1 / self.task_arrival_interval
             )()
-        elif self.omegaconf.tasks.sampling == CONSTANT:
+        elif self.omegaconf.tasks.sampling == "constant":
             task_arrival_interval = self.task_arrival_interval
 
         else:
@@ -192,9 +176,7 @@ class Config:
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num
 
-    def load_task_spec_from_file(
-        self, path: Path = PRIVATEKUBE_DEMANDS_PATH
-    ) -> TaskSpec:
+    def load_task_spec_from_file(self, path: Path) -> TaskSpec:
 
         with open(path, "r") as f:
             demand_dict = yaml.safe_load(f)

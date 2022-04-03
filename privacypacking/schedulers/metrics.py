@@ -22,11 +22,7 @@ from scipy.sparse.dok import dok_matrix
 from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Block, Task
-from privacypacking.schedulers.scheduler import Scheduler, TaskQueue
-from privacypacking.utils.utils import (
-    NORMALIZE_BY_AVAILABLE_BUDGET,
-    NORMALIZE_BY_CAPACITY,
-)
+from privacypacking.schedulers.scheduler import TaskQueue
 
 
 class MetricException(Exception):

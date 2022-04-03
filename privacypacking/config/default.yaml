@@ -26,7 +26,7 @@ blocks:
   max_num: 10
 
 tasks:
-  data_path: "heterogenous"
+  data_path: "heterogeneous"
   frequencies_path: "frequencies.yaml"
   tasks_path: "tasks"
   initial_num: 100
