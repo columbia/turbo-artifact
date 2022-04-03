@@ -126,7 +126,6 @@ class DynamicFlatRelevance(Metric):
         return True
 
 
-
 class RoundRobins(Metric):
     def apply(task: Task, blocks: Dict[int, Block], tasks: List[Task] = None) -> float:
         pass
@@ -465,7 +464,7 @@ class SoftKnapsack(RelevanceMetric):
         demands.sort()
         opt = 0
         for demand in demands:
-            if opt+demand <= capacity:
+            if opt + demand <= capacity:
                 opt += demand
         return opt
 
@@ -767,9 +766,9 @@ class ArgmaxKnapsack(SoftKnapsack):
                     max_profits[block_id, alpha_index] = results[i]
                 else:
                     logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-                    max_profits[block_id, alpha_index] = self.solve_local_knapsack_no_profits(
-                        *args[i]
-                    )
+                    max_profits[
+                        block_id, alpha_index
+                    ] = self.solve_local_knapsack_no_profits(*args[i])
 
                 i += 1
 

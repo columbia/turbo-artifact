@@ -2,10 +2,12 @@ import argparse
 
 from privacypacking.budget import SubsampledGaussianCurve
 
+
 def compute_subsampled_gaussian_task_demands(sigma):
     return SubsampledGaussianCurve.from_training_parameters(
         dataset_size=50_000, batch_size=100, epochs=100, sigma=sigma
     ).epsilons
+
 
 def main():
     parser = argparse.ArgumentParser()

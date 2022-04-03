@@ -250,14 +250,14 @@ def plot_fairness(fig_dir):
 
 def plot_alibaba(fig_dir):
     rdf = grid_online(
-        scheduler_scheduling_time=[1], #[0.01, 0.1, 1, 10],
+        scheduler_scheduling_time=[1],  # [0.01, 0.1, 1, 10],
         metric_recomputation_period=[50],
         initial_blocks=[10],
         max_blocks=[20],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
         tasks_sampling="",
         avg_num_tasks_per_block=[100],
-        data_lifetime=[5]
+        data_lifetime=[5],
     )
 
     fig = px.line(
@@ -271,9 +271,7 @@ def plot_alibaba(fig_dir):
         title="Alibaba",
     )
 
-    fig_path = fig_dir.joinpath(
-        "alibaba/alibaba.png"
-    )
+    fig_path = fig_dir.joinpath("alibaba/alibaba.png")
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
 

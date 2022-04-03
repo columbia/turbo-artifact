@@ -77,7 +77,7 @@ class Config:
             ].iteritems()
 
     def dump(self) -> dict:
-        return {'omegaconf': OmegaConf.to_container(self.omegaconf)}
+        return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
 
     def create_task(self, task_id: int) -> Task:
 
@@ -143,7 +143,10 @@ class Config:
 
     def create_block(self, block_id: int) -> Block:
         return Block.from_epsilon_delta(
-            block_id, self.omegaconf.epsilon, self.omegaconf.delta, alpha_list=self.omegaconf.alphas
+            block_id,
+            self.omegaconf.epsilon,
+            self.omegaconf.delta,
+            alpha_list=self.omegaconf.alphas,
         )
 
     def set_task_arrival_time(self):
