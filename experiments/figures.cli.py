@@ -236,7 +236,7 @@ def plot_mixed_curves_offline(fig_dir):
 
 def plot_mixed_curves_online(fig_dir):
     rdf = grid_online(
-        scheduler_scheduling_time=[0.01, 0.1, 1, 10],
+        scheduler_scheduling_time=[2, 4, 6, 8, 10],
         metric_recomputation_period=[50],
         initial_blocks=[10],
         max_blocks=[30],
