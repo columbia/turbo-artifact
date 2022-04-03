@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 
 
 def main():
-    conf = Config(OmegaConf.load(DEFAULT_CONFIG_FILE))
+    conf = Config({})
     logs = Simulator(conf).run()
     save_logs(conf, logs)
 
