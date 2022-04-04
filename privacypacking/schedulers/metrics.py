@@ -460,12 +460,14 @@ class SoftKnapsack(RelevanceMetric):
     def solve_local_knapsack_no_profits(self, capacity, task_demands) -> float:
         if capacity <= 0:
             return 0
+        opt = 0
+        sum = 0
         demands = list(task_demands.values())
         demands.sort()
-        opt = 0
         for demand in demands:
-            if opt + demand <= capacity:
-                opt += demand
+            if sum + demand <= capacity:
+                sum += demand
+                opt += 1
         return opt
 
     def compute_relevance_matrix(
