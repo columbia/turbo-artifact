@@ -17,7 +17,6 @@ from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 class TaskQueue:
     def __init__(self):
         self.tasks = []
-        self.efficiency_threshold = 100
 
 
 class TasksInfo:
@@ -38,18 +37,6 @@ class TasksInfo:
             "scheduling_time": self.scheduling_time,
             "allocation_index": self.allocation_index,
         }
-
-        # # Why only dumping the metadata for allocated tasks?
-        # for task_id, task in self.allocated_tasks.items():
-        #     # tasks_info["allocated_tasks"][task_id] = task
-
-        #     # No need to store the task object
-        #     tasks_info["allocated_tasks"][task_id] = True
-
-        #     tasks_info["scheduling_delay"][task_id] = self.scheduling_delay[task_id]
-        #     tasks_info["creation_time"][task_id] = self.creation_time[task_id]
-        #     tasks_info["scheduling_time"][task_id] = self.scheduling_time[task_id]
-
         return tasks_info
 
 
@@ -133,18 +120,16 @@ class Scheduler:
                 # raise TimeoutError(
                 #     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
                 # )
-
                 logger.error(
                     f"The scheduler took {duration_seconds} to schedule {self.allocation_counter} tasks in {cycles} cycles."
                 )
-
                 sys.exit(1)
 
             # Sort the remaining tasks and try to allocate the first one
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
 
-            logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
+            # logger.info(f"Pending tasks: {[t.id for t in sorted_tasks]}")
 
             # logger.info(f"Sorted tasks: {[st.id for st in sorted_tasks]}")
             # time.sleep(1)
@@ -152,6 +137,7 @@ class Scheduler:
             n_allocated_tasks = 0
             for task in sorted_tasks:
                 if self.can_run(task):
+                    # print("Allocated:", task.name, " - with blocks", task.n_blocks)
 
                     self.allocate_task(task)
                     allocated_task_ids.append(task.id)
@@ -174,7 +160,6 @@ class Scheduler:
                         == 0
                     ):
                         # We go back to the beginning of the while loop
-
                         converged = False
                         break
                 # else:
@@ -188,7 +173,7 @@ class Scheduler:
         try:
             self.task_set_block_ids(task)
             logger.debug(
-                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
             )
         except NotEnoughBlocks as e:
             # logger.warning(
@@ -279,7 +264,6 @@ class Scheduler:
             self.iteration_counter[scheduling_time] += 1
 
             return sorted_tasks
-
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, task: Task) -> bool:

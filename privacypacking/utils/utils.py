@@ -6,81 +6,15 @@ from omegaconf import OmegaConf
 
 from privacypacking.schedulers.utils import ALLOCATED
 
-EPSILON = "epsilon"
-DELTA = "delta"
-BLOCKS_SPEC = "blocks_spec"
-TASKS_SPEC = "tasks_spec"
-SCHEDULER_SPEC = "scheduler_spec"
-ENABLED = "enabled"
-NUM = "num"
-CURVE_DISTRIBUTIONS = "curve_distributions"
-CUSTOM = "custom"
-DATA_PATH = "data_path"
-DATA_TASK_FREQUENCIES_PATH = "data_task_frequencies_path"
-READ_BLOCK_SELECTION_POLICY_FROM_CONFIG = "read_block_selecting_policy_from_config"
-METHOD = "method"
-METRIC = "metric"
-N = "n"
-DATA_LIFETIME = "data_lifetime"
-PROFIT = "profit"
-SOLVER = "solver"
-GUROBI = "gurobi"
-MIP = "mip"
-ACTUAL = "actual"
-NORMALIZE_BY_AVAILABLE_BUDGET = "normalize_by_available_budget"
-NORMALIZE_BY_CAPACITY = "normalize_by_capacity"
-
-THRESHOLD_UPDATE_MECHANISM = "threshold_update_mechanism"
-PLOT_FILE = "plot_file"
-LOG_FILE = "log_file"
-
-FREQUENCY = "frequency"
-TASK_ARRIVAL_FREQUENCY = "task_arrival_frequency"
-AVG_NUMBER_TASKS_PER_BLOCK = "avg_number_tasks_per_block"
-BLOCK_ARRIVAL_FRQUENCY = "block_arrival_frequency"
-MAX_BLOCKS = "max_blocks"
-# MAX_TASKS = "max_tasks"
-FROM_MAX_BLOCKS = "from_max_blocks"
-GLOBAL_SEED = "global_seed"
-DETERMINISTIC = "deterministic"
-LOG_EVERY_N_ITERATIONS = "log_every_n_iterations"
-RANDOM = "random"
-POISSON = "poisson"
-CONSTANT = "constant"
-TASK_ARRIVAL_INTERVAL = "task_arrival_interval"
-BLOCK_ARRIVAL_INTERVAL = "block_arrival_interval"
-BLOCKS_REQUEST = "blocks_request"
-NUM_BLOCKS_MAX = "num_blocks_max"
-NUM_BLOCKS = "num_blocks"
-INITIAL_NUM = "initial_num"
-SAMPLING = "sampling"
-BLOCK_SELECTING_POLICY = "block_selecting_policy"
-SCHEDULING_WAIT_TIME = "scheduling_wait_time"
-BUDGET_UNLOCKING_TIME = "budget_unlocking_time"
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
-
 REPO_ROOT = Path(__file__).parent.parent.parent
-
-PRIVATEKUBE_DEMANDS_PATH = REPO_ROOT.joinpath("data/privatekube_demands")
 LOGS_PATH = REPO_ROOT.joinpath("logs")
-DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default_config.yaml")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
+DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
-
-
-def update_dict(src, des):
-    ref = des
-    for k, v in src.items():
-        if isinstance(v, dict):
-            prev_ref = ref
-            ref = ref[k]
-            update_dict(v, ref)
-            ref = prev_ref
-        else:
-            ref[k] = v
 
 
 def load_logs(log_path: str, relative_path=True) -> dict:
@@ -147,10 +81,6 @@ def get_logs(
     omegaconf = OmegaConf.create(simulator_config["omegaconf"])
 
     datapoint = {
-        # "scheduler": simulator_config["scheduler_spec"]["method"],
-        # "solver": simulator_config["scheduler_spec"]["solver"],
-        # "scheduler_n": simulator_config["scheduler_spec"]["n"],
-        # "scheduler_metric": simulator_config["scheduler_spec"]["metric"],
         "scheduler": omegaconf.scheduler.method,
         "solver": omegaconf.scheduler.solver,
         "scheduler_n": omegaconf.scheduler.n,
@@ -166,17 +96,17 @@ def get_logs(
         "mean_task_per_block": omegaconf.tasks.avg_num_tasks_per_block,
         "data_path": omegaconf.tasks.data_path,
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
+        "initial_blocks": omegaconf.blocks.initial_num,
+        "max_blocks": omegaconf.blocks.max_num,
         "tasks": log_tasks,
         "blocks": log_blocks,
         "task_frequencies_path": omegaconf.tasks.frequencies_path,
         "tasks_path": omegaconf.tasks.tasks_path,
+        "metric_recomputation_period": omegaconf.scheduler.metric_recomputation_period,
+        "normalize_by": omegaconf.metric.normalize_by,
+        "temperature": omegaconf.metric.temperature,
     }
 
-    datapoint[
-        "metric_recomputation_period"
-    ] = omegaconf.scheduler.metric_recomputation_period
-    datapoint["normalize_by"] = omegaconf.metric.normalize_by
-    datapoint["temperature"] = omegaconf.metric.temperature
     # TODO: remove allocating_task_id from args
     # TODO: Store scheduling times into the tasks directly?
 

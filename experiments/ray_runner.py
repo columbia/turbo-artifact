@@ -1,8 +1,6 @@
-import argparse
 import os
-from datetime import datetime
-from functools import partial
 from typing import Any, Dict, List
+from pathlib import Path
 
 import ray
 import yaml
@@ -14,23 +12,19 @@ from privacypacking import schedulers
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     ARGMAX_KNAPSACK,
-    BASIC_SCHEDULER,
     BATCH_OVERFLOW_RELEVANCE,
     DOMINANT_SHARES,
     DYNAMIC_FLAT_RELEVANCE,
     FCFS,
     FLAT_RELEVANCE,
-    NAIVE_AVERAGE,
     OVERFLOW_RELEVANCE,
     SIMPLEX,
     SOFT_KNAPSACK,
-    THRESHOLD_UPDATING,
-    TIME_BASED_BUDGET_UNLOCKING,
     VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
-from privacypacking.utils.utils import *
+from privacypacking.utils.utils import RAY_LOGS
 
 
 def run_and_report(config: dict) -> None:
@@ -38,23 +32,18 @@ def run_and_report(config: dict) -> None:
     metrics = sim.run()
     # logger.info(f"Trial logs: {tune.get_trial_dir()}")
     tune.report(**metrics)
-
     # return tune.get_trial_dir()
 
 
 def grid_offline(
     num_tasks: List[int],
     num_blocks: List[int],
-    data_path: str = "",
+    data_path: List[str],
     optimal: bool = False,
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
 ):
-    # TODO: remove the remaining stuff in there
-    with open(DEFAULT_CONFIG_FILE, "r") as f:
-        config = yaml.safe_load(f)
-
     metrics = [
         SIMPLEX,
         DOMINANT_SHARES,
@@ -63,27 +52,12 @@ def grid_offline(
         ARGMAX_KNAPSACK,
     ]
 
-    num_blocks = tune.grid_search(num_blocks)
-    block_selection_policies = ["RandomBlocks"]
+    block_selection_policy = ["RandomBlocks"]
     temperature = [-1]
-
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM].update(
-        {
-            SAMPLING: True,
-            INITIAL_NUM: tune.grid_search(num_tasks),
-            DATA_PATH: data_path,
-            DATA_TASK_FREQUENCIES_PATH: "frequencies.yaml",
-            FREQUENCY: 1,
-            READ_BLOCK_SELECTION_POLICY_FROM_CONFIG: {
-                ENABLED: True,
-                BLOCK_SELECTING_POLICY: tune.grid_search(block_selection_policies),
-            },
-        }
-    )
-
     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
     gurobi_threads = os.cpu_count() // 4
 
+    config = {}
     config["omegaconf"] = {
         "scheduler": {
             "method": "offline",
@@ -107,6 +81,11 @@ def grid_offline(
             "initial_num": num_blocks,
             "max_num": num_blocks,
         },
+        "tasks": {
+            "initial_num": tune.grid_search(num_tasks),
+            "data_path": tune.grid_search(data_path),
+            "block_selection_policy": tune.grid_search(block_selection_policy),
+        },
     }
 
     experiment_analysis = tune.run(
@@ -127,9 +106,7 @@ def grid_offline(
 
     all_trial_paths = experiment_analysis._get_trial_paths()
     experiment_dir = Path(all_trial_paths[0]).parent
-
     rdf = load_ray_experiment(experiment_dir)
-
     return rdf
 
 
@@ -195,7 +172,7 @@ def grid_offline_heterogeneity_knob(
             "tasks_path": tune.grid_search(tasks_paths),
             "frequencies_path": tune.grid_search(frequencies),
             "block_selection_policy": tune.grid_search(block_selection_policies),
-            "sampling": POISSON,
+            "sampling": "poisson",
             "initial_num": tune.grid_search(num_tasks),
         },
     }
@@ -238,34 +215,27 @@ def grid_offline_heterogeneity_knob(
 
 
 def grid_online(
-    custom_config: str = "time_based_budget_unlocking/privatekube/base.yaml",
-    scheduler_scheduling_time=[1],
-    metric_recomputation_period=100,
+    scheduler_scheduling_time: List[int],
+    initial_blocks: List[int],
+    max_blocks: List[int],
+    metric_recomputation_period: List[int],
+    data_path: List[str],
+    tasks_sampling: str,
+    data_lifetime: List[int],
+    avg_num_tasks_per_block: List[int] = [100],
 ):
-    with open(DEFAULT_CONFIG_FILE, "r") as f:
-        config = yaml.safe_load(f)
-    with open(
-        DEFAULT_CONFIG_FILE.parent.joinpath(custom_config),
-        "r",
-    ) as user_config:
-        user_config = yaml.safe_load(user_config)
-    update_dict(user_config, config)
     # ray.init(log_to_driver=False)
-
-    scheduler_methods = [TIME_BASED_BUDGET_UNLOCKING]
     scheduler_metrics = [
-        SOFT_KNAPSACK,
-        # ARGMAX_KNAPSACK,
+        # SOFT_KNAPSACK,
+        ARGMAX_KNAPSACK,
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
         #  FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        # DOMINANT_SHARES,
+        DOMINANT_SHARES,
     ]
 
-    # temperature = [0.1, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0, 3, 4, 5]
-    # temperature = [0.001, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 1000]
     temperature = [0.01]
 
     # Fully unlocked case
@@ -274,38 +244,23 @@ def grid_online(
 
     # Progressive unlocking
     n = [1_000]
-    data_lifetime = [5]
+    # data_lifetime = [5]
 
-    avg_number_tasks_per_block = [100]
-    max_blocks = [20]
-    initial_blocks = [10]
-    block_selection_policies = ["LatestBlocksFirst"]
-
-    # data_path = "mixed_curves"
-    data_path = "mixed_curves_profits"
-
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-    ][ENABLED] = True
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][
-        READ_BLOCK_SELECTION_POLICY_FROM_CONFIG
-    ][BLOCK_SELECTING_POLICY] = tune.grid_search(block_selection_policies)
-    config[TASKS_SPEC][CURVE_DISTRIBUTIONS][CUSTOM][DATA_PATH] = data_path
-
-    config[TASKS_SPEC][TASK_ARRIVAL_FREQUENCY][POISSON][
-        AVG_NUMBER_TASKS_PER_BLOCK
-    ] = tune.grid_search(avg_number_tasks_per_block)
+    block_selection_policy = ["LatestBlocksFirst"]
+    config = {}
 
     config["omegaconf"] = {
         "scheduler": {
-            "metric_recomputation_period": metric_recomputation_period,
+            "metric_recomputation_period": tune.grid_search(
+                metric_recomputation_period
+            ),
             # "log_warning_every_n_allocated_tasks": 500,
             "scheduler_timeout_seconds": 20 * 60,
-            DATA_LIFETIME: tune.grid_search(data_lifetime),
-            SCHEDULING_WAIT_TIME: tune.grid_search(scheduler_scheduling_time),
-            METHOD: "batch",
-            METRIC: tune.grid_search(scheduler_metrics),
-            N: tune.grid_search(n),
+            "data_lifetime": tune.grid_search(data_lifetime),
+            "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
+            "method": "batch",
+            "metric": tune.grid_search(scheduler_metrics),
+            "n": tune.grid_search(n),
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -314,42 +269,51 @@ def grid_online(
         },
         "logs": {
             "verbose": False,
-            "save": True,
+            "save": False,
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
         },
+        "tasks": {
+            "sampling": tasks_sampling,
+            "data_path": tune.grid_search(data_path),
+            "block_selection_policy": tune.grid_search(block_selection_policy),
+            "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+        },
     }
-
     logger.info(f"Tune config: {config}")
 
-    tune.run(
+    experiment_analysis = tune.run(
         run_and_report,
         config=config,
         resources_per_trial={"cpu": 1},
         # resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS,
         resume=False,
-        verbose=0,
+        verbose=1,
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
-            tune.integration.mlflow.MLflowLoggerCallback(
-                experiment_name="mixed_curves_online",
-            ),
+            # tune.integration.mlflow.MLflowLoggerCallback(
+            #     experiment_name="grid-online",
+            # ),
         ],
         progress_reporter=ray.tune.CLIReporter(
             metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
             parameter_columns={
-                "scheduler_spec/scheduling_wait_time": "T",
-                "scheduler_spec/data_lifetime": "lifetime",
-                "scheduler_spec/metric": "metric",
-                "omegaconf/metric/temperature": "temperature",
+                "omegaconf/scheduler/scheduling_wait_time": "T",
+                "omegaconf/scheduler/data_lifetime": "lifetime",
+                "omegaconf/scheduler/metric": "metric",
+                # "omegaconf/metric/temperature": "temperature",
             },
             max_report_frequency=60,
         ),
     )
+    all_trial_paths = experiment_analysis._get_trial_paths()
+    experiment_dir = Path(all_trial_paths[0]).parent
+    rdf = load_ray_experiment(experiment_dir)
+    return rdf
 
 
 class CustomLoggerCallback(tune.logger.LoggerCallback):
@@ -362,7 +326,7 @@ class CustomLoggerCallback(tune.logger.LoggerCallback):
         logger.info(
             [
                 f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit", "temperature"]
+                for key in ["n_allocated_tasks", "realized_profit"]
             ]
         )
         return

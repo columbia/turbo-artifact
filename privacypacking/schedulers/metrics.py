@@ -22,11 +22,7 @@ from scipy.sparse.dok import dok_matrix
 from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Block, Task
-from privacypacking.schedulers.scheduler import Scheduler, TaskQueue
-from privacypacking.utils.utils import (
-    NORMALIZE_BY_AVAILABLE_BUDGET,
-    NORMALIZE_BY_CAPACITY,
-)
+from privacypacking.schedulers.scheduler import TaskQueue
 
 
 class MetricException(Exception):
@@ -80,7 +76,6 @@ class Fcfs(Metric):
     def apply(
         self, task: Task, blocks: Dict[int, Block] = None, tasks: List[Task] = None
     ) -> id:
-        # return task.id
         # The smallest id has the highest priority
         return 1 / (task.id + 1)
 
@@ -126,26 +121,6 @@ class DynamicFlatRelevance(Metric):
             return float("inf")
         logger.info(f"Task {task.id} cost: {cost} profit: {task.profit / cost} ")
         return task.profit / cost
-
-    def is_dynamic(self):
-        return True
-
-
-class SquaredDynamicFlatRelevance(Metric):
-    def apply(
-        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
-    ) -> float:
-        total_cost = 0.0
-        block_cost = 0
-        for block_id, budget in task.budget_per_block.items():
-            for alpha in budget.alphas:
-                demand = budget.epsilon(alpha)
-                remaining_budget = blocks[block_id].budget.epsilon(alpha)
-                if remaining_budget > 0:
-                    block_cost += demand / remaining_budget
-            total_cost += block_cost ** 2
-        task.cost = total_cost
-        return task.profit / total_cost
 
     def is_dynamic(self):
         return True
@@ -281,7 +256,7 @@ class VectorizedBatchOverflowRelevance(Metric):
                         float("inf")
                     )
 
-        # overflow > 0 or infty (if we drop blocks with no contention)
+        # overflow > 0 or infinity (if we drop blocks with no contention)
         relevance = np.reciprocal(overflow)
         # logger.info(f"Relevance: {relevance}")
 
@@ -480,6 +455,19 @@ class SoftKnapsack(RelevanceMetric):
             m.optimize()
 
             opt = m.getObjective().getValue()
+        return opt
+
+    def solve_local_knapsack_no_profits(self, capacity, task_demands) -> float:
+        if capacity <= 0:
+            return 0
+        opt = 0
+        sum = 0
+        demands = list(task_demands.values())
+        demands.sort()
+        for demand in demands:
+            if sum + demand <= capacity:
+                sum += demand
+                opt += 1
         return opt
 
     def compute_relevance_matrix(
@@ -758,8 +746,8 @@ class ArgmaxKnapsack(SoftKnapsack):
                         np.array(efficiencies_per_block_alpha)
                     )
 
-                args.append((local_capacity, task_ids, task_demands, task_profits))
-
+                # args.append((local_capacity, task_ids, task_demands, task_profits))
+                args.append((local_capacity, task_demands))
             if self.config.save_profit_matrix:
                 min_profit_per_block[block_id] = current_min_profit
 
@@ -767,7 +755,7 @@ class ArgmaxKnapsack(SoftKnapsack):
             # NOTE: you probably don't need to run in parallel.
             logger.info(f"Solving the knapsacks in parallel...")
             with Pool(processes=self.config.n_knapsack_solvers) as pool:
-                results = pool.starmap(self.solve_local_knapsack, args)
+                results = pool.starmap(self.solve_local_knapsack_no_profits, args)
             logger.info(f"Collecting the results...")
         else:
             logger.info(f"Solving the knapsacks one by one...")
@@ -780,9 +768,9 @@ class ArgmaxKnapsack(SoftKnapsack):
                     max_profits[block_id, alpha_index] = results[i]
                 else:
                     logger.info(f"Solving{i} {block_id} alpha: {alpha}")
-                    max_profits[block_id, alpha_index] = self.solve_local_knapsack(
-                        *args[i]
-                    )
+                    max_profits[
+                        block_id, alpha_index
+                    ] = self.solve_local_knapsack_no_profits(*args[i])
 
                 i += 1
 

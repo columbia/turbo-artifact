@@ -25,10 +25,6 @@ class UnlockingBlock(Block):
         self.unlocked_budget = self.unlocked_budget.add_with_threshold(
             budget if budget else self.fair_share, self.initial_budget
         )
-        # print("\n\nFair Share \n", self.fair_share)
-        # print("\nUpdate budget\n", self.budget)
-        # print("\nTotal budget capacity\n", self.block.initial_budget)
-        # print("\n\n")
 
     def is_unlocked(self):
         return self.unlocked_budget == self.initial_budget
@@ -101,14 +97,11 @@ class TimeUnlockingBlock(UnlockingBlock):
 
 
 class TBudgetUnlocking(Scheduler):
-    """T-unlocking: unlocks some budget every time T units of time pass."""
+    """T-unlocking: unlocks some budget per some period."""
 
     def __init__(
         self,
         metric,
-        # n,
-        # budget_unlocking_time,
-        # scheduling_wait_time,
         env,
         simulator_config: DictConfig,
     ):
@@ -123,9 +116,6 @@ class TBudgetUnlocking(Scheduler):
         )
         self.scheduling_wait_time = simulator_config.scheduler.scheduling_wait_time
         self.env = env
-
-        # # TODO: why do we launch this as a process?
-        # self.env.process(self.schedule_queue())
 
     def add_block(self, block: Block) -> None:
         unlocking_block = TimeUnlockingBlock(

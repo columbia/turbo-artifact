@@ -26,7 +26,7 @@ blocks:
   max_num: 10
 
 tasks:
-  data_path: "heterogenous"
+  data_path: "heterogeneous"
   frequencies_path: "frequencies.yaml"
   tasks_path: "tasks"
   initial_num: 100
@@ -35,8 +35,8 @@ tasks:
   sampling: "poisson"
   avg_num_tasks_per_block: 100
 
-  # Set to RandomBlocks or LatestBlocksFirst for instance. 
-  # Will override the selection given by individual tasks specs. 
+  # Set to RandomBlocks or LatestBlocksFirst for instance.
+  # Will override the selection given by individual tasks specs.
   # Leave empty to follow the tasks specs.
   block_selection_policy: ""
 
