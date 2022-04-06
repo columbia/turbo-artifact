@@ -21,6 +21,12 @@ def build_zoo() -> list:
         # for sigma in np.linspace(0.01, 100, 100):
         curve_zoo.append(GaussianCurve(sigma=sigma))
         task_names.append(f"gaussian-{sigma:.4f}")
+
+    for sigma in np.geomspace(0.01, 10, 10):
+        for dataset_size in np.geomspace(1_000, 100_000_000, 10):
+            curve_zoo.append(GaussianCurve(sigma=sigma) * np.ceil(np.log(dataset_size)))
+            task_names.append(f"dpftrl-{sigma:.4f}-{np.ceil(np.log(dataset_size))}")
+
     for sigma in np.geomspace(0.01, 10, 100):
         curve_zoo.append(LaplaceCurve(laplace_noise=sigma))
         task_names.append(f"laplace-{sigma:.4f}")
@@ -81,11 +87,43 @@ def zoo_df(zoo: list, clipped=True, epsilon=10, delta=1e-8) -> pd.DataFrame:
     tasks = tasks.rename(columns={"normalized_epsilons": "epsilon_min"})
     tasks["epsilon_max"] = df.groupby("task_id")["normalized_epsilons"].agg(max)
     tasks["epsilon_range"] = tasks["epsilon_max"] - tasks["epsilon_min"]
-    tasks = tasks.query("epsilon_min < 1 and epsilon_min > 1e-3")
+    tasks = tasks.query("epsilon_min < 1 and epsilon_min > 5e-3")
+
+    indx = df.groupby("task_id")["normalized_epsilons"].idxmin()
+    best_alpha = df.loc[indx][["task_id", "alphas"]]
+    best_alpha = best_alpha.rename(columns={"alphas": "best_alpha"})
+    tasks = tasks.merge(best_alpha, how="outer", on="task_id")
 
     df = df.merge(tasks, on="task_id")
-
     return df, tasks
+
+
+def alpha_variance_frequencies(
+    tasks_df: pd.DataFrame, n_bins=7, sigma=0
+) -> pd.DataFrame:
+    def map_range_to_bin(alpha):
+        d = {3: -3, 4: -2, 5: -1, 6: 0, 8: 1, 16: 2, 64: 3}
+        return d[alpha]
+
+    df = tasks_df.copy()
+    df["bin_id"] = df["best_alpha"].apply(map_range_to_bin)
+
+    count_by_bin = list(df.groupby("bin_id").count().epsilon_range)
+
+    def map_bin_to_freq(k, center=0):
+        if sigma == 0:
+            if k == center:
+                return 1 / count_by_bin[k]
+            else:
+                return 0
+        # Kind of discrete Gaussian distribution to choose the bin, then uniformly at random inside each bin
+        return np.exp((k - center) ** 2 / (2 * sigma ** 2)) / count_by_bin[k]
+
+    df["frequency"] = df["bin_id"].apply(map_bin_to_freq)
+    # We normalize (we chopped off the last bins, + some error is possible)
+    df["frequency"] = df["frequency"] / df["frequency"].sum()
+
+    return df
 
 
 def geometric_frequencies(tasks_df: pd.DataFrame, n_bins=20, p=0.5) -> pd.DataFrame:

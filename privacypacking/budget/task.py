@@ -53,9 +53,10 @@ class Task:
     def set_budget_per_block(self, block_ids: Iterable[int]):
         pass
 
-    def dump(self):
+    def dump(self, budget_per_block=True):
         return {
             "id": self.id,
+            "name": self.name,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,

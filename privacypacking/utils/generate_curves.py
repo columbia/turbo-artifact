@@ -14,6 +14,7 @@ from privacypacking.budget.curves import (
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
 from privacypacking.utils.zoo import (
+    alpha_variance_frequencies,
     build_zoo,
     gaussian_block_distribution,
     geometric_frequencies,
@@ -21,7 +22,8 @@ from privacypacking.utils.zoo import (
 )
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data")
-P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
+# P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
+P_GRID = [0, 1, 2, 4, 8, 16]
 app = typer.Typer()
 
 
@@ -165,7 +167,9 @@ def heterogeneous(
     logger.info(f"Saving the frequencies at {frequencies_path}...")
 
     for p in P_GRID:
-        p_tasks_df = geometric_frequencies(tasks_df, p=p)
+        # p_tasks_df = geometric_frequencies(tasks_df, p=p)
+
+        p_tasks_df = alpha_variance_frequencies(tasks_df, sigma=p)
 
         frequencies_dict = {}
         sum_frequencies = 0

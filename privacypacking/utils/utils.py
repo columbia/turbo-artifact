@@ -33,6 +33,10 @@ def get_logs(
     simulator_config,
     **kwargs,
 ) -> dict:
+
+    simulator_config = simulator_config.dump()
+    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
+
     n_allocated_tasks = 0
     tasks_scheduling_times = []
     allocated_tasks_scheduling_delays = []
@@ -40,45 +44,45 @@ def get_logs(
     realized_profit = 0
 
     log_tasks = []
-    for task in tasks:
-        task_dump = task.dump()
+    if omegaconf.logs.save:
+        for task in tasks:
+            task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
 
-        maximum_profit += task.profit
-        if tasks_info.tasks_status[task.id] == ALLOCATED:
-            n_allocated_tasks += 1
-            realized_profit += task.profit
-            tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
-            allocated_tasks_scheduling_delays.append(
-                tasks_info.scheduling_delay.get(task.id, None)
+            maximum_profit += task.profit
+            if tasks_info.tasks_status[task.id] == ALLOCATED:
+                n_allocated_tasks += 1
+                realized_profit += task.profit
+                tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
+                allocated_tasks_scheduling_delays.append(
+                    tasks_info.scheduling_delay.get(task.id, None)
+                )
+
+            task_dump.update(
+                {
+                    "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                    "status": tasks_info.tasks_status[task.id],
+                    "creation_time": tasks_info.creation_time[task.id],
+                    "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                    "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                    "allocation_index": tasks_info.allocation_index.get(task.id, None),
+                }
             )
-
-        task_dump.update(
-            {
-                "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
-                "status": tasks_info.tasks_status[task.id],
-                "creation_time": tasks_info.creation_time[task.id],
-                "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
-                "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
-                "allocation_index": tasks_info.allocation_index.get(task.id, None),
-            }
-        )
-        log_tasks.append(
-            task_dump
-        )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+            log_tasks.append(
+                task_dump
+            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
 
     # TODO: Store scheduling times into the tasks directly?
 
     log_blocks = []
-    for block in blocks.values():
-        log_blocks.append(block.dump())
+    if omegaconf.logs.save:
+        for block in blocks.values():
+            log_blocks.append(block.dump())
 
     n_allocated_tasks = n_allocated_tasks
     total_tasks = len(tasks)
     # tasks_info = tasks_info.dump()
     # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
-    simulator_config = simulator_config.dump()
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
 
     datapoint = {
         "scheduler": omegaconf.scheduler.method,
@@ -130,8 +134,8 @@ def save_logs(config, log_dict, compact=False, compressed=False):
             fp.write(json_object)
 
 
-def global_metrics(logs: dict, verbose=False) -> dict:
-    if not verbose:
-        logs["tasks"] = ""
-        logs["blocks"] = ""
-    return logs
+# def global_metrics(logs: dict, verbose=False) -> dict:
+#     if not verbose:
+#         logs["tasks"] = ""
+#         logs["blocks"] = ""
+#     return logs

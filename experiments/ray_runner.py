@@ -1,6 +1,6 @@
 import os
-from typing import Any, Dict, List
 from pathlib import Path
+from typing import Any, Dict, List
 
 import ray
 import yaml
@@ -118,10 +118,12 @@ def grid_offline_heterogeneity_knob(
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
+    block_axis=False,
+    alpha_axis=True,
 ):
 
     metrics = [
-        # SIMPLEX,
+        SIMPLEX,
         DOMINANT_SHARES,
         # FLAT_RELEVANCE,
         # OVERFLOW_RELEVANCE,
@@ -130,11 +132,16 @@ def grid_offline_heterogeneity_knob(
 
     # tasks_paths = ["tasks"]
 
-    # frequencies = [f"frequencies-{p}.yaml" for p in P_GRID]
-    # tasks_paths = [f"tasks-mu10-sigma0"]
-
-    frequencies = ["frequencies-0.95.yaml"]
-    tasks_paths = [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
+    tasks_paths = (
+        [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
+        if block_axis
+        else [f"tasks-mu10-sigma0"]
+    )
+    frequencies = (
+        [f"frequencies-{p}.yaml" for p in P_GRID]
+        if alpha_axis
+        else ["frequencies-0.95.yaml"]
+    )
 
     num_blocks = tune.grid_search(num_blocks)
     block_selection_policies = ["RandomBlocks"]
@@ -145,6 +152,7 @@ def grid_offline_heterogeneity_knob(
 
     config = {}
     config["omegaconf"] = {
+        "global_seed": 0,
         "scheduler": {
             "method": "offline",
             "metric": tune.grid_search(metrics),
@@ -203,12 +211,18 @@ def grid_offline_heterogeneity_knob(
         p = float(d.replace(".yaml", ""))
         return (1 - p) / p ** 2
 
+    def get_alpha_std(path):
+        _, d = path.split("-")
+        p = float(d.replace(".yaml", ""))
+        return p
+
     def get_block_std(path):
         if "sigma" not in path:
             return 0
         return float(path.split("sigma")[1])
 
-    rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    # rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
     rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
     return rdf
     # return experiment_analysis.dataframe()
@@ -319,16 +333,13 @@ def grid_online(
 class CustomLoggerCallback(tune.logger.LoggerCallback):
     """Custom logger interface"""
 
-    def __init__(self) -> None:
+    def __init__(self, metrics=["scheduler_metric"]) -> None:
+        self.metrics = ["n_allocated_tasks", "realized_profit"]
+        self.metrics.extend(metrics)
         super().__init__()
 
     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-        logger.info(
-            [
-                f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit"]
-            ]
-        )
+        logger.info([f"{key}: {result[key]}" for key in self.metrics])
         return
 
     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):

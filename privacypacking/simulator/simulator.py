@@ -3,7 +3,7 @@ from datetime import datetime
 import simpy
 
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
-from privacypacking.utils.utils import get_logs, global_metrics
+from privacypacking.utils.utils import get_logs
 
 
 class Simulator:
@@ -42,5 +42,6 @@ class Simulator:
             if hasattr(self.rm.scheduler, "scheduling_queue_info")
             else None,
         )
-        verbose = self.config.omegaconf.logs.save  # Saves tasks and blocks logs too
-        return global_metrics(logs, verbose)
+        # verbose = self.config.omegaconf.logs.save  # Saves tasks and blocks logs too
+        # return global_metrics(logs, verbose)
+        return logs
