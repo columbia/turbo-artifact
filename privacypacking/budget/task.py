@@ -54,17 +54,21 @@ class Task:
         pass
 
     def dump(self, budget_per_block=True):
-        return {
+        d = {
             "id": self.id,
             "name": self.name,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,
-            "budget_per_block": {
+            "n_blocks": len(self.budget_per_block),
+            "max_block_id": max(list(self.budget_per_block.keys())),
+        }
+        if budget_per_block:
+            d["budget_per_block"] = {
                 block_id: budget.dump()
                 for block_id, budget in self.budget_per_block.items()
-            },
-        }
+            }
+        return d
 
     def build_demand_matrix(self, alphas=ALPHAS, max_block_id=None):
         # Prepare a sparse matrix of the demand

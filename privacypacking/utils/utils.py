@@ -1,5 +1,7 @@
 import json
+import uuid
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 
 from omegaconf import OmegaConf
@@ -121,11 +123,14 @@ def get_logs(
 
 
 def save_logs(config, log_dict, compact=False, compressed=False):
-    config.log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_PATH.joinpath(
+        f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+    )
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     if compressed:
         raise NotImplementedError
     else:
-        with open(config.log_path, "w") as fp:
+        with open(log_path, "w") as fp:
             if compact:
                 json_object = json.dumps(log_dict, separators=(",", ":"))
             else:

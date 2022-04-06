@@ -5,12 +5,43 @@ import pandas as pd
 import scipy
 
 from privacypacking.budget import Budget
+from privacypacking.budget.budget import ALPHAS
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
     SubsampledGaussianCurve,
     SubsampledLaplaceCurve,
+    SyntheticPolynomialCurve,
 )
+
+
+def build_synthetic_zoo() -> list:
+    curve_zoo = []
+    task_names = []
+
+    for best_alpha in ALPHAS[5:-2]:
+        for norm_epsilon_min in np.linspace(0.01, 0.5, 2):
+            for norm_epsilon_left in np.linspace(1, 5, 2):
+                for norm_epsilon_right in np.linspace(1, 5, 2):
+                    if (
+                        norm_epsilon_min < norm_epsilon_left
+                        and norm_epsilon_min < norm_epsilon_right
+                    ):
+
+                        # for sigma in np.linspace(0.01, 100, 100):
+                        curve_zoo.append(
+                            SyntheticPolynomialCurve(
+                                best_alpha=best_alpha,
+                                epsilon_min=norm_epsilon_min,
+                                epsilon_left=norm_epsilon_left,
+                                epsilon_right=norm_epsilon_right,
+                            )
+                        )
+                        task_names.append(
+                            f"{norm_epsilon_left:.3f}-{norm_epsilon_min:.3f}-{norm_epsilon_right:.3f}-{best_alpha}"
+                        )
+
+    return list(zip(task_names, curve_zoo))
 
 
 def build_zoo() -> list:

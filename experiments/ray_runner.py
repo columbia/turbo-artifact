@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -245,7 +246,7 @@ def grid_online(
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
-        #  FCFS,
+        FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
     ]
@@ -268,7 +269,7 @@ def grid_online(
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
             ),
-            # "log_warning_every_n_allocated_tasks": 500,
+            # "log_warning_every_n_allocated_tasks": 50,
             "scheduler_timeout_seconds": 20 * 60,
             "data_lifetime": tune.grid_search(data_lifetime),
             "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
@@ -283,7 +284,7 @@ def grid_online(
         },
         "logs": {
             "verbose": False,
-            "save": False,
+            "save": True,
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
@@ -309,9 +310,9 @@ def grid_online(
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
-            # tune.integration.mlflow.MLflowLoggerCallback(
-            #     experiment_name="grid-online",
-            # ),
+            tune.integration.mlflow.MLflowLoggerCallback(
+                experiment_name=f"grid-online-{datetime.now().strftime('%m%d-%H%M%S')}",
+            ),
         ],
         progress_reporter=ray.tune.CLIReporter(
             metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
