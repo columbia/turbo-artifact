@@ -279,14 +279,14 @@ def plot_fairness(fig_dir):
 def plot_alibaba(fig_dir):
     rdf = grid_online(
         # scheduler_scheduling_time=[0.01, 0.1, 1, 10],
-        scheduler_scheduling_time=[1, 10],
+        scheduler_scheduling_time=[1, 10, 50],
         metric_recomputation_period=[50],
         initial_blocks=[20],
-        max_blocks=[200, 400],
+        max_blocks=[100, 200, 400],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
         tasks_sampling="",
         # data_lifetime=[1],
-        data_lifetime=[1, 10],
+        data_lifetime=[50, 100],
     )
 
     fig = px.line(

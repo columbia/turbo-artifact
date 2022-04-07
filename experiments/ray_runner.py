@@ -270,7 +270,7 @@ def grid_online(
                 metric_recomputation_period
             ),
             # "log_warning_every_n_allocated_tasks": 50,
-            "scheduler_timeout_seconds": 20 * 60,
+            "scheduler_timeout_seconds": 20 * 60 * 60,
             "data_lifetime": tune.grid_search(data_lifetime),
             "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
             "method": "batch",
