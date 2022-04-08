@@ -129,6 +129,7 @@ def grid_offline_heterogeneity_knob(
         # FLAT_RELEVANCE,
         # OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
+        FCFS,
     ]
 
     # tasks_paths = ["tasks"]
@@ -136,7 +137,8 @@ def grid_offline_heterogeneity_knob(
     tasks_paths = (
         [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
         if block_axis
-        else [f"tasks-mu10-sigma0"]
+        # else [f"tasks-mu10-sigma0"]
+        else ["tasks"]
     )
     frequencies = (
         [f"frequencies-{p}.yaml" for p in P_GRID]

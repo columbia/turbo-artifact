@@ -20,26 +20,31 @@ def build_synthetic_zoo() -> list:
     task_names = []
 
     for best_alpha in ALPHAS[5:-2]:
-        for norm_epsilon_min in np.linspace(0.01, 0.5, 2):
-            for norm_epsilon_left in np.linspace(1, 5, 2):
-                for norm_epsilon_right in np.linspace(1, 5, 2):
-                    if (
-                        norm_epsilon_min < norm_epsilon_left
-                        and norm_epsilon_min < norm_epsilon_right
-                    ):
+        for norm_epsilon_min in np.linspace(0.01, 0.5, 5):
+            for norm_epsilon_right in np.linspace(0.01, 1, 5):
+                # for norm_epsilon_right in [(1 + norm_epsilon_min) / 2]:
+                # for norm_epsilon_left in np.linspace(0.01, 1, 5):
+                norm_epsilon_left = (norm_epsilon_min + norm_epsilon_right) / 2
+                if (
+                    norm_epsilon_min < norm_epsilon_left
+                    and norm_epsilon_min < norm_epsilon_right
+                ):
 
-                        # for sigma in np.linspace(0.01, 100, 100):
-                        curve_zoo.append(
-                            SyntheticPolynomialCurve(
-                                best_alpha=best_alpha,
-                                epsilon_min=norm_epsilon_min,
-                                epsilon_left=norm_epsilon_left,
-                                epsilon_right=norm_epsilon_right,
-                            )
+                    # for sigma in np.linspace(0.01, 100, 100):
+                    curve_zoo.append(
+                        SyntheticPolynomialCurve(
+                            best_alpha=best_alpha,
+                            epsilon_min=norm_epsilon_min,
+                            epsilon_left=norm_epsilon_left,
+                            epsilon_right=norm_epsilon_right,
                         )
-                        task_names.append(
-                            f"{norm_epsilon_left:.3f}-{norm_epsilon_min:.3f}-{norm_epsilon_right:.3f}-{best_alpha}"
-                        )
+                    )
+                    task_names.append(
+                        f"{norm_epsilon_left:.3f}-{norm_epsilon_min:.3f}-{norm_epsilon_right:.3f}-{best_alpha}"
+                    )
+
+                    # Add only one curve with epsilon_right right above epsilon_min
+                    # break
 
     return list(zip(task_names, curve_zoo))
 

@@ -42,6 +42,7 @@ class SyntheticPolynomialCurve(Budget):
         block = Budget.from_epsilon_delta(epsilon=block_epsilon, delta=block_delta)
 
         non_zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) > 0]
+        zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) == 0]
 
         # x = [non_zero_alphas[0], best_alpha, non_zero_alphas[-2], non_zero_alphas[-1]]
         # y = [
@@ -67,7 +68,8 @@ class SyntheticPolynomialCurve(Budget):
         ]
         f = interp1d(x=x, y=y, kind="slinear")
         orders = {alpha: f(alpha) * block.epsilon(alpha) for alpha in non_zero_alphas}
-        print(orders)
+        for alpha in zero_alphas:
+            orders[alpha] = 1
         super().__init__(orders)
 
 

@@ -282,11 +282,11 @@ def plot_alibaba(fig_dir):
         scheduler_scheduling_time=[1, 10, 50],
         metric_recomputation_period=[50],
         initial_blocks=[20],
-        max_blocks=[100, 200, 400],
+        max_blocks=[50, 100, 200, 400],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
         tasks_sampling="",
         # data_lifetime=[1],
-        data_lifetime=[50, 100],
+        data_lifetime=[10, 50, 100],
     )
 
     fig = px.line(
@@ -307,12 +307,12 @@ def plot_alibaba(fig_dir):
 
 def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
-        num_blocks=[10],
+        num_blocks=[1],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[10_000],
+        num_tasks=[100, 500, 1000, 2000, 10_000],
         # num_tasks=[20_000],
-        data_path="heterogeneous",
-        metric_recomputation_period=100,
+        data_path="heterogeneous_synthetic",
+        metric_recomputation_period=10,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
     )
