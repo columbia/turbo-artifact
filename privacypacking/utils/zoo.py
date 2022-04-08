@@ -95,8 +95,8 @@ def build_zoo() -> list:
     return list(zip(task_names, curve_zoo))
 
 
-def zoo_df(zoo: list, clipped=True, epsilon=10, delta=1e-8) -> pd.DataFrame:
-    block = Budget.from_epsilon_delta(epsilon=10, delta=1e-8)
+def zoo_df(zoo: list, clipped=True, epsilon=10, delta=1e-7) -> pd.DataFrame:
+    block = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
 
     dict_list = defaultdict(list)
     for index, name_and_curve in enumerate(zoo):
@@ -121,14 +121,25 @@ def zoo_df(zoo: list, clipped=True, epsilon=10, delta=1e-8) -> pd.DataFrame:
         df.groupby("task_id")["normalized_epsilons"].agg(min)
     ).reset_index()
     tasks = tasks.rename(columns={"normalized_epsilons": "epsilon_min"})
-    tasks["epsilon_max"] = df.groupby("task_id")["normalized_epsilons"].agg(max)
-    tasks["epsilon_range"] = tasks["epsilon_max"] - tasks["epsilon_min"]
-    tasks = tasks.query("epsilon_min < 1 and epsilon_min > 5e-3")
+
+    # We only consider plausible alphas, not the dominant share (it is irrelevant anyway). "Flatness".
+    tasks["epsilon_range"] = (
+        df.query("alphas in [4,5,6,8]")
+        .groupby("task_id")["normalized_epsilons"]
+        .agg(max)
+    ) - (
+        df.query("alphas in [4,5,6,8]")
+        .groupby("task_id")["normalized_epsilons"]
+        .agg(min)
+    )
+    # tasks["epsilon_range"] = tasks["epsilon_max"] - tasks["epsilon_min"]
+    # tasks = tasks.query("epsilon_min < 1 and epsilon_min > 5e-3")
+    tasks = tasks.query("epsilon_min < 1")
 
     indx = df.groupby("task_id")["normalized_epsilons"].idxmin()
     best_alpha = df.loc[indx][["task_id", "alphas"]]
     best_alpha = best_alpha.rename(columns={"alphas": "best_alpha"})
-    tasks = tasks.merge(best_alpha, how="outer", on="task_id")
+    tasks = tasks.merge(best_alpha, how="inner", on="task_id")
 
     df = df.merge(tasks, on="task_id")
     return df, tasks

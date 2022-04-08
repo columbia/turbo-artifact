@@ -154,7 +154,9 @@ class SubsampledLaplaceCurve(Budget):
     ) -> None:
 
         curve = AmplificationBySampling(PoissonSampling=True)(
-            LaplaceMechanism(b=noise_multiplier), sampling_probability
+            LaplaceMechanism(b=noise_multiplier),
+            sampling_probability,
+            improved_bound_flag=True,
         )
 
         orders = {alpha: curve.get_RDP(alpha) * steps for alpha in alpha_list}
