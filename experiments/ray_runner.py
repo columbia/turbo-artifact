@@ -134,12 +134,33 @@ def grid_offline_heterogeneity_knob(
 
     # tasks_paths = ["tasks"]
 
-    tasks_paths = (
-        [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
-        if block_axis
-        # else [f"tasks-mu10-sigma0"]
-        else ["tasks"]
-    )
+    # TODO: select the right set of curves and try running it!
+
+    if alpha_axis:
+        mu = 1
+        sigma = 0  # Single block case!
+        tasks_paths = []
+        for epsilon_min_avg in [0.05, 0.1, 0.5]:
+            for epsilon_min_std in [0, 0.01, 0.1]:
+                for range_avg in [0.005, 0.05, 0.1]:
+                    for range_std in [0, 0.03]:
+                        tasks_paths.append(
+                            f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std}-ra={range_avg}-rs={range_std}"
+                        )
+
+        # DEBUG:
+        tasks_paths = tasks_paths[0:2]
+
+    else:
+        # tasks_paths = [f"tasks-mu10-sigma0"]
+        tasks_paths = ["tasks"]
+    # tasks_paths = (
+    #     # [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
+
+    #     if block_axis
+    #     # else
+    #     else ["tasks"]
+    # )
     frequencies = (
         [f"frequencies-{p}.yaml" for p in P_GRID]
         if alpha_axis
@@ -227,6 +248,8 @@ def grid_offline_heterogeneity_knob(
     # rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
     rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
     rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
+
+    # TODO: load the hyperparemeters too
     return rdf
     # return experiment_analysis.dataframe()
 

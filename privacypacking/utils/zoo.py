@@ -5,6 +5,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 import scipy
+from loguru import logger
 
 from privacypacking.budget import Budget
 from privacypacking.budget.budget import ALPHAS
@@ -316,16 +317,22 @@ def zoo_df(
 def alpha_variance_frequencies(
     tasks_df: pd.DataFrame, n_bins=7, sigma=0
 ) -> pd.DataFrame:
+
+    # TODO: remove tasks that have been filtered.
+    # BUG
     def map_range_to_bin(alpha):
-        d = {3: -3, 4: -2, 5: -1, 6: 0, 8: 1, 16: 2, 64: 3}
-        return d[alpha]
+        # d = {3: -3, 4: -2, 5: -1, 6: 0, 8: 1, 16: 2, 64: 3}
+        # return d[alpha]
+        return ALPHAS.index(alpha)
 
     df = tasks_df.copy()
     df["bin_id"] = df["best_alpha"].apply(map_range_to_bin)
 
-    count_by_bin = list(df.groupby("bin_id").count().epsilon_range)
+    count_by_bin = dict(df.groupby("bin_id").count().task_id)
 
-    def map_bin_to_freq(k, center=0):
+    # logger.debug(count_by_bin)
+
+    def map_bin_to_freq(k, center=ALPHAS.index(5)):
         if sigma == 0:
             if k == center:
                 return 1 / count_by_bin[k]

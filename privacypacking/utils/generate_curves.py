@@ -126,6 +126,7 @@ def heterogeneous(
 
     task_id_to_name = {}
 
+    logger.info("Generating the initial workload...")
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
 
     args = []
@@ -137,6 +138,9 @@ def heterogeneous(
                         (epsilon_min_avg, epsilon_min_std, range_avg, range_std)
                     )
 
+    # args = [(0.05, 0, 0.05, 0)]
+
+    logger.info("Generating normalized versions with different scales...")
     for arg in tqdm(args):
         epsilon_min_avg, epsilon_min_std, range_avg, range_std = arg
         names_and_curves = normalize_zoo(
@@ -166,9 +170,14 @@ def heterogeneous(
             task_id_to_name[task_id] = task_name
             yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
+        mu_sigma = []
+        mu_sigma.append((1, 0))
         mu = 10
         max_blocks = 20
         for sigma in [0, 1, 4, 10]:
+            mu_sigma.append((mu, sigma))
+
+        for mu, sigma in mu_sigma:
             tasks_path = output_path.joinpath(
                 f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std}-ra={range_avg}-rs={range_std}"
             )

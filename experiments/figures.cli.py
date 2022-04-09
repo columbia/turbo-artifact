@@ -311,7 +311,7 @@ def plot_temp(fig_dir):
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
         num_tasks=[100, 500, 1000, 2000, 10_000],
         # num_tasks=[20_000],
-        data_path="heterogeneous_synthetic",
+        data_path="heterogeneous",
         metric_recomputation_period=10,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
