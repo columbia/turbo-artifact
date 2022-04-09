@@ -5,6 +5,7 @@ import numpy as np
 import typer
 import yaml
 from loguru import logger
+from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Budget
 from privacypacking.budget.curves import (
@@ -19,6 +20,7 @@ from privacypacking.utils.zoo import (
     build_zoo,
     gaussian_block_distribution,
     geometric_frequencies,
+    normalize_zoo,
     zoo_df,
 )
 
@@ -110,10 +112,8 @@ def heterogeneous(
     block_selection_policy: str = typer.Option(
         "RandomBlocks", help="Block selection policy"
     ),
-    output_path: str = typer.Option(
-        str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous_synthetic"))
-    ),
-    synthetic: bool = typer.Option(True),
+    output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
+    synthetic: bool = typer.Option(False),
 ):
 
     output_path = Path(output_path)
@@ -126,31 +126,29 @@ def heterogeneous(
 
     task_id_to_name = {}
 
-    names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
-    _, tasks_df = zoo_df(names_and_curves)
+    original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
 
-    for task_id in tasks_df.task_id:
-        # for name, budget in names_and_curves:
-        name, budget = names_and_curves[task_id]
-        task_dict = {
-            "alphas": budget.alphas,
-            # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
-            "rdp_epsilons": np.array(budget.epsilons).tolist(),
-            "n_blocks": f"1:1",
-            # TODO: multiblock version!
-            "block_selection_policy": block_selection_policy,
-            "profit": "1:1",
-        }
+    args = []
+    for epsilon_min_avg in [0.05, 0.1, 0.5]:
+        for epsilon_min_std in [0, 0.01, 0.1]:
+            for range_avg in [0.005, 0.05, 0.1]:
+                for range_std in [0, 0.03]:
+                    args.append(
+                        (epsilon_min_avg, epsilon_min_std, range_avg, range_std)
+                    )
 
-        task_name = f"{name}.yaml"
-        task_id_to_name[task_id] = task_name
-        yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+    for arg in tqdm(args):
+        epsilon_min_avg, epsilon_min_std, range_avg, range_std = arg
+        names_and_curves = normalize_zoo(
+            original_names_and_curves,
+            epsilon_min_avg=epsilon_min_avg,
+            epsilon_min_std=epsilon_min_std,
+            range_avg=range_avg,
+            range_std=range_std,
+        )
 
-    mu = 10
-    max_blocks = 20
-    for sigma in [0, 1, 2, 4, 6, 10]:
-        tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
-        tasks_path.mkdir(exist_ok=True, parents=True)
+        _, tasks_df = zoo_df(names_and_curves)
+
         for task_id in tasks_df.task_id:
             # for name, budget in names_and_curves:
             name, budget = names_and_curves[task_id]
@@ -158,15 +156,39 @@ def heterogeneous(
                 "alphas": budget.alphas,
                 # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
                 "rdp_epsilons": np.array(budget.epsilons).tolist(),
-                "n_blocks": gaussian_block_distribution(
-                    mu=mu, sigma=sigma, max_blocks=max_blocks
-                ),
+                "n_blocks": f"1:1",
+                # TODO: multiblock version!
                 "block_selection_policy": block_selection_policy,
                 "profit": "1:1",
             }
 
             task_name = f"{name}.yaml"
+            task_id_to_name[task_id] = task_name
             yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+
+        mu = 10
+        max_blocks = 20
+        for sigma in [0, 1, 4, 10]:
+            tasks_path = output_path.joinpath(
+                f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std}-ra={range_avg}-rs={range_std}"
+            )
+            tasks_path.mkdir(exist_ok=True, parents=True)
+            for task_id in tasks_df.task_id:
+                # for name, budget in names_and_curves:
+                name, budget = names_and_curves[task_id]
+                task_dict = {
+                    "alphas": budget.alphas,
+                    # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+                    "rdp_epsilons": np.array(budget.epsilons).tolist(),
+                    "n_blocks": gaussian_block_distribution(
+                        mu=mu, sigma=sigma, max_blocks=max_blocks
+                    ),
+                    "block_selection_policy": block_selection_policy,
+                    "profit": "1:1",
+                }
+
+                task_name = f"{name}.yaml"
+                yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
     logger.info(f"Saving the frequencies at {frequencies_path}...")
 

@@ -1,7 +1,7 @@
 from typing import List
 
 import numpy as np
-from opacus.privacy_analysis import compute_rdp
+from opacus.accountants.analysis.rdp import compute_rdp
 from scipy.interpolate import interp1d, splev, splrep
 
 from autodp.mechanism_zoo import LaplaceMechanism
