@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from functools import partial
+from functools import partial, update_wrapper
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -27,6 +27,12 @@ from privacypacking.schedulers.utils import (
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
 from privacypacking.utils.utils import RAY_LOGS, get_args_from_taskname
+
+
+def wrapped_partial(func, *args, **kwargs):
+    partial_func = partial(func, *args, **kwargs)
+    update_wrapper(partial_func, func)
+    return partial_func
 
 
 def run_and_report(config: dict, replace=False) -> None:
@@ -231,7 +237,7 @@ def grid_offline_heterogeneity_knob(
     }
 
     experiment_analysis = tune.run(
-        partial(run_and_report, replace=True),
+        wrapped_partial(run_and_report, replace=True),
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
@@ -248,6 +254,8 @@ def grid_offline_heterogeneity_knob(
 
     all_trial_paths = experiment_analysis._get_trial_paths()
     experiment_dir = Path(all_trial_paths[0]).parent
+
+    logger.info(f"Experiment dir: {experiment_dir}")
 
     rdf = load_ray_experiment(experiment_dir)
 
