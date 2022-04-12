@@ -134,6 +134,7 @@ def normalize_zoo(
     min_epsilon=1e-2,
     epsilon=10,
     delta=1e-7,
+    **kwargs,
 ) -> list:
 
     # We'll work on the dataframe, and dump back the zoo at the end
@@ -161,6 +162,9 @@ def normalize_zoo(
         )
     )
     offset = offset.merge(offset_2)
+
+    logger.info(f"Original epsilon min avg/std: {offset}")
+
     alphas_df = alphas_df.merge(offset)
     rescaled = alphas_df.copy()
     # Vertical shift the whole curve depending on epsilon_min
@@ -218,6 +222,9 @@ def normalize_zoo(
         .rename(columns={"alphas": "best_alpha", "epsilon_range": "epsilon_range_std"})
     )
     offset_range = offset_range.merge(offset_range_2)
+
+    logger.info(f"Original range avg/std: {offset_range}")
+
     rescaled = rescaled.merge(offset_range)
 
     # Do the scaling: bend the curve upwards while keeping epsilon_min identical
@@ -263,7 +270,7 @@ def normalize_zoo(
 
 
 def zoo_df(
-    zoo: list, min_epsilon=5e-2, clipped=True, epsilon=10, delta=1e-7
+    zoo: list, min_epsilon=5e-2, max_epsilon=1, clipped=True, epsilon=10, delta=1e-7
 ) -> pd.DataFrame:
     block = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
 
@@ -303,7 +310,7 @@ def zoo_df(
     )
     # tasks["epsilon_range"] = tasks["epsilon_max"] - tasks["epsilon_min"]
     # tasks = tasks.query("epsilon_min < 1 and epsilon_min > 5e-3")
-    tasks = tasks.query(f"epsilon_min < 1 and epsilon_min > {min_epsilon}")
+    tasks = tasks.query(f"epsilon_min < {max_epsilon} and epsilon_min > {min_epsilon}")
 
     indx = df.groupby("task_id")["normalized_epsilons"].idxmin()
     best_alpha = df.loc[indx][["task_id", "alphas"]]
@@ -368,15 +375,15 @@ def geometric_frequencies(tasks_df: pd.DataFrame, n_bins=20, p=0.5) -> pd.DataFr
     return df
 
 
-def gaussian_block_distribution(mu, sigma, max_blocks):
+def gaussian_block_distribution(block_avg, block_std, max_blocks, **kwargs):
 
-    if sigma == 0:
-        return f"{mu}:1"
+    if block_std == 0:
+        return f"{block_avg}:1"
 
     f = []
     for k in range(1, max_blocks + 1):
         f.append(
-            scipy.stats.norm.pdf(k, mu, sigma)
+            scipy.stats.norm.pdf(k, block_avg, block_std)
             # scipy.special.binom(k + r - 1, k) * (1-p)**r * p**k
             # k **(alpha - 1) * np.exp(-beta * k) * beta ** alpha / scipy.special.gamma(alpha)
         )

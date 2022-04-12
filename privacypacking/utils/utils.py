@@ -4,6 +4,7 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 from omegaconf import OmegaConf
 
 from privacypacking.schedulers.utils import ALLOCATED
@@ -17,6 +18,42 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
+
+
+def add_workload_args_to_results(results_df: pd.DataFrame):
+    def get_row_parameters(row):
+        # print(row)
+        # print(type(row))
+        # print(row.task_path)
+        task_path = row["tasks_path"]
+        args = get_args_from_taskname(task_path)
+        args["trial_id"] = row["trial_id"]
+        return pd.Series(args)
+
+    def get_alpha_std(path):
+        _, d = path.split("-")
+        p = float(d.replace(".yaml", ""))
+        return p
+
+    df = results_df.apply(get_row_parameters, axis=1)
+    df["alpha_std"] = results_df["task_frequencies_path"].apply(get_alpha_std)
+
+    return results_df.merge(df, on="trial_id")
+    # return df
+
+
+def get_name_from_args(arg_dict: dict, category="task") -> str:
+    arg_string = ",".join([f"{key}={value}" for key, value in arg_dict.items()])
+    task_path = f"{category}-{arg_string}"
+    return task_path
+
+
+def get_args_from_taskname(task_path: str) -> dict:
+    arg_string = task_path.split("-")[1]
+    arg_dict = {
+        kv.split("=")[0]: float(kv.split("=")[1]) for kv in arg_string.split(",")
+    }
+    return arg_dict
 
 
 def load_logs(log_path: str, relative_path=True) -> dict:

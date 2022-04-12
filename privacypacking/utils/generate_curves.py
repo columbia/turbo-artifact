@@ -1,3 +1,4 @@
+import itertools
 import random
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import numpy as np
 import typer
 import yaml
 from loguru import logger
+from omegaconf import OmegaConf
 from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Budget
@@ -14,6 +16,7 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
+from privacypacking.utils.utils import get_name_from_args
 from privacypacking.utils.zoo import (
     alpha_variance_frequencies,
     build_synthetic_zoo,
@@ -114,9 +117,14 @@ def heterogeneous(
     ),
     output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
     synthetic: bool = typer.Option(False),
+    config_name: str = typer.Option("default"),
 ):
 
-    output_path = Path(output_path)
+    config_path = Path(__file__).parent.joinpath(
+        f"heterogeneous_configs/{config_name}.yaml"
+    )
+    output_path = Path(output_path).joinpath(config_name)
+    config = dict(OmegaConf.load(config_path))
 
     tasks_path = output_path.joinpath("tasks")
     tasks_path.mkdir(exist_ok=True, parents=True)
@@ -129,29 +137,38 @@ def heterogeneous(
     logger.info("Generating the initial workload...")
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
 
-    args = []
-    for epsilon_min_avg in [0.05, 0.1, 0.5]:
-        for epsilon_min_std in [0, 0.01, 0.1]:
-            for range_avg in [0.005, 0.05, 0.1]:
-                for range_std in [0, 0.03]:
-                    args.append(
-                        (epsilon_min_avg, epsilon_min_std, range_avg, range_std)
-                    )
+    # Preprocess non-list items and take the cartesian product
+    for (key, value) in config.items():
+        if isinstance(value, list):
+            config[key] = value
+        else:
+            config[key] = [value]
+    args = [dict(zip(config, x)) for x in itertools.product(*config.values())]
 
-    # args = [(0.05, 0, 0.05, 0)]
+    # for epsilon_min_avg in [0.05, 0.1, 0.5]:
+    #     for epsilon_min_std in [0, 0.01, 0.1]:
+    #         for range_avg in [0.005, 0.05, 0.1]:
+    #             for range_std in [0, 0.03]:
+    #                 args.append(
+    #                     (epsilon_min_avg, epsilon_min_std, range_avg, range_std)
+    #                 )
+
+    # # args = [(0.05, 0, 0.05, 0)]
 
     logger.info("Generating normalized versions with different scales...")
     for arg in tqdm(args):
-        epsilon_min_avg, epsilon_min_std, range_avg, range_std = arg
+        # epsilon_min_avg, epsilon_min_std, range_avg, range_std = arg
         names_and_curves = normalize_zoo(
             original_names_and_curves,
-            epsilon_min_avg=epsilon_min_avg,
-            epsilon_min_std=epsilon_min_std,
-            range_avg=range_avg,
-            range_std=range_std,
+            **arg
+            # epsilon_min_avg=epsilon_min_avg,
+            # epsilon_min_std=epsilon_min_std,
+            # range_avg=range_avg,
+            # range_std=range_std,
         )
 
-        _, tasks_df = zoo_df(names_and_curves)
+        # If we filter too much we break the normalization
+        _, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
 
         for task_id in tasks_df.task_id:
             # for name, budget in names_and_curves:
@@ -170,34 +187,42 @@ def heterogeneous(
             task_id_to_name[task_id] = task_name
             yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
-        mu_sigma = []
-        mu_sigma.append((1, 0))
-        mu = 10
-        max_blocks = 20
-        for sigma in [0, 1, 4, 10]:
-            mu_sigma.append((mu, sigma))
+        # mu_sigma = []
+        # mu_sigma.append((1, 0))
+        # mu = 10
+        # max_blocks = 20
+        # for sigma in [0, 1, 4, 10]:
+        #     mu_sigma.append((mu, sigma))
 
-        for mu, sigma in mu_sigma:
-            tasks_path = output_path.joinpath(
-                f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std}-ra={range_avg}-rs={range_std}"
-            )
-            tasks_path.mkdir(exist_ok=True, parents=True)
-            for task_id in tasks_df.task_id:
-                # for name, budget in names_and_curves:
-                name, budget = names_and_curves[task_id]
-                task_dict = {
-                    "alphas": budget.alphas,
-                    # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
-                    "rdp_epsilons": np.array(budget.epsilons).tolist(),
-                    "n_blocks": gaussian_block_distribution(
-                        mu=mu, sigma=sigma, max_blocks=max_blocks
-                    ),
-                    "block_selection_policy": block_selection_policy,
-                    "profit": "1:1",
-                }
+        # for mu, sigma in mu_sigma:
+        #     # TODO: use this dict elsewhere instead of weird lists of tuples
+        #     arg_dict = {
+        #         "mu": mu,
+        #         "sigma": sigma,
+        #         "epsilon_min_avg": epsilon_min_avg,
+        #         "epsilon_min_std": epsilon_min_std,
+        #         "range_avg": range_avg,
+        #         "range_std": range_std,
+        #     }
 
-                task_name = f"{name}.yaml"
-                yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+        tasks_path = output_path.joinpath(get_name_from_args(arg))
+        tasks_path.mkdir(exist_ok=True, parents=True)
+        for task_id in tasks_df.task_id:
+            # for name, budget in names_and_curves:
+            name, budget = names_and_curves[task_id]
+            task_dict = {
+                "alphas": budget.alphas,
+                # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+                "rdp_epsilons": np.array(budget.epsilons).tolist(),
+                "n_blocks": gaussian_block_distribution(**arg),
+                #     mu=arg["mu"], sigma=arg["sigma"], max_blocks=max_blocks
+                # ),
+                "block_selection_policy": block_selection_policy,
+                "profit": "1:1",
+            }
+
+            task_name = f"{name}.yaml"
+            yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
     logger.info(f"Saving the frequencies at {frequencies_path}...")
 

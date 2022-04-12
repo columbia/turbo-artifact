@@ -11,6 +11,7 @@ from experiments.ray_runner import (
     grid_offline_heterogeneity_knob,
     grid_online,
 )
+from privacypacking.utils.utils import add_workload_args_to_results
 
 app = typer.Typer()
 
@@ -309,13 +310,15 @@ def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
         num_blocks=[1],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[100, 500, 1000, 2000, 10_000],
+        num_tasks=[100, 500, 1000, 2000],
         # num_tasks=[20_000],
         data_path="heterogeneous",
-        metric_recomputation_period=10,
+        metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
     )
+
+    rdf = add_workload_args_to_results(rdf)
 
     fig = px.line(
         rdf.sort_values("alpha_std"),

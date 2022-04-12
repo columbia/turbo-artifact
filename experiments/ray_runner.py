@@ -25,7 +25,7 @@ from privacypacking.schedulers.utils import (
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
-from privacypacking.utils.utils import RAY_LOGS
+from privacypacking.utils.utils import RAY_LOGS, get_args_from_taskname
 
 
 def run_and_report(config: dict) -> None:
@@ -140,16 +140,24 @@ def grid_offline_heterogeneity_knob(
         mu = 1
         sigma = 0  # Single block case!
         tasks_paths = []
-        for epsilon_min_avg in [0.05, 0.1, 0.5]:
-            for epsilon_min_std in [0, 0.01, 0.1]:
-                for range_avg in [0.005, 0.05, 0.1]:
-                    for range_std in [0, 0.03]:
-                        tasks_paths.append(
-                            f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std}-ra={range_avg}-rs={range_std}"
-                        )
+
+        for task_dir in Path("data/heterogeneous").iterdir():
+            if "mu=1,sigma=0" in str(task_dir):
+                n_tasks = len(list(task_dir.glob("*")))
+                if n_tasks == 233:
+                    # Only keep configurations that have all the tasks for now
+                    tasks_paths.append(task_dir.name)
+
+        # for epsilon_min_avg in [0.05, 0.1, 0.5]:
+        #     for epsilon_min_std in [0, 0.01, 0.1]:
+        #         for range_avg in [0.005, 0.05, 0.1]:
+        #             for range_std in [0, 0.03]:
+        #                 tasks_paths.append(
+        #                     f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std},ra={range_avg},rs={range_std}"
+        #                 )
 
         # DEBUG:
-        tasks_paths = tasks_paths[0:2]
+        # tasks_paths = tasks_paths[0:2]
 
     else:
         # tasks_paths = [f"tasks-mu10-sigma0"]
@@ -230,24 +238,21 @@ def grid_offline_heterogeneity_knob(
 
     rdf = load_ray_experiment(experiment_dir)
 
-    def get_variance(path):
-        _, d = path.split("-")
-        p = float(d.replace(".yaml", ""))
-        return (1 - p) / p ** 2
+    # TODO: test on notebook
 
-    def get_alpha_std(path):
-        _, d = path.split("-")
-        p = float(d.replace(".yaml", ""))
-        return p
+    # def get_variance(path):
+    #     _, d = path.split("-")
+    #     p = float(d.replace(".yaml", ""))
+    #     return (1 - p) / p ** 2
 
-    def get_block_std(path):
-        if "sigma" not in path:
-            return 0
-        return float(path.split("sigma")[1])
+    # def get_block_std(path):
+    #     if "sigma" not in path:
+    #         return 0
+    #     return float(path.split("sigma")[1])
 
     # rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
-    rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
-    rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
+    # rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
+    # rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
 
     # TODO: load the hyperparemeters too
     return rdf
