@@ -117,17 +117,15 @@ def heterogeneous(
     ),
     output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
     synthetic: bool = typer.Option(False),
-    config_name: str = typer.Option("default"),
+    config: str = typer.Option("default"),
 ):
 
-    config_path = Path(__file__).parent.joinpath(
-        f"heterogeneous_configs/{config_name}.yaml"
-    )
-    output_path = Path(output_path).joinpath(config_name)
-    config = dict(OmegaConf.load(config_path))
+    config_path = Path(__file__).parent.joinpath(f"heterogeneous_configs/{config}.yaml")
+    output_path = Path(output_path).joinpath(config)
+    config = OmegaConf.to_container(OmegaConf.load(config_path))
 
-    tasks_path = output_path.joinpath("tasks")
-    tasks_path.mkdir(exist_ok=True, parents=True)
+    # tasks_path = output_path.joinpath("tasks")
+    # tasks_path.mkdir(exist_ok=True, parents=True)
 
     frequencies_path = output_path.joinpath("task_frequencies")
     frequencies_path.mkdir(exist_ok=True, parents=True)
@@ -138,12 +136,16 @@ def heterogeneous(
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
 
     # Preprocess non-list items and take the cartesian product
+    d = {}
     for (key, value) in config.items():
         if isinstance(value, list):
-            config[key] = value
+            d[key] = value
         else:
-            config[key] = [value]
-    args = [dict(zip(config, x)) for x in itertools.product(*config.values())]
+            d[key] = [value]
+
+    # alpha_std = d.pop("alpha_std")
+
+    args = [dict(zip(config, x)) for x in itertools.product(*d.values())]
 
     # for epsilon_min_avg in [0.05, 0.1, 0.5]:
     #     for epsilon_min_std in [0, 0.01, 0.1]:
@@ -170,22 +172,22 @@ def heterogeneous(
         # If we filter too much we break the normalization
         _, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
 
-        for task_id in tasks_df.task_id:
-            # for name, budget in names_and_curves:
-            name, budget = names_and_curves[task_id]
-            task_dict = {
-                "alphas": budget.alphas,
-                # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
-                "rdp_epsilons": np.array(budget.epsilons).tolist(),
-                "n_blocks": f"1:1",
-                # TODO: multiblock version!
-                "block_selection_policy": block_selection_policy,
-                "profit": "1:1",
-            }
+        # for task_id in tasks_df.task_id:
+        #     # for name, budget in names_and_curves:
+        #     name, budget = names_and_curves[task_id]
+        #     task_dict = {
+        #         "alphas": budget.alphas,
+        #         # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
+        #         "rdp_epsilons": np.array(budget.epsilons).tolist(),
+        #         "n_blocks": f"1:1",
+        #         # TODO: multiblock version!
+        #         "block_selection_policy": block_selection_policy,
+        #         "profit": "1:1",
+        #     }
 
-            task_name = f"{name}.yaml"
-            task_id_to_name[task_id] = task_name
-            yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
+        #     task_name = f"{name}.yaml"
+        #     task_id_to_name[task_id] = task_name
+        #     yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
         # mu_sigma = []
         # mu_sigma.append((1, 0))
@@ -222,14 +224,16 @@ def heterogeneous(
             }
 
             task_name = f"{name}.yaml"
+            task_id_to_name[task_id] = task_name
             yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
-    logger.info(f"Saving the frequencies at {frequencies_path}...")
+        logger.info(f"Saving the frequencies at {frequencies_path}...")
 
-    for p in P_GRID:
+        # for p in alpha_std:
         # p_tasks_df = geometric_frequencies(tasks_df, p=p)
 
-        p_tasks_df = alpha_variance_frequencies(tasks_df, sigma=p)
+        # Some normalized workloads have fewer tasks so we recompute the frequencies
+        p_tasks_df = alpha_variance_frequencies(tasks_df, sigma=arg["alpha_std"])
 
         frequencies_dict = {}
         sum_frequencies = 0
@@ -254,7 +258,10 @@ def heterogeneous(
 
         yaml.dump(
             frequencies_dict,
-            frequencies_path.joinpath(f"frequencies-{p}.yaml").open("w"),
+            frequencies_path.joinpath(
+                f"{get_name_from_args(arg,category='frequency')}.yaml"
+            ).open("w"),
+            # frequencies_path.joinpath(f"frequencies-{p}.yaml").open("w"),
         )
 
     logger.info("Done.")

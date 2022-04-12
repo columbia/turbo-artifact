@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -28,7 +29,15 @@ from privacypacking.utils.generate_curves import P_GRID
 from privacypacking.utils.utils import RAY_LOGS, get_args_from_taskname
 
 
-def run_and_report(config: dict) -> None:
+def run_and_report(config: dict, replace=False) -> None:
+
+    if replace:
+        # Overwrite the frequencies after the hyperparam sampling
+        config["omegaconf"]["tasks"]["frequencies_path"] = (
+            config["omegaconf"]["tasks"]["tasks_path"].replace("task", "frequency")
+            + ".yaml"
+        )
+
     sim = Simulator(Config(config))
     metrics = sim.run()
     # logger.info(f"Trial logs: {tune.get_trial_dir()}")
@@ -114,20 +123,16 @@ def grid_offline(
 def grid_offline_heterogeneity_knob(
     num_tasks: List[int],
     num_blocks: List[int],
-    data_path: str = "",
+    data_path: str = "heterogeneous/default",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
-    block_axis=False,
-    alpha_axis=True,
 ):
 
     metrics = [
         SIMPLEX,
         DOMINANT_SHARES,
-        # FLAT_RELEVANCE,
-        # OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
         FCFS,
     ]
@@ -136,44 +141,52 @@ def grid_offline_heterogeneity_knob(
 
     # TODO: select the right set of curves and try running it!
 
-    if alpha_axis:
-        mu = 1
-        sigma = 0  # Single block case!
-        tasks_paths = []
+    tasks_paths = [
+        p.name
+        for p in Path(f"data/{data_path}").iterdir()
+        if "frequencies" not in str(p.name)
+    ]
 
-        for task_dir in Path("data/heterogeneous").iterdir():
-            if "mu=1,sigma=0" in str(task_dir):
-                n_tasks = len(list(task_dir.glob("*")))
-                if n_tasks == 233:
-                    # Only keep configurations that have all the tasks for now
-                    tasks_paths.append(task_dir.name)
+    logger.info(f"tasks_paths: {tasks_paths}")
 
-        # for epsilon_min_avg in [0.05, 0.1, 0.5]:
-        #     for epsilon_min_std in [0, 0.01, 0.1]:
-        #         for range_avg in [0.005, 0.05, 0.1]:
-        #             for range_std in [0, 0.03]:
-        #                 tasks_paths.append(
-        #                     f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std},ra={range_avg},rs={range_std}"
-        #                 )
+    # if alpha_axis:
+    #     mu = 1
+    #     sigma = 0  # Single block case!
+    #     tasks_paths = []
 
-        # DEBUG:
-        # tasks_paths = tasks_paths[0:2]
+    #     for task_dir in Path("data/heterogeneous").iterdir():
+    #         if "mu=1,sigma=0" in str(task_dir):
+    #             n_tasks = len(list(task_dir.glob("*")))
+    #             if n_tasks == 233:
+    #                 # Only keep configurations that have all the tasks for now
+    #                 tasks_paths.append(task_dir.name)
 
-    else:
-        # tasks_paths = [f"tasks-mu10-sigma0"]
-        tasks_paths = ["tasks"]
-    # tasks_paths = (
+    #     # for epsilon_min_avg in [0.05, 0.1, 0.5]:
+    #     #     for epsilon_min_std in [0, 0.01, 0.1]:
+    #     #         for range_avg in [0.005, 0.05, 0.1]:
+    #     #             for range_std in [0, 0.03]:
+    #     #                 tasks_paths.append(
+    #     #                     f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std},ra={range_avg},rs={range_std}"
+    #     #                 )
+
+    #     # DEBUG:
+    #     # tasks_paths = tasks_paths[0:2]
+
+    # else:
+    #     # tasks_paths = [f"tasks-mu10-sigma0"]
+    #     tasks_paths = ["tasks"]
+    # # tasks_paths = (
     #     # [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
 
     #     if block_axis
     #     # else
     #     else ["tasks"]
     # )
-    frequencies = (
-        [f"frequencies-{p}.yaml" for p in P_GRID]
-        if alpha_axis
-        else ["frequencies-0.95.yaml"]
-    )
+    # frequencies = (
+    #     [f"frequencies-{p}.yaml" for p in P_GRID]
+    #     if alpha_axis
+    #     else ["frequencies-0.95.yaml"]
+    # )
 
     num_blocks = tune.grid_search(num_blocks)
     block_selection_policies = ["RandomBlocks"]
@@ -210,7 +223,7 @@ def grid_offline_heterogeneity_knob(
         "tasks": {
             "data_path": data_path,
             "tasks_path": tune.grid_search(tasks_paths),
-            "frequencies_path": tune.grid_search(frequencies),
+            # "frequencies_path": tune.grid_search(frequencies),
             "block_selection_policy": tune.grid_search(block_selection_policies),
             "sampling": "poisson",
             "initial_num": tune.grid_search(num_tasks),
@@ -218,7 +231,7 @@ def grid_offline_heterogeneity_knob(
     }
 
     experiment_analysis = tune.run(
-        run_and_report,
+        partial(run_and_report, replace=True),
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,

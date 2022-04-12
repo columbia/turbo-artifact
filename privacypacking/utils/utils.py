@@ -30,16 +30,8 @@ def add_workload_args_to_results(results_df: pd.DataFrame):
         args["trial_id"] = row["trial_id"]
         return pd.Series(args)
 
-    def get_alpha_std(path):
-        _, d = path.split("-")
-        p = float(d.replace(".yaml", ""))
-        return p
-
     df = results_df.apply(get_row_parameters, axis=1)
-    df["alpha_std"] = results_df["task_frequencies_path"].apply(get_alpha_std)
-
     return results_df.merge(df, on="trial_id")
-    # return df
 
 
 def get_name_from_args(arg_dict: dict, category="task") -> str:
