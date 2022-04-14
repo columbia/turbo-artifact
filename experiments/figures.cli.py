@@ -151,7 +151,8 @@ def plot_mixed_curves_offline(fig_dir):
         # num_tasks=[50, 100, 200, 300, 500],
         num_tasks=[500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
         data_path=["mixed_curves"],
-        metric_recomputation_period=100,
+        # metric_recomputation_period=100,
+        metric_recomputation_period=1,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
     )
@@ -308,11 +309,13 @@ def plot_alibaba(fig_dir):
 
 def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
-        num_blocks=[1],
+        # num_blocks=[1],
+        num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[500, 1000, 2000, 5000],
+        # num_tasks=[25, 50, 100, 500, 1000, 2000, 5000],
+        num_tasks=[500, 1000, 2000, 5000, 10_000],
         # num_tasks=[20_000],
-        data_path="heterogeneous/epsilon_min_std",
+        data_path="heterogeneous/blocks",
         metric_recomputation_period=100,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,

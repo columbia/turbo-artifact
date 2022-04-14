@@ -119,6 +119,8 @@ def heterogeneous(
     output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
     synthetic: bool = typer.Option(False),
     config: str = typer.Option("default"),
+    control_flatness: bool = typer.Option(True),
+    control_size: bool = typer.Option(True),
 ):
 
     config_path = Path(__file__).parent.joinpath(f"heterogeneous_configs/{config}.yaml")
@@ -136,7 +138,7 @@ def heterogeneous(
     logger.info("Generating & saving the initial workload...")
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
     alphas_df, tasks_df = zoo_df(
-        original_names_and_curves, min_epsilon=1e-10, max_epsilon=1
+        original_names_and_curves, min_epsilon=1e-2, max_epsilon=1
     )
     tasks_path = output_path.joinpath("original_tasks")
     tasks_path.mkdir(exist_ok=True, parents=True)
@@ -182,6 +184,8 @@ def heterogeneous(
         # epsilon_min_avg, epsilon_min_std, range_avg, range_std = arg
         names_and_curves = normalize_zoo(
             original_names_and_curves,
+            control_flatness=control_flatness,
+            control_size=control_size,
             **arg
             # epsilon_min_avg=epsilon_min_avg,
             # epsilon_min_std=epsilon_min_std,

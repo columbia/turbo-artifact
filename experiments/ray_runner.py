@@ -137,7 +137,7 @@ def grid_offline_heterogeneity_knob(
 ):
 
     metrics = [
-        SIMPLEX,
+        # SIMPLEX,
         DOMINANT_SHARES,
         ARGMAX_KNAPSACK,
         FCFS,

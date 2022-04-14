@@ -133,6 +133,7 @@ def normalize_zoo(
     range_avg,
     range_std,
     control_flatness=True,
+    control_size=True,
     min_epsilon=1e-2,
     epsilon=10,
     delta=1e-7,
@@ -144,40 +145,49 @@ def normalize_zoo(
         names_and_curves, min_epsilon=min_epsilon, epsilon=epsilon, delta=delta
     )
 
-    # Compute stats, shift and scale to normalize! We start with epsilon min.
-    offset = (
-        alphas_df.query("alphas == best_alpha")
-        .groupby("alphas")
-        .agg({"normalized_epsilons": "mean"})
-        .reset_index()
-        .rename(
-            columns={"alphas": "best_alpha", "normalized_epsilons": "epsilon_min_avg"}
+    if control_size:
+        # Compute stats, shift and scale to normalize! We start with epsilon min.
+        offset = (
+            alphas_df.query("alphas == best_alpha")
+            .groupby("alphas")
+            .agg({"normalized_epsilons": "mean"})
+            .reset_index()
+            .rename(
+                columns={
+                    "alphas": "best_alpha",
+                    "normalized_epsilons": "epsilon_min_avg",
+                }
+            )
         )
-    )
-    offset_2 = (
-        alphas_df.query("alphas == best_alpha")
-        .groupby("alphas")
-        .agg({"normalized_epsilons": "std"})
-        .reset_index()
-        .rename(
-            columns={"alphas": "best_alpha", "normalized_epsilons": "epsilon_min_std"}
+        offset_2 = (
+            alphas_df.query("alphas == best_alpha")
+            .groupby("alphas")
+            .agg({"normalized_epsilons": "std"})
+            .reset_index()
+            .rename(
+                columns={
+                    "alphas": "best_alpha",
+                    "normalized_epsilons": "epsilon_min_std",
+                }
+            )
         )
-    )
-    offset = offset.merge(offset_2)
+        offset = offset.merge(offset_2)
 
-    logger.debug(f"Original epsilon min avg/std: {offset}")
+        logger.debug(f"Original epsilon min avg/std: {offset}")
 
-    alphas_df = alphas_df.merge(offset)
-    rescaled = alphas_df.copy()
+        alphas_df = alphas_df.merge(offset)
+        rescaled = alphas_df.copy()
 
-    # Vertical shift the whole curve depending on epsilon_min
-    rescaled["normalized_epsilons"] = (
-        alphas_df["normalized_epsilons"]
-        + (epsilon_min_avg - alphas_df["epsilon_min"])
-        + epsilon_min_std
-        * (alphas_df["epsilon_min"] - alphas_df["epsilon_min_avg"])
-        / alphas_df["epsilon_min_std"]
-    )
+        # Vertical shift the whole curve depending on epsilon_min
+        rescaled["normalized_epsilons"] = (
+            alphas_df["normalized_epsilons"]
+            + (epsilon_min_avg - alphas_df["epsilon_min"])
+            + epsilon_min_std
+            * (alphas_df["epsilon_min"] - alphas_df["epsilon_min_avg"])
+            / alphas_df["epsilon_min_std"]
+        )
+    else:
+        rescaled = alphas_df
 
     if control_flatness:
         # Collect some stats about flatness (range). We only focus on flatness in the relevant region.
