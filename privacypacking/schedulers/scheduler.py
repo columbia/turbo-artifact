@@ -171,9 +171,10 @@ class Scheduler:
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
         try:
+            task.sample_n_blocks_and_profit()
             self.task_set_block_ids(task)
             logger.debug(
-                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
             )
         except NotEnoughBlocks as e:
             # logger.warning(

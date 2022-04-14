@@ -19,6 +19,15 @@ TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
 
+import numpy as np
+
+
+def sample_one_from_string(stochastic_string: str) -> float:
+    events = stochastic_string.split(",")
+    values = [float(event.split(":")[0]) for event in events]
+    frequencies = [float(event.split(":")[1]) for event in events]
+    return np.random.choice(values, p=frequencies)
+
 
 def add_workload_args_to_results(results_df: pd.DataFrame):
     def get_row_parameters(row):

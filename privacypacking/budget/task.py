@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any, Iterable, Union
 
 import numpy as np
 from scipy.sparse import bsr_matrix, dok_matrix
@@ -7,15 +7,16 @@ from scipy.sparse.construct import vstack
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import ALPHAS, Budget
 from privacypacking.budget.curves import ZeroCurve
+from privacypacking.utils.utils import sample_one_from_string
 
 
 class Task:
     def __init__(
         self,
         id: int,
-        profit: float,
+        profit: Union[float, str],
         block_selection_policy: BlockSelectionPolicy,
-        n_blocks: int,
+        n_blocks: Union[int, str],
         name: str = None,
     ):
         self.id = id
@@ -27,6 +28,18 @@ class Task:
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
         self.cost = 0
+
+    def sample_n_blocks_and_profit(self):
+        """
+        If profit and n_blocks are stochastic, we sample their value when the task is added to the scheduler.
+        Do not cache this for all the instances of a same task, unless this is intended.
+        """
+
+        if isinstance(self.n_blocks, str):
+            self.n_blocks = int(sample_one_from_string(self.n_blocks))
+
+        if isinstance(self.profit, str):
+            self.profit = sample_one_from_string(self.profit)
 
     def get_efficiency(self, cost):
         efficiency = 0

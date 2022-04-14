@@ -16,7 +16,7 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
-from privacypacking.utils.utils import get_name_from_args
+from privacypacking.utils.utils import TaskSpec, get_name_from_args
 from privacypacking.utils.zoo import (
     alpha_variance_frequencies,
     build_synthetic_zoo,
@@ -195,42 +195,6 @@ def heterogeneous(
 
         # If we filter too much we break the normalization
         alphas_df, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
-
-        # for task_id in tasks_df.task_id:
-        #     # for name, budget in names_and_curves:
-        #     name, budget = names_and_curves[task_id]
-        #     task_dict = {
-        #         "alphas": budget.alphas,
-        #         # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
-        #         "rdp_epsilons": np.array(budget.epsilons).tolist(),
-        #         "n_blocks": f"1:1",
-        #         # TODO: multiblock version!
-        #         "block_selection_policy": block_selection_policy,
-        #         "profit": "1:1",
-        #     }
-
-        #     task_name = f"{name}.yaml"
-        #     task_id_to_name[task_id] = task_name
-        #     yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
-
-        # mu_sigma = []
-        # mu_sigma.append((1, 0))
-        # mu = 10
-        # max_blocks = 20
-        # for sigma in [0, 1, 4, 10]:
-        #     mu_sigma.append((mu, sigma))
-
-        # for mu, sigma in mu_sigma:
-        #     # TODO: use this dict elsewhere instead of weird lists of tuples
-        #     arg_dict = {
-        #         "mu": mu,
-        #         "sigma": sigma,
-        #         "epsilon_min_avg": epsilon_min_avg,
-        #         "epsilon_min_std": epsilon_min_std,
-        #         "range_avg": range_avg,
-        #         "range_std": range_std,
-        #     }
-
         tasks_path = output_path.joinpath(get_name_from_args(arg))
         tasks_path.mkdir(exist_ok=True, parents=True)
         plot_curves_stats(alphas_df, tasks_path)
