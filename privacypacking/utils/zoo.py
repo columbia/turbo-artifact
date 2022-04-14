@@ -4,6 +4,7 @@ from itertools import product
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import scipy
 from loguru import logger
 
@@ -131,6 +132,7 @@ def normalize_zoo(
     epsilon_min_std,
     range_avg,
     range_std,
+    control_flatness=True,
     min_epsilon=1e-2,
     epsilon=10,
     delta=1e-7,
@@ -177,73 +179,86 @@ def normalize_zoo(
         / alphas_df["epsilon_min_std"]
     )
 
-    # Collect some stats about flatness (range). We only focus on flatness in the relevant region.
-    # TODO: auto-detect this range depending on the zoo and the block parameters
-    ranges = (
-        rescaled.query("alphas in [4,5,6,8]")
-        .groupby("task_id")["normalized_epsilons"]
-        .agg(min)
-        .reset_index()
-        .rename(columns={"normalized_epsilons": "epsilon_range_min"})
-    )
-    ranges = ranges.merge(
-        rescaled.query("alphas in [4,5,6,8]")
-        .groupby("task_id")["normalized_epsilons"]
-        .agg(max)
-        .reset_index()
-        .rename(columns={"normalized_epsilons": "epsilon_range_max"})
-    )
-    ranges = ranges.merge(
-        rescaled.groupby("task_id")["normalized_epsilons"]
-        .agg(min)
-        .reset_index()
-        .rename(columns={"normalized_epsilons": "epsilon_min"})
-    )
-    ranges["epsilon_range"] = ranges["epsilon_range_max"] - ranges["epsilon_range_min"]
-
-    # Attach the range stats to each task
-    rescaled = rescaled.drop(
-        columns=["epsilon_range", "epsilon_min"]
-    )  # Obsolete columns since we rescaled
-    rescaled = rescaled.merge(ranges, on="task_id")
-
-    # Aggregate the range stats to prepare the scaling
-    offset_range = (
-        rescaled.query("alphas == 3")
-        .groupby("best_alpha")
-        .agg({"epsilon_range": "mean"})
-        .reset_index()
-        .rename(columns={"alphas": "best_alpha", "epsilon_range": "epsilon_range_avg"})
-    )
-    offset_range_2 = (
-        rescaled.query("alphas == 3")
-        .groupby("best_alpha")
-        .agg({"epsilon_range": "std"})
-        .reset_index()
-        .rename(columns={"alphas": "best_alpha", "epsilon_range": "epsilon_range_std"})
-    )
-    offset_range = offset_range.merge(offset_range_2)
-
-    logger.debug(f"Original range avg/std: {offset_range}")
-
-    rescaled = rescaled.merge(offset_range)
-
-    # Do the scaling: bend the curve upwards while keeping epsilon_min identical
-    rescaled_with_range = rescaled.copy()
-    rescaled_with_range["new_range"] = (
-        range_avg
-        + range_std
-        * (
-            rescaled_with_range["epsilon_range"]
-            - rescaled_with_range["epsilon_range_avg"]
+    if control_flatness:
+        # Collect some stats about flatness (range). We only focus on flatness in the relevant region.
+        # TODO: auto-detect this range depending on the zoo and the block parameters
+        ranges = (
+            rescaled.query("alphas in [4,5,6,8]")
+            .groupby("task_id")["normalized_epsilons"]
+            .agg(min)
+            .reset_index()
+            .rename(columns={"normalized_epsilons": "epsilon_range_min"})
         )
-        / rescaled_with_range["epsilon_range_std"]
-    )
-    rescaled_with_range["normalized_epsilons"] = rescaled_with_range["epsilon_min"] + (
-        rescaled_with_range["new_range"] / rescaled_with_range["epsilon_range"]
-    ) * (
-        rescaled_with_range["normalized_epsilons"] - rescaled_with_range["epsilon_min"]
-    )
+        ranges = ranges.merge(
+            rescaled.query("alphas in [4,5,6,8]")
+            .groupby("task_id")["normalized_epsilons"]
+            .agg(max)
+            .reset_index()
+            .rename(columns={"normalized_epsilons": "epsilon_range_max"})
+        )
+        ranges = ranges.merge(
+            rescaled.groupby("task_id")["normalized_epsilons"]
+            .agg(min)
+            .reset_index()
+            .rename(columns={"normalized_epsilons": "epsilon_min"})
+        )
+        ranges["epsilon_range"] = (
+            ranges["epsilon_range_max"] - ranges["epsilon_range_min"]
+        )
+
+        # Attach the range stats to each task
+        rescaled = rescaled.drop(
+            columns=["epsilon_range", "epsilon_min"]
+        )  # Obsolete columns since we rescaled
+        rescaled = rescaled.merge(ranges, on="task_id")
+
+        # Aggregate the range stats to prepare the scaling
+        offset_range = (
+            rescaled.query("alphas == 3")
+            .groupby("best_alpha")
+            .agg({"epsilon_range": "mean"})
+            .reset_index()
+            .rename(
+                columns={"alphas": "best_alpha", "epsilon_range": "epsilon_range_avg"}
+            )
+        )
+        offset_range_2 = (
+            rescaled.query("alphas == 3")
+            .groupby("best_alpha")
+            .agg({"epsilon_range": "std"})
+            .reset_index()
+            .rename(
+                columns={"alphas": "best_alpha", "epsilon_range": "epsilon_range_std"}
+            )
+        )
+        offset_range = offset_range.merge(offset_range_2)
+
+        logger.debug(f"Original range avg/std: {offset_range}")
+
+        rescaled = rescaled.merge(offset_range)
+
+        # Do the scaling: bend the curve upwards while keeping epsilon_min identical
+        rescaled_with_range = rescaled.copy()
+        rescaled_with_range["new_range"] = (
+            range_avg
+            + range_std
+            * (
+                rescaled_with_range["epsilon_range"]
+                - rescaled_with_range["epsilon_range_avg"]
+            )
+            / rescaled_with_range["epsilon_range_std"]
+        )
+        rescaled_with_range["normalized_epsilons"] = rescaled_with_range[
+            "epsilon_min"
+        ] + (
+            rescaled_with_range["new_range"] / rescaled_with_range["epsilon_range"]
+        ) * (
+            rescaled_with_range["normalized_epsilons"]
+            - rescaled_with_range["epsilon_min"]
+        )
+
+    else:
+        rescaled_with_range = rescaled
 
     # Deal with errors
     rescaled_with_range.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -298,6 +313,7 @@ def zoo_df(
         df.groupby("task_id")["normalized_epsilons"].agg(min)
     ).reset_index()
     tasks = tasks.rename(columns={"normalized_epsilons": "epsilon_min"})
+    tasks["epsilon_max"] = df.groupby("task_id")["normalized_epsilons"].agg(max)
 
     # We only consider plausible alphas, not the dominant share (it is irrelevant anyway). "Flatness".
     tasks["epsilon_range"] = (
@@ -319,6 +335,16 @@ def zoo_df(
     tasks = tasks.merge(best_alpha, how="inner", on="task_id")
 
     df = df.merge(tasks, on="task_id")
+
+    def get_task_type(task_name):
+        if "-" in task_name:
+            return task_name.split("-")[0]
+        if "g" in task_name:
+            return "laplace_gaussian"
+        return "laplace_laplace"
+
+    df["task_type"] = df["task_name"].apply(get_task_type)
+
     return df, tasks
 
 
@@ -396,3 +422,72 @@ def gaussian_block_distribution(block_avg, block_std, max_blocks, **kwargs):
         name_and_freq.append(f"{k+1}:{float(freq)}")
 
     return ",".join(name_and_freq)
+
+
+def plot_curves_stats(alphas_df, tasks_path):
+    figs = {}
+
+    title = "_RDP curves"
+    fig = px.line(
+        alphas_df.sort_values("alphas"),
+        x="alphas",
+        y="normalized_epsilons",
+        color="task_name",
+        log_y=True,
+        log_x=True,
+        title=title,
+    )
+    fig.update_layout(showlegend=False)
+    figs[title] = fig
+
+    title = "_RDP curves by best alpha"
+    fig = px.line(
+        alphas_df.sort_values("alphas"),
+        x="alphas",
+        y="normalized_epsilons",
+        color="task_name",
+        log_y=True,
+        log_x=True,
+        height=1200,
+        facet_row="best_alpha",
+        title=title,
+    )
+    fig.update_layout(showlegend=False)
+    figs[title] = fig
+
+    title = "_Best eps by best alpha"
+    figs[title] = px.scatter(
+        alphas_df.query("alphas == best_alpha"),
+        x="alphas",
+        y="epsilon_min",
+        color="task_type",
+        log_y=True,
+        log_x=True,
+        title=title,
+    )
+
+    title = "_Dominant share by best alpha"
+    figs[title] = px.scatter(
+        alphas_df.query("alphas == best_alpha"),
+        x="alphas",
+        y="epsilon_max",
+        color="task_type",
+        log_y=True,
+        log_x=True,
+        title=title,
+    )
+
+    title = "_Range by best alpha"
+    figs[title] = px.scatter(
+        alphas_df.query("alphas == best_alpha"),
+        x="alphas",
+        y="epsilon_range",
+        color="task_type",
+        log_y=True,
+        log_x=True,
+        title=title,
+    )
+
+    for title, fig in figs.items():
+        fig_path = tasks_path.joinpath(f"{title}.png")
+        fig.write_image(fig_path)

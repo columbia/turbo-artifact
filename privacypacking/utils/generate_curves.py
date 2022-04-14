@@ -24,6 +24,7 @@ from privacypacking.utils.zoo import (
     gaussian_block_distribution,
     geometric_frequencies,
     normalize_zoo,
+    plot_curves_stats,
     zoo_df,
 )
 
@@ -132,8 +133,27 @@ def heterogeneous(
 
     task_id_to_name = {}
 
-    logger.info("Generating the initial workload...")
+    logger.info("Generating & saving the initial workload...")
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
+    alphas_df, tasks_df = zoo_df(
+        original_names_and_curves, min_epsilon=1e-10, max_epsilon=1
+    )
+    tasks_path = output_path.joinpath("original_tasks")
+    tasks_path.mkdir(exist_ok=True, parents=True)
+    plot_curves_stats(alphas_df, tasks_path)
+
+    for task_id in tasks_df.task_id:
+        name, budget = original_names_and_curves[task_id]
+        task_dict = {
+            "alphas": budget.alphas,
+            "rdp_epsilons": np.array(budget.epsilons).tolist(),
+            "n_blocks": "1:1",
+            "block_selection_policy": block_selection_policy,
+            "profit": "1:1",
+        }
+        task_name = f"{name}.yaml"
+        task_id_to_name[task_id] = task_name
+        yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
     # Preprocess non-list items and take the cartesian product
     d = {}
@@ -170,7 +190,7 @@ def heterogeneous(
         )
 
         # If we filter too much we break the normalization
-        _, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
+        alphas_df, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
 
         # for task_id in tasks_df.task_id:
         #     # for name, budget in names_and_curves:
@@ -209,6 +229,8 @@ def heterogeneous(
 
         tasks_path = output_path.joinpath(get_name_from_args(arg))
         tasks_path.mkdir(exist_ok=True, parents=True)
+        plot_curves_stats(alphas_df, tasks_path)
+
         for task_id in tasks_df.task_id:
             # for name, budget in names_and_curves:
             name, budget = names_and_curves[task_id]

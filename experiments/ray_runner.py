@@ -148,9 +148,7 @@ def grid_offline_heterogeneity_knob(
     # TODO: select the right set of curves and try running it!
 
     tasks_paths = [
-        p.name
-        for p in Path(f"data/{data_path}").iterdir()
-        if "frequencies" not in str(p.name)
+        p.name for p in Path(f"data/{data_path}").iterdir() if "task-" in str(p.name)
     ]
 
     logger.info(f"tasks_paths: {tasks_paths}")
