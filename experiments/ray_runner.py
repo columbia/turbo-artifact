@@ -208,6 +208,7 @@ def grid_offline_heterogeneity_knob(
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 250,
             "scheduler_timeout_seconds": 20 * 60,
+            "demands_tiebreaker": 0.001,
         },
         "metric": {
             "normalize_by": "available_budget",

@@ -131,6 +131,15 @@ class UniformTask(Task):
         self.budget = budget
         super().__init__(id, profit, block_selection_policy, n_blocks, name=name)
 
-    def set_budget_per_block(self, block_ids: Iterable[int]):
+    def set_budget_per_block(
+        self, block_ids: Iterable[int], demands_tiebreaker: float = 0
+    ):
+
+        # Add random noise (negligible) to break ties when we compare multiple copies of the same task
+        # We don't need this in real life when tasks come from a large pool or continuum of tasks
+        if demands_tiebreaker:
+            fraction_offset = np.random.random()
+            self.budget = self.budget * (1 + demands_tiebreaker * fraction_offset)
+
         for block_id in block_ids:
             self.budget_per_block[block_id] = self.budget

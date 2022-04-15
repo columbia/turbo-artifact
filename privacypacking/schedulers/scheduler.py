@@ -293,4 +293,6 @@ class Scheduler:
         #     )
         #     selected_block_ids = [-1]
         assert selected_block_ids is not None
-        task.set_budget_per_block(selected_block_ids)
+        task.set_budget_per_block(
+            selected_block_ids, demands_tiebreaker=self.omegaconf.demands_tiebreaker
+        )

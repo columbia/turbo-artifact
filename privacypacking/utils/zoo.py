@@ -1,12 +1,14 @@
 from cmath import isinf
 from collections import defaultdict
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import scipy
 from loguru import logger
+from omegaconf import OmegaConf
 
 from privacypacking.budget import Budget
 from privacypacking.budget.budget import ALPHAS
@@ -53,6 +55,22 @@ def build_synthetic_zoo() -> list:
     return list(zip(task_names, curve_zoo))
 
 
+def load_zoo(tasks_path):
+    curve_zoo = []
+    task_names = []
+    for task_path in Path(tasks_path).glob("*.yaml"):
+        task_dict = OmegaConf.load(task_path)
+        name = task_path.stem
+        if not "gaussian" in name:
+            orders = {
+                alpha: epsilon
+                for alpha, epsilon in zip(task_dict.alphas, task_dict.rdp_epsilons)
+            }
+            curve_zoo.append(Budget(orders=orders))
+            task_names.append(name)
+    return list(zip(task_names, curve_zoo))
+
+
 def build_zoo() -> list:
     curve_zoo = []
     task_names = []
@@ -95,33 +113,6 @@ def build_zoo() -> list:
                 )
             )
             task_names.append(f"subsampledlaplace-q{q}_s{s}_k{k}")
-
-    # for sigma in np.geomspace(0.01, 10, 5):
-    #     # for sigma in np.linspace(0.01, 100, 100):
-
-    #     for sampling in np.geomspace(1e-5, 0.5, 5):
-    #         for steps in [1] + [200 * k for k in range(1, 5)]:
-    #             curve_zoo.append(
-    #                 SubsampledGaussianCurve(
-    #                     sigma=sigma,
-    #                     sampling_probability=sampling,
-    #                     steps=steps / sampling,
-    #                 )
-    #             )
-    #             task_names.append(
-    #                 f"subsampledgaussian-{sigma:.4f}_{sampling:.6f}_{steps}"
-    #             )
-
-    #             curve_zoo.append(
-    #                 SubsampledLaplaceCurve(
-    #                     noise_multiplier=sigma,
-    #                     sampling_probability=sampling,
-    #                     steps=steps / sampling,
-    #                 )
-    #             )
-    #             task_names.append(
-    #                 f"subsampledlaplace-{sigma:.4f}_{sampling:.6f}_{steps}"
-    #             )
 
     return list(zip(task_names, curve_zoo))
 

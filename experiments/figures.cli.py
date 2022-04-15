@@ -313,7 +313,7 @@ def plot_temp(fig_dir):
         num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
         # num_tasks=[25, 50, 100, 500, 1000, 2000, 5000],
-        num_tasks=[500, 1000, 2000, 5000, 10_000],
+        num_tasks=[10, 25, 50, 100, 200, 500, 1000, 2000, 5000, 10_000],
         # num_tasks=[20_000],
         data_path="heterogeneous/blocks",
         metric_recomputation_period=100,
