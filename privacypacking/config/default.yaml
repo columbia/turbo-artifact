@@ -60,5 +60,5 @@ alphas:
 - 64
 
 epsilon: 10
-delta: 0.00001
+delta: 1e-7
 global_seed: 64

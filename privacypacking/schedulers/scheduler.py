@@ -136,7 +136,25 @@ class Scheduler:
 
             n_allocated_tasks = 0
             for task in sorted_tasks:
+
+                # if hasattr(self.metric, "compute_relevance_matrix"):
+                #     relevance_matrix = (
+                #         relevance_matrix
+                #     ) = self.metric.compute_relevance_matrix(
+                #         self.blocks, self.task_queue.tasks
+                #     )
+                #     logger.warning(
+                #         f"P1: {task.name} with efficiency {self.metric.apply(task, self.blocks, self.task_queue.tasks, relevance_matrix)} and {task.n_blocks} blocks. {type(self.metric)}"
+                #     )
+                # else:
+                #     logger.warning(
+                #         f"P1: {task.name} with efficiency {self.metric.apply(task, self.blocks, self.task_queue.tasks)} and {task.n_blocks} blocks. {type(self.metric)}"
+                #     )
+
+                # time.sleep(1000)
+
                 if self.can_run(task):
+
                     # print("Allocated:", task.name, " - with blocks", task.n_blocks)
 
                     self.allocate_task(task)

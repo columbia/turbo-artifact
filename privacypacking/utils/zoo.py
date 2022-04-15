@@ -19,6 +19,7 @@ from privacypacking.budget.curves import (
     SubsampledLaplaceCurve,
     SyntheticPolynomialCurve,
 )
+from privacypacking.utils.utils import sample_one_from_string
 
 
 def build_synthetic_zoo() -> list:
@@ -58,6 +59,7 @@ def build_synthetic_zoo() -> list:
 def load_zoo(tasks_path):
     curve_zoo = []
     task_names = []
+    blocks_dict = defaultdict(list)
     for task_path in Path(tasks_path).glob("*.yaml"):
         task_dict = OmegaConf.load(task_path)
         name = task_path.stem
@@ -68,7 +70,11 @@ def load_zoo(tasks_path):
             }
             curve_zoo.append(Budget(orders=orders))
             task_names.append(name)
-    return list(zip(task_names, curve_zoo))
+        blocks_dict["task_name"].append(name)
+        blocks_dict["n_blocks"].append(task_dict.n_blocks)
+
+    blocks_df = pd.DataFrame(blocks_dict)
+    return list(zip(task_names, curve_zoo)), blocks_df
 
 
 def build_zoo() -> list:
@@ -119,10 +125,10 @@ def build_zoo() -> list:
 
 def normalize_zoo(
     names_and_curves,
-    epsilon_min_avg,
-    epsilon_min_std,
-    range_avg,
-    range_std,
+    epsilon_min_avg=None,
+    epsilon_min_std=None,
+    range_avg=None,
+    range_std=None,
     control_flatness=True,
     control_size=True,
     min_epsilon=1e-2,
@@ -133,7 +139,11 @@ def normalize_zoo(
 
     # We'll work on the dataframe, and dump back the zoo at the end
     alphas_df, tasks_df = zoo_df(
-        names_and_curves, min_epsilon=min_epsilon, epsilon=epsilon, delta=delta
+        names_and_curves,
+        min_epsilon=min_epsilon,
+        epsilon=epsilon,
+        delta=delta,
+        clipped=False,
     )
 
     if control_size:
@@ -352,9 +362,6 @@ def zoo_df(
 def alpha_variance_frequencies(
     tasks_df: pd.DataFrame, n_bins=7, sigma=0
 ) -> pd.DataFrame:
-
-    # TODO: remove tasks that have been filtered.
-    # BUG
     def map_range_to_bin(alpha):
         # d = {3: -3, 4: -2, 5: -1, 6: 0, 8: 1, 16: 2, 64: 3}
         # return d[alpha]
@@ -425,6 +432,11 @@ def gaussian_block_distribution(block_avg, block_std, max_blocks, **kwargs):
     return ",".join(name_and_freq)
 
 
+def sample_from_gaussian_block_distribution(block_avg, block_std, max_blocks, **kwargs):
+    stochastic_string = gaussian_block_distribution(block_avg, block_std, max_blocks)
+    return int(sample_one_from_string(stochastic_string))
+
+
 def plot_curves_stats(alphas_df, tasks_path):
     figs = {}
 
@@ -488,6 +500,20 @@ def plot_curves_stats(alphas_df, tasks_path):
         log_x=True,
         title=title,
     )
+
+    if "n_blocks" in alphas_df.columns:
+        title = "_Blocks by dominant share, for each best alpha"
+        figs[title] = px.scatter(
+            alphas_df.query("alphas == best_alpha"),
+            x="epsilon_max",
+            y="n_blocks",
+            color="task_type",
+            log_y=False,
+            log_x=True,
+            facet_row="best_alpha",
+            height=1200,
+            title=title,
+        )
 
     for title, fig in figs.items():
         fig_path = tasks_path.joinpath(f"{title}.png")

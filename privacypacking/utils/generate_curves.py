@@ -26,6 +26,7 @@ from privacypacking.utils.zoo import (
     load_zoo,
     normalize_zoo,
     plot_curves_stats,
+    sample_from_gaussian_block_distribution,
     zoo_df,
 )
 
@@ -191,7 +192,8 @@ def heterogeneous(
             task_dict = {
                 "alphas": budget.alphas,
                 "rdp_epsilons": np.array(budget.epsilons).tolist(),
-                "n_blocks": gaussian_block_distribution(**arg),
+                # "n_blocks": gaussian_block_distribution(**arg),
+                "n_blocks": sample_from_gaussian_block_distribution(**arg),
                 "block_selection_policy": block_selection_policy,
                 "profit": "1:1",
             }
@@ -459,10 +461,11 @@ def plot(tasks_path: str = typer.Option("data/privatekube_event_g0.0_l0.5_p=1/ta
     """
     Simply plots some statistics for an existing directory of yaml tasks.
     """
-    original_names_and_curves = load_zoo(tasks_path)
+    original_names_and_curves, blocks_df = load_zoo(tasks_path)
     alphas_df, tasks_df = zoo_df(
         original_names_and_curves, min_epsilon=0, max_epsilon=1e10
     )
+    alphas_df = alphas_df.merge(blocks_df, on="task_name")
     plot_curves_stats(alphas_df, Path(tasks_path))
 
 
