@@ -174,7 +174,7 @@ def normalize_zoo(
         )
         offset = offset.merge(offset_2)
 
-        logger.debug(f"Original epsilon min avg/std: {offset}")
+        # logger.debug(f"Original epsilon min avg/std: {offset}")
 
         alphas_df = alphas_df.merge(offset)
         rescaled = alphas_df.copy()
@@ -244,7 +244,7 @@ def normalize_zoo(
         )
         offset_range = offset_range.merge(offset_range_2)
 
-        logger.debug(f"Original range avg/std: {offset_range}")
+        # logger.debug(f"Original range avg/std: {offset_range}")
 
         rescaled = rescaled.merge(offset_range)
 

@@ -178,6 +178,7 @@ def heterogeneous(
             original_names_and_curves,
             control_flatness=control_flatness,
             control_size=control_size,
+            min_epsilon=min_epsilon,
             **arg,
         )
 

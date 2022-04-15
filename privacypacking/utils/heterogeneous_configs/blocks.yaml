@@ -1,9 +1,9 @@
 epsilon_min_avg: [0.05]
-# epsilon_min_std: [0.0]
-epsilon_min_std: [0.01]
+epsilon_min_std: [0.0]
+# epsilon_min_std: [0.01]
 range_avg: [0.05]
 range_std: [0.03]
 max_blocks: 20
 block_avg: 10
-block_std: [0, 1, 2, 4, 8, 16]
+block_std: [0, 0.5, 1, 1.5, 2, 3, 4, 6, 8, 10]
 alpha_std: [0]
