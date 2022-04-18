@@ -144,14 +144,20 @@ def heterogeneous(
     logger.info("Generating & saving the initial workload...")
     original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
     alphas_df, tasks_df = zoo_df(
-        original_names_and_curves, min_epsilon=min_epsilon, max_epsilon=max_epsilon
+        original_names_and_curves,
+        min_epsilon=min_epsilon,
+        max_epsilon=max_epsilon,
+        # best_alphas=[5, 64],
     )
     tasks_path = output_path.joinpath("original_tasks")
     tasks_path.mkdir(exist_ok=True, parents=True)
     plot_curves_stats(alphas_df, tasks_path)
 
+    # We filter out the original tasks
+    filtered_names_and_curves = []
     for task_id in tasks_df.task_id:
         name, budget = original_names_and_curves[task_id]
+        filtered_names_and_curves.append((name, budget))
         task_dict = {
             "alphas": budget.alphas,
             "rdp_epsilons": np.array(budget.epsilons).tolist(),
@@ -175,7 +181,7 @@ def heterogeneous(
     logger.info("Generating normalized versions with different scales...")
     for arg in tqdm(args):
         names_and_curves = normalize_zoo(
-            original_names_and_curves,
+            filtered_names_and_curves,
             control_flatness=control_flatness,
             control_size=control_size,
             min_epsilon=min_epsilon,

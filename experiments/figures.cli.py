@@ -424,14 +424,14 @@ def save_fig_and_csv(
 
 def plot_temp(fig_dir):
     rdf = grid_offline_heterogeneity_knob(
-        # num_blocks=[1],
-        num_blocks=[20],
+        num_blocks=[1],
+        # num_blocks=[20],
         # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        # num_tasks=[25, 50, 100, 500, 1000, 2000, 5000],
-        num_tasks=[1000],
+        num_tasks=[25, 50, 100, 500, 1000, 2000, 5000],
+        # num_tasks=[1000],
         # num_tasks=[100],
-        data_path="heterogeneous/alphas_std",
-        metric_recomputation_period=100,
+        data_path="heterogeneous/best_alphas",
+        metric_recomputation_period=10000,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
     )
@@ -439,8 +439,8 @@ def plot_temp(fig_dir):
     rdf = add_workload_args_to_results(rdf)
 
     fig = px.line(
-        rdf.sort_values("alpha_std"),
-        x="alpha_std",
+        rdf.sort_values("range_avg"),
+        x="range_avg",
         # rdf.sort_values("block_std"),
         # x="block_std",
         y="n_allocated_tasks",

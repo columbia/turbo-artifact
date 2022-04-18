@@ -174,7 +174,7 @@ def normalize_zoo(
         )
         offset = offset.merge(offset_2)
 
-        # logger.debug(f"Original epsilon min avg/std: {offset}")
+        logger.debug(f"Original epsilon min avg/std: {offset}")
 
         alphas_df = alphas_df.merge(offset)
         rescaled = alphas_df.copy()
@@ -244,7 +244,7 @@ def normalize_zoo(
         )
         offset_range = offset_range.merge(offset_range_2)
 
-        # logger.debug(f"Original range avg/std: {offset_range}")
+        logger.debug(f"Original range avg/std: {offset_range}")
 
         rescaled = rescaled.merge(offset_range)
 
@@ -297,7 +297,13 @@ def normalize_zoo(
 
 
 def zoo_df(
-    zoo: list, min_epsilon=5e-2, max_epsilon=1, clipped=True, epsilon=10, delta=1e-7
+    zoo: list,
+    min_epsilon=5e-2,
+    max_epsilon=1,
+    clipped=True,
+    epsilon=10,
+    delta=1e-7,
+    best_alphas=ALPHAS,
 ) -> pd.DataFrame:
     block = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
 
@@ -343,9 +349,15 @@ def zoo_df(
     indx = df.groupby("task_id")["normalized_epsilons"].idxmin()
     best_alpha = df.loc[indx][["task_id", "alphas"]]
     best_alpha = best_alpha.rename(columns={"alphas": "best_alpha"})
-    tasks = tasks.merge(best_alpha, how="inner", on="task_id")
+    tasks = tasks.merge(best_alpha, how="inner", on="task_id").query(
+        f"best_alpha in {best_alphas}"
+    )
+
+    logger.info(tasks.best_alpha.unique())
 
     df = df.merge(tasks, on="task_id")
+
+    logger.info(df.best_alpha.unique())
 
     def get_task_type(task_name):
         if "-" in task_name:
