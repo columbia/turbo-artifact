@@ -59,19 +59,19 @@ def grid_offline(
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
+    gurobi_threads: int = os.cpu_count() // 4,
 ):
     metrics = [
         SIMPLEX,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        OVERFLOW_RELEVANCE,
-        ARGMAX_KNAPSACK,
+        # ARGMAX_KNAPSACK,
+        # DOMINANT_SHARES,
+        # FLAT_RELEVANCE,
+        # OVERFLOW_RELEVANCE,
     ]
 
     block_selection_policy = ["RandomBlocks"]
     temperature = [-1]
     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
-    gurobi_threads = os.cpu_count() // 4
 
     config = {}
     config["omegaconf"] = {
@@ -80,7 +80,7 @@ def grid_offline(
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 50,
-            "scheduler_timeout_seconds": 20 * 60,
+            "scheduler_timeout_seconds": 20 * 60 * 60,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -94,8 +94,8 @@ def grid_offline(
             "save": True,
         },
         "blocks": {
-            "initial_num": num_blocks,
-            "max_num": num_blocks,
+            "initial_num": tune.grid_search(num_blocks),
+            "max_num": tune.grid_search(num_blocks)
         },
         "tasks": {
             "initial_num": tune.grid_search(num_tasks),
@@ -106,11 +106,12 @@ def grid_offline(
 
     experiment_analysis = tune.run(
         run_and_report,
+        raise_on_failed_trial=False,
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
         resume=False,
-        verbose=0,
+        verbose=1,
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
@@ -118,6 +119,14 @@ def grid_offline(
             #     experiment_name="grid_offline",
             # ),
         ],
+        progress_reporter=ray.tune.CLIReporter(
+            metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit", "time_total_s"],
+            parameter_columns={
+                "omegaconf/scheduler/metric": "metric",
+                # "omegaconf/metric/temperature": "temperature",
+            },
+            max_report_frequency=60,
+        )
     )
 
     all_trial_paths = experiment_analysis._get_trial_paths()

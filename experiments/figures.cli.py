@@ -266,6 +266,124 @@ def plot_mixed_curves_online(fig_dir):
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
 
+def plot_heterogeneous_curves_offline(fig_dir):
+    rdf = grid_offline(
+        num_blocks=[10],
+        num_tasks=[100],  #, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
+        data_path=["heterogeneous/blocks"],
+        # metric_recomputation_period=100,
+        metric_recomputation_period=100,
+        parallel=False,  # We care about the runtime here
+        gurobi_timeout_minutes=10,
+        gurobi_threads=1,
+    )
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Diverse RDP curves offline",
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "n_allocated_tasks",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+            .sort_values(["id", "total_tasks"])
+            .drop_duplicates()
+    )
+
+    fig_path = fig_dir.joinpath(
+        "heterogeneous/heterogeneous_curves.png"
+    )
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+    # Let's plot the runtime now
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="time_total_s",
+        color="scheduler_metric",
+        # log_x=True,
+        width=800,
+        height=600,
+        range_y=[0, 1_000],
+        # title="Number of allocated tasks depending on the scheduling step size<br><sup>Online mixed curves, 20 blocks, no initial blocks, 100 tasks per block on average, lifetime = 5 blocks</sup>"
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "time_total_s",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+            .sort_values(["id", "total_tasks"])
+            .drop_duplicates()
+    )
+    fig_path = fig_dir.joinpath(
+        "heterogeneous/heterogeneous_curves_runtime.png"
+    )
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+
+def plot_heterogeneous_curves_online(fig_dir):
+    rdf = grid_online(
+        scheduler_scheduling_time=[2, 4, 6, 8, 10],
+        metric_recomputation_period=[50],
+        initial_blocks=[10],
+        max_blocks=[30],
+        data_path=["mixed_curves"],
+        tasks_sampling="poisson",
+        data_lifetime=[10],
+        avg_num_tasks_per_block=[500],
+    )
+
+    fig = px.line(
+        rdf.sort_values("T"),
+        x="T",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Mixed curves online",
+    )
+
+    fig_path = fig_dir.joinpath("mixed-curves/online.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
 
 # TODO: remember to update delta if you are using something else than mixed curves.
 
