@@ -136,6 +136,7 @@ class Scheduler:
 
             n_allocated_tasks = 0
             for task in sorted_tasks:
+                # TODO: CREATE SUBSTITUTES TO HAVE MORE OPTIONS
                 if self.can_run(task):
                     # print("Allocated:", task.name, " - with blocks", task.n_blocks)
 
@@ -144,7 +145,7 @@ class Scheduler:
                     self.tasks_info.allocation_index[task.id] = self.allocation_counter
                     self.allocation_counter += 1
                     n_allocated_tasks += 1
-
+                    # TODO: RUN TASK - UPDATE CACHES
                     if self.omegaconf.log_warning_every_n_allocated_tasks and (
                         self.allocation_counter
                         % self.omegaconf.log_warning_every_n_allocated_tasks

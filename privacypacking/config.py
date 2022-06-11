@@ -142,12 +142,14 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        return Block.from_epsilon_delta(
-            block_id,
-            self.omegaconf.epsilon,
-            self.omegaconf.delta,
-            alpha_list=self.omegaconf.alphas,
-        )
+        block = Block.from_epsilon_delta(
+                        block_id,
+                        self.omegaconf.epsilon,
+                        self.omegaconf.delta,
+                        alpha_list=self.omegaconf.alphas,
+                    )
+        block.data_path=f"{self.omegaconf.data_path}/block_{block_id}"
+        return block
 
     def set_task_arrival_time(self):
         if self.omegaconf.tasks.sampling == "poisson":

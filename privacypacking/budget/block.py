@@ -8,7 +8,7 @@ class Block:
         self.id = id
         self.initial_budget = budget
         self.budget = budget
-        # add other properties here
+        self.data_path = data_path
 
     @classmethod
     def from_epsilon_delta(
