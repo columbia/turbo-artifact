@@ -38,11 +38,11 @@ def get_logs(
     allocated_tasks_scheduling_delays = []
     maximum_profit = 0
     realized_profit = 0
+    tasks_allocated_due_to_substitution = 0
 
     log_tasks = []
     for task in tasks:
         task_dump = task.dump()
-
         maximum_profit += task.profit
         if tasks_info.tasks_status[task.id] == ALLOCATED:
             n_allocated_tasks += 1
@@ -51,11 +51,15 @@ def get_logs(
             allocated_tasks_scheduling_delays.append(
                 tasks_info.scheduling_delay.get(task.id, None)
             )
+            if tasks_info.tasks_allocated_substitutions[task.id]:
+                tasks_allocated_due_to_substitution += 1
 
         task_dump.update(
             {
                 "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                 "status": tasks_info.tasks_status[task.id],
+                "substitutes_num": tasks_info.tasks_substitutions_num[task.id],
+                "tasks_allocated_substitutions": tasks_info.tasks_allocated_substitutions[task.id],
                 "creation_time": tasks_info.creation_time[task.id],
                 "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
                 "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
@@ -89,6 +93,7 @@ def get_logs(
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
+        "n_substituted_allocated_tasks": tasks_allocated_due_to_substitution,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,

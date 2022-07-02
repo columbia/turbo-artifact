@@ -215,28 +215,30 @@ def grid_offline_heterogeneity_knob(
 
 
 def grid_online(
-    scheduler_scheduling_time: List[int],
+    scheduler_scheduling_time: List[float],
     initial_blocks: List[int],
     max_blocks: List[int],
     metric_recomputation_period: List[int],
-    data_path: List[str],
+    tasks_data_path: List[str],
+    blocks_data_path: List[str],
     tasks_sampling: str,
-    data_lifetime: List[int],
+    data_lifetime: List[float],
+    allow_block_substitution: bool,
     avg_num_tasks_per_block: List[int] = [100],
 ):
     # ray.init(log_to_driver=False)
     scheduler_metrics = [
         # SOFT_KNAPSACK,
-        ARGMAX_KNAPSACK,
+        # ARGMAX_KNAPSACK,
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
-        #  FCFS,
+         FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        DOMINANT_SHARES,
+        # DOMINANT_SHARES,
     ]
 
-    temperature = [0.01]
+    # temperature = [0.01]
 
     # Fully unlocked case
     # n = [1]
@@ -244,12 +246,14 @@ def grid_online(
 
     # Progressive unlocking
     n = [1_000]
-    # data_lifetime = [5]
+    data_lifetime = data_lifetime
 
     block_selection_policy = ["LatestBlocksFirst"]
     config = {}
 
     config["omegaconf"] = {
+        "epsilon": 10,
+        "delta": 0.00001,
         "scheduler": {
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
@@ -261,23 +265,26 @@ def grid_online(
             "method": "batch",
             "metric": tune.grid_search(scheduler_metrics),
             "n": tune.grid_search(n),
+            "allow_block_substitution": allow_block_substitution,
         },
         "metric": {
             "normalize_by": "available_budget",
-            "temperature": tune.grid_search(temperature),
+            # "temperature": tune.grid_search(temperature),
             "n_knapsack_solvers": 1,
         },
         "logs": {
             "verbose": False,
-            "save": False,
+            "save": True,
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
+            "data_path": tune.grid_search(blocks_data_path),
+
         },
         "tasks": {
             "sampling": tasks_sampling,
-            "data_path": tune.grid_search(data_path),
+            "data_path": tune.grid_search(tasks_data_path),
             "block_selection_policy": tune.grid_search(block_selection_policy),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
         },
@@ -292,15 +299,15 @@ def grid_online(
         local_dir=RAY_LOGS,
         resume=False,
         verbose=1,
-        callbacks=[
-            CustomLoggerCallback(),
-            tune.logger.JsonLoggerCallback(),
+        # callbacks=[
+            # CustomLoggerCallback(),
+            # tune.tune.logger.JsonLoggerCallback(),
             # tune.integration.mlflow.MLflowLoggerCallback(
             #     experiment_name="grid-online",
             # ),
-        ],
+        # ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
+            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks", "realized_profit"],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
@@ -310,26 +317,26 @@ def grid_online(
             max_report_frequency=60,
         ),
     )
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-    rdf = load_ray_experiment(experiment_dir)
-    return rdf
+    # all_trial_paths = experiment_analysis._get_trial_paths()
+    # experiment_dir = Path(all_trial_paths[0]).parent
+    # rdf = load_ray_experiment(experiment_dir)
+    # return rdf
 
 
-class CustomLoggerCallback(tune.logger.LoggerCallback):
-    """Custom logger interface"""
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-        logger.info(
-            [
-                f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit"]
-            ]
-        )
-        return
-
-    def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
-        return
+# class CustomLoggerCallback(tune.tune.logger.LoggerCallback):
+#     """Custom logger interface"""
+#
+#     def __init__(self) -> None:
+#         super().__init__()
+#
+#     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
+#         logger.info(
+#             [
+#                 f"{key}: {result[key]}"
+#                 for key in ["n_allocated_tasks", "realized_profit"]
+#             ]
+#         )
+#         return
+#
+#     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
+#         return

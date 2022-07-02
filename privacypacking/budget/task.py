@@ -13,19 +13,24 @@ class Task:
     def __init__(
         self,
         id: int,
+        query_type: int,
         profit: float,
         block_selection_policy: BlockSelectionPolicy,
         n_blocks: int,
+        k: float,
         name: str = None,
     ):
+        # User request
         self.id = id
+        self.query_type = query_type
         self.profit = profit
         self.block_selection_policy = block_selection_policy
         self.n_blocks = n_blocks
+        self.k = k
         self.name = name
-
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
+        self.initial_budget_per_block = {}
         self.cost = 0
 
     def get_efficiency(self, cost):
@@ -53,9 +58,13 @@ class Task:
     def set_budget_per_block(self, block_ids: Iterable[int]):
         pass
 
+    def get_substitute_demand(self, substitute):
+        pass
+
     def dump(self):
         return {
             "id": self.id,
+            "query_type": self.query_type,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,
@@ -101,18 +110,30 @@ class UniformTask(Task):
     def __init__(
         self,
         id: int,
+        query_type: int,
         profit: float,
         block_selection_policy: Any,
         n_blocks: int,
         budget: Budget,
+        k: float,
         name: str = None,
     ):
         """
         A Task that requires (the same) `budget` for all blocks in `block_ids`
         """
         self.budget = budget
-        super().__init__(id, profit, block_selection_policy, n_blocks, name=name)
+        super().__init__(id, query_type, profit, block_selection_policy, n_blocks, k, name=name)
 
     def set_budget_per_block(self, block_ids: Iterable[int]):
         for block_id in block_ids:
             self.budget_per_block[block_id] = self.budget
+            self.initial_budget_per_block[block_id] = self.budget
+
+    def get_substitute_demand(self, substitute):
+        demand = {}
+        for b in substitute:
+            if b not in demand:
+                demand[b] = self.budget
+            else:
+                demand[b] += self.budget
+        return demand

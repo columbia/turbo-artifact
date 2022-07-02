@@ -71,6 +71,12 @@ class Budget:
                 return True
         return False
 
+    def is_exhausted(self) -> bool:
+        for epsilon in self.epsilons:
+            if epsilon >= 0:
+                return False
+        return True
+
     def is_positive_all_alphas(self) -> bool:
         for epsilon in self.epsilons:
             if epsilon < 0:

@@ -15,9 +15,10 @@ For all schedulers based on gradually unlocking budget
 class UnlockingBlock(Block):
     def __init__(self, id: int, budget: Budget, n: int = 1):
         super().__init__(id, budget)
-        self.unlocked_budget = (
-            ZeroCurve()
-        )  # Will be gradually unlocking budget till we reach full capacity
+        self.unlocked_budget = Budget({0.0: 0})
+            # (
+            # ZeroCurve()
+        # )  # Will be gradually unlocking budget till we reach full capacity
         self.fair_share = self.initial_budget / n
 
     def unlock_budget(self, budget: Budget = None):
@@ -129,8 +130,8 @@ class TBudgetUnlocking(Scheduler):
             yield self.env.timeout(period)
             super().schedule_queue()
 
-    def can_run(self, task):
-        for block_id, demand_budget in task.budget_per_block.items():
+    def can_run(self, demand):
+        for block_id, demand_budget in demand.items():
             block = self.blocks[block_id]
             allocated_budget = block.initial_budget - block.budget
             available_budget = block.unlocked_budget - allocated_budget

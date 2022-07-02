@@ -13,12 +13,12 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
-from privacypacking.utils.zoo import (
-    build_zoo,
-    gaussian_block_distribution,
-    geometric_frequencies,
-    zoo_df,
-)
+# from privacypacking.utils.zoo import (
+#     build_zoo,
+#     gaussian_block_distribution,
+#     geometric_frequencies,
+#     zoo_df,
+# )
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data")
 P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]

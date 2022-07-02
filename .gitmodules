@@ -4,6 +4,3 @@
 [submodule "autodp"]
 	path = autodp
 	url = git@github.com:yuxiangw/autodp.git
-[submodule "privacypacking/harvestpd"]
-	path = privacypacking/harvestpd
-	url = https://github.com/columbia/harvestpd.git

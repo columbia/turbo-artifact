@@ -23,7 +23,8 @@ torch = "1.8.1"
 opacus = "^0.14.0"
 PyYAML = "^5.4.1"
 desmod = "^0.6.1"
-ray = {extras = ["tune", "default"], version = "^1.5.2"}
+ray = {extras = ["tune"], version = "^1.12.1"}
+
 tensorboard = "^2.6.0"
 tensorflow = "^2.6.0"
 mip = "^1.13.0"
@@ -34,6 +35,7 @@ tqdm = "^4.62.3"
 omegaconf = "^2.1.1"
 mlflow = "^1.23.1"
 snakeviz = "^2.1.1"
+termcolor = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

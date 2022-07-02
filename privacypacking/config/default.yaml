@@ -61,3 +61,4 @@ alphas:
 epsilon: 10
 delta: 0.00001
 global_seed: 64
+k: 100000000

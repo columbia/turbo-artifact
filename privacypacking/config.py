@@ -1,17 +1,12 @@
-import math
 import os
 import random
-import uuid
-from datetime import datetime
 from functools import partial
-from typing import List
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger
-from numpy.lib.arraysetops import isin
 from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
@@ -70,8 +65,9 @@ class Config:
                 self.omegaconf.tasks.data_path
             )
             self.tasks = pd.read_csv(self.data_path)
+            self.max_tasks = len(self.tasks)
             self.tasks_generator = self.tasks.iterrows()
-            self.sum_task_interval = self.tasks["relative_submit_time"].sum()
+            # self.sum_task_interval = self.tasks["relative_submit_time"].sum()
             self.task_arrival_interval_generator = self.tasks[
                 "relative_submit_time"
             ].iteritems()
@@ -109,11 +105,13 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
+                query_type=0,
                 profit=task_spec.profit,
                 block_selection_policy=block_selection_policy,
                 n_blocks=task_spec.n_blocks,
                 budget=task_spec.budget,
                 name=task_spec.name,
+                k=self.omegaconf.k
             )
         # Not sampling but reading actual tasks sequentially from one file
         else:
@@ -129,6 +127,7 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
+                query_type=int(task_row["query_type"]),
                 profit=float(task_row["profit"]),
                 block_selection_policy=BlockSelectionPolicy.from_str(
                     task_row["block_selection_policy"]
@@ -136,19 +135,23 @@ class Config:
                 n_blocks=int(task_row["n_blocks"]),
                 budget=Budget(orders),
                 name=task_row["task_name"],
+                k=self.omegaconf.k
             )
 
         assert task is not None
         return task
 
     def create_block(self, block_id: int) -> Block:
-        block = Block.from_epsilon_delta(
-                        block_id,
-                        self.omegaconf.epsilon,
-                        self.omegaconf.delta,
-                        alpha_list=self.omegaconf.alphas,
-                    )
-        block.data_path=f"{self.omegaconf.data_path}/block_{block_id}"
+        block = Block(block_id,
+                      Budget({0.0: self.omegaconf.epsilon}),
+                      f"{self.omegaconf.blocks.data_path}/block_{block_id}")
+        # block = Block.from_epsilon_delta(
+        #                 block_id,
+        #                 self.omegaconf.epsilon,
+        #                 self.omegaconf.delta,
+        #                 alpha_list=self.omegaconf.alphas,
+        #             )
+        # block.data_path = f"{self.omegaconf.blocks.data_path}/block_{block_id}"
         return block
 
     def set_task_arrival_time(self):
@@ -161,10 +164,10 @@ class Config:
 
         else:
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
-            normalized_task_interval = task_arrival_interval / self.sum_task_interval
-            task_arrival_interval = (
-                normalized_task_interval * self.block_arrival_interval * self.max_blocks
-            )
+            # normalized_task_interval = task_arrival_interval / self.sum_task_interval
+            # task_arrival_interval = (
+            #     normalized_task_interval * self.block_arrival_interval * self.max_blocks
+            # )
         return task_arrival_interval
 
     def set_block_arrival_time(self):
