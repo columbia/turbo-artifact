@@ -223,6 +223,7 @@ def grid_online(
     blocks_data_path: List[str],
     tasks_sampling: str,
     data_lifetime: List[float],
+    k: List[float],
     allow_block_substitution: bool,
     avg_num_tasks_per_block: List[int] = [100],
 ):
@@ -254,6 +255,7 @@ def grid_online(
     config["omegaconf"] = {
         "epsilon": 10,
         "delta": 0.00001,
+        "k": tune.grid_search(k),
         "scheduler": {
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period

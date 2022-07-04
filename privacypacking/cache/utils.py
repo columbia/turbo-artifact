@@ -1,63 +1,22 @@
-import random
-import collections
-
-from pathlib import Path
-REPO_ROOT = Path(__file__).parent.parent
-LOGS_PATH = REPO_ROOT.joinpath("exps/exps/logs")
-RAY_LOGS = LOGS_PATH
-
-random.seed(99)
-
-class Task:
-    def __init__(self, task_id, blocks):
-        self.id = task_id
-        self.blocks = blocks
-        self.result = None
-        self.substitutes = {}
+import itertools
 
 
-    def dump(self,):
-        return {
-                "id": self.id,
-                "result": self.result,
-                "blocks": self.blocks,
-                "substitutes": {str(key): value for key, value in self.substitutes.items()},
-                }
+def get_subsets_of_contiguous_blocks(x):
+    subsets = []
+    xlen = len(x)
+    for size in range(xlen):
+        for i in range(xlen-size):
+            subsets.append(tuple([x[i], x[i+size]]))
+    return subsets
 
 
-def flatten_list(x):
-    if isinstance(x, list):
-        return [a for i in x for a in flatten_list(i)]
-    else:
-        return [x]
-
-def flatten(x):
-    if isinstance(x, (list,tuple)):
-        return [a for i in x for a in flatten(i)]
-    else:
-        return [x]
-
-def workload_pattern(max_queries, max_blocks, query_nums, total_tasks):
-    possible_requested_blocks = []
-    for i in range(max_blocks):
-        for j in range(i, max_blocks):
-            possible_requested_blocks += [(i+1, j+1)]
-    print("Possible requested blocks", possible_requested_blocks)
-
-    cached_tasks = []
-    uncached_tasks = []
-    indices = random.sample(range(len(possible_requested_blocks)), total_tasks)
-    for i in range(len(possible_requested_blocks)):
-        if i in indices:
-            cached_tasks += [Task(query_nums[0], possible_requested_blocks[i])]
-        else:
-            uncached_tasks += [Task(query_nums[0], possible_requested_blocks[i])]
-
-    print("Cached tasks")
-    for i in cached_tasks:
-        print(i.blocks)
-    print("Uncached tasks")
-    for i in uncached_tasks:
-            print(i.blocks)
-
-    return cached_tasks, uncached_tasks
+def get_splits(x, num_cuts):
+    splits = []
+    xlen = len(x)
+    for cuts in itertools.combinations(range(1, xlen), num_cuts):
+        c = list(cuts)
+        c.append(xlen)
+        c.insert(0, 0)
+        split = [tuple(x[c[i]:c[i+1]]) for i in range(len(c)-1)]
+        splits.append(split)
+    return splits

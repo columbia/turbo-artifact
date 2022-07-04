@@ -73,7 +73,7 @@ class Budget:
 
     def is_exhausted(self) -> bool:
         for epsilon in self.epsilons:
-            if epsilon >= 0:
+            if epsilon > 0:
                 return False
         return True
 

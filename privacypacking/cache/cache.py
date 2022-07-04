@@ -1,9 +1,8 @@
 import yaml
-from itertools import permutations
 import numpy as np
+import itertools
+from utils import get_splits, get_subsets_of_contiguous_blocks
 from termcolor import colored
-from privacypacking.harvestpd.cache.utils import flatten, flatten_list
-
 
 class Cache:
     def __init__(self, ):
@@ -43,7 +42,6 @@ class Cache:
         if query_type in self.substitute_results:
             if blocks in self.substitute_results[query_type]:
                 return self.substitute_results[query_type][blocks]
-
         return None
 
     def remove(self, block_id, curr_num_blocks):
@@ -97,102 +95,84 @@ class Cache:
         # print(colored("Distances distances...", 'yellow'), self.distances)
 
     def absolute_mean_error(self, res1, res2):
-        return np.abs((res1.to_numpy() - res2.to_numpy())).mean()
+        res1 = res1.to_numpy()
+        res2 = res2.to_numpy()
+        d = max(np.abs(res1), np.abs(res2))
+        if not d:
+            print(f"Res1={res1}, Res2={res2} -     distance: 0")
+            return 0
+        print(f"Res1={res1}, Res2={res2} -     distance: {np.abs(res1-res2) / d}")
+        return np.abs(res1-res2) / d
 
     def get_substitute_blocks(self, task, sys_blocks):
-        if task.query_type not in self.results:
-            return ()
+        # if task.query_type not in self.results:
+        #     return ()
+        direct_substitutes = {}
 
-        arr = {}
+        def add_to_direct_substitutes(k, val):
+            if k not in direct_substitutes:
+                direct_substitutes[k] = [val]
+            else:
+                direct_substitutes[k] += [val]
+
         bs = sorted(list(task.budget_per_block.keys()))
-        blocks = (bs[0], bs[-1])
-        substitute_blocks = self.get_substitute_blocks_rec(task.query_type, blocks, task.k,
-                                                           task.budget, sys_blocks, arr)
-        # print(substitute_blocks)
-        subs = set()
-        for blocks in substitute_blocks:
-            blocks = flatten_list(blocks)
-            for i, v in enumerate(blocks):
-                blocks[i] = tuple(range(v[0], v[1]+1))
-            subs.add(tuple(sorted(flatten(blocks))))
-        # for i in subs:
-        #     print(i)
-        # print(self.distances[4])
-        # exit(0)
-        return subs
 
-    def get_substitute_blocks_rec(self, query_type, blocks, k, demand, sys_blocks, arr):
-        """ returns a list of lists of substitute blocks """
-        if blocks in arr:
-            return arr[blocks]
+        # Fill array with direct substitutes that have enough budget
+        subsets = self.get_subsets_of_contiguous_blocks(bs)
+        # print("\n\nsubsets", subsets)
 
-        substitutes = []
+        for blocks in subsets:
+            if have_enough_budget(blocks, task.budget, sys_blocks):
+                add_to_direct_substitutes(blocks, blocks)
 
-        if have_enough_budget(blocks, demand, sys_blocks):
-            substitutes += [blocks]
+            if blocks in self.distances[task.query_type]:
+                r = self.distances[task.query_type][blocks]
+                for (blocks_, error) in r:
+                    #  Substitutes have at most the same cardinality as blocks
+                    if blocks[1]-blocks[0]+1 >= blocks_[1]-blocks_[0]+1:
+                        if error <= task.k and have_enough_budget(blocks_, task.budget, sys_blocks):
+                            add_to_direct_substitutes(blocks, blocks_)
 
-        if blocks in self.distances[query_type]:
-            r = self.distances[query_type][blocks]
-            for (blocks_, error) in r:
-                #  Substitutes have at most the same cardinality as blocks
-                if blocks[1] - blocks[0] >= blocks_[1] - blocks_[0]:
-                    if error <= k and have_enough_budget(blocks_, demand, sys_blocks):
-                        substitutes += [blocks_]
+        # print("\n\ncache distances")
+        # for i, v in self.distances.items():
+        #     print(i, v)
+        # print("\n\ndirect distances")
+        # for i, v in direct_substitutes.items():
+        #     print(i, v)
 
-        if blocks[1] - blocks[0] > 0:
-            for combination in get_combinations(blocks):
-                substitute = []
-                # print("combination", combination)
-                for b in combination:
-                    if b != blocks:
-                        # print("     get subs of", b)
-                        sub = self.get_substitute_blocks_rec(query_type, b, k, demand, sys_blocks, arr)
-                        if not sub:
-                            print("\n\n\nHAPPENED...\n\n\n")
-                            substitute = []
-                            break
-                        substitute = cross_product(substitute, sub)
-
-                substitutes += substitute
-        arr[blocks] = substitutes
-        # print(f"     substitutes of {blocks} are {substitutes} ")
-        return substitutes
+        # Get all substitutes
+        num_substitutions = len(bs)     # Max number of allowed substitutes
+        substitutes_set = set()
+        for i in range(num_substitutions):
+            splits = self.get_splits(bs, i)
+            # print("splits", splits)
+            for split in splits:
+                substitutes = []
+                # print(" split", split)
+                for s in split:
+                    s = (s[0], s[-1])
+                    # print("         s", s)
+                    if s in direct_substitutes:
+                        # print("         dds", direct_substitutes[s])
+                        substitutes += [direct_substitutes[s]]
+                    else:
+                        substitutes = []
+                        break
+                # print("\nsubstitutes", substitutes)
+                if substitutes:
+                    for substitute in itertools.product(*substitutes):
+                        substitutes_set.add(tuple(sorted([x for s in substitute for x in range(s[0], s[-1]+1)])))
+                    # print("substitutes", substitutes)
+        # print("substitutes set")
+        # Order them according to a heuristic
+        for substitute in substitutes_set:
+            # print(substitute)
+            yield substitute
 
 
 def have_enough_budget(blocks, demand, sys_blocks):
     for b in range(blocks[0], blocks[1]+1):
+        # print(colored(f"? enough budget {demand} for block {b} : {sys_blocks[b].remaining_budget}", "red"))
         if not (sys_blocks[b].remaining_budget-demand).is_positive():
             return False
     return True
-    # if b in self.exhausted_blocks:
-
-
-def cross_product(l1, l2):
-    ll = []
-    for i in l2:
-        if len(l1) == 0:
-            ll += [i]
-        for j in l1:
-            ll += [[j] + [i]]
-    return ll
-
-
-def get_combinations(blocks):
-    blocks = list(range(blocks[0], blocks[1] + 1))
-    combinations = set()
-    size = len(blocks)
-    for i in reversed(range(1, size + 1)):
-        # list of size i that sum up to size
-        div, mod = divmod(size, i)
-        ll = [div + 1] * mod + [div] * (i - mod)
-        perms = permutations(ll)
-        combinations.update(list(perms))
-    combs = []
-    for comb in combinations:
-        x = 0
-        c = []
-        for v in comb:
-            c.append((blocks[x], blocks[x + v - 1]))
-            x += v
-        combs += [c]
-    return combs

@@ -7,8 +7,8 @@ import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
-from privacypacking.harvestpd.cache import cache
-from privacypacking.harvestpd.exps.queries import *
+from privacypacking.cache import cache
+from privacypacking.cache.queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -117,11 +117,6 @@ class Scheduler:
         self.n_allocated_tasks += 1
         self.task_queue.tasks.remove(task)
 
-    def select_substitute(self, substitute_blocks):
-        # todo: change that / add heuristics-optimizations
-        for sub in substitute_blocks:
-            yield sub
-
     def schedule_queue(self) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them
         to some blocks from `self.blocks`.
@@ -161,10 +156,9 @@ class Scheduler:
                 if self.omegaconf.allow_block_substitution and not cond:
                     print(colored(f"Getting query {task.query_type} "
                                   f"Substitutes for demand {sorted(list(task.budget_per_block.keys()))}", 'blue'))
-                    substitute_blocks = self.cache.get_substitute_blocks(task, self.blocks)
-                    self.tasks_info.tasks_substitutions_num[task.id] = len(substitute_blocks)
                     # Loop until finding a substitute for the blocks on which the task can run
-                    for substitute in self.select_substitute(substitute_blocks):
+                    for substitute in self.cache.get_substitute_blocks(task, self.blocks):
+                        self.tasks_info.tasks_substitutions_num[task.id] += 1
                         for block in substitute:
                             print(f"             block {block} - available - {self.blocks[block].remaining_budget}")
                         print(colored(f"    substitute {substitute}", 'magenta'))
@@ -175,7 +169,7 @@ class Scheduler:
                             print(colored(f"        Found eligible Substitute {substitute}", 'red'))
                             task.budget_per_block = demand
                             break
-
+                    exit(0)
                 if cond:
                     # print("Allocated:", task.name, " - with blocks", task.n_blocks)
                     self.allocate_task(task)
@@ -192,7 +186,6 @@ class Scheduler:
                         blocks = range(blocks[0], blocks[1]+1)
                     else:
                         self.cache.add_substitute_result(task.query_type, blocks, result)
-
                         blocks = sorted(list(task.budget_per_block.keys()))
 
                     for block in blocks:
@@ -233,6 +226,9 @@ class Scheduler:
         df = pd.concat(df)
         res = globals()[f"query{task.query_type}"](df)
         print(colored(f"Result of query {task.query_type} on blocks {blocks}: \n{res}", 'green'))
+        for k in blocks:
+            print(f"Rem Budget:{k}, - {self.blocks[k].budget}")
+        print("\n")
         return res
 
     def add_task(self, task_message: Tuple[Task, Event]):
