@@ -6,6 +6,8 @@ scheduler:
   solver: gurobi
   scheduling_wait_time: 1
   data_lifetime: 10
+  task_lifetime: 10
+  max_substitutes_allowed: 10
   metric_recomputation_period: 1
   log_warning_every_n_allocated_tasks: 0
   scheduler_timeout_seconds: 0

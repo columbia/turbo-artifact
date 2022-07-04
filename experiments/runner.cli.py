@@ -19,7 +19,9 @@ def budget_utilization():
         blocks_data_path=["covid19/blocks"],
         tasks_sampling="",
         data_lifetime=[0.1],
+        task_lifetime=[1],
         k=[0.25],
+        max_substitutes_allowed=[10],
         allow_block_substitution=True,
     )
 

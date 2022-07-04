@@ -3,7 +3,6 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple, Union
-import pandas as pd
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
@@ -54,7 +53,6 @@ class Scheduler:
         verbose_logs=False,
         simulator_config: Optional[DictConfig] = None,
     ):
-        self.cache = cache.Cache()
         self.metric = metric
         self.task_queue = TaskQueue()
         self.blocks = {}
@@ -78,6 +76,7 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
+        self.cache = cache.Cache(self.omegaconf.task_lifetime, self.omegaconf.max_substitutes_allowed)
 
     def consume_budgets(self, task):
         """
@@ -107,8 +106,8 @@ class Scheduler:
         del self.tasks_info.allocated_resources_events[task.id]
         self.tasks_info.scheduling_time[task.id] = self.now()
         self.tasks_info.scheduling_delay[task.id] = (
-                self.tasks_info.scheduling_time[task.id]
-                - self.tasks_info.creation_time[task.id]
+            self.tasks_info.scheduling_time[task.id]
+            - self.tasks_info.creation_time[task.id]
         )
         self.tasks_info.allocated_tasks[task.id] = task
         self.allocated_task_ids.append(task.id)
@@ -136,8 +135,10 @@ class Scheduler:
 
             for task in sorted_tasks:
                 # Do not schedule tasks whose lifetime has been exceeded
-                if self.tasks_info.tasks_lifetime[task.id] < self.get_num_blocks() - \
-                        self.tasks_info.tasks_submit_time[task.id]:
+                if (
+                    self.tasks_info.tasks_lifetime[task.id]
+                    < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
+                ):
                     continue
 
                 self.tasks_info.tasks_allocated_substitutions[task.id] = False
@@ -147,29 +148,41 @@ class Scheduler:
                 bs = sorted(list(task.budget_per_block.keys()))
                 blocks = (bs[0], bs[-1])
                 if self.cache.find_result(task.query_type, blocks) is not None:
-                    print(colored(f"Found cached result for {blocks}", 'cyan'))
+                    print(colored(f"Found cached result for {blocks}", "cyan"))
                     self.update_allocated_task(task)
                     continue
 
                 cond = self.can_run(task.budget_per_block)
 
                 if self.omegaconf.allow_block_substitution and not cond:
-                    print(colored(f"Getting query {task.query_type} "
-                                  f"Substitutes for demand {sorted(list(task.budget_per_block.keys()))}", 'blue'))
+                    print(
+                        colored(
+                            f"Getting query {task.query_type} "
+                            f"Substitutes for demand {sorted(list(task.budget_per_block.keys()))}",
+                            "blue",
+                        )
+                    )
                     # Loop until finding a substitute for the blocks on which the task can run
-                    for substitute in self.cache.get_substitute_blocks(task, self.blocks):
+                    for substitute in self.cache.get_substitute_blocks(
+                        task, self.blocks
+                    ):
                         self.tasks_info.tasks_substitutions_num[task.id] += 1
                         for block in substitute:
-                            print(f"             block {block} - available - {self.blocks[block].remaining_budget}")
-                        print(colored(f"    substitute {substitute}", 'magenta'))
+                            print(
+                                f"             block {block} - available - {self.blocks[block].remaining_budget}"
+                            )
+                        print(colored(f"    substitute {substitute}", "magenta"))
                         demand = task.get_substitute_demand(substitute)
                         cond = self.can_run(demand)
                         if cond:
-                            self.tasks_info.tasks_allocated_substitutions[task.id] = True
-                            print(colored(f"        Found eligible Substitute {substitute}", 'red'))
+                            self.tasks_info.tasks_allocated_substitutions[
+                                task.id
+                            ] = True
+                            print(
+                                colored(f"        Found eligible Substitute {substitute}", "red",)
+                            )
                             task.budget_per_block = demand
                             break
-                    exit(0)
                 if cond:
                     # print("Allocated:", task.name, " - with blocks", task.n_blocks)
                     self.allocate_task(task)
@@ -177,20 +190,24 @@ class Scheduler:
 
                     # Run task - update caches
                     result = self.run_task(task)
-                    if task.initial_budget_per_block == task.budget_per_block:  # if running on original blocks
+                    if (
+                        task.initial_budget_per_block == task.budget_per_block
+                    ):  # if running on original blocks
                         print("Running on original blocks\n")
                         # Add result in cache and compute new distances
                         self.cache.add_result(task.query_type, blocks, result)
                         if self.omegaconf.allow_block_substitution:
                             self.cache.compute_distances(task.query_type, blocks)
-                        blocks = range(blocks[0], blocks[1]+1)
+                        blocks = range(blocks[0], blocks[1] + 1)
                     else:
-                        self.cache.add_substitute_result(task.query_type, blocks, result)
+                        self.cache.add_substitute_result(
+                            task.query_type, blocks, result
+                        )
                         blocks = sorted(list(task.budget_per_block.keys()))
 
                     for block in blocks:
                         if self.blocks[block].is_exhausted:
-                            print(colored(f"        removing {block}", 'yellow'))
+                            print(colored(f"        removing {block}", "yellow"))
                             self.cache.remove(block, self.get_num_blocks())
 
                     if self.omegaconf.log_warning_every_n_allocated_tasks and (
@@ -211,24 +228,32 @@ class Scheduler:
                         converged = False
                         break
                 else:
-                    # self.task_queue.tasks.remove(task)
                     # logger.debug(
-                    print(colored(f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n", 'blue'))
+                    print(
+                        colored(
+                            f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n",
+                            "blue",
+                        )
+                    )
                     # )
         return self.allocated_task_ids
 
     def run_task(self, task):
         df = []
         blocks = sorted(list(task.budget_per_block.keys()))
-        print(colored(f"Running query type {task.query_type} on blocks {blocks}", 'green'))
+        print(
+            colored(f"Running query type {task.query_type} on blocks {blocks}", "green")
+        )
         for block in blocks:
-            df += [pd.read_csv(f'{self.blocks_path}/covid_block_{block}.csv')]
+            df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
         res = globals()[f"query{task.query_type}"](df)
-        print(colored(f"Result of query {task.query_type} on blocks {blocks}: \n{res}", 'green'))
-        for k in blocks:
-            print(f"Rem Budget:{k}, - {self.blocks[k].budget}")
-        print("\n")
+        print(
+            colored(
+                f"Result of query {task.query_type} on blocks {blocks}: \n{res}",
+                "green",
+            )
+        )
         return res
 
     def add_task(self, task_message: Tuple[Task, Event]):
@@ -236,7 +261,8 @@ class Scheduler:
         try:
             self.task_set_block_ids(task)
             logger.debug(
-                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. "
+                f"Blocks: {list(task.budget_per_block.keys())}"
             )
         except NotEnoughBlocks as e:
             # logger.warning(
@@ -247,7 +273,7 @@ class Scheduler:
 
         # Update tasks_info
         self.tasks_info.tasks_status[task.id] = PENDING
-        self.tasks_info.tasks_lifetime[task.id] = 14
+        self.tasks_info.tasks_lifetime[task.id] = self.omegaconf.task_lifetime
         self.tasks_info.tasks_submit_time[task.id] = self.get_num_blocks()
         self.tasks_info.allocated_resources_events[task.id] = allocated_resources_event
         self.tasks_info.creation_time[task.id] = self.now()

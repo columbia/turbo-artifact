@@ -20,7 +20,6 @@ from privacypacking.schedulers.utils import (
     OVERFLOW_RELEVANCE,
     SIMPLEX,
     SOFT_KNAPSACK,
-    VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
@@ -108,6 +107,112 @@ def grid_offline(
     experiment_dir = Path(all_trial_paths[0]).parent
     rdf = load_ray_experiment(experiment_dir)
     return rdf
+
+
+def grid_online(
+    scheduler_scheduling_time: List[float],
+    initial_blocks: List[int],
+    max_blocks: List[int],
+    metric_recomputation_period: List[int],
+    tasks_data_path: List[str],
+    blocks_data_path: List[str],
+    tasks_sampling: str,
+    data_lifetime: List[float],
+    task_lifetime: List[int],
+    k: List[float],
+    max_substitutes_allowed: [int],
+    allow_block_substitution: bool,
+    avg_num_tasks_per_block: List[int] = [100],
+):
+    # ray.init(log_to_driver=False)
+    scheduler_metrics = [
+        # ARGMAX_KNAPSACK,
+        # BATCH_OVERFLOW_RELEVANCE,
+        #  FLAT_RELEVANCE,
+        DYNAMIC_FLAT_RELEVANCE,
+        #  FCFS,
+        # DOMINANT_SHARES,
+    ]
+
+    # Fully unlocked case
+    # n = [1]
+    # Progressive unlocking
+    n = [1_000]
+
+    block_selection_policy = ["LatestBlocksFirst"]
+    config = {"omegaconf": {
+        "epsilon": 10,
+        "delta": 0.00001,
+        "k": tune.grid_search(k),
+        "scheduler": {
+            "metric_recomputation_period": tune.grid_search(
+                metric_recomputation_period
+            ),
+            # "log_warning_every_n_allocated_tasks": 500,
+            "scheduler_timeout_seconds": 20 * 60,
+            "data_lifetime": tune.grid_search(data_lifetime),
+            "task_lifetime": tune.grid_search(task_lifetime),
+            "max_substitutes_allowed": tune.grid_search(max_substitutes_allowed),
+            "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
+            "method": "batch",
+            "metric": tune.grid_search(scheduler_metrics),
+            "n": tune.grid_search(n),
+            "allow_block_substitution": allow_block_substitution,
+        },
+        "metric": {
+            "normalize_by": "available_budget",
+            "n_knapsack_solvers": 1,
+        },
+        "logs": {
+            "verbose": False,
+            "save": True,
+        },
+        "blocks": {
+            "initial_num": tune.grid_search(initial_blocks),
+            "max_num": tune.grid_search(max_blocks),
+            "data_path": tune.grid_search(blocks_data_path),
+
+        },
+        "tasks": {
+            "sampling": tasks_sampling,
+            "data_path": tune.grid_search(tasks_data_path),
+            "block_selection_policy": tune.grid_search(block_selection_policy),
+            "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+        },
+    }}
+
+    logger.info(f"Tune config: {config}")
+
+    experiment_analysis = tune.run(
+        run_and_report,
+        config=config,
+        resources_per_trial={"cpu": 1},
+        # resources_per_trial={"cpu": 32},
+        local_dir=RAY_LOGS,
+        resume=False,
+        verbose=1,
+        # callbacks=[
+            # CustomLoggerCallback(),
+            # tune.tune.logger.JsonLoggerCallback(),
+            # tune.integration.mlflow.MLflowLoggerCallback(
+            #     experiment_name="grid-online",
+            # ),
+        # ],
+        progress_reporter=ray.tune.CLIReporter(
+            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks", "realized_profit"],
+            parameter_columns={
+                "omegaconf/scheduler/scheduling_wait_time": "T",
+                "omegaconf/scheduler/data_lifetime": "lifetime",
+                "omegaconf/scheduler/metric": "metric",
+                # "omegaconf/metric/temperature": "temperature",
+            },
+            max_report_frequency=60,
+        ),
+    )
+    # all_trial_paths = experiment_analysis._get_trial_paths()
+    # experiment_dir = Path(all_trial_paths[0]).parent
+    # rdf = load_ray_experiment(experiment_dir)
+    # return rdf
 
 
 def grid_offline_heterogeneity_knob(
@@ -212,117 +317,6 @@ def grid_offline_heterogeneity_knob(
     rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
     return rdf
     # return experiment_analysis.dataframe()
-
-
-def grid_online(
-    scheduler_scheduling_time: List[float],
-    initial_blocks: List[int],
-    max_blocks: List[int],
-    metric_recomputation_period: List[int],
-    tasks_data_path: List[str],
-    blocks_data_path: List[str],
-    tasks_sampling: str,
-    data_lifetime: List[float],
-    k: List[float],
-    allow_block_substitution: bool,
-    avg_num_tasks_per_block: List[int] = [100],
-):
-    # ray.init(log_to_driver=False)
-    scheduler_metrics = [
-        # SOFT_KNAPSACK,
-        # ARGMAX_KNAPSACK,
-        # BATCH_OVERFLOW_RELEVANCE,
-        #  FLAT_RELEVANCE,
-        # DYNAMIC_FLAT_RELEVANCE,
-         FCFS,
-        # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
-        # DOMINANT_SHARES,
-    ]
-
-    # temperature = [0.01]
-
-    # Fully unlocked case
-    # n = [1]
-    # data_lifetime = [0.001]
-
-    # Progressive unlocking
-    n = [1_000]
-    data_lifetime = data_lifetime
-
-    block_selection_policy = ["LatestBlocksFirst"]
-    config = {}
-
-    config["omegaconf"] = {
-        "epsilon": 10,
-        "delta": 0.00001,
-        "k": tune.grid_search(k),
-        "scheduler": {
-            "metric_recomputation_period": tune.grid_search(
-                metric_recomputation_period
-            ),
-            # "log_warning_every_n_allocated_tasks": 500,
-            "scheduler_timeout_seconds": 20 * 60,
-            "data_lifetime": tune.grid_search(data_lifetime),
-            "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
-            "method": "batch",
-            "metric": tune.grid_search(scheduler_metrics),
-            "n": tune.grid_search(n),
-            "allow_block_substitution": allow_block_substitution,
-        },
-        "metric": {
-            "normalize_by": "available_budget",
-            # "temperature": tune.grid_search(temperature),
-            "n_knapsack_solvers": 1,
-        },
-        "logs": {
-            "verbose": False,
-            "save": True,
-        },
-        "blocks": {
-            "initial_num": tune.grid_search(initial_blocks),
-            "max_num": tune.grid_search(max_blocks),
-            "data_path": tune.grid_search(blocks_data_path),
-
-        },
-        "tasks": {
-            "sampling": tasks_sampling,
-            "data_path": tune.grid_search(tasks_data_path),
-            "block_selection_policy": tune.grid_search(block_selection_policy),
-            "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
-        },
-    }
-    logger.info(f"Tune config: {config}")
-
-    experiment_analysis = tune.run(
-        run_and_report,
-        config=config,
-        resources_per_trial={"cpu": 1},
-        # resources_per_trial={"cpu": 32},
-        local_dir=RAY_LOGS,
-        resume=False,
-        verbose=1,
-        # callbacks=[
-            # CustomLoggerCallback(),
-            # tune.tune.logger.JsonLoggerCallback(),
-            # tune.integration.mlflow.MLflowLoggerCallback(
-            #     experiment_name="grid-online",
-            # ),
-        # ],
-        progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks", "realized_profit"],
-            parameter_columns={
-                "omegaconf/scheduler/scheduling_wait_time": "T",
-                "omegaconf/scheduler/data_lifetime": "lifetime",
-                "omegaconf/scheduler/metric": "metric",
-                # "omegaconf/metric/temperature": "temperature",
-            },
-            max_report_frequency=60,
-        ),
-    )
-    # all_trial_paths = experiment_analysis._get_trial_paths()
-    # experiment_dir = Path(all_trial_paths[0]).parent
-    # rdf = load_ray_experiment(experiment_dir)
-    # return rdf
 
 
 # class CustomLoggerCallback(tune.tune.logger.LoggerCallback):
