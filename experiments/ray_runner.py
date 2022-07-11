@@ -17,9 +17,7 @@ from privacypacking.schedulers.utils import (
     DYNAMIC_FLAT_RELEVANCE,
     FCFS,
     FLAT_RELEVANCE,
-    OVERFLOW_RELEVANCE,
     SIMPLEX,
-    SOFT_KNAPSACK,
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
@@ -47,7 +45,6 @@ def grid_offline(
         SIMPLEX,
         DOMINANT_SHARES,
         FLAT_RELEVANCE,
-        OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
     ]
 
@@ -129,8 +126,8 @@ def grid_online(
         # ARGMAX_KNAPSACK,
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
-        DYNAMIC_FLAT_RELEVANCE,
-        #  FCFS,
+        # DYNAMIC_FLAT_RELEVANCE,
+         FCFS,
         # DOMINANT_SHARES,
     ]
 
@@ -138,7 +135,8 @@ def grid_online(
     # n = [1]
     # Progressive unlocking
     n = [1_000]
-
+    if not allow_block_substitution:
+        k = [0]
     block_selection_policy = ["LatestBlocksFirst"]
     config = {"omegaconf": {
         "epsilon": 10,
@@ -199,18 +197,19 @@ def grid_online(
             # ),
         # ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks", "realized_profit"],
+            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks",
+                            "realized_profit", "budget_utilization", "realized_budget"],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
+                "omegaconf/k": "k",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
-                # "omegaconf/metric/temperature": "temperature",
             },
             max_report_frequency=60,
         ),
     )
-    # all_trial_paths = experiment_analysis._get_trial_paths()
-    # experiment_dir = Path(all_trial_paths[0]).parent
+    all_trial_paths = experiment_analysis._get_trial_paths()
+    experiment_dir = Path(all_trial_paths[0]).parent
     # rdf = load_ray_experiment(experiment_dir)
     # return rdf
 
@@ -318,7 +317,7 @@ def grid_offline_heterogeneity_knob(
     return rdf
     # return experiment_analysis.dataframe()
 
-
+#
 # class CustomLoggerCallback(tune.tune.logger.LoggerCallback):
 #     """Custom logger interface"""
 #

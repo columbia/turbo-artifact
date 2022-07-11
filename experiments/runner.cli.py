@@ -20,8 +20,9 @@ def budget_utilization():
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
-        k=[0.25],
-        max_substitutes_allowed=[10],
+        k=[0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
+        # k=[0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
+        max_substitutes_allowed=[20],
         allow_block_substitution=True,
     )
 

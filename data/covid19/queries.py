@@ -1,26 +1,7 @@
+import random
+
 import pandas as pd
 import numpy as np
-
-
-class Task:
-    def __init__(self, start_time, n_blocks, task_type):
-        self.start_time = start_time
-        self.n_blocks = n_blocks
-        self.type = task_type
-
-
-def generate_one_day_tasks(start_time, num_queries):
-    tasks = []
-    num_tasks = np.abs(np.random.normal(10, 20, 1)).astype(int)+1
-    # print(num_tasks)
-    for i in range(num_tasks[0]):
-        # nblocks = np.abs(np.random.normal(1, 5, 1)).astype(int)[0]+1
-        query_type = np.random.randint(1, num_queries+1)
-        nblocks = np.random.choice([1, 7, 14], 1, p=[0.4, 0.4, 0.2])[0]
-        tasks.append(Task(start_time, nblocks, query_type))
-    return tasks
-#
-
 
 class Query:
     def __init__(self, query_type, blocks_num):
@@ -72,7 +53,6 @@ class Query:
 
 def query1(df):
     return df.query("continent == 'Europe'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
-    # df.groupby(by=["continent"]).mean()['new_cases'].to_frame('result')
 
 def query2(df):
     return df.query("continent == 'Africa'")['new_cases'].mean().rename(columns={'new_cases': 'result'})

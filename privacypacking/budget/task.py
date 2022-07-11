@@ -13,7 +13,8 @@ class Task:
     def __init__(
         self,
         id: int,
-        query_type: int,
+        query_id: int,
+        query_type: str,
         profit: float,
         block_selection_policy: BlockSelectionPolicy,
         n_blocks: int,
@@ -22,6 +23,7 @@ class Task:
     ):
         # User request
         self.id = id
+        self.query_id = query_id
         self.query_type = query_type
         self.profit = profit
         self.block_selection_policy = block_selection_policy
@@ -64,7 +66,7 @@ class Task:
     def dump(self):
         return {
             "id": self.id,
-            "query_type": self.query_type,
+            "query_id": self.query_id,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,
@@ -110,7 +112,8 @@ class UniformTask(Task):
     def __init__(
         self,
         id: int,
-        query_type: int,
+        query_id: int,
+        query_type: str,
         profit: float,
         block_selection_policy: Any,
         n_blocks: int,
@@ -122,7 +125,7 @@ class UniformTask(Task):
         A Task that requires (the same) `budget` for all blocks in `block_ids`
         """
         self.budget = budget
-        super().__init__(id, query_type, profit, block_selection_policy, n_blocks, k, name=name)
+        super().__init__(id, query_id, query_type, profit, block_selection_policy, n_blocks, k, name=name)
 
     def set_budget_per_block(self, block_ids: Iterable[int]):
         for block_id in block_ids:
@@ -134,6 +137,6 @@ class UniformTask(Task):
         for b in substitute:
             if b not in demand:
                 demand[b] = self.budget
-            else:
-                demand[b] += self.budget
+            # else:
+            #     demand[b] += self.budget
         return demand

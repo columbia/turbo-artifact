@@ -105,7 +105,8 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
-                query_type=0,
+                query_id=0,
+                query_type="",
                 profit=task_spec.profit,
                 block_selection_policy=block_selection_policy,
                 n_blocks=task_spec.n_blocks,
@@ -127,7 +128,8 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
-                query_type=int(task_row["query_type"]),
+                query_id=int(task_row["query_id"]),
+                query_type=task_row["query_type"],
                 profit=float(task_row["profit"]),
                 block_selection_policy=BlockSelectionPolicy.from_str(
                     task_row["block_selection_policy"]

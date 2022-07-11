@@ -282,7 +282,7 @@ def plot_alibaba(fig_dir):
         metric_recomputation_period=[50],
         initial_blocks=[10],
         max_blocks=[50],
-        data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
+        data_path=["alibaba-privacy-workload/outputs/privacy_tasks2.csv"],
         tasks_sampling="",
         data_lifetime=[10],
     )
