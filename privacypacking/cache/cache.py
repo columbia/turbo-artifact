@@ -3,7 +3,7 @@ import itertools
 from privacypacking.cache.utils import (
     get_splits,
     get_subsets_of_contiguous_blocks,
-    absolute_mean_error,
+    upper_bound_normalized_absolute_mean_error,
 )
 from termcolor import colored
 import time
@@ -12,9 +12,8 @@ import numpy as np
 
 
 class Cache:
-    def __init__(self, task_lifetime, max_substitutes_allowed):
+    def __init__(self, max_substitutes_allowed):
         self.max_substitutes_allowed = max_substitutes_allowed
-        self.task_lifetime = task_lifetime
         self.results = {}
         self.distances = {}
         self.substitute_results = {}
@@ -27,29 +26,31 @@ class Cache:
         print("Results", res)
         print("Distances", dis)
 
-    def add_result(self, query_id, blocks, result):
+    def add_result(self, query_id, blocks, epsilon, result):
         if query_id not in self.results:
             self.results[query_id] = {}
         if blocks not in self.results[query_id]:
-            self.results[query_id].update({blocks: result})
+            self.results[query_id].update({blocks: (epsilon, result)})
             if query_id not in self.distances:
                 self.distances[query_id] = {}
 
-    def add_substitute_result(self, query_id, blocks, result):
+    def add_substitute_result(self, query_id, blocks, epsilon, result):
         if query_id not in self.substitute_results:
             self.substitute_results[query_id] = {}
         if blocks not in self.substitute_results[query_id]:
-            self.substitute_results[query_id].update({blocks: result})
+            self.substitute_results[query_id].update({blocks: (epsilon, result)})
 
     def find_result(self, query_id, blocks):
         if query_id in self.results:
             if blocks in self.results[query_id]:
-                return self.results[query_id][blocks]
+                (_, result) = self.results[query_id][blocks]
+                return result
 
     def find_substitute_result(self, query_id, blocks):
         if query_id in self.substitute_results:
             if blocks in self.substitute_results[query_id]:
-                return self.substitute_results[query_id][blocks]
+                (_, result) = self.substitute_results[query_id][blocks]
+                return result
 
     def remove(self, block_id, curr_num_blocks):
 
@@ -78,7 +79,7 @@ class Cache:
         for blocks_ in task_results.keys():
             if blocks_ != blocks:
                 result_ = task_results[blocks_]
-                error = absolute_mean_error(result, result_)
+                error = upper_bound_normalized_absolute_mean_error(result, result_)
                 if error <= k:
                     if not self.is_exhausted(blocks_):
                         if blocks not in self.distances[query_id]:

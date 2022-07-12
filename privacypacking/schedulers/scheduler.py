@@ -15,6 +15,7 @@ from privacypacking.utils.utils import REPO_ROOT
 from termcolor import colored
 from time import sleep
 
+
 # TODO: efficient data structure here? (We have indices)
 class TaskQueue:
     def __init__(self):
@@ -83,7 +84,7 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
         print(self.omegaconf.max_substitutes_allowed)
-        self.cache = cache.Cache(self.omegaconf.task_lifetime, self.omegaconf.max_substitutes_allowed)
+        self.cache = cache.Cache(self.omegaconf.max_substitutes_allowed)
 
     def consume_budgets(self, task):
         """
@@ -145,7 +146,7 @@ class Scheduler:
 
                 # See if there is enough budget to run original request
                 can_run = self.can_run(task.budget_per_block)
-                cached = False
+                # cached = False
                 bs = original_bs = sorted(list(task.budget_per_block.keys()))
                 blocks = (bs[0], bs[-1])
 
@@ -198,7 +199,7 @@ class Scheduler:
                         ):  # if running on original blocks
                             print("Running on original blocks\n")
                             # Add result in cache and compute new distances
-                            self.cache.add_result(task.query_id, blocks, result)
+                            self.cache.add_result(task.query_id, blocks, task.budget.epsilon(0.0), result)
                             if self.omegaconf.allow_block_substitution:
                                 self.cache.compute_distances(task.query_id, blocks, self.get_num_blocks(), task.k)
                             blocks = range(blocks[0], blocks[1] + 1)
@@ -208,9 +209,7 @@ class Scheduler:
                             blocks = sorted(list(task.budget_per_block.keys()))
                             print(colored(f"        Found eligible Substitute {substitute}", "red",))
                             self.tasks_info.subs += 1
-                            self.cache.add_substitute_result(
-                                task.query_id, substitute, result
-                            )
+                            self.cache.add_substitute_result(task.query_id, substitute, task.budget.epsilon(0.0), result)
                             self.tasks_info.substitute_result[task.id] = result
 
                             # Run on original request just to store the result
