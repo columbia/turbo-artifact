@@ -53,12 +53,12 @@ class Cache:
                 return result
 
     def remove(self, block_id, curr_num_blocks):
-
         self.blocks_to_be_deleted.add(block_id)
+        grace_period = 0
         # self.exhausted_blocks.add(block_id)
         delete = []
         for b in self.blocks_to_be_deleted:
-            if curr_num_blocks > b:
+            if curr_num_blocks > b + grace_period:
                 self.exhausted_blocks.add(b)
                 delete.append(b)
 

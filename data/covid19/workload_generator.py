@@ -29,7 +29,7 @@ class PrivacyWorkload:
         self.tasks = None
         # self.query_instances_num = 2000
         self.blocks_num = 400
-        self.num_queries = 25
+        self.num_queries = 18
         self.tasks = []
         # for i in range(self.query_instances_num):
         #     sample_query = random.randint(1, self.num_queries)

@@ -7,7 +7,7 @@ from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from privacypacking.cache import cache
-from privacypacking.cache.queries import *
+from privacypacking.cache.dp_queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -251,7 +251,7 @@ class Scheduler:
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
-        res = globals()[f"query{task.query_id}"](df)
+        res = globals()[f"dp_query{task.query_id}"](df)
         print(
             colored(
                 f"Result of query {task.query_id} on blocks {blocks}: \n{res}",
