@@ -4,6 +4,7 @@ from privacypacking.cache.utils import (
     get_splits,
     get_subsets_of_contiguous_blocks,
     upper_bound_normalized_absolute_mean_error,
+    normalized_absolute_mean_error,
 )
 from termcolor import colored
 import time
@@ -12,8 +13,9 @@ import numpy as np
 
 
 class Cache:
-    def __init__(self, max_substitutes_allowed):
+    def __init__(self, max_substitutes_allowed, disable_dp):
         self.max_substitutes_allowed = max_substitutes_allowed
+        self.disable_dp = disable_dp
         self.results = {}
         self.distances = {}
         self.substitute_results = {}
@@ -79,7 +81,10 @@ class Cache:
         for blocks_ in task_results.keys():
             if blocks_ != blocks:
                 result_ = task_results[blocks_]
-                error = upper_bound_normalized_absolute_mean_error(result, result_)
+                if self.disable_dp:
+                    error = normalized_absolute_mean_error(result, result_)
+                else:
+                    error = upper_bound_normalized_absolute_mean_error(result, result_)
                 if error <= k:
                     if not self.is_exhausted(blocks_):
                         if blocks not in self.distances[query_id]:

@@ -137,6 +137,6 @@ class UniformTask(Task):
         for b in substitute:
             if b not in demand:
                 demand[b] = self.budget
-            # else:
-            #     demand[b] += self.budget
+            else:
+                demand[b] += self.budget
         return demand

@@ -231,14 +231,14 @@ class Budget:
             alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
         }
         budget_info = {"orders": rounded_orders}
-        dp_budget = self.dp_budget()
-        budget_info.update(
-            {
-                "dp_budget": {
-                    "epsilon": round(dp_budget.epsilon, MAX_DUMP_DIGITS),
-                    "delta": dp_budget.delta,
-                    "best_alpha": dp_budget.best_alpha,
-                }
-            }
-        )
+        # dp_budget = self.dp_budget()
+        # budget_info.update(
+        #     {
+        #         "dp_budget": {
+        #             "epsilon": round(dp_budget.epsilon, MAX_DUMP_DIGITS),
+        #             "delta": dp_budget.delta,
+        #             "best_alpha": dp_budget.best_alpha,
+        #         }
+        #     }
+        # )
         return budget_info

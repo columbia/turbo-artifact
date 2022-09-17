@@ -12,7 +12,6 @@ from privacypacking import schedulers
 from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     ARGMAX_KNAPSACK,
-    BATCH_OVERFLOW_RELEVANCE,
     DOMINANT_SHARES,
     DYNAMIC_FLAT_RELEVANCE,
     FCFS,
@@ -117,6 +116,7 @@ def grid_online(
     data_lifetime: List[float],
     task_lifetime: List[int],
     k: List[float],
+    disable_dp: bool,
     max_substitutes_allowed: [int],
     allow_block_substitution: bool,
     avg_num_tasks_per_block: List[int] = [100],
@@ -136,7 +136,7 @@ def grid_online(
     # Progressive unlocking
     n = [1_000]
     if not allow_block_substitution:
-        k = [0]
+        k = [-0.05]
     block_selection_policy = ["LatestBlocksFirst"]
     config = {"omegaconf": {
         "epsilon": 10,
@@ -156,6 +156,7 @@ def grid_online(
             "metric": tune.grid_search(scheduler_metrics),
             "n": tune.grid_search(n),
             "allow_block_substitution": allow_block_substitution,
+            "disable_dp": disable_dp,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -189,13 +190,13 @@ def grid_online(
         local_dir=RAY_LOGS,
         resume=False,
         verbose=1,
-        # callbacks=[
-            # CustomLoggerCallback(),
-            # tune.tune.logger.JsonLoggerCallback(),
+        callbacks=[
+            CustomLoggerCallback(),
+            tune.logger.JsonLoggerCallback(),
             # tune.integration.mlflow.MLflowLoggerCallback(
             #     experiment_name="grid-online",
             # ),
-        # ],
+        ],
         progress_reporter=ray.tune.CLIReporter(
             metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks",
                             "realized_profit", "budget_utilization", "realized_budget"],
@@ -317,21 +318,21 @@ def grid_offline_heterogeneity_knob(
     return rdf
     # return experiment_analysis.dataframe()
 
-#
-# class CustomLoggerCallback(tune.tune.logger.LoggerCallback):
-#     """Custom logger interface"""
-#
-#     def __init__(self) -> None:
-#         super().__init__()
-#
-#     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-#         logger.info(
-#             [
-#                 f"{key}: {result[key]}"
-#                 for key in ["n_allocated_tasks", "realized_profit"]
-#             ]
-#         )
-#         return
-#
-#     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
-#         return
+
+class CustomLoggerCallback(tune.logger.LoggerCallback):
+    """Custom logger interface"""
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def log_trial_result(self, iteration: int, trial: Any, result: Dict):
+        logger.info(
+            [
+                f"{key}: {result[key]}"
+                for key in ["n_allocated_tasks", "realized_profit"]
+            ]
+        )
+        return
+
+    def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
+        return

@@ -29,7 +29,7 @@ class PrivacyWorkload:
         self.tasks = None
         # self.query_instances_num = 2000
         self.blocks_num = 400
-        self.num_queries = 18
+        self.num_queries = 1
         self.tasks = []
         # for i in range(self.query_instances_num):
         #     sample_query = random.randint(1, self.num_queries)
@@ -77,12 +77,12 @@ class PrivacyWorkload:
             # elif 15 <= nblocks:
             #     nblocks = 15
             query_id = np.random.randint(1, num_queries+1)
-            query_type = "average"
-            nblocks = np.random.choice([1, 7, 14], 1, p=[0.41, 0.39, 0.2])[0]
+            query_type = "summation" #"average"
+            # nblocks = np.random.choice([1, 7, 14], 1, p=[0.41, 0.39, 0.2])[0]
             # nblocks = np.random.choice([1, 7], 1, p=[0.5, 0.5])[0]
             # nblocks = np.random.choice([1, 7], 1, p=[0.5, 0.5])[0]
             # nblocks = (np.abs(np.random.normal(7, 4, 1)).astype(int)+1)[0]
-            # nblocks = np.random.randint(1, 10)
+            nblocks = np.random.randint(1, 10)
             tasks.append(Task(start_time, nblocks, query_id, query_type))
 
         return tasks
