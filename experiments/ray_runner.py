@@ -115,10 +115,9 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    k: List[float],
     disable_dp: bool,
-    max_substitutes_allowed: [int],
-    allow_block_substitution: bool,
+    max_aggregations_allowed: [int],
+    allow_caching: bool,
     avg_num_tasks_per_block: List[int] = [100],
 ):
     # ray.init(log_to_driver=False)
@@ -135,13 +134,11 @@ def grid_online(
     # n = [1]
     # Progressive unlocking
     n = [1_000]
-    if not allow_block_substitution:
-        k = [-0.05]
+
     block_selection_policy = ["LatestBlocksFirst"]
     config = {"omegaconf": {
         "epsilon": 10,
         "delta": 0.00001,
-        "k": tune.grid_search(k),
         "scheduler": {
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
@@ -150,12 +147,12 @@ def grid_online(
             "scheduler_timeout_seconds": 20 * 60,
             "data_lifetime": tune.grid_search(data_lifetime),
             "task_lifetime": tune.grid_search(task_lifetime),
-            "max_substitutes_allowed": tune.grid_search(max_substitutes_allowed),
+            "max_aggregations_allowed": tune.grid_search(max_aggregations_allowed),
             "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
             "method": "batch",
             "metric": tune.grid_search(scheduler_metrics),
             "n": tune.grid_search(n),
-            "allow_block_substitution": allow_block_substitution,
+            "allow_caching": allow_caching,
             "disable_dp": disable_dp,
         },
         "metric": {

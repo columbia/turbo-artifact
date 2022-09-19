@@ -112,7 +112,6 @@ class Config:
                 n_blocks=task_spec.n_blocks,
                 budget=task_spec.budget,
                 name=task_spec.name,
-                k=self.omegaconf.k
             )
         # Not sampling but reading actual tasks sequentially from one file
         else:
@@ -137,7 +136,6 @@ class Config:
                 n_blocks=int(task_row["n_blocks"]),
                 budget=Budget(orders),
                 name=task_row["task_name"],
-                k=self.omegaconf.k
             )
 
         assert task is not None
@@ -145,7 +143,7 @@ class Config:
 
     def create_block(self, block_id: int) -> Block:
         block = Block(block_id,
-                      Budget({0.0: self.omegaconf.epsilon}),
+                      Budget({0.0: self.omegaconf.epsilon}),                        # Hacky way to go from Renyi to e,d dp
                       f"{self.omegaconf.blocks.data_path}/block_{block_id}")
         # block = Block.from_epsilon_delta(
         #                 block_id,
@@ -243,5 +241,6 @@ class Config:
                 budget=Budget(orders),
                 name=os.path.basename(path),
             )
+            
         assert task_spec is not None
         return task_spec

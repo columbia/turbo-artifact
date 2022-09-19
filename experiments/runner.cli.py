@@ -9,7 +9,7 @@ from experiments.ray_runner import (
 app = typer.Typer()
 
 
-def budget_utilization():
+def caching():
     grid_online(
         scheduler_scheduling_time=[1],
         metric_recomputation_period=[50],
@@ -20,16 +20,15 @@ def budget_utilization():
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
-        k=[-0.05, 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
         disable_dp=False,
-        max_substitutes_allowed=[20],
-        allow_block_substitution=True,
+        max_aggregations_allowed=[20],
+        allow_caching=True,
     )
 
 
 @app.command()
 def run(
-    exp: str = "budget_utilization",
+    exp: str = "caching",
     loguru_level: str = "WARNING",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level
