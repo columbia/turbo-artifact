@@ -81,6 +81,7 @@ class Scheduler:
         )
         if self.simulator_config.k < 0:
             self.omegaconf.allow_block_substitution = False
+        self.omegaconf.allow_aggregating_cached_results = False
         self.alphas = None
         self.start_time = datetime.now()
         self.allocated_task_ids = []
@@ -131,12 +132,12 @@ class Scheduler:
 
         while not converged:
             cycles += 1
-            can_run_substitute = False
             # Sort the remaining tasks and try to allocate them
             sorted_tasks = self.order(self.task_queue.tasks)
             converged = True
 
             for task in sorted_tasks:
+                can_run_substitute = False
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
                     self.tasks_info.tasks_lifetime[task.id]
@@ -156,7 +157,7 @@ class Scheduler:
                     self.update_allocated_task(task)
                     self.tasks_info.cached_original += 1
 
-                # Search for substitutes availability (including original request)
+                # If the original request cannot run find an alternative plan
                 elif not can_run_original:
                     # Allowed to search for substitutes
                     if self.omegaconf.allow_block_substitution:
@@ -182,13 +183,6 @@ class Scheduler:
                                 if can_run_substitute:
                                     task.budget_per_block = demand
                                     break
-                    
-                    # Allowed to aggregate cached results
-                    else:
-                        # Aggregate cached results
-                        pass
-
-
 
                 # else:
                 #     # See if there is enough budget to run original request
