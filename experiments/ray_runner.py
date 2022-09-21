@@ -116,8 +116,8 @@ def grid_online(
     data_lifetime: List[float],
     task_lifetime: List[int],
     disable_dp: bool,
-    max_aggregations_allowed: [int],
-    allow_caching: bool,
+    max_aggregations_allowed: List[int],
+    allow_caching: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
 ):
     # ray.init(log_to_driver=False)
@@ -130,10 +130,10 @@ def grid_online(
         # DOMINANT_SHARES,
     ]
 
-    # Fully unlocked case
-    # n = [1]
+    # Instant unlocking
+    n = [1]
     # Progressive unlocking
-    n = [1_000]
+    # n = [1_000]
 
     block_selection_policy = ["LatestBlocksFirst"]
     config = {"omegaconf": {
@@ -152,7 +152,7 @@ def grid_online(
             "method": "batch",
             "metric": tune.grid_search(scheduler_metrics),
             "n": tune.grid_search(n),
-            "allow_caching": allow_caching,
+            "allow_caching": tune.grid_search(allow_caching),
             "disable_dp": disable_dp,
         },
         "metric": {
@@ -195,11 +195,12 @@ def grid_online(
             # ),
         ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks", "n_substituted_allocated_tasks",
+            metric_columns=["n_allocated_tasks", "total_tasks",
                             "realized_profit", "budget_utilization", "realized_budget"],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
-                "omegaconf/k": "k",
+                "omegaconf/scheduler/allow_caching": "allow_caching",
+                "omegaconf/scheduler/max_aggregations_allowed": "max_aggregations_allowed",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
             },

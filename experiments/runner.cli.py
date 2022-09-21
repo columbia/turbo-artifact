@@ -21,8 +21,8 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         disable_dp=False,
-        max_aggregations_allowed=[20],
-        allow_caching=True,
+        max_aggregations_allowed=[0, 2, 4, 6, 8, 10],
+        allow_caching=[True],
     )
 
 

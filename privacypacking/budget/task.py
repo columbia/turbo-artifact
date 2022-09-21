@@ -30,7 +30,6 @@ class Task:
         self.name = name
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
-        self.initial_budget_per_block = {}
         self.cost = 0
 
     def get_efficiency(self, cost):
@@ -56,9 +55,6 @@ class Task:
             return ZeroCurve()
 
     def set_budget_per_block(self, block_ids: Iterable[int]):
-        pass
-
-    def get_substitute_demand(self, substitute):
         pass
 
     def dump(self):
@@ -127,4 +123,3 @@ class UniformTask(Task):
     def set_budget_per_block(self, block_ids: Iterable[int]):
         for block_id in block_ids:
             self.budget_per_block[block_id] = self.budget
-            self.initial_budget_per_block[block_id] = self.budget

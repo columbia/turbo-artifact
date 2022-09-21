@@ -3,12 +3,12 @@ import random
 from functools import partial
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger
 from omegaconf import OmegaConf
 
+import numpy as np
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget

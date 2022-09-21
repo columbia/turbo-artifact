@@ -81,7 +81,7 @@ def query1(df):
 
 def dp_query1(df, privacy_budget):
     ll = [1] * int(df.query("state in @west")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -91,7 +91,7 @@ def dp_query1(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -104,7 +104,7 @@ def query2(df):
 
 def dp_query2(df, privacy_budget):
     ll = [1] * int(df.query("state in @west")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -114,7 +114,7 @@ def dp_query2(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -127,7 +127,7 @@ def query3(df):
 
 def dp_query3(df, privacy_budget):
     ll = [1] * int(df.query("state in @midwest")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -137,7 +137,7 @@ def dp_query3(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -150,7 +150,7 @@ def query4(df):
 
 def dp_query4(df, privacy_budget):
     ll = [1] * int(df.query("state in @midwest")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -160,7 +160,7 @@ def dp_query4(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -173,7 +173,7 @@ def query5(df):
 
 def dp_query5(df, privacy_budget):
     ll = [1] * int(df.query("state in @northeast")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -183,7 +183,7 @@ def dp_query5(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -196,7 +196,7 @@ def query6(df):
 
 def dp_query6(df, privacy_budget):
     ll = [1] * int(df.query("state in @northeast")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -206,7 +206,7 @@ def dp_query6(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -219,7 +219,7 @@ def query7(df):
 
 def dp_query7(df, privacy_budget):
     ll = [1] * int(df.query("state in @south")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -229,7 +229,7 @@ def dp_query7(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -242,7 +242,7 @@ def query8(df):
 
 def dp_query8(df, privacy_budget):
     ll = [1] * int(df.query("state in @south")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -252,7 +252,7 @@ def dp_query8(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -265,7 +265,7 @@ def query9(df):
 
 def dp_query9(df, privacy_budget):
     ll = [1] * int(df.query("state in @NewYork")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -275,7 +275,7 @@ def dp_query9(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -288,7 +288,7 @@ def query10(df):
 
 def dp_query10(df, privacy_budget):
     ll = [1] * int(df.query("state in @NewYork")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -298,7 +298,7 @@ def dp_query10(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -311,7 +311,7 @@ def query11(df):
 
 def dp_query11(df, privacy_budget):
     ll = [1] * int(df.query("state in @California")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -321,7 +321,7 @@ def dp_query11(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -334,7 +334,7 @@ def query12(df):
 
 def dp_query12(df, privacy_budget):
     ll = [1] * int(df.query("state in @California")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -344,7 +344,7 @@ def dp_query12(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -357,7 +357,7 @@ def query13(df):
 
 def dp_query13(df, privacy_budget):
     ll = [1] * int(df.query("state in @Texas")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -367,7 +367,7 @@ def dp_query13(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -380,7 +380,7 @@ def query14(df):
 
 def dp_query14(df, privacy_budget):
     ll = [1] * int(df.query("state in @Texas")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -390,7 +390,7 @@ def dp_query14(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -403,7 +403,7 @@ def query15(df):
 
 def dp_query15(df, privacy_budget):
     ll = [1] * int(df.query("state in @Florida")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -413,7 +413,7 @@ def dp_query15(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -426,7 +426,7 @@ def query16(df):
 
 def dp_query16(df, privacy_budget):
     ll = [1] * int(df.query("state in @Florida")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -436,7 +436,7 @@ def dp_query16(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -449,7 +449,7 @@ def query17(df):
 
 def dp_query17(df, privacy_budget):
     ll = [1] * int(df.query("state in @Pennsylvania")["new_cases"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -459,7 +459,7 @@ def dp_query17(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )
 
 
@@ -472,7 +472,7 @@ def query18(df):
 
 def dp_query18(df, privacy_budget):
     ll = [1] * int(df.query("state in @Pennsylvania")["new_deaths"].sum())
-    s = 1  # int(days / 90)+1
+    s = 5 
     x = BoundedSum(
         epsilon=privacy_budget,
         delta=0,
@@ -482,5 +482,5 @@ def dp_query18(df, privacy_budget):
         dtype="float",
     )
     return pd.DataFrame(
-        [{"result": int(x.quick_result(ll))}]
+        [{"result": abs(int(x.quick_result(ll)))}]
     )

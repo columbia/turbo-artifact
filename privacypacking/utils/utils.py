@@ -39,8 +39,6 @@ def get_logs(
     allocated_tasks_scheduling_delays = []
     maximum_profit = 0
     realized_profit = 0
-    realized_budget = 0
-    # tasks_allocated_due_to_substitution = 0
 
     log_tasks = []
     for task in tasks:
@@ -53,22 +51,21 @@ def get_logs(
             allocated_tasks_scheduling_delays.append(
                 tasks_info.scheduling_delay.get(task.id, None)
             )
-            realized_budget += len(task.initial_budget_per_block)*task.budget.epsilon(0)
 
-        substitute_result = None
-        if task.id in tasks_info.substitute_result:
-            substitute_result = tasks_info.substitute_result[task.id]
+        alternative_plan_result = None
+        if task.id in tasks_info.alternative_plan_result:
+            alternative_plan_result = tasks_info.alternative_plan_result[task.id]
 
-        original_result = None
-        if task.id in tasks_info.original_result:
-            original_result = tasks_info.original_result[task.id]
+        original_plan_result = None
+        if task.id in tasks_info.original_plan_result:
+            original_plan_result = tasks_info.original_plan_result[task.id]
 
         task_dump.update(
             {
                 "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                 "status": tasks_info.tasks_status[task.id],
-                "original_result": original_result,
-                "substitute_result": substitute_result,
+                "original_plan_result": original_plan_result,
+                "alternative_plan_result": alternative_plan_result,
                 "creation_time": tasks_info.creation_time[task.id],
                 "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
                 "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
@@ -87,6 +84,7 @@ def get_logs(
         log_blocks.append(block.dump())
         dfs.append(pd.DataFrame([{"budget": block.budget.epsilon(0.0)}]))
     df = pd.concat(dfs)
+
     df['budget'] = 10 - df['budget']
     bu = df['budget'].mean()
 
@@ -103,16 +101,14 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
-        "k": omegaconf.k,
         "budget_utilization": bu,
-        "realized_budget": realized_budget,
+        "realized_budget": tasks_info.realized_budget,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
-        "cached_subs": tasks_info.cached_subs,
-        "subs": tasks_info.subs,
-        "cached_original": tasks_info.cached_original,
-        "original": tasks_info.original,
+        "original_plans_ran": tasks_info.original_plans_ran,
+        "alternative_plans_ran": tasks_info.alternative_plans_ran,
+        "max_aggregations_allowed": omegaconf.scheduler.max_aggregations_allowed,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,

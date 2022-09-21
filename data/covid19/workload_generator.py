@@ -27,19 +27,9 @@ class PrivacyWorkload:
 
     def __init__(self,):
         self.tasks = None
-        # self.query_instances_num = 2000
         self.blocks_num = 400
-        self.num_queries = 1
+        self.num_queries = 10
         self.tasks = []
-        # for i in range(self.query_instances_num):
-        #     sample_query = random.randint(1, self.num_queries)
-        #     self.tasks += Query(sample_query, self.blocks_num).generate_tasks()
-        # print(len(self.tasks))
-
-        # self.time_partition = sorted(get_split(self.blocks_num, 350))
-        # self.freq = {}
-        # for i in self.time_partition:
-        #     self.freq[i] = random.randint(0, 2)
         for i in range(self.blocks_num):
             self.tasks += self.generate_one_day_tasks(i, self.num_queries)
 
@@ -47,42 +37,12 @@ class PrivacyWorkload:
     def generate_one_day_tasks(self, start_time, num_queries):
         tasks = []
         freq = 0
-        # for i in range(len(self.time_partition)-1):
-        #     if self.time_partition[i] <= start_time < self.time_partition[i + 1]:
-        #         freq = self.freq[self.time_partition[i]]
-        # if freq:
-        freq = random.randint(0, 2)
-        if freq == 0:
-            num_tasks = np.abs(np.random.normal(50, 5, 1)).astype(int)+1
-        # elif freq == 2:
-        #     num_tasks = np.abs(np.random.normal(10, 2, 1)).astype(int)+1
-        # elif freq == 1:
-        #     num_tasks = np.abs(np.random.normal(20, 3, 1)).astype(int)+1
-        # elif freq == 3:
-        #     num_tasks = np.abs(np.random.normal(20, 2, 1)).astype(int)+1
-        elif freq == 1 or freq == 2:
-            num_tasks = np.abs(np.random.normal(10, 2, 1)).astype(int)+1
-        # elif freq == 3:
-        #     num_tasks = np.abs(np.random.normal(5, 2, 1)).astype(int)+1
-        # num_tasks = np.abs(np.random.normal(20, 10, 1)).astype(int)+1
-        # print(num_tasks)
+        num_tasks = np.abs(np.random.normal(40, 20, 1)).astype(int)+1
+        
         for i in range(num_tasks[0]):
-            # nblocks = np.abs(np.random.normal(1, 7, 1)).astype(int)[0]+1
-            # if 1 <= nblocks < 5:
-            #     nblocks = 1
-            # elif 5 <= nblocks < 10:
-            #     nblocks = 7
-            # elif 10 <= nblocks < 15:
-            #     nblocks = 10
-            # elif 15 <= nblocks:
-            #     nblocks = 15
             query_id = np.random.randint(1, num_queries+1)
             query_type = "summation" #"average"
-            # nblocks = np.random.choice([1, 7, 14], 1, p=[0.41, 0.39, 0.2])[0]
-            # nblocks = np.random.choice([1, 7], 1, p=[0.5, 0.5])[0]
-            # nblocks = np.random.choice([1, 7], 1, p=[0.5, 0.5])[0]
-            # nblocks = (np.abs(np.random.normal(7, 4, 1)).astype(int)+1)[0]
-            nblocks = np.random.randint(1, 10)
+            nblocks = np.random.randint(1, 11)
             tasks.append(Task(start_time, nblocks, query_id, query_type))
 
         return tasks
@@ -99,7 +59,7 @@ class PrivacyWorkload:
             "epsilon": epsilon[0],
             "delta": delta,
             "n_blocks": n_blocks,
-            "profit": n_blocks,
+            "profit": 1,
             "block_selection_policy": self.compute_block_selection_policy(),
             "task_name": task_name,
             "alphas": [0.0],  # Hacky

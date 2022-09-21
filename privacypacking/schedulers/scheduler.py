@@ -32,11 +32,11 @@ class TasksInfo:
         self.allocation_index = {}
         self.tasks_lifetime = {}
         self.tasks_submit_time = {}
-        self.cached_subs = 0
         self.alternative_plans_ran = 0
         self.original_plans_ran = 0
         self.original_plan_result = {}
         self.alternative_plan_result = {}
+        self.realized_budget = 0
 
     def dump(self):
         tasks_info = {
@@ -88,6 +88,8 @@ class Scheduler:
         for block_id in blocks:
             block = self.blocks[block_id]
             block.budget -= budget
+            self.tasks_info.realized_budget += budget.epsilon(0.0)
+
 
     def now(self) -> Optional[float]:
         return self.env.now if hasattr(self, "env") else 0
@@ -130,29 +132,47 @@ class Scheduler:
             converged = True
 
             for task in sorted_tasks:
+                
+                # Do not schedule tasks whose lifetime has been exceeded
+                if (
+                    self.tasks_info.tasks_lifetime[task.id]
+                    < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
+                ):
+                    continue
 
-                print("\n\n\original_plans_ran", self.tasks_info.original_plans_ran, "alternative_plans_ran", self.tasks_info.alternative_plans_ran)
+                print("\n\noriginal_plans_ran", self.tasks_info.original_plans_ran, "| alternative_plans_ran", self.tasks_info.alternative_plans_ran)
                 
                 bs_list = sorted(list(task.budget_per_block.keys()))
+                bs_tuple = (bs_list[0], bs_list[-1])
+
                 budget = task.budget #.epsilon(0.0)                       # Handling only uniform tasks
-                original_plan = cache.R(task_id=task.query_id, blocks=bs_list, budget=budget)
+                original_plan = cache.A([cache.R(task_id=task.query_id, blocks=bs_tuple, budget=budget)])
                 
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
                     print(colored(f"Setting query {task.query_id} " f" plan for {sorted(list(task.budget_per_block.keys()))}", "blue",))
-                    plan = self.cache.get_execution_plan(task.query_id, task.query_type, bs_list, budget, self)
+                    plan = self.cache.get_execution_plan(task.query_id, bs_list, budget, self)
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
 
+                print(colored(f"Original plan:     {original_plan}", 'red'))
+                print(colored(f"Plan:              {plan}\n", 'yellow'))
+
                 # Execute Plan
                 if plan is not None:
-                    self.execute_plan(plan)
+                    result = self.execute_plan(plan)
                     self.update_allocated_task(task)
                 
                     # Run original plan just to store the result - for experiments
-                    if original_plan is not plan:
-                        self.tasks_info.original_result[task.id] = self.execute_plan(original_plan)
+                    if str(original_plan) != str(plan):
+                        self.tasks_info.alternative_plans_ran += 1
+                        self.tasks_info.alternative_plan_result[task.id] = result
+                        result = self.run_task(task.query_id, bs_list, budget)
+                    else:
+                        self.tasks_info.original_plans_ran += 1
+
+                    self.tasks_info.original_plan_result[task.id] = result
 
                     if (self.metric.is_dynamic() and self.n_allocated_tasks % self.omegaconf.metric_recomputation_period == 0):
                         # We go back to the beginning of the while loop
@@ -165,7 +185,8 @@ class Scheduler:
 
 
     def execute_plan(self, plan):
-        if plan is isinstance(cache.R):
+        result = None
+        if isinstance(plan, cache.R):
             blocks_list = list(range(plan.blocks[0], plan.blocks[-1]+1))
             # Run the task on blocks
             result = self.run_task(plan.task_id, blocks_list, plan.budget)
@@ -173,11 +194,11 @@ class Scheduler:
             # Add result in cache
             self.cache.add_result(plan.task_id, plan.blocks, plan.budget, result)
 
-        elif plan is isinstance(cache.F):
+        elif isinstance(plan, cache.F):
             # Fetch result from cache
             result = self.cache.find_result(plan.task_id, plan.blocks, plan.budget)
 
-        elif plan is isinstance(cache.A):
+        elif isinstance(plan, cache.A):
             agglist = [self.execute_plan(x) for x in plan.l]
             result = sum(agglist)
 

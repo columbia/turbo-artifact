@@ -1,7 +1,5 @@
 from queue import Empty
-from privacypacking.cache.utils import (
-    get_splits,
-)
+from privacypacking.cache.utils import get_splits
 from termcolor import colored
 
 
@@ -9,15 +7,26 @@ class R:
     def __init__(self, task_id, blocks, budget) -> None:
         self.task_id = task_id
         self.blocks = blocks
+        self.budget = budget
+
+    def __str__(self,):
+        return f"R({self.blocks},{self.budget.epsilon(0.0)})"
 
 class F:
     def __init__(self, task_id, blocks, budget) -> None:
         self.task_id = task_id
         self.blocks = blocks
+        self.budget = budget
+    
+    def __str__(self,):
+        return f"F({self.blocks},{self.budget.epsilon(0.0)})"
 
 class A:
     def __init__(self, l) -> None:
         self.l = l
+
+    def __str__(self,):
+            return f"A({[str(l) for l in self.l]})"
 
 
 class Cache:
@@ -35,6 +44,8 @@ class Cache:
         for block in range(blocks[0], blocks[-1]+1):
             demand[block] = budget
         # Add other constraints too here
+        # for block in demand.keys():
+            # print(f"             block {block} - available - {scheduler.blocks[block].remaining_budget}")
         return scheduler.can_run(demand)
 
     def add_result(self, query_id, blocks, budget, result):
@@ -42,8 +53,6 @@ class Cache:
             self.results[query_id] = {}
         if blocks not in self.results[query_id]:
             self.results[query_id].update({blocks: (budget.epsilon(0.0), result)})
-            if query_id not in self.distances:
-                self.distances[query_id] = {}
 
     def find_result(self, query_id, blocks, budget):
         # budget = budget.epsilon(0.0)
@@ -53,29 +62,29 @@ class Cache:
                 return result
 
     def get_execution_plan(self, query_id, blocks, budget, scheduler):
-        if query_id not in self.results:            # Fast way out
-            return None
 
         max_num_aggregations = min(self.max_aggregations_allowed, len(blocks))
 
         plan = []
-        for i in range(max_num_aggregations):      # Prioritizing smallest number of aggregations
+        for i in range(max_num_aggregations+1):      # Prioritizing smallest number of aggregations
             splits = get_splits(blocks, i)
             for split in splits:
+                # print("split", split)
                 
                 for x in split:
                     x = (x[0], x[-1])
+                    # print("         x", x)
 
-                    if self.find_result(x) is not None:
-                        plan += self.F(query_id, x, budget)
+                    if self.find_result(query_id, x, budget) is not None:
+                        plan += [F(query_id, x, budget)]
 
                     elif self.can_run(scheduler, x, budget):
-                        plan += self.R(query_id, x, budget)
+                        plan += [R(query_id, x, budget)]
 
                     else:
                         plan = []
                         break
 
-                if plan is not Empty:
-                    return self.A(plan)
+                if plan:
+                    return A(plan)
         return None

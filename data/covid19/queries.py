@@ -49,19 +49,3 @@ class Query:
         for i in np.arange(start_time, end_time, period):
             tasks.append(Task(i, self.get_n_blocks(period), self.query_type))
         return tasks
-
-
-def query1(df):
-    return df.query("continent == 'Europe'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
-
-def query2(df):
-    return df.query("continent == 'Africa'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
-
-def query3(df):
-    return df.query("continent == 'South America'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
-
-def query4(df):
-    return df.query("continent == 'North America'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
-
-def query5(df):
-    return df.query("continent == 'Asia'")['new_cases'].mean().rename(columns={'new_cases': 'result'})
