@@ -62,8 +62,8 @@ class PrivacyWorkload:
             "profit": 1,
             "block_selection_policy": self.compute_block_selection_policy(),
             "task_name": task_name,
-            "alphas": [0.0],  # Hacky
-            "rdp_epsilons": epsilon,
+            # "alphas": [0.0],  # Hacky
+            # "epsilon": epsilon,
             "submit_time": submit_time,
         }
         return task

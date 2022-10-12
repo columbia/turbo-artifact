@@ -4,7 +4,7 @@ from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 
-from privacypacking.budget import Block, Budget, Task, ZeroCurve
+from privacypacking.budget import Block, Budget, Task, ZeroCurve, BasicBudget
 from privacypacking.schedulers.scheduler import Scheduler
 
 """
@@ -15,7 +15,7 @@ For all schedulers based on gradually unlocking budget
 class UnlockingBlock(Block):
     def __init__(self, id: int, budget: Budget, n: int = 1):
         super().__init__(id, budget)
-        self.unlocked_budget = Budget({0.0: 0})
+        self.unlocked_budget = BasicBudget(0)
             # (
             # ZeroCurve()
         # )  # Will be gradually unlocking budget till we reach full capacity
