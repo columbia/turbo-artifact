@@ -12,6 +12,7 @@ import numpy as np
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
+from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import REPO_ROOT, DEFAULT_CONFIG_FILE, TaskSpec
 
@@ -116,14 +117,14 @@ class Config:
         # Not sampling but reading actual tasks sequentially from one file
         else:
             _, task_row = next(self.tasks_generator)
-            orders = {}
+            # orders = {}
             parsed_alphas = task_row["alphas"].strip("][").split(", ")
             parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
 
-            for i, alpha in enumerate(parsed_alphas):
-                alpha = float(alpha)
-                epsilon = float(parsed_epsilons[i])
-                orders[alpha] = epsilon
+            # for i, alpha in enumerate(parsed_alphas):
+            #     alpha = float(alpha)
+            #     epsilon = float(parsed_epsilons[i])
+            #     orders[alpha] = epsilon
 
             task = UniformTask(
                 id=task_id,
@@ -134,7 +135,7 @@ class Config:
                     task_row["block_selection_policy"]
                 ),
                 n_blocks=int(task_row["n_blocks"]),
-                budget=Budget(orders),
+                budget=BasicBudget(parsed_epsilons[0]),
                 name=task_row["task_name"],
             )
 
@@ -143,7 +144,7 @@ class Config:
 
     def create_block(self, block_id: int) -> Block:
         block = Block(block_id,
-                      Budget({0.0: self.omegaconf.epsilon}),                        # Hacky way to go from Renyi to e,d dp
+                      BasicBudget(self.omegaconf.epsilon),
                       f"{self.omegaconf.blocks.data_path}/block_{block_id}")
         # block = Block.from_epsilon_delta(
         #                 block_id,
@@ -183,9 +184,10 @@ class Config:
 
         with open(path, "r") as f:
             demand_dict = yaml.safe_load(f)
-            orders = {}
-            for i, alpha in enumerate(demand_dict["alphas"]):
-                orders[alpha] = demand_dict["rdp_epsilons"][i]
+            # orders = {}
+            # for i, alpha in enumerate(demand_dict["alphas"]):
+                # orders[alpha] = demand_dict["rdp_epsilons"][i]
+            epsilon = demand_dict['epsilon']
             block_selection_policy = None
             if "block_selection_policy" in demand_dict:
                 block_selection_policy = BlockSelectionPolicy.from_str(
@@ -238,7 +240,7 @@ class Config:
                 profit=float(profit),
                 block_selection_policy=block_selection_policy,
                 n_blocks=int(n_blocks),
-                budget=Budget(orders),
+                budget=BasicBudget(epsilon),
                 name=os.path.basename(path),
             )
             

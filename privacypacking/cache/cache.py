@@ -4,22 +4,22 @@ from termcolor import colored
 
 
 class R:
-    def __init__(self, task_id, blocks, budget) -> None:
-        self.task_id = task_id
+    def __init__(self, query_id, blocks, budget) -> None:
+        self.query_id = query_id
         self.blocks = blocks
         self.budget = budget
 
     def __str__(self,):
-        return f"R({self.blocks},{self.budget.epsilon(0.0)})"
+        return f"R({self.blocks},{self.budget.epsilon})"
 
 class F:
-    def __init__(self, task_id, blocks, budget) -> None:
-        self.task_id = task_id
+    def __init__(self, query_id, blocks, budget) -> None:
+        self.query_id = query_id
         self.blocks = blocks
         self.budget = budget
     
     def __str__(self,):
-        return f"F({self.blocks},{self.budget.epsilon(0.0)})"
+        return f"F({self.blocks},{self.budget.epsilon})"
 
 class A:
     def __init__(self, l) -> None:
@@ -28,7 +28,7 @@ class A:
     def __str__(self,):
             return f"A({[str(l) for l in self.l]})"
 
-
+# Todo: Deterministic cache - clean up - restructure - make abstract class
 class Cache:
     def __init__(self, max_aggregations_allowed, disable_dp):
         self.max_aggregations_allowed = max_aggregations_allowed
@@ -54,7 +54,7 @@ class Cache:
         if blocks not in self.results[query_id]:
             self.results[query_id].update({blocks: (budget.epsilon(0.0), result)})
 
-    def find_result(self, query_id, blocks, budget):
+    def run_cache(self, query_id, blocks, budget):
         # budget = budget.epsilon(0.0)
         if query_id in self.results:
             if blocks in self.results[query_id]:

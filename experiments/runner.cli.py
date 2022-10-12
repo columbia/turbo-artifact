@@ -26,6 +26,24 @@ def caching():
     )
 
 
+def pmw():
+    grid_online(
+        scheduler_scheduling_time=[1],
+        metric_recomputation_period=[50],
+        initial_blocks=[1],
+        max_blocks=[400],
+        tasks_data_path=["covid19/privacy_tasks.csv"],
+        blocks_data_path=["covid19/blocks"],
+        tasks_sampling="",
+        data_lifetime=[0.1],
+        task_lifetime=[1],
+        disable_dp=False,
+        max_aggregations_allowed=[0, 2, 4, 6, 8, 10],
+        allow_caching=[True],
+    )
+
+
+
 @app.command()
 def run(
     exp: str = "caching",

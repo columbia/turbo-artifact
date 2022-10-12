@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple, Union
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
-from privacypacking.cache import cache
+from privacypacking.cache import cache, pmw
 from privacypacking.cache.dp_queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
@@ -79,7 +79,9 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        self.cache = cache.Cache(self.omegaconf.max_aggregations_allowed, self.omegaconf.disable_dp)
+        # self.cache = cache.Cache(self.omegaconf.max_aggregations_allowed, self.omegaconf.disable_dp)
+        # todo: avoid passing the scheduler as argument (circular reference)
+        self.cache = pmw.PerBlockPMW(self)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -146,13 +148,13 @@ class Scheduler:
                 bs_tuple = (bs_list[0], bs_list[-1])
 
                 budget = task.budget #.epsilon(0.0)                       # Handling only uniform tasks
-                original_plan = cache.A([cache.R(task_id=task.query_id, blocks=bs_tuple, budget=budget)])
+                original_plan = cache.A([cache.R(query_id=task.query_id, blocks=bs_tuple, budget=budget)])
                 
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
                     print(colored(f"Setting query {task.query_id} " f" plan for {sorted(list(task.budget_per_block.keys()))}", "blue",))
-                    plan = self.cache.get_execution_plan(task.query_id, bs_list, budget, self)
+                    plan = self.cache.get_execution_plan(task.query_id, bs_list, budget)
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
 
@@ -189,14 +191,14 @@ class Scheduler:
         if isinstance(plan, cache.R):
             blocks_list = list(range(plan.blocks[0], plan.blocks[-1]+1))
             # Run the task on blocks
-            result = self.run_task(plan.task_id, blocks_list, plan.budget)
+            result = self.run_task(plan.query_id, blocks_list, plan.budget)
             self.consume_budgets(blocks_list, plan.budget)
             # Add result in cache
-            self.cache.add_result(plan.task_id, plan.blocks, plan.budget, result)
+            self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
 
         elif isinstance(plan, cache.F):
             # Fetch result from cache
-            result = self.cache.find_result(plan.task_id, plan.blocks, plan.budget)
+            result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
 
         elif isinstance(plan, cache.A):
             agglist = [self.execute_plan(x) for x in plan.l]
@@ -208,18 +210,19 @@ class Scheduler:
 
         return result
 
-    def run_task(self, task_id, blocks, budget):
+    def run_task(self, query_id, blocks, budget):
         df = []
-        print(colored(f"Running query type {task_id} on blocks {blocks}", "green"))
+        print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
         if self.omegaconf.disable_dp:
-            result = globals()[f"query{task_id}"](df)
+            result = globals()[f"query{query_id}"](df)
         else:
-            result = globals()[f"dp_query{task_id}"](df, budget.epsilon(0.0))
-        print(colored(f"Result of query {task_id} on blocks {blocks}: \n{result}","green",))
+            result = globals()[f"dp_query{query_id}"](df, budget.epsilon(0.0))
+        print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
+
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
