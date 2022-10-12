@@ -2,22 +2,6 @@ from collections import namedtuple
 from typing import Dict, List, Tuple
 
 import numpy as np
-from opacus.privacy_analysis import get_privacy_spent
-
-ALPHAS = [
-    1.5,
-    1.75,
-    2,
-    2.5,
-    3,
-    4,
-    5,
-    6,
-    8,
-    16,
-    32,
-    64,
-]
 
 
 # Default values for some datasets
@@ -28,9 +12,6 @@ DELTA_IMAGENET = 1e-7
 MAX_DUMP_DIGITS = 50
 
 
-# DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta", "best_alpha"])
-
-
 class Budget:
     def __init__(self) -> None:
         pass
@@ -39,9 +20,6 @@ class Budget:
         pass
 
     def epsilon(self, alpha: float) -> float:
-        pass
-
-    def dp_budget(self, delta: float = DELTA_MNIST) -> DPBudget:
         pass
 
     def add_with_threshold(self, other: "Budget", threshold: "Budget"):

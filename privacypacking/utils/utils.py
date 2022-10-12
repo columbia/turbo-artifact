@@ -82,7 +82,7 @@ def get_logs(
     log_blocks = []
     for block in blocks.values():
         log_blocks.append(block.dump())
-        dfs.append(pd.DataFrame([{"budget": block.budget.epsilon(0.0)}]))
+        dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
     df = pd.concat(dfs)
 
     df['budget'] = 10 - df['budget']

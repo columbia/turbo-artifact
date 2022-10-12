@@ -30,9 +30,9 @@ class A:
 
 # Todo: Deterministic cache - clean up - restructure - make abstract class
 class Cache:
-    def __init__(self, max_aggregations_allowed, disable_dp):
+    def __init__(self, max_aggregations_allowed, scheduler):
         self.max_aggregations_allowed = max_aggregations_allowed
-        self.disable_dp = disable_dp
+        self.scheduler = scheduler
         self.results = {}
 
     def dump(self,):
@@ -52,16 +52,15 @@ class Cache:
         if query_id not in self.results:
             self.results[query_id] = {}
         if blocks not in self.results[query_id]:
-            self.results[query_id].update({blocks: (budget.epsilon(0.0), result)})
+            self.results[query_id].update({blocks: (budget.epsilon, result)})
 
     def run_cache(self, query_id, blocks, budget):
-        # budget = budget.epsilon(0.0)
         if query_id in self.results:
             if blocks in self.results[query_id]:
                 (_, result) = self.results[query_id][blocks]
                 return result
 
-    def get_execution_plan(self, query_id, blocks, budget, scheduler):
+    def get_execution_plan(self, query_id, blocks, budget):
 
         max_num_aggregations = min(self.max_aggregations_allowed, len(blocks))
 
@@ -75,10 +74,10 @@ class Cache:
                     x = (x[0], x[-1])
                     # print("         x", x)
 
-                    if self.find_result(query_id, x, budget) is not None:
+                    if self.run_cache(query_id, x, budget) is not None:
                         plan += [F(query_id, x, budget)]
 
-                    elif self.can_run(scheduler, x, budget):
+                    elif self.can_run(self.scheduler, x, budget):
                         plan += [R(query_id, x, budget)]
 
                     else:

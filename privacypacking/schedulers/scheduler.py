@@ -2,7 +2,7 @@ import sys
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
@@ -79,8 +79,9 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        # self.cache = cache.Cache(self.omegaconf.max_aggregations_allowed, self.omegaconf.disable_dp)
+
         # todo: avoid passing the scheduler as argument (circular reference)
+        # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
         self.cache = pmw.PerBlockPMW(self)
 
     def consume_budgets(self, blocks, budget):
@@ -90,8 +91,7 @@ class Scheduler:
         for block_id in blocks:
             block = self.blocks[block_id]
             block.budget -= budget
-            self.tasks_info.realized_budget += budget.epsilon(0.0)
-
+            self.tasks_info.realized_budget += budget.epsilon
 
     def now(self) -> Optional[float]:
         return self.env.now if hasattr(self, "env") else 0
@@ -147,14 +147,13 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                budget = task.budget #.epsilon(0.0)                       # Handling only uniform tasks
-                original_plan = cache.A([cache.R(query_id=task.query_id, blocks=bs_tuple, budget=budget)])
+                original_plan = cache.A([cache.R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
                 
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
-                    print(colored(f"Setting query {task.query_id} " f" plan for {sorted(list(task.budget_per_block.keys()))}", "blue",))
-                    plan = self.cache.get_execution_plan(task.query_id, bs_list, budget)
+                    print(colored(f"Setting query {task.query_id}-{task.budget} " f" plan for {sorted(list(task.budget_per_block.keys()))}", "blue",))
+                    plan = self.cache.get_execution_plan(task.query_id, bs_list, task.budget)
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
 
@@ -170,7 +169,7 @@ class Scheduler:
                     if str(original_plan) != str(plan):
                         self.tasks_info.alternative_plans_ran += 1
                         self.tasks_info.alternative_plan_result[task.id] = result
-                        result = self.run_task(task.query_id, bs_list, budget)
+                        result = self.run_task(task.query_id, bs_list, task.budget)
                     else:
                         self.tasks_info.original_plans_ran += 1
 
@@ -219,7 +218,7 @@ class Scheduler:
         if self.omegaconf.disable_dp:
             result = globals()[f"query{query_id}"](df)
         else:
-            result = globals()[f"dp_query{query_id}"](df, budget.epsilon(0.0))
+            result = globals()[f"dp_query{query_id}"](df, budget.epsilon)
         print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
 
@@ -259,8 +258,8 @@ class Scheduler:
         self.blocks.update({block.id: block})
 
         # Support blocks with custom support
-        if not self.alphas:
-            self.alphas = block.initial_budget.alphas
+        # if not self.alphas:
+            # self.alphas = block.initial_budget.alphas
 
     def get_num_blocks(self) -> int:
         num_blocks = len(self.blocks)

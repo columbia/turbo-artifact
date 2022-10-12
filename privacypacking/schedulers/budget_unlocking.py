@@ -92,7 +92,7 @@ class TimeUnlockingBlock(UnlockingBlock):
                 "Unlock Block ",
                 self.id,
                 "locked",
-                (self.initial_budget - self.unlocked_budget).epsilons,
+                (self.initial_budget - self.unlocked_budget).epsilon,
             )
             self.unlock_budget()
 

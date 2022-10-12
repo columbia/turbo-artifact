@@ -20,7 +20,7 @@ class BasicBudget:
         self.epsilon = epsilon
 
     def is_positive(self) -> bool:
-        if self.epsilon > 0:
+        if self.epsilon >= 0:
             return True
         return False
 
@@ -39,31 +39,15 @@ class BasicBudget:
         Increases every budget-epsilon by "amount".
         The maximum value a budget-epsilon can take is threshold-epsilon.
         """
-        return Budget(min(self.epsilon + other.epsilon, threshold.epsilon))
+        return BasicBudget(min(self.epsilon + other.epsilon, threshold.epsilon))
 
     def can_allocate(self, demand_budget: "Budget") -> bool:
         # TODO: remove if this is too slow
-        assert not demand_budget.is_positive()
+        assert demand_budget.is_positive()
         diff = self - demand_budget
         if diff.epsilon >= 0:
             return True
         return False
-
-    def approx_epsilon_bound(self, delta: float) -> "Budget":
-        return Budget(
-            {
-                alpha: epsilon - np.log(delta) / (alpha - 1)
-                for alpha, epsilon in zip(self.alphas, self.epsilons)
-            }
-        )
-
-    def positive(self) -> "Budget":
-        return Budget(
-            {
-                alpha: max(epsilon, 0.0)
-                for alpha, epsilon in zip(self.alphas, self.epsilons)
-            }
-        )
 
     def __eq__(self, other):
         if other.epsilon != self.epsilon:
@@ -71,33 +55,30 @@ class BasicBudget:
         return True
 
     def __sub__(self, other):
-        a, b = self, other
-        return Budget(a.epsilon - b.epsilon)
+        return BasicBudget(self.epsilon - other.epsilon)
 
     def __add__(self, other):
-        a, b = self, other
-        return Budget(a.epsilon+ b.epsilon)
+        return BasicBudget(self.epsilon+ other.epsilon)
 
     def normalize_by(self, other: "Budget"):
-        a, b = self, other
-        if b.epsilon > 0:
-            return Budget(a.epsilon / b.epsilon)
+        if other.epsilon > 0:
+            return BasicBudget(self.epsilon / other.epsilon)
 
     def __mul__(self, n: float):
-        return Budget(self.epsilon * n)
+        return BasicBudget(self.epsilon * n)
 
     def __truediv__(self, n: int):
-        return Budget(self.epsilon / n)
+        return BasicBudget(self.epsilon / n)
 
     def __repr__(self) -> str:
-        return "Budget({})".format(self.epsilon)
+        return "BasicBudget({})".format(self.epsilon)
 
     def __ge__(self, other) -> bool:
         diff = self - other
         return diff.is_positive()
 
     def copy(self):
-        return Budget(self.epsilon.copy())
+        return BasicBudget(self.epsilon.copy())
 
     def dump(self):
         budget_info = {"epsilon": self.epsilon}

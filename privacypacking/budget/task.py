@@ -5,7 +5,8 @@ from scipy.sparse import bsr_matrix, dok_matrix
 from scipy.sparse.construct import vstack
 
 from privacypacking.budget.block_selection import BlockSelectionPolicy
-from privacypacking.budget.budget import ALPHAS, Budget
+from privacypacking.budget.budget import Budget
+from privacypacking.budget.renyi_budget import ALPHAS
 from privacypacking.budget.curves import ZeroCurve
 
 
