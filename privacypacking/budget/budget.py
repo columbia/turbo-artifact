@@ -45,10 +45,13 @@ class Budget:
 
     def __mul__(self, n: float):
         pass
+
     def __truediv__(self, n: int):
         pass
+
     def __repr__(self) -> str:
         pass
+
     def __ge__(self, other) -> bool:
         pass
 

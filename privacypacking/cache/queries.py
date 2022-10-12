@@ -296,4 +296,3 @@
 #     return pd.DataFrame(
 #         [{"result": df.query("continent == 'Asia'")["new_cases"].mean()}]
 #     )
-

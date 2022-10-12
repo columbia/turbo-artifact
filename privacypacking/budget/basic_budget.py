@@ -29,9 +29,7 @@ class BasicBudget:
             return self.dp_budget_cached
 
         # Cache the result
-        self.dp_budget_cached = DPBudget(
-            epsilon=self.epsilon, delta=delta
-        )
+        self.dp_budget_cached = DPBudget(epsilon=self.epsilon, delta=delta)
         return self.dp_budget_cached
 
     def add_with_threshold(self, other: "Budget", threshold: "Budget"):
@@ -58,7 +56,7 @@ class BasicBudget:
         return BasicBudget(self.epsilon - other.epsilon)
 
     def __add__(self, other):
-        return BasicBudget(self.epsilon+ other.epsilon)
+        return BasicBudget(self.epsilon + other.epsilon)
 
     def normalize_by(self, other: "Budget"):
         if other.epsilon > 0:
@@ -83,5 +81,3 @@ class BasicBudget:
     def dump(self):
         budget_info = {"epsilon": self.epsilon}
         return budget_info
-
-
