@@ -1,4 +1,3 @@
-from cv2 import dft
 import pandas as pd
 import pydp as dp
 from pydp.algorithms.laplacian import (
@@ -18,12 +17,12 @@ from pydp.algorithms.laplacian import (
 attributes = ["positive", "deceased"]
 
 
-def query_0(df, constraints):
+def query_0(df):
     ll = df["positive"]
     return pd.DataFrame([{"result": ll.sum()}])
 
 
-def dp_query_0(df, privacy_budget, constraints):
+def dp_query_0(df, privacy_budget):
     ll = df["positive"]
     s = 5
     x = BoundedSum(
@@ -39,12 +38,12 @@ def dp_query_0(df, privacy_budget, constraints):
 
 # query 1: Sum of Deaths
 # accesses : `deceased=1 AND (positive=1 OR positive=0)`     -- Count of New Deaths
-def query2(df, constraints):
+def query2(df):
     ll = df["deceased"]
     return pd.DataFrame([{"result": ll.sum()}])
 
 
-def dp_query2(df, privacy_budget, constraints):
+def dp_query2(df, privacy_budget):
     ll = df["deceased"]
     s = 5
     x = BoundedSum(

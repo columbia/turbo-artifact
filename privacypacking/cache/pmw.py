@@ -68,7 +68,7 @@ class PerBlockPMW:
         num_features = 2
         domain_size = 4
         domain_size_per_feature = {"positive": 2, "deceased": 2}
-        self.n = 100  # block size
+        self.n = 100  # block size- to be configured
         self.epsilon = 0.1
         self.delta = 0.01
         self.beta = 0.001
@@ -105,6 +105,7 @@ class PerBlockPMW:
     def run_cache(self, query_id, blocks, budget):
         ### NOTE:  I'm not using the budget argument because I no longer care about the user defined epsilon
 
+        # Too many rounds - breaking privacy
         if self.queries_ran >= self.k:
             exit(0)
 

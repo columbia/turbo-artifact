@@ -209,16 +209,16 @@ class Scheduler:
 
         return result
 
-    def run_task(self, query_id, blocks, budget, constraints, disable_dp=False):
+    def run_task(self, query_id, blocks, budget, disable_dp=False):
         df = []
         print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
         if disable_dp:
-            result = globals()[f"query{query_id, constraints}"](df)
+            result = globals()[f"query{query_id}"](df)
         else:
-            result = globals()[f"dp_query_user{query_id, constraints}"](df, budget.epsilon)
+            result = globals()[f"dp_query_user{query_id}"](df, budget.epsilon)
         print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
 
