@@ -1,46 +1,51 @@
-from queue import Empty
-from prometheus_client import Histogram
-
-from tomlkit import value
+from contextvars import copy_context
+from cv2 import normalize
 from privacypacking.cache.utils import get_splits
 from termcolor import colored
 from privacypacking.cache import cache
 import math
 import numpy as np
 import pandas as pd
-import yaml
+from privacypacking.budget import BasicBudget
 
 
-class histogram:
+class Histogram:
     def __init__(self, num_features, domain_size_per_feature, domain_size) -> None:
         self.domain_size_per_feature = domain_size_per_feature
         self.num_features = num_features
         self.domain_size = domain_size
 
-        normalization_factor = 1 / self.domain_size
-        shape = tuple([self.domain_size_per_feature[i] for i in range(num_features)])
+        normalization_factor = 1 / self.domain_size            
+        shape = tuple([value for value in domain_size_per_feature.values()])
         # Initializing with a uniform distribution
-        self.bins = np.full(shape=shape, value=normalization_factor)
+        self.bins = np.full(shape=shape, fill_value=normalization_factor)
+
+
+    def get_bins_idx(
+        self, query_id
+    ):
+
+      # Gives us direct access to the bins we are interested in
+        # Two types of hardcoded queries for now: count new cases, count new deaths
+        # histogram arrangement: p:positive, d:deceased
+        # [[p0-d0, p0-d1],
+        #  [p1-d0, p1-d0]]
+        # todo: generalize
+
+        if query_id == 0:  # accesses : `positive=1 AND (deceased=1 OR deceased=0)`     -- Count of New Cases
+            return tuple(([1],[0]), ([1],[1]))
+        if query_id == 1:  # accesses : `(positive=1 OR positive=0) AND deceased=1`     -- Count of New Deaths
+            return tuple(([0],[1]), ([1],[1]))
+
 
     def get_bins(
         self, query_id
-    ):  # Gives us direct access to the bins we are interested in
-        # Two types of hardcoded queries for now: count new cases, count new deaths
-        # histogram arrangement:
-        # [[new_cases_0, new_deaths_0],
-        #  [new_cases_1, new_deaths_1]]
-        # todo: generalize
+    ):
+        return self.bins[self.get_bins_idx(query_id)]
 
-        if query_id == 0:  # count new cases
-            return self.bins[1, 0]
-        if query_id == 0:  # count new deaths
-            return self.bins[1, 1]
-
-    def update_bins(self, indices, value):
-        bins = self.bins
-        for idx in indices:
-            bins = bins[idx]
-        bins = value
+    def update_bins(self, indices, values):
+        for idx, value in zip(indices, values):
+            self.bins[idx] = value
 
     def run_task(self, query_id):
         return np.sum(self.get_bins(query_id))
@@ -62,7 +67,7 @@ class PerBlockPMW:
         # todo: for now all this is hardcoded
         num_features = 2
         domain_size = 4
-        domain_size_per_feature = {"new_cases": 2, "new_deaths": 2}
+        domain_size_per_feature = {"positive": 2, "deceased": 2}
         self.n = 100  # block size
         self.epsilon = 0.1
         self.delta = 0.01
@@ -71,12 +76,14 @@ class PerBlockPMW:
         self.k = 100
         #############################
 
+
         # Initializations as per the Hardt and Rothblum 2010 paper
-        self.sigma = (
-            (10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4))
-            / math.sqrt(self.n)
-            * self.epsilon
-        )
+        self.w = 0
+        # self.sigma = (
+        #     (10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4))
+        #     / math.sqrt(self.n)
+        #     * self.epsilon
+        # )
         self.learning_rate = math.pow(math.log(self.M), 1 / 4) / math.sqrt(self.n)
         self.T = 4 * self.sigma * (math.log(self.k) + math.log(1 / self.beta))
 
@@ -85,29 +92,64 @@ class PerBlockPMW:
     def dump(
         self,
     ):
-        histogram = yaml.dump(self.histogram)
-        print("Histogram", histogram)
+        # histogram = yaml.dump(self.histogram)
+        print("Histogram", self.histogram)
+
+
+    def is_query_hard(self, error):
+        if abs(error) > self.T:     # How is this consuming budget?
+            return True
+        return False
+
 
     def run_cache(self, query_id, blocks, budget):
+        ### NOTE:  I'm not using the budget argument because I no longer care about the user defined epsilon
+
+        if self.queries_ran >= self.k:
+            exit(0)
+
         # Runs the PMW algorithm
-        for round in range(self.k):
-            # Compute the true noisy output
-            noise_sample = np.random.laplace(scale=self.sigma)
+        self.queries_ran += 1
+        # Compute the true noisy output
+        # noise_sample = np.random.laplace(scale=self.sigma)
+        true_output = self.run_task(
+            query_id, blocks, BasicBudget(self.epsilon)
+        )  # Don't waste budget just yet!
+        predicted_output = self.histogram.run_task(query_id)
 
-            def translate_laplace_noise_to_epsilon(sigma):
-                pass
+        # Compute the error
+        error = true_output - predicted_output
+        if self.is_query_hard(error):   # Is the query hard
+            self.scheduler.consume_budgets(blocks, BasicBudget(self.epsilon))
+            
+            indices_reached = self.histogram.get_bins_idx(query_id)  # get the indices that are "reached" by the query                    
+            copy_histogram = self.histogram.copy()
 
-            budget = translate_laplace_noise_to_epsilon(self.sigma)
-            true_output = self.scheduler.run_task(
-                query_id, blocks, budget
-            )  # Don't waste budget just yet
-            predicted_output = self.histogram.run_task(query_id)
-            ###############################################
-            # Compute the error
-            # Is the query hard
-            # Update or/and output etc
-            # ............
-            ###############################################
+            if error > 0:
+                # r_i is 1 for reached indices and 0 for unreached -- update only for reached indices - unreached remain the same
+                copy_histogram.bins[indices_reached] *= math.exp(-self.learning_rate)
+            else:
+                # r_i is 0 for reached indices and 1 for unreached -- update only for unreached indices - reached remain the same
+                copy_histogram.bins *= math.exp(-self.learning_rate)
+                copy_histogram.bins[indices_reached] = self.histogram.bins[indices_reached]     # Re-write original values to reached indices
+
+            # Now we need to normalize
+            normalizing_factor = copy_histogram.sum()       # reduces to a scalar
+            copy_histogram *= 1/normalizing_factor
+
+            self.histogram = copy_histogram
+
+
+            # Too many hard queries - breaking privacy
+            if self.w > self.n * math.pow(math.log(self.M), 1 / 2):
+                exit(0)
+            
+            self.w += 1
+            return true_output
+
+        else:
+            return predicted_output
+
 
     def get_execution_plan(self, query_id, blocks, budget):
         """
@@ -126,6 +168,8 @@ class PerBlockPMW:
 
 
 def main():
+
+    # Testing ... 
     num_features = 2
     domain_size_per_feature = {"new_cases": 2, "new_deaths": 2}
 
@@ -134,6 +178,12 @@ def main():
         domain_size *= v
 
     histogram = Histogram(num_features, domain_size_per_feature, domain_size)
+
+    bins = histogram.get_bins(0)
+    histogram.update_bins([(1,0),(0,1)], [3,5])
+    histogram.run_task(0)
+
+
 
     # self.n = 100         # block size
     # self.epsilon = 0.1

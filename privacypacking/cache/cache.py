@@ -9,54 +9,43 @@ class R:
         self.blocks = blocks
         self.budget = budget
 
-    def __str__(
-        self,
-    ):
+    def __str__(self,):
         return f"R({self.blocks},{self.budget.epsilon})"
-
 
 class F:
     def __init__(self, query_id, blocks, budget) -> None:
         self.query_id = query_id
         self.blocks = blocks
         self.budget = budget
-
-    def __str__(
-        self,
-    ):
+    
+    def __str__(self,):
         return f"F({self.blocks},{self.budget.epsilon})"
-
 
 class A:
     def __init__(self, l) -> None:
         self.l = l
 
-    def __str__(
-        self,
-    ):
-        return f"A({[str(l) for l in self.l]})"
-
+    def __str__(self,):
+            return f"A({[str(l) for l in self.l]})"
 
 # Todo: Deterministic cache - clean up - restructure - make abstract class
-class Cache:
+class DeterministicCache:
     def __init__(self, max_aggregations_allowed, scheduler):
         self.max_aggregations_allowed = max_aggregations_allowed
         self.scheduler = scheduler
         self.results = {}
 
-    def dump(
-        self,
-    ):
+    def dump(self,):
         res = yaml.dump(self.results)
         print("Results", res)
 
     def can_run(self, scheduler, blocks, budget):
         demand = {}
-        for block in range(blocks[0], blocks[-1] + 1):
+        for block in range(blocks[0], blocks[-1]+1):
             demand[block] = budget
         # Add other constraints too here
         # for block in demand.keys():
-        # print(f"             block {block} - available - {scheduler.blocks[block].remaining_budget}")
+            # print(f"             block {block} - available - {scheduler.blocks[block].remaining_budget}")
         return scheduler.can_run(demand)
 
     def add_result(self, query_id, blocks, budget, result):
@@ -76,13 +65,11 @@ class Cache:
         max_num_aggregations = min(self.max_aggregations_allowed, len(blocks))
 
         plan = []
-        for i in range(
-            max_num_aggregations + 1
-        ):  # Prioritizing smallest number of aggregations
+        for i in range(max_num_aggregations+1):      # Prioritizing smallest number of aggregations
             splits = get_splits(blocks, i)
             for split in splits:
                 # print("split", split)
-
+                
                 for x in split:
                     x = (x[0], x[-1])
                     # print("         x", x)

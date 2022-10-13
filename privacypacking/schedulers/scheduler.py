@@ -7,7 +7,7 @@ from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from privacypacking.cache import cache, pmw
-from privacypacking.cache.dp_queries import *
+from privacypacking.cache.dp_queries_user import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -209,16 +209,16 @@ class Scheduler:
 
         return result
 
-    def run_task(self, query_id, blocks, budget):
+    def run_task(self, query_id, blocks, budget, constraints, disable_dp=False):
         df = []
         print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
-        if self.omegaconf.disable_dp:
-            result = globals()[f"query{query_id}"](df)
+        if disable_dp:
+            result = globals()[f"query{query_id, constraints}"](df)
         else:
-            result = globals()[f"dp_query{query_id}"](df, budget.epsilon)
+            result = globals()[f"dp_query_user{query_id, constraints}"](df, budget.epsilon)
         print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
 

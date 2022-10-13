@@ -72,6 +72,27 @@ Florida = ["Florida"]
 Pennsylvania = ["Pennsylvania"]
 
 
+
+# query 1: West region Cases
+def query_0(df, constraints):
+    return pd.DataFrame([{"result": df.query("state in @California")["new_cases"].sum()}])
+
+
+def dp_query_0(df, privacy_budget, constraints):
+    ll = [1] * int(df.query("state in @California")["new_cases"].sum())
+    s = 5
+    x = BoundedSum(
+        epsilon=privacy_budget,
+        delta=0,
+        lower_bound=0,
+        upper_bound=1,
+        l0_sensitivity=s,
+        dtype="float",
+    )
+    return pd.DataFrame([{"result": abs(int(x.quick_result(ll)))}])
+
+
+
 # query 1: West region Cases
 def query1(df):
     return pd.DataFrame([{"result": df.query("state in @west")["new_cases"].sum()}])
