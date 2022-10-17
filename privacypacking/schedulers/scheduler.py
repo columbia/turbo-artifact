@@ -6,8 +6,9 @@ from typing import List, Optional, Tuple
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
-from privacypacking.cache import cache, pmw
-from privacypacking.cache.dp_queries_user import *
+import numpy as np
+from privacypacking.cache import cache, per_block_pmw
+from privacypacking.cache.queries_user import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -82,7 +83,7 @@ class Scheduler:
 
         # todo: avoid passing the scheduler as argument (circular reference)
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
-        self.cache = pmw.PerBlockPMW(self)
+        self.cache = per_block_pmw.PerBlockPMW(self)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -148,7 +149,7 @@ class Scheduler:
                 bs_tuple = (bs_list[0], bs_list[-1])
 
                 original_plan = cache.A([cache.R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
-                
+                # A(R(B1,b2,...BN))
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
@@ -184,7 +185,6 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-
     def execute_plan(self, plan):
         result = None
         if isinstance(plan, cache.R):
@@ -215,10 +215,16 @@ class Scheduler:
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
-        if disable_dp:
-            result = globals()[f"query{query_id}"](df)
-        else:
-            result = globals()[f"dp_query_user{query_id}"](df, budget.epsilon)
+        
+        # This output is not noisy
+        result = globals()[f"query_user{query_id}"](df)
+        
+        sensitivity = 1/len(df)
+        noise_sample = np.random.laplace(scale=sensitivity/budget.epsilon)  # todo: this is not compatible with renyi
+
+        if not disable_dp:
+            result += noise_sample
+
         print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
 
@@ -256,7 +262,6 @@ class Scheduler:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
         self.blocks.update({block.id: block})
-
         # Support blocks with custom support
         # if not self.alphas:
             # self.alphas = block.initial_budget.alphas

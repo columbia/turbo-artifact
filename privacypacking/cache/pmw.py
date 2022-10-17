@@ -1,5 +1,3 @@
-from contextvars import copy_context
-from cv2 import normalize
 from privacypacking.cache.utils import get_splits
 from termcolor import colored
 from privacypacking.cache import cache
@@ -7,6 +5,7 @@ import math
 import numpy as np
 import pandas as pd
 from privacypacking.budget import BasicBudget
+from copy import deepcopy
 
 
 class Histogram:
@@ -19,7 +18,6 @@ class Histogram:
         shape = tuple([value for value in domain_size_per_feature.values()])
         # Initializing with a uniform distribution
         self.bins = np.full(shape=shape, fill_value=normalization_factor)
-
 
     def get_bins_idx(
         self, query_id
@@ -36,7 +34,6 @@ class Histogram:
             return tuple(([1],[0]), ([1],[1]))
         if query_id == 1:  # accesses : `(positive=1 OR positive=0) AND deceased=1`     -- Count of New Deaths
             return tuple(([0],[1]), ([1],[1]))
-
 
     def get_bins(
         self, query_id
@@ -57,8 +54,8 @@ class Histogram:
 
 
 # Todo: make this inherit from a Cache class
-# One PMW per Block
-class PerBlockPMW:
+# This is for one instance of PMW
+class PMW:
     def __init__(self, scheduler):
 
         self.scheduler = scheduler
@@ -76,18 +73,20 @@ class PerBlockPMW:
         self.k = 100
         #############################
 
-
+        self.queries_ran = 0
         # Initializations as per the Hardt and Rothblum 2010 paper
         self.w = 0
-        # self.sigma = (
-        #     (10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4))
-        #     / math.sqrt(self.n)
-        #     * self.epsilon
-        # )
+        self.sigma = (
+            (10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4))
+            / math.sqrt(self.n)
+            * self.epsilon
+        )
         self.learning_rate = math.pow(math.log(self.M), 1 / 4) / math.sqrt(self.n)
         self.T = 4 * self.sigma * (math.log(self.k) + math.log(1 / self.beta))
 
         self.histogram = Histogram(num_features, domain_size_per_feature, domain_size)
+        # We consume the whole budget once at initialization
+        self.scheduler.consume_budgets(blocks, BasicBudget(self.epsilon))
 
     def dump(
         self,
@@ -95,14 +94,12 @@ class PerBlockPMW:
         # histogram = yaml.dump(self.histogram)
         print("Histogram", self.histogram)
 
-
     def is_query_hard(self, error):
         if abs(error) > self.T:     # How is this consuming budget?
             return True
         return False
 
-
-    def run_cache(self, query_id, blocks, budget):
+    def run_cache(self, query_id, blocks, _):
         ### NOTE:  I'm not using the budget argument because I no longer care about the user defined epsilon
 
         # Too many rounds - breaking privacy
@@ -112,20 +109,22 @@ class PerBlockPMW:
         # Runs the PMW algorithm
         self.queries_ran += 1
         # Compute the true noisy output
-        # noise_sample = np.random.laplace(scale=self.sigma)
-        true_output = self.run_task(
-            query_id, blocks, BasicBudget(self.epsilon)
-        )  # Don't waste budget just yet!
+        noise_sample = np.random.laplace(scale=self.sigma)
+
+        #todo: add noise directly here
+        true_output = self.scheduler.run_task(
+            query_id, blocks, budget=None, disable_dp=True
+        )  + noise_sample # but don't waste budget just yet!!
         predicted_output = self.histogram.run_task(query_id)
 
         # Compute the error
         error = true_output - predicted_output
-        if self.is_query_hard(error):   # Is the query hard
-            self.scheduler.consume_budgets(blocks, BasicBudget(self.epsilon))
-            
+        if self.is_query_hard(error):   # Is the query hard            
             indices_reached = self.histogram.get_bins_idx(query_id)  # get the indices that are "reached" by the query                    
-            copy_histogram = self.histogram.copy()
+            copy_histogram = deepcopy(self.histogram)
 
+
+            ### UPDATING IS TAILORED ONLY FOR COUNT QUERIES NOW ##
             if error > 0:
                 # r_i is 1 for reached indices and 0 for unreached -- update only for reached indices - unreached remain the same
                 copy_histogram.bins[indices_reached] *= math.exp(-self.learning_rate)
@@ -134,9 +133,9 @@ class PerBlockPMW:
                 copy_histogram.bins *= math.exp(-self.learning_rate)
                 copy_histogram.bins[indices_reached] = self.histogram.bins[indices_reached]     # Re-write original values to reached indices
 
-            # Now we need to normalize
-            normalizing_factor = copy_histogram.sum()       # reduces to a scalar
-            copy_histogram *= 1/normalizing_factor
+            # Now we need to normalize1
+            normalizing_factor = np.sum(copy_histogram.bins)      # reduces to a scalar
+            copy_histogram.bins *= 1/normalizing_factor
 
             self.histogram = copy_histogram
 
@@ -150,22 +149,6 @@ class PerBlockPMW:
 
         else:
             return predicted_output
-
-
-    def get_execution_plan(self, query_id, blocks, budget):
-        """
-        For per-block-pmu all plans have this form: A(F(B1), F(B2), ... , F(Bn))
-        """
-        num_aggregations = len(blocks)
-        plan = []
-        splits = get_splits(blocks, num_aggregations)
-        for split in splits:
-            # print("split", split)
-            for x in split:
-                x = (x[0], x[-1])
-                plan += [cache.F(query_id, x, budget)]
-                return cache.A(plan)
-        return None
 
 
 def main():
@@ -196,3 +179,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
