@@ -1,3 +1,4 @@
+import itertools
 import random
 from pathlib import Path
 
@@ -5,6 +6,8 @@ import numpy as np
 import typer
 import yaml
 from loguru import logger
+from omegaconf import OmegaConf
+from tqdm import tqdm
 
 from privacypacking.budget import ALPHAS, Budget
 from privacypacking.budget.curves import (
@@ -13,15 +16,23 @@ from privacypacking.budget.curves import (
     SubsampledGaussianCurve,
 )
 from privacypacking.budget.utils import compute_noise_from_target_epsilon
+from privacypacking.utils.utils import TaskSpec, get_name_from_args
 from privacypacking.utils.zoo import (
+    alpha_variance_frequencies,
+    build_synthetic_zoo,
     build_zoo,
     gaussian_block_distribution,
     geometric_frequencies,
+    load_zoo,
+    normalize_zoo,
+    plot_curves_stats,
+    sample_from_gaussian_block_distribution,
     zoo_df,
 )
 
 DEFAULT_OUTPUT_PATH = Path(__file__).parent.parent.parent.joinpath("data")
-P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
+# P_GRID = [0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 0.95]
+P_GRID = [0, 0.5, 1, 2, 4, 8]
 app = typer.Typer()
 
 
@@ -103,69 +114,105 @@ def mixed(
 
 @app.command()
 def heterogeneous(
-    # p: float = typer.Option(0.5, help="Poisson parameter for bin selection"),
     block_selection_policy: str = typer.Option(
         "RandomBlocks", help="Block selection policy"
     ),
     output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
+    synthetic: bool = typer.Option(False),
+    config: str = typer.Option("default"),
+    control_flatness: bool = typer.Option(True),
+    control_size: bool = typer.Option(True),
+    min_epsilon: float = typer.Option(1e-2),
+    max_epsilon: float = typer.Option(1),
 ):
 
-    output_path = Path(output_path)
-
-    tasks_path = output_path.joinpath("tasks")
-    tasks_path.mkdir(exist_ok=True, parents=True)
-
+    config_path = Path(__file__).parent.joinpath(f"heterogeneous_configs/{config}.yaml")
+    output_path = Path(output_path).joinpath(config)
+    config = OmegaConf.to_container(OmegaConf.load(config_path))
     frequencies_path = output_path.joinpath("task_frequencies")
     frequencies_path.mkdir(exist_ok=True, parents=True)
 
     task_id_to_name = {}
 
-    names_and_curves = build_zoo()
-    _, tasks_df = zoo_df(names_and_curves)
+    if not control_size:
+        config.pop("epsilon_min_avg")
+        config.pop("epsilon_min_std")
+    if not control_flatness:
+        config.pop("range_avg")
+        config.pop("range_std")
 
+    logger.info("Generating & saving the initial workload...")
+    original_names_and_curves = build_synthetic_zoo() if synthetic else build_zoo()
+    alphas_df, tasks_df = zoo_df(
+        original_names_and_curves,
+        min_epsilon=min_epsilon,
+        max_epsilon=max_epsilon,
+        # best_alphas=[5, 64],
+    )
+    tasks_path = output_path.joinpath("original_tasks")
+    tasks_path.mkdir(exist_ok=True, parents=True)
+    plot_curves_stats(alphas_df, tasks_path)
+
+    # We filter out the original tasks
+    filtered_names_and_curves = []
     for task_id in tasks_df.task_id:
-        # for name, budget in names_and_curves:
-        name, budget = names_and_curves[task_id]
+        name, budget = original_names_and_curves[task_id]
+        filtered_names_and_curves.append((name, budget))
         task_dict = {
             "alphas": budget.alphas,
-            # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
             "rdp_epsilons": np.array(budget.epsilons).tolist(),
-            "n_blocks": f"1:1",
-            # TODO: multiblock version!
+            "n_blocks": "1:1",
             "block_selection_policy": block_selection_policy,
             "profit": "1:1",
         }
-
         task_name = f"{name}.yaml"
         task_id_to_name[task_id] = task_name
         yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
-    mu = 10
-    max_blocks = 20
-    for sigma in [0, 1, 2, 4, 6, 10]:
-        tasks_path = output_path.joinpath(f"tasks-mu{mu}-sigma{sigma}")
+    # Preprocess non-list items and take the cartesian product
+    d = {}
+    for (key, value) in config.items():
+        if isinstance(value, list):
+            d[key] = value
+        else:
+            d[key] = [value]
+    args = [dict(zip(config, x)) for x in itertools.product(*d.values())]
+
+    logger.info("Generating normalized versions with different scales...")
+    for arg in tqdm(args):
+        names_and_curves = normalize_zoo(
+            filtered_names_and_curves,
+            control_flatness=control_flatness,
+            control_size=control_size,
+            min_epsilon=min_epsilon,
+            **arg,
+        )
+
+        # If we filter too much we break the normalization
+        alphas_df, tasks_df = zoo_df(names_and_curves, min_epsilon=1e-10, max_epsilon=1)
+        tasks_path = output_path.joinpath(get_name_from_args(arg))
         tasks_path.mkdir(exist_ok=True, parents=True)
+        plot_curves_stats(alphas_df, tasks_path)
+
         for task_id in tasks_df.task_id:
-            # for name, budget in names_and_curves:
             name, budget = names_and_curves[task_id]
             task_dict = {
                 "alphas": budget.alphas,
-                # "rdp_epsilons": list(map(lambda x: float(x), budget.epsilons)),
                 "rdp_epsilons": np.array(budget.epsilons).tolist(),
-                "n_blocks": gaussian_block_distribution(
-                    mu=mu, sigma=sigma, max_blocks=max_blocks
-                ),
+                # "n_blocks": gaussian_block_distribution(**arg),
+                "n_blocks": sample_from_gaussian_block_distribution(**arg),
                 "block_selection_policy": block_selection_policy,
                 "profit": "1:1",
             }
 
             task_name = f"{name}.yaml"
+            task_id_to_name[task_id] = task_name
             yaml.dump(task_dict, tasks_path.joinpath(task_name).open("w"))
 
-    logger.info(f"Saving the frequencies at {frequencies_path}...")
+        logger.info(f"Saving the frequencies at {frequencies_path}...")
 
-    for p in P_GRID:
-        p_tasks_df = geometric_frequencies(tasks_df, p=p)
+        # Some normalized workloads have fewer tasks so we recompute the frequencies
+        p_tasks_df = alpha_variance_frequencies(tasks_df, sigma=arg["alpha_std"])
 
         frequencies_dict = {}
         sum_frequencies = 0
@@ -190,7 +237,9 @@ def heterogeneous(
 
         yaml.dump(
             frequencies_dict,
-            frequencies_path.joinpath(f"frequencies-{p}.yaml").open("w"),
+            frequencies_path.joinpath(
+                f"{get_name_from_args(arg,category='frequency')}.yaml"
+            ).open("w"),
         )
 
     logger.info("Done.")
@@ -412,6 +461,19 @@ def privatekube(
     output_frequencies_path.parent.mkdir(exist_ok=True, parents=True)
     with open(output_frequencies_path, "w") as f:
         yaml.dump(task_frequencies, f)
+
+
+@app.command()
+def plot(tasks_path: str = typer.Option("data/privatekube_event_g0.0_l0.5_p=1/tasks")):
+    """
+    Simply plots some statistics for an existing directory of yaml tasks.
+    """
+    original_names_and_curves, blocks_df = load_zoo(tasks_path)
+    alphas_df, tasks_df = zoo_df(
+        original_names_and_curves, min_epsilon=0, max_epsilon=1e10
+    )
+    alphas_df = alphas_df.merge(blocks_df, on="task_name")
+    plot_curves_stats(alphas_df, Path(tasks_path))
 
 
 if __name__ == "__main__":

@@ -69,6 +69,9 @@ class Simplex(Scheduler):
 
             # m.Params.OutputFlag = 0
             m.Params.TimeLimit = self.simulator_config.metric.gurobi_timeout
+            m.Params.Threads = self.simulator_config.metric.gurobi_threads
+
+
             # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
 
             # m = gp.Model("pack")

@@ -1,7 +1,8 @@
 from typing import List
 
 import numpy as np
-from opacus.privacy_analysis import compute_rdp
+from opacus.accountants.analysis.rdp import compute_rdp
+from scipy.interpolate import interp1d, splev, splrep
 
 from autodp.mechanism_zoo import LaplaceMechanism
 from autodp.transformer_zoo import AmplificationBySampling
@@ -11,6 +12,64 @@ from privacypacking.budget import ALPHAS, Budget
 class ZeroCurve(Budget):
     def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: 0 for alpha in alpha_list}
+        super().__init__(orders)
+
+
+class SyntheticPolynomialCurve(Budget):
+    def __init__(
+        self,
+        best_alpha,
+        epsilon_min,
+        epsilon_left,
+        epsilon_right,
+        alpha_list: List[float] = ALPHAS,
+        block_epsilon=10,
+        block_delta=1e-8,
+    ) -> None:
+        def lagrange_3(x):
+            x_0 = alpha_list[0]
+            x_2 = alpha_list[-1]
+            x_1 = best_alpha
+            return (
+                epsilon_left * (x - x_1) * (x - x_2) / (x_0 - x_1) * (x_0 - x_2)
+                + epsilon_min * (x - x_0) * (x - x_2) / (x_1 - x_0) * (x_1 - x_2)
+                + epsilon_right * (x - x_0) * (x - x_1) / (x_2 - x_0) * (x_2 - x_1)
+            )
+
+        # if best_alpha not in [epsilon_left, epsilon_right]:
+        #     orders = {alpha: lagrange_3(alpha) for alpha in alpha_list}
+
+        block = Budget.from_epsilon_delta(epsilon=block_epsilon, delta=block_delta)
+
+        non_zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) > 0]
+        zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) == 0]
+
+        # x = [non_zero_alphas[0], best_alpha, non_zero_alphas[-2], non_zero_alphas[-1]]
+        # y = [
+        #     epsilon_left,
+        #     epsilon_min,
+        #     (epsilon_min + epsilon_right) / 2,
+        #     epsilon_right,
+        # ]
+
+        # print(x, y)
+        # spl = splrep(x, y, k=3)
+
+        # rdp_epsilons = splev(non_zero_alphas, spl)
+
+        # orders = {
+        #     alpha: epsilon for alpha, epsilon in zip(non_zero_alphas, rdp_epsilons)
+        # }
+        x = [non_zero_alphas[0], best_alpha, non_zero_alphas[-1]]
+        y = [
+            epsilon_left,
+            epsilon_min,
+            epsilon_right,
+        ]
+        f = interp1d(x=x, y=y, kind="slinear")
+        orders = {alpha: f(alpha) * block.epsilon(alpha) for alpha in non_zero_alphas}
+        for alpha in zero_alphas:
+            orders[alpha] = 1
         super().__init__(orders)
 
 
@@ -95,7 +154,9 @@ class SubsampledLaplaceCurve(Budget):
     ) -> None:
 
         curve = AmplificationBySampling(PoissonSampling=True)(
-            LaplaceMechanism(b=noise_multiplier), sampling_probability
+            LaplaceMechanism(b=noise_multiplier),
+            sampling_probability,
+            improved_bound_flag=True,
         )
 
         orders = {alpha: curve.get_RDP(alpha) * steps for alpha in alpha_list}

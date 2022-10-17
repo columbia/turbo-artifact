@@ -49,41 +49,71 @@ def load_scheduling_dumps(
             with open(p) as f:
                 run_dict = json.load(f)
             for t in run_dict["tasks"]:
-                for block_id, block_budget in t["budget_per_block"].items():
+                if "budget_per_block" in t:
+                    for block_id, block_budget in t["budget_per_block"].items():
 
-                    d["id"].append(t["id"])
-                    d["hashed_id"].append(hash(str(t["id"])) % 100)
-                    d["allocated"].append(t["allocated"])
-                    d["profit"].append(t["profit"])
+                        d["id"].append(t["id"])
+                        d["hashed_id"].append(hash(str(t["id"])) % 100)
+                        d["allocated"].append(t["allocated"])
+                        d["profit"].append(t["profit"])
+                        d["realized_profit"].append(
+                            t["profit"] if t["allocated"] else 0
+                        )
+                        d["scheduler"].append(
+                            run_dict["config"]["scheduler_spec"]["method"]
+                        )
+                        d["total_blocks"].append(len(run_dict["blocks"]))
+                        d["n_blocks"].append(len(t["budget_per_block"]))
+
+                        d["block"].append(int(block_id))
+                        d["epsilon"].append(block_budget["dp_budget"]["epsilon"])
+                        d["block_selection"].append(
+                            run_dict["config"]["tasks_spec"]["curve_distributions"][
+                                "custom"
+                            ]["read_block_selecting_policy_from_config"][
+                                "block_selecting_policy"
+                            ]
+                        )
+                        d["totalblocks_scheduler_selection"].append(
+                            f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
+                        )
+                        d["metric"].append(
+                            run_dict["config"]["scheduler_spec"]["metric"]
+                        )
+                        d["nblocks_maxeps"].append(
+                            f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
+                        )
+                else:
+                    # d["id"].append(t["id"])
+                    # d["hashed_id"].append(hash(str(t["id"])) % 100)
+                    # d["allocated"].append(t["allocated"])
+                    # d["profit"].append(t["profit"])
                     d["realized_profit"].append(t["profit"] if t["allocated"] else 0)
-                    d["scheduler"].append(
-                        run_dict["config"]["scheduler_spec"]["method"]
-                    )
-                    d["total_blocks"].append(len(run_dict["blocks"]))
-                    d["n_blocks"].append(len(t["budget_per_block"]))
+                    # d["total_blocks"].append(len(run_dict["blocks"]))
+                    # d["n_blocks"].append(t["n_blocks"])
 
-                    d["block"].append(int(block_id))
-                    d["epsilon"].append(block_budget["dp_budget"]["epsilon"])
-                    d["block_selection"].append(
-                        run_dict["config"]["tasks_spec"]["curve_distributions"][
-                            "custom"
-                        ]["read_block_selecting_policy_from_config"][
-                            "block_selecting_policy"
-                        ]
-                    )
-                    d["totalblocks_scheduler_selection"].append(
-                        f"{d['total_blocks'][-1]}-{d['scheduler'][-1]}-{d['block_selection'][-1]}"
-                    )
-                    d["metric"].append(run_dict["config"]["scheduler_spec"]["metric"])
-                    d["nblocks_maxeps"].append(
-                        f"{d['n_blocks'][-1]}-{block_budget['orders']['64']:.3f}"
-                    )
+                    for k, v in t.items():
+                        d[k].append(v)
+
+                    for run_metric in [
+                        "scheduler",
+                        "scheduler_metric",
+                        "data_lifetime",
+                        "max_blocks",
+                        "T",
+                    ]:
+                        d[run_metric].append(run_dict[run_metric])
+
         except Exception as e:
             print(e)
 
-    df = pd.DataFrame(d).sort_values(
-        ["block", "id", "allocated"], ascending=[True, True, False]
-    )
+    print([(k, len(v)) for k, v in d.items()])
+
+    df = pd.DataFrame(d)
+
+    # df = df.sort_values(
+    #     ["block", "id", "allocated"], ascending=[True, True, False]
+    # )
 
     return df
 

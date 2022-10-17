@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any, Iterable, Union
 
 import numpy as np
 from scipy.sparse import bsr_matrix, dok_matrix
@@ -7,15 +7,16 @@ from scipy.sparse.construct import vstack
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import ALPHAS, Budget
 from privacypacking.budget.curves import ZeroCurve
+from privacypacking.utils.utils import sample_one_from_string
 
 
 class Task:
     def __init__(
         self,
         id: int,
-        profit: float,
+        profit: Union[float, str],
         block_selection_policy: BlockSelectionPolicy,
-        n_blocks: int,
+        n_blocks: Union[int, str],
         name: str = None,
     ):
         self.id = id
@@ -27,6 +28,18 @@ class Task:
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
         self.cost = 0
+
+    def sample_n_blocks_and_profit(self):
+        """
+        If profit and n_blocks are stochastic, we sample their value when the task is added to the scheduler.
+        Do not cache this for all the instances of a same task, unless this is intended.
+        """
+
+        if isinstance(self.n_blocks, str):
+            self.n_blocks = int(sample_one_from_string(self.n_blocks))
+
+        if isinstance(self.profit, str):
+            self.profit = sample_one_from_string(self.profit)
 
     def get_efficiency(self, cost):
         efficiency = 0
@@ -53,17 +66,22 @@ class Task:
     def set_budget_per_block(self, block_ids: Iterable[int]):
         pass
 
-    def dump(self):
-        return {
+    def dump(self, budget_per_block=True):
+        d = {
             "id": self.id,
+            "name": self.name,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,
-            "budget_per_block": {
+            "n_blocks": len(self.budget_per_block),
+            "max_block_id": max(list(self.budget_per_block.keys())),
+        }
+        if budget_per_block:
+            d["budget_per_block"] = {
                 block_id: budget.dump()
                 for block_id, budget in self.budget_per_block.items()
-            },
-        }
+            }
+        return d
 
     def build_demand_matrix(self, alphas=ALPHAS, max_block_id=None):
         # Prepare a sparse matrix of the demand
@@ -113,6 +131,15 @@ class UniformTask(Task):
         self.budget = budget
         super().__init__(id, profit, block_selection_policy, n_blocks, name=name)
 
-    def set_budget_per_block(self, block_ids: Iterable[int]):
+    def set_budget_per_block(
+        self, block_ids: Iterable[int], demands_tiebreaker: float = 0
+    ):
+
+        # Add random noise (negligible) to break ties when we compare multiple copies of the same task
+        # We don't need this in real life when tasks come from a large pool or continuum of tasks
+        if demands_tiebreaker:
+            fraction_offset = np.random.random()
+            self.budget = self.budget * (1 + demands_tiebreaker * fraction_offset)
+
         for block_id in block_ids:
             self.budget_per_block[block_id] = self.budget

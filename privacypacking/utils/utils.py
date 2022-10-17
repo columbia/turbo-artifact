@@ -1,7 +1,10 @@
 import json
+import uuid
 from collections import namedtuple
+from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 from omegaconf import OmegaConf
 
 from privacypacking.schedulers.utils import ALLOCATED
@@ -15,6 +18,43 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
+
+import numpy as np
+
+
+def sample_one_from_string(stochastic_string: str) -> float:
+    events = stochastic_string.split(",")
+    values = [float(event.split(":")[0]) for event in events]
+    frequencies = [float(event.split(":")[1]) for event in events]
+    return np.random.choice(values, p=frequencies)
+
+
+def add_workload_args_to_results(results_df: pd.DataFrame):
+    def get_row_parameters(row):
+        # print(row)
+        # print(type(row))
+        # print(row.task_path)
+        task_path = row["tasks_path"]
+        args = get_args_from_taskname(task_path)
+        args["trial_id"] = row["trial_id"]
+        return pd.Series(args)
+
+    df = results_df.apply(get_row_parameters, axis=1)
+    return results_df.merge(df, on="trial_id")
+
+
+def get_name_from_args(arg_dict: dict, category="task") -> str:
+    arg_string = ",".join([f"{key}={value}" for key, value in arg_dict.items()])
+    task_path = f"{category}-{arg_string}"
+    return task_path
+
+
+def get_args_from_taskname(task_path: str) -> dict:
+    arg_string = task_path.split("-")[1]
+    arg_dict = {
+        kv.split("=")[0]: float(kv.split("=")[1]) for kv in arg_string.split(",")
+    }
+    return arg_dict
 
 
 def load_logs(log_path: str, relative_path=True) -> dict:
@@ -33,6 +73,10 @@ def get_logs(
     simulator_config,
     **kwargs,
 ) -> dict:
+
+    simulator_config = simulator_config.dump()
+    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
+
     n_allocated_tasks = 0
     tasks_scheduling_times = []
     allocated_tasks_scheduling_delays = []
@@ -40,45 +84,45 @@ def get_logs(
     realized_profit = 0
 
     log_tasks = []
-    for task in tasks:
-        task_dump = task.dump()
+    if omegaconf.logs.save:
+        for task in tasks:
+            task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
 
-        maximum_profit += task.profit
-        if tasks_info.tasks_status[task.id] == ALLOCATED:
-            n_allocated_tasks += 1
-            realized_profit += task.profit
-            tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
-            allocated_tasks_scheduling_delays.append(
-                tasks_info.scheduling_delay.get(task.id, None)
+            maximum_profit += task.profit
+            if tasks_info.tasks_status[task.id] == ALLOCATED:
+                n_allocated_tasks += 1
+                realized_profit += task.profit
+                tasks_scheduling_times.append(tasks_info.scheduling_time[task.id])
+                allocated_tasks_scheduling_delays.append(
+                    tasks_info.scheduling_delay.get(task.id, None)
+                )
+
+            task_dump.update(
+                {
+                    "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                    "status": tasks_info.tasks_status[task.id],
+                    "creation_time": tasks_info.creation_time[task.id],
+                    "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                    "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                    "allocation_index": tasks_info.allocation_index.get(task.id, None),
+                }
             )
-
-        task_dump.update(
-            {
-                "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
-                "status": tasks_info.tasks_status[task.id],
-                "creation_time": tasks_info.creation_time[task.id],
-                "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
-                "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
-                "allocation_index": tasks_info.allocation_index.get(task.id, None),
-            }
-        )
-        log_tasks.append(
-            task_dump
-        )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+            log_tasks.append(
+                task_dump
+            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
 
     # TODO: Store scheduling times into the tasks directly?
 
     log_blocks = []
-    for block in blocks.values():
-        log_blocks.append(block.dump())
+    if omegaconf.logs.save:
+        for block in blocks.values():
+            log_blocks.append(block.dump())
 
     n_allocated_tasks = n_allocated_tasks
     total_tasks = len(tasks)
     # tasks_info = tasks_info.dump()
     # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
-    simulator_config = simulator_config.dump()
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
 
     datapoint = {
         "scheduler": omegaconf.scheduler.method,
@@ -117,11 +161,14 @@ def get_logs(
 
 
 def save_logs(config, log_dict, compact=False, compressed=False):
-    config.log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_PATH.joinpath(
+        f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+    )
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     if compressed:
         raise NotImplementedError
     else:
-        with open(config.log_path, "w") as fp:
+        with open(log_path, "w") as fp:
             if compact:
                 json_object = json.dumps(log_dict, separators=(",", ":"))
             else:
@@ -130,8 +177,8 @@ def save_logs(config, log_dict, compact=False, compressed=False):
             fp.write(json_object)
 
 
-def global_metrics(logs: dict, verbose=False) -> dict:
-    if not verbose:
-        logs["tasks"] = ""
-        logs["blocks"] = ""
-    return logs
+# def global_metrics(logs: dict, verbose=False) -> dict:
+#     if not verbose:
+#         logs["tasks"] = ""
+#         logs["blocks"] = ""
+#     return logs

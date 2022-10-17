@@ -136,7 +136,25 @@ class Scheduler:
 
             n_allocated_tasks = 0
             for task in sorted_tasks:
+
+                # if hasattr(self.metric, "compute_relevance_matrix"):
+                #     relevance_matrix = (
+                #         relevance_matrix
+                #     ) = self.metric.compute_relevance_matrix(
+                #         self.blocks, self.task_queue.tasks
+                #     )
+                #     logger.warning(
+                #         f"P1: {task.name} with efficiency {self.metric.apply(task, self.blocks, self.task_queue.tasks, relevance_matrix)} and {task.n_blocks} blocks. {type(self.metric)}"
+                #     )
+                # else:
+                #     logger.warning(
+                #         f"P1: {task.name} with efficiency {self.metric.apply(task, self.blocks, self.task_queue.tasks)} and {task.n_blocks} blocks. {type(self.metric)}"
+                #     )
+
+                # time.sleep(1000)
+
                 if self.can_run(task):
+
                     # print("Allocated:", task.name, " - with blocks", task.n_blocks)
 
                     self.allocate_task(task)
@@ -171,9 +189,10 @@ class Scheduler:
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
         try:
+            task.sample_n_blocks_and_profit()
             self.task_set_block_ids(task)
             logger.debug(
-                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+                f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
             )
         except NotEnoughBlocks as e:
             # logger.warning(
@@ -292,4 +311,6 @@ class Scheduler:
         #     )
         #     selected_block_ids = [-1]
         assert selected_block_ids is not None
-        task.set_budget_per_block(selected_block_ids)
+        task.set_budget_per_block(
+            selected_block_ids, demands_tiebreaker=self.omegaconf.demands_tiebreaker
+        )

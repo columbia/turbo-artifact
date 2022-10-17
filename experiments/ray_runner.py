@@ -1,6 +1,8 @@
 import os
-from typing import Any, Dict, List
+from datetime import datetime
+from functools import partial, update_wrapper
 from pathlib import Path
+from typing import Any, Dict, List
 
 import ray
 import yaml
@@ -24,10 +26,24 @@ from privacypacking.schedulers.utils import (
 )
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.generate_curves import P_GRID
-from privacypacking.utils.utils import RAY_LOGS
+from privacypacking.utils.utils import RAY_LOGS, get_args_from_taskname
 
 
-def run_and_report(config: dict) -> None:
+def wrapped_partial(func, *args, **kwargs):
+    partial_func = partial(func, *args, **kwargs)
+    update_wrapper(partial_func, func)
+    return partial_func
+
+
+def run_and_report(config: dict, replace=False) -> None:
+
+    if replace:
+        # Overwrite the frequencies after the hyperparam sampling
+        config["omegaconf"]["tasks"]["frequencies_path"] = (
+            config["omegaconf"]["tasks"]["tasks_path"].replace("task", "frequency")
+            + ".yaml"
+        )
+
     sim = Simulator(Config(config))
     metrics = sim.run()
     # logger.info(f"Trial logs: {tune.get_trial_dir()}")
@@ -43,19 +59,19 @@ def grid_offline(
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
+    gurobi_threads: int = os.cpu_count() // 4,
 ):
     metrics = [
         SIMPLEX,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        OVERFLOW_RELEVANCE,
-        ARGMAX_KNAPSACK,
+        # ARGMAX_KNAPSACK,
+        # DOMINANT_SHARES,
+        # FLAT_RELEVANCE,
+        # OVERFLOW_RELEVANCE,
     ]
 
     block_selection_policy = ["RandomBlocks"]
     temperature = [-1]
     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
-    gurobi_threads = os.cpu_count() // 4
 
     config = {}
     config["omegaconf"] = {
@@ -64,7 +80,7 @@ def grid_offline(
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 50,
-            "scheduler_timeout_seconds": 20 * 60,
+            "scheduler_timeout_seconds": 20 * 60 * 60,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -78,8 +94,8 @@ def grid_offline(
             "save": True,
         },
         "blocks": {
-            "initial_num": num_blocks,
-            "max_num": num_blocks,
+            "initial_num": tune.grid_search(num_blocks),
+            "max_num": tune.grid_search(num_blocks)
         },
         "tasks": {
             "initial_num": tune.grid_search(num_tasks),
@@ -90,11 +106,12 @@ def grid_offline(
 
     experiment_analysis = tune.run(
         run_and_report,
+        raise_on_failed_trial=False,
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
         resume=False,
-        verbose=0,
+        verbose=1,
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
@@ -102,6 +119,14 @@ def grid_offline(
             #     experiment_name="grid_offline",
             # ),
         ],
+        progress_reporter=ray.tune.CLIReporter(
+            metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit", "time_total_s"],
+            parameter_columns={
+                "omegaconf/scheduler/metric": "metric",
+                # "omegaconf/metric/temperature": "temperature",
+            },
+            max_report_frequency=60,
+        )
     )
 
     all_trial_paths = experiment_analysis._get_trial_paths()
@@ -113,7 +138,7 @@ def grid_offline(
 def grid_offline_heterogeneity_knob(
     num_tasks: List[int],
     num_blocks: List[int],
-    data_path: str = "",
+    data_path: str = "heterogeneous/default",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
     parallel: bool = False,
@@ -123,18 +148,58 @@ def grid_offline_heterogeneity_knob(
     metrics = [
         # SIMPLEX,
         DOMINANT_SHARES,
-        # FLAT_RELEVANCE,
-        # OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
+        FCFS,
     ]
 
     # tasks_paths = ["tasks"]
 
-    # frequencies = [f"frequencies-{p}.yaml" for p in P_GRID]
-    # tasks_paths = [f"tasks-mu10-sigma0"]
+    # TODO: select the right set of curves and try running it!
 
-    frequencies = ["frequencies-0.95.yaml"]
-    tasks_paths = [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
+    tasks_paths = [
+        p.name for p in Path(f"data/{data_path}").iterdir() if "task-" in str(p.name)
+    ]
+
+    logger.info(f"tasks_paths: {tasks_paths}")
+
+    # if alpha_axis:
+    #     mu = 1
+    #     sigma = 0  # Single block case!
+    #     tasks_paths = []
+
+    #     for task_dir in Path("data/heterogeneous").iterdir():
+    #         if "mu=1,sigma=0" in str(task_dir):
+    #             n_tasks = len(list(task_dir.glob("*")))
+    #             if n_tasks == 233:
+    #                 # Only keep configurations that have all the tasks for now
+    #                 tasks_paths.append(task_dir.name)
+
+    #     # for epsilon_min_avg in [0.05, 0.1, 0.5]:
+    #     #     for epsilon_min_std in [0, 0.01, 0.1]:
+    #     #         for range_avg in [0.005, 0.05, 0.1]:
+    #     #             for range_std in [0, 0.03]:
+    #     #                 tasks_paths.append(
+    #     #                     f"tasks_mu={mu},sigma={sigma},ea={epsilon_min_avg},es={epsilon_min_std},ra={range_avg},rs={range_std}"
+    #     #                 )
+
+    #     # DEBUG:
+    #     # tasks_paths = tasks_paths[0:2]
+
+    # else:
+    #     # tasks_paths = [f"tasks-mu10-sigma0"]
+    #     tasks_paths = ["tasks"]
+    # # tasks_paths = (
+    #     # [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
+
+    #     if block_axis
+    #     # else
+    #     else ["tasks"]
+    # )
+    # frequencies = (
+    #     [f"frequencies-{p}.yaml" for p in P_GRID]
+    #     if alpha_axis
+    #     else ["frequencies-0.95.yaml"]
+    # )
 
     num_blocks = tune.grid_search(num_blocks)
     block_selection_policies = ["RandomBlocks"]
@@ -145,12 +210,14 @@ def grid_offline_heterogeneity_knob(
 
     config = {}
     config["omegaconf"] = {
+        "global_seed": 0,
         "scheduler": {
             "method": "offline",
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 250,
             "scheduler_timeout_seconds": 20 * 60,
+            # "demands_tiebreaker": 0.001,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -170,7 +237,7 @@ def grid_offline_heterogeneity_knob(
         "tasks": {
             "data_path": data_path,
             "tasks_path": tune.grid_search(tasks_paths),
-            "frequencies_path": tune.grid_search(frequencies),
+            # "frequencies_path": tune.grid_search(frequencies),
             "block_selection_policy": tune.grid_search(block_selection_policies),
             "sampling": "poisson",
             "initial_num": tune.grid_search(num_tasks),
@@ -178,7 +245,7 @@ def grid_offline_heterogeneity_knob(
     }
 
     experiment_analysis = tune.run(
-        run_and_report,
+        wrapped_partial(run_and_report, replace=True),
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
@@ -196,20 +263,27 @@ def grid_offline_heterogeneity_knob(
     all_trial_paths = experiment_analysis._get_trial_paths()
     experiment_dir = Path(all_trial_paths[0]).parent
 
+    logger.info(f"Experiment dir: {experiment_dir}")
+
     rdf = load_ray_experiment(experiment_dir)
 
-    def get_variance(path):
-        _, d = path.split("-")
-        p = float(d.replace(".yaml", ""))
-        return (1 - p) / p ** 2
+    # TODO: test on notebook
 
-    def get_block_std(path):
-        if "sigma" not in path:
-            return 0
-        return float(path.split("sigma")[1])
+    # def get_variance(path):
+    #     _, d = path.split("-")
+    #     p = float(d.replace(".yaml", ""))
+    #     return (1 - p) / p ** 2
 
-    rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
-    rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
+    # def get_block_std(path):
+    #     if "sigma" not in path:
+    #         return 0
+    #     return float(path.split("sigma")[1])
+
+    # rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    # rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
+    # rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
+
+    # TODO: load the hyperparemeters too
     return rdf
     # return experiment_analysis.dataframe()
 
@@ -231,7 +305,7 @@ def grid_online(
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
-        #  FCFS,
+        FCFS,
         # # VECTORIZED_BATCH_OVERFLOW_RELEVANCE,
         DOMINANT_SHARES,
     ]
@@ -254,8 +328,8 @@ def grid_online(
             "metric_recomputation_period": tune.grid_search(
                 metric_recomputation_period
             ),
-            # "log_warning_every_n_allocated_tasks": 500,
-            "scheduler_timeout_seconds": 20 * 60,
+            # "log_warning_every_n_allocated_tasks": 50,
+            "scheduler_timeout_seconds": 20 * 60 * 60,
             "data_lifetime": tune.grid_search(data_lifetime),
             "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
             "method": "batch",
@@ -269,7 +343,7 @@ def grid_online(
         },
         "logs": {
             "verbose": False,
-            "save": False,
+            "save": True,
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
@@ -295,9 +369,9 @@ def grid_online(
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
-            # tune.integration.mlflow.MLflowLoggerCallback(
-            #     experiment_name="grid-online",
-            # ),
+            tune.integration.mlflow.MLflowLoggerCallback(
+                experiment_name=f"grid-online-{datetime.now().strftime('%m%d-%H%M%S')}",
+            ),
         ],
         progress_reporter=ray.tune.CLIReporter(
             metric_columns=["n_allocated_tasks", "total_tasks", "realized_profit"],
@@ -319,16 +393,13 @@ def grid_online(
 class CustomLoggerCallback(tune.logger.LoggerCallback):
     """Custom logger interface"""
 
-    def __init__(self) -> None:
+    def __init__(self, metrics=["scheduler_metric"]) -> None:
+        self.metrics = ["n_allocated_tasks", "realized_profit"]
+        self.metrics.extend(metrics)
         super().__init__()
 
     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-        logger.info(
-            [
-                f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit"]
-            ]
-        )
+        logger.info([f"{key}: {result[key]}" for key in self.metrics])
         return
 
     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
