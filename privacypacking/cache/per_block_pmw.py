@@ -1,16 +1,14 @@
 from privacypacking.cache.utils import get_splits
-from privacypacking.cache import cache
 from privacypacking.cache.pmw import PMW
+from privacypacking.cache import Cache, A, C
 
-# Todo: make this inherit from a Cache class
-# This is for one instance of PMW
-class PerBlockPMW:
+class PerBlockPMW(Cache):
     def __init__(self, scheduler):
         self.scheduler = scheduler      # todo: find a way to remove this
-        self.all_PMW = {}       # One PMW per block
+        self.all_PMW = {}               # One PMW per block
     
     def addPMW(self, block):
-        pmw = PMW(self.scheduler)
+        pmw = PMW(self.scheduler, block)
         self.all_PMW[block] = pmw
         return pmw
 
@@ -35,7 +33,7 @@ class PerBlockPMW:
             # print("split", split)
             for x in split:
                 x = (x[0], x[-1])
-                plan += [cache.F(query_id, x, budget)]
-                return cache.A(plan)
+                plan += [C(query_id, x, budget)]
+                return A(plan)
         return None
 

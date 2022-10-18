@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from pathlib import Path
 
 import ray
-import yaml
+import json
 from loguru import logger
 from ray import tune
 
@@ -111,11 +111,11 @@ def grid_online(
     max_blocks: List[int],
     metric_recomputation_period: List[int],
     tasks_data_path: List[str],
-    blocks_data_path: List[str],
+    blocks_data_path: str,
+    blocks_metadata: str,
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    disable_dp: bool,
     max_aggregations_allowed: List[int],
     allow_caching: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
@@ -129,6 +129,12 @@ def grid_online(
          FCFS,
         # DOMINANT_SHARES,
     ]
+
+    # Read block size from metadata
+    f = open(blocks_metadata)
+    metadata = json.load(f)
+    block_size = metadata['block_size']
+    f.close()
 
     # Instant unlocking
     n = [1]
@@ -147,13 +153,13 @@ def grid_online(
             "scheduler_timeout_seconds": 20 * 60,
             "data_lifetime": tune.grid_search(data_lifetime),
             "task_lifetime": tune.grid_search(task_lifetime),
+            "block_size": block_size,
             "max_aggregations_allowed": tune.grid_search(max_aggregations_allowed),
             "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
             "method": "batch",
             "metric": tune.grid_search(scheduler_metrics),
             "n": tune.grid_search(n),
             "allow_caching": tune.grid_search(allow_caching),
-            "disable_dp": disable_dp,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -167,11 +173,10 @@ def grid_online(
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
             "data_path": tune.grid_search(blocks_data_path),
-
         },
         "tasks": {
             "sampling": tasks_sampling,
-            "data_path": tune.grid_search(tasks_data_path),
+            "data_path": tasks_data_path,
             "block_selection_policy": tune.grid_search(block_selection_policy),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
         },

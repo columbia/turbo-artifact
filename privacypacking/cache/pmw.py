@@ -52,20 +52,19 @@ class Histogram:
     ):
         return self.bins
 
-
-# Todo: make this inherit from a Cache class
 # This is for one instance of PMW
 class PMW:
-    def __init__(self, scheduler):
+    def __init__(self, scheduler, blocks):
 
         self.scheduler = scheduler
+        self.blocks = blocks
+        self.n = (blocks[1]-blocks[0]+1) * scheduler.block_size  # data size
 
         #############################
         # todo: for now all this is hardcoded
         num_features = 2
         domain_size = 4
         domain_size_per_feature = {"positive": 2, "deceased": 2}
-        self.n = 100  # block size- to be configured
         self.epsilon = 0.1
         self.delta = 0.01
         self.beta = 0.001
@@ -74,6 +73,7 @@ class PMW:
         #############################
 
         self.queries_ran = 0
+
         # Initializations as per the Hardt and Rothblum 2010 paper
         self.w = 0
         self.sigma = (
@@ -95,7 +95,7 @@ class PMW:
         print("Histogram", self.histogram)
 
     def is_query_hard(self, error):
-        if abs(error) > self.T:     # How is this consuming budget?
+        if abs(error) > self.T:
             return True
         return False
 
@@ -111,7 +111,7 @@ class PMW:
         # Compute the true noisy output
         noise_sample = np.random.laplace(scale=self.sigma)
 
-        #todo: add noise directly here
+        # adding noise directly here
         true_output = self.scheduler.run_task(
             query_id, blocks, budget=None, disable_dp=True
         )  + noise_sample # but don't waste budget just yet!!

@@ -7,12 +7,12 @@ from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 import numpy as np
-from privacypacking.cache import cache, per_block_pmw
 from privacypacking.cache.queries_user import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
+from privacypacking import cache
 from termcolor import colored
 
 
@@ -80,10 +80,11 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
+        self.block_size = self.omegaconf['block_size']
 
         # todo: avoid passing the scheduler as argument (circular reference)
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
-        self.cache = per_block_pmw.PerBlockPMW(self)
+        self.cache = cache.PerBlockPMW(self)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -189,14 +190,14 @@ class Scheduler:
         result = None
         if isinstance(plan, cache.R):
             blocks_list = list(range(plan.blocks[0], plan.blocks[-1]+1))
-            # Run the task on blocks
+            # Run the task on blocks without looking at the cache
             result = self.run_task(plan.query_id, blocks_list, plan.budget)
             self.consume_budgets(blocks_list, plan.budget)
             # Add result in cache
             self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
 
-        elif isinstance(plan, cache.F):
-            # Fetch result from cache
+        if isinstance(plan, cache.C):
+            # Run cache to get a result
             result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
 
         elif isinstance(plan, cache.A):
