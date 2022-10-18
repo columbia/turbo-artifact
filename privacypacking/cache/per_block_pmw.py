@@ -1,6 +1,6 @@
 from privacypacking.cache.utils import get_splits
 from privacypacking.cache.pmw import PMW
-from privacypacking.cache import Cache, A, C
+from privacypacking.cache.cache import Cache, A, C
 
 class PerBlockPMW(Cache):
     def __init__(self, scheduler):

@@ -1,6 +1,6 @@
 from queue import Empty
 
-from privacypacking.cache import Cache, R, C
+from privacypacking.cache.cache import Cache, R, C
 from privacypacking.cache.utils import get_splits
 from termcolor import colored
 
@@ -50,7 +50,7 @@ class DeterministicCache(Cache):
                     # print("         x", x)
 
                     if self.run_cache(query_id, x, budget) is not None:
-                        plan += [F(query_id, x, budget)]
+                        plan += [C(query_id, x, budget)]
 
                     elif self.can_run(self.scheduler, x, budget):
                         plan += [R(query_id, x, budget)]

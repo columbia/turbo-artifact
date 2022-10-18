@@ -31,8 +31,11 @@ class PrivacyWorkload:
         for _ in range(num_tasks[0]):
             query_id = np.random.randint(1, num_types_of_queries+1)-1
             query_type = "count"
-            nblocks_options = [1, 7, 14, 30, 60, 90, 120]
-            nblocks = np.random.choice(nblocks_options, 1)
+            # start time is in block units, so it indicates how many blocks currently exist
+            # we use this info so that a task does not request more blocks than those existing
+            num_existing_blocks = start_time+1
+            nblocks_options = [n for n in [1, 7, 14, 30, 60, 90, 120] if n <= num_existing_blocks]
+            nblocks = np.random.choice(nblocks_options, 1)[0]
             tasks.append(Task(start_time, nblocks, query_id, query_type))
 
         return tasks

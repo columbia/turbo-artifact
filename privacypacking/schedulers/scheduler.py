@@ -1,5 +1,3 @@
-import sys
-import time
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
@@ -12,7 +10,9 @@ from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
-from privacypacking import cache
+from privacypacking.cache.per_block_pmw import PerBlockPMW
+from privacypacking.cache.deterministic_cache import DeterministicCache
+from privacypacking.cache.cache import A, R, C
 from termcolor import colored
 
 
@@ -71,7 +71,7 @@ class Scheduler:
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
-        self.simulator_config = simulator_config
+        self.simulator_config = simulator_config        
         self.omegaconf = simulator_config.scheduler if simulator_config else None
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
             self.simulator_config.blocks.data_path
@@ -84,7 +84,7 @@ class Scheduler:
 
         # todo: avoid passing the scheduler as argument (circular reference)
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
-        self.cache = cache.PerBlockPMW(self)
+        self.cache = PerBlockPMW(self)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -149,7 +149,7 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = cache.A([cache.R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
+                original_plan = A([R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
                 # A(R(B1,b2,...BN))
                 # Find a plan to run the query using caching
                 plan = None
@@ -188,7 +188,7 @@ class Scheduler:
 
     def execute_plan(self, plan):
         result = None
-        if isinstance(plan, cache.R):
+        if isinstance(plan, R):
             blocks_list = list(range(plan.blocks[0], plan.blocks[-1]+1))
             # Run the task on blocks without looking at the cache
             result = self.run_task(plan.query_id, blocks_list, plan.budget)
@@ -196,11 +196,11 @@ class Scheduler:
             # Add result in cache
             self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
 
-        if isinstance(plan, cache.C):
+        if isinstance(plan, C):
             # Run cache to get a result
             result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
 
-        elif isinstance(plan, cache.A):
+        elif isinstance(plan, A):
             agglist = [self.execute_plan(x) for x in plan.l]
             result = sum(agglist)
 

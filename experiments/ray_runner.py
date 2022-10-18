@@ -172,11 +172,11 @@ def grid_online(
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
-            "data_path": tune.grid_search(blocks_data_path),
+            "data_path": blocks_data_path,
         },
         "tasks": {
             "sampling": tasks_sampling,
-            "data_path": tasks_data_path,
+            "data_path": tune.grid_search(tasks_data_path),
             "block_selection_policy": tune.grid_search(block_selection_policy),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
         },

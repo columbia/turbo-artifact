@@ -16,8 +16,8 @@ def caching():
         initial_blocks=[1],
         max_blocks=[400],
         tasks_data_path=["covid19_workload/privacy_tasks.csv"],
-        blocks_data_path=["covid19_data/blocks"],
-        blocks_metadata=["covid19_data/metadata.json"],
+        blocks_data_path="covid19_data/blocks",
+        blocks_metadata="covid19_data/metadata.json",
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
@@ -34,14 +34,12 @@ def pmw():
         max_blocks=[400],
         tasks_data_path=["covid19_workload/privacy_tasks.csv"],
         blocks_data_path="covid19_data/blocks",
-        blocks_metadata="covid19_data/metadata.json",
+        blocks_metadata="data/covid19_data/metadata.json",
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
-        disable_dp=False,
         max_aggregations_allowed=[10000],
         allow_caching=[True],
-        block_size=203828,
     )
 
 
