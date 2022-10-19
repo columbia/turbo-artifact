@@ -81,3 +81,9 @@ class BasicBudget:
     def dump(self):
         budget_info = {"epsilon": self.epsilon}
         return budget_info
+
+    def __repr__(self):
+        return f"epsilon: {self.epsilon}"
+    
+    def __str__(self):
+        return f"epsilon: {self.epsilon}"

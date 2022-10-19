@@ -149,12 +149,11 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = A([R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
-                # A(R(B1,b2,...BN))
+                original_plan = A([C(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
-                    print(colored(f"Setting query {task.query_id}-{task.budget} " f" plan for {sorted(list(task.budget_per_block.keys()))}", "blue",))
+                    print(colored(f"Setting query {task.query_id}-{task.budget} " f" plan for {bs_tuple}", "blue",))
                     plan = self.cache.get_execution_plan(task.query_id, bs_list, task.budget)
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
@@ -218,7 +217,7 @@ class Scheduler:
         df = pd.concat(df)
         
         # This output is not noisy
-        result = globals()[f"query_user{query_id}"](df)
+        result = globals()[f"query{query_id}"](df)
         
         sensitivity = 1/len(df)
         noise_sample = np.random.laplace(scale=sensitivity/budget.epsilon)  # todo: this is not compatible with renyi
@@ -226,7 +225,7 @@ class Scheduler:
         if not disable_dp:
             result += noise_sample
 
-        print(colored(f"Result of query {query_id} on blocks {blocks}: \n{result}","green",))
+        print(colored(f"Result (with_noise={not disable_dp}) of query {query_id} on blocks {blocks}: \n{result}","green",))
         return result
 
 

@@ -27,18 +27,19 @@ class Histogram:
         # Two types of hardcoded queries for now: count new cases, count new deaths
         # histogram arrangement: p:positive, d:deceased
         # [[p0-d0, p0-d1],
-        #  [p1-d0, p1-d0]]
+        #  [p1-d0, p1-d1]]
         # todo: generalize
 
         if query_id == 0:  # accesses : `positive=1 AND (deceased=1 OR deceased=0)`     -- Count of New Cases
-            return tuple(([1],[0]), ([1],[1]))
+            return [(1,0), (1,1)]
         if query_id == 1:  # accesses : `(positive=1 OR positive=0) AND deceased=1`     -- Count of New Deaths
-            return tuple(([0],[1]), ([1],[1]))
+            return [(0,1), (1,1)]
 
     def get_bins(
         self, query_id
     ):
-        return self.bins[self.get_bins_idx(query_id)]
+        return [self.bins[idx] for idx in self.get_bins_idx(query_id)]
+
 
     def update_bins(self, indices, values):
         for idx, value in zip(indices, values):
@@ -163,8 +164,10 @@ def main():
 
     histogram = Histogram(num_features, domain_size_per_feature, domain_size)
 
+    histogram.update_bins([(1,0), (1,1)], [1,2])
+    histogram.update_bins([(0,1), (1,1)], [3,4])
     bins = histogram.get_bins(0)
-    histogram.update_bins([(1,0),(0,1)], [3,5])
+    bins = histogram.get_bins(1)
     histogram.run_task(0)
 
 

@@ -29,7 +29,7 @@ class DeterministicCache(Cache):
         if blocks not in self.results[query_id]:
             self.results[query_id].update({blocks: (budget.epsilon, result)})
 
-    def run_cache(self, query_id, blocks, budget):
+    def run_cache(self, query_id, blocks, _):
         if query_id in self.results:
             if blocks in self.results[query_id]:
                 (_, result) = self.results[query_id][blocks]
