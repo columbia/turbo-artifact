@@ -5,7 +5,7 @@ from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 import numpy as np
-from privacypacking.cache.queries_user import *
+from data.covid19.queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -33,10 +33,10 @@ class TasksInfo:
         self.allocation_index = {}
         self.tasks_lifetime = {}
         self.tasks_submit_time = {}
-        self.alternative_plans_ran = 0
-        self.original_plans_ran = 0
-        self.original_plan_result = {}
-        self.alternative_plan_result = {}
+        self.with_cache_plans_ran = 0
+        self.without_cache_plans_ran = 0
+        self.without_cache_plan_result = {}
+        self.with_cache_plan_result = {}
         self.realized_budget = 0
 
     def dump(self):
@@ -144,21 +144,21 @@ class Scheduler:
                 ):
                     continue
 
-                print("\n\noriginal_plans_ran", self.tasks_info.original_plans_ran, "| alternative_plans_ran", self.tasks_info.alternative_plans_ran)
+                print("\n\nwithout_cache_plans_ran", self.tasks_info.without_cache_plans_ran, "| with_cache_plans_ran", self.tasks_info.with_cache_plans_ran)
                 
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = A([C(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
+                without_cache_plan = R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
                     print(colored(f"Setting query {task.query_id}-{task.budget} " f" plan for {bs_tuple}", "blue",))
                     plan = self.cache.get_execution_plan(task.query_id, bs_list, task.budget)
                 elif self.can_run(task.budget_per_block):
-                    plan = original_plan
+                    plan = without_cache_plan
 
-                print(colored(f"Original plan:     {original_plan}", 'red'))
+                print(colored(f"Original plan:     {without_cache_plan}", 'red'))
                 print(colored(f"Plan:              {plan}\n", 'yellow'))
 
                 # Execute Plan
@@ -167,14 +167,14 @@ class Scheduler:
                     self.update_allocated_task(task)
                 
                     # Run original plan just to store the result - for experiments
-                    if str(original_plan) != str(plan):
-                        self.tasks_info.alternative_plans_ran += 1
-                        self.tasks_info.alternative_plan_result[task.id] = result
+                    if str(without_cache_plan) != str(plan):
+                        self.tasks_info.with_cache_plans_ran += 1
+                        self.tasks_info.with_cache_plan_result[task.id] = result
                         result = self.run_task(task.query_id, bs_list, task.budget)
                     else:
-                        self.tasks_info.original_plans_ran += 1
+                        self.tasks_info.without_cache_plans_ran += 1
 
-                    self.tasks_info.original_plan_result[task.id] = result
+                    self.tasks_info.without_cache_plan_result[task.id] = result
 
                     if (self.metric.is_dynamic() and self.n_allocated_tasks % self.omegaconf.metric_recomputation_period == 0):
                         # We go back to the beginning of the while loop
@@ -219,10 +219,9 @@ class Scheduler:
         # This output is not noisy
         result = globals()[f"query{query_id}"](df)
         
-        sensitivity = 1/len(df)
-        noise_sample = np.random.laplace(scale=sensitivity/budget.epsilon)  # todo: this is not compatible with renyi
-
         if not disable_dp:
+            sensitivity = 1/len(df)
+            noise_sample = np.random.laplace(scale=sensitivity/budget.epsilon)  # todo: this is not compatible with renyi
             result += noise_sample
 
         print(colored(f"Result (with_noise={not disable_dp}) of query {query_id} on blocks {blocks}: \n{result}","green",))

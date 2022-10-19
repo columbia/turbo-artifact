@@ -120,6 +120,7 @@ class PMW:
 
         # Compute the error
         error = true_output - predicted_output
+        print(error)
         if self.is_query_hard(error):   # Is the query hard            
             indices_reached = self.histogram.get_bins_idx(query_id)  # get the indices that are "reached" by the query                    
             copy_histogram = deepcopy(self.histogram)

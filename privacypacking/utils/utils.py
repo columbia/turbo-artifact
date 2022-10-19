@@ -52,20 +52,20 @@ def get_logs(
                 tasks_info.scheduling_delay.get(task.id, None)
             )
 
-        alternative_plan_result = None
-        if task.id in tasks_info.alternative_plan_result:
-            alternative_plan_result = tasks_info.alternative_plan_result[task.id]
+        with_cache_plan_result = None
+        if task.id in tasks_info.with_cache_plan_result:
+            with_cache_plan_result = tasks_info.with_cache_plan_result[task.id]
 
-        original_plan_result = None
-        if task.id in tasks_info.original_plan_result:
-            original_plan_result = tasks_info.original_plan_result[task.id]
+        without_cache_plan_result = None
+        if task.id in tasks_info.without_cache_plan_result:
+            without_cache_plan_result = tasks_info.without_cache_plan_result[task.id]
 
         task_dump.update(
             {
                 "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                 "status": tasks_info.tasks_status[task.id],
-                "original_plan_result": original_plan_result,
-                "alternative_plan_result": alternative_plan_result,
+                "without_cache_plan_result": without_cache_plan_result,
+                "with_cache_plan_result": with_cache_plan_result,
                 "creation_time": tasks_info.creation_time[task.id],
                 "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
                 "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
@@ -106,8 +106,8 @@ def get_logs(
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
-        "original_plans_ran": tasks_info.original_plans_ran,
-        "alternative_plans_ran": tasks_info.alternative_plans_ran,
+        "without_cache_plans_ran": tasks_info.without_cache_plans_ran,
+        "with_cache_plans_ran": tasks_info.with_cache_plans_ran,
         "max_aggregations_allowed": omegaconf.scheduler.max_aggregations_allowed,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
