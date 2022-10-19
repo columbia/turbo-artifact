@@ -1,3 +1,3 @@
 ## Covid19 dataset and benchmark
 
-Queries and variouis tools for generating the dataset and workloads
+Queries and various tools for generating the dataset and workloads
