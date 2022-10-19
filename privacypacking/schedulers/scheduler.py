@@ -144,12 +144,12 @@ class Scheduler:
                 ):
                     continue
 
-                print(
-                    "\n\nwithout_cache_plans_ran",
-                    self.tasks_info.without_cache_plans_ran,
-                    "| with_cache_plans_ran",
-                    self.tasks_info.with_cache_plans_ran,
-                )
+                # print(
+                #     "\n\nwithout_cache_plans_ran",
+                #     self.tasks_info.without_cache_plans_ran,
+                #     "| with_cache_plans_ran",
+                #     self.tasks_info.with_cache_plans_ran,
+                # )
 
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
@@ -160,34 +160,48 @@ class Scheduler:
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
-                    print(
-                        colored(
-                            f"Setting query {task.query_id}-{task.budget} "
-                            f" plan for {bs_tuple}",
-                            "blue",
-                        )
-                    )
+                    # print(
+                    #     colored(
+                    #         f"Setting query {task.query_id}"
+                    #         f" plan for {bs_tuple}",
+                    #         "blue",
+                    #     )
+                    # )
                     plan = self.cache.get_execution_plan(
                         task.query_id, bs_list, task.budget
                     )
                 elif self.can_run(task.budget_per_block):
                     plan = without_cache_plan
 
-                print(colored(f"Original plan:     {without_cache_plan}", "red"))
-                print(colored(f"Plan:              {plan}\n", "yellow"))
+                print("\n")
+                print(colored(f"Without Caching plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}", "green"))
+                print(colored(f"With Caching Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}", "blue"))
 
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
+                    print(
+                        colored(
+                            f"With Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                            "blue",
+                        )
+                    )
                     self.update_allocated_task(task)
 
                     # Run original plan just to store the result - for experiments
                     if str(without_cache_plan) != str(plan):
-                        self.tasks_info.with_cache_plans_ran += 1
+                        # self.tasks_info.with_cache_plans_ran += 1
                         self.tasks_info.with_cache_plan_result[task.id] = result
-                        result = self.run_task(task.query_id, bs_list, task.budget)
-                    else:
-                        self.tasks_info.without_cache_plans_ran += 1
+                        result = self.run_task(task.query_id, bs_tuple, task.budget)
+                        print(
+                            colored(
+                                f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                "green",
+                            )
+                        )
+
+                    # else:
+                        # self.tasks_info.without_cache_plans_ran += 1
 
                     self.tasks_info.without_cache_plan_result[task.id] = result
 
@@ -213,6 +227,7 @@ class Scheduler:
     def execute_plan(self, plan):
         result = None
         if isinstance(plan, R):
+            # The R (Run) operator is used only for the deterministic cache
             blocks_list = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             # Run the task on blocks without looking at the cache
             result = self.run_task(plan.query_id, blocks_list, plan.budget)
@@ -220,13 +235,13 @@ class Scheduler:
             # Add result in cache
             self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
 
-        if isinstance(plan, C):
+        elif isinstance(plan, C):
             # Run cache to get a result
             result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
 
         elif isinstance(plan, A):
             agglist = [self.execute_plan(x) for x in plan.l]
-            result = sum(agglist)
+            result = sum(agglist) / len(agglist)        # for aggregation here we average (results are fractions)
 
         else:
             logger.error("Execution: no such operator")
@@ -236,7 +251,8 @@ class Scheduler:
 
     def run_task(self, query_id, blocks, budget, disable_dp=False):
         df = []
-        print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
+        # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
+        blocks = range(blocks[0],blocks[1]+1)
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
@@ -251,12 +267,12 @@ class Scheduler:
             )  # todo: this is not compatible with renyi
             result += noise_sample
 
-        print(
-            colored(
-                f"Result (with_noise={not disable_dp}) of query {query_id} on blocks {blocks}: \n{result}",
-                "green",
-            )
-        )
+            # print(
+            #     colored(
+            #         f"Noisy Result of query {query_id} on blocks {blocks}: \n{result}",
+            #         "green",
+            #     )
+            # )
         return result
 
     def add_task(self, task_message: Tuple[Task, Event]):

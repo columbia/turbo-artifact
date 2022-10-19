@@ -10,7 +10,7 @@ attributes = ["positive", "deceased"]
 
 # query 0: Sum of Cases over Population
 # accesses : `positive=1 AND (deceased=1 OR deceased=0)`     -- Count of New Cases
-def query_0(df):
+def query0(df):
     ll = df["positive"]
     return ll.sum() / len(df)
 

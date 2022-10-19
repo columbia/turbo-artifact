@@ -1,6 +1,6 @@
 from queue import Empty
 
-from privacypacking.cache.cache import Cache, R, C
+from privacypacking.cache.cache import Cache, R, C, A
 from privacypacking.cache.utils import get_splits
 from termcolor import colored
 
@@ -65,5 +65,8 @@ class DeterministicCache(Cache):
                         break
 
                 if plan:
-                    return A(plan)
+                    if len(plan) == 1:
+                        return plan[0]
+                    else:
+                        return A(plan)
         return None

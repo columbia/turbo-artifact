@@ -23,7 +23,7 @@ class PerBlockPMW(Cache):
         # If there is no PMW for the block then create it (creation happens on demand not eagerly)
         if pmw is None:
             pmw = self.addPMW(block)
-        pmw.run_cache(query_id, block, budget)
+        return pmw.run_cache(query_id, block, budget)
 
     def get_execution_plan(self, query_id, blocks, budget):
         """
@@ -32,11 +32,15 @@ class PerBlockPMW(Cache):
         num_aggregations = len(blocks) - 1
         plan = []
         splits = get_splits(blocks, num_aggregations)
-        print(splits)
         for split in splits:
             # print("split", split)
             for x in split:
                 x = (x[0], x[-1])
                 plan += [C(query_id, x, budget)]
+            
+            # Only one split for per-block-pmu - we stop here
+            if len(plan) == 1:
+                return plan[0]
+            else:
                 return A(plan)
         return None

@@ -97,6 +97,12 @@ class PMW:
 
     def is_query_hard(self, error):
         if abs(error) > self.T:
+            print(
+                colored(
+                    "\tHard Query - oh no!",
+                    "red",
+                )
+             )
             return True
         return False
 
@@ -119,9 +125,22 @@ class PMW:
         )  # but don't waste budget just yet!!
         predicted_output = self.histogram.run_task(query_id)
 
+        print(
+            colored(
+                f"\tNoisy True Result of query {query_id} on blocks {blocks}: {true_output}",
+                "magenta",
+            )
+        )
+        print(
+            colored(
+                f"\tNoisy Predicted Result of query {query_id} on blocks {blocks}: {predicted_output}",
+                "grey",
+            )
+        )
+
         # Compute the error
         error = true_output - predicted_output
-        print(error)
+        # print(error)
         if self.is_query_hard(error):  # Is the query hard
             indices_reached = self.histogram.get_bins_idx(
                 query_id
