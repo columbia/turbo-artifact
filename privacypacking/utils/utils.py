@@ -85,8 +85,8 @@ def get_logs(
         dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
     df = pd.concat(dfs)
 
-    df['budget'] = 10 - df['budget']
-    bu = df['budget'].mean()
+    df["budget"] = 10 - df["budget"]
+    bu = df["budget"].mean()
 
     total_tasks = len(tasks)
     # tasks_info = tasks_info.dump()

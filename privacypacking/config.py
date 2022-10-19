@@ -144,9 +144,11 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        block = Block(block_id,
-                      BasicBudget(self.omegaconf.epsilon),
-                      f"{self.omegaconf.blocks.data_path}/block_{block_id}")
+        block = Block(
+            block_id,
+            BasicBudget(self.omegaconf.epsilon),
+            f"{self.omegaconf.blocks.data_path}/block_{block_id}",
+        )
         # block = Block.from_epsilon_delta(
         #                 block_id,
         #                 self.omegaconf.epsilon,
@@ -187,8 +189,8 @@ class Config:
             demand_dict = yaml.safe_load(f)
             # orders = {}
             # for i, alpha in enumerate(demand_dict["alphas"]):
-                # orders[alpha] = demand_dict["rdp_epsilons"][i]
-            epsilon = demand_dict['epsilon']
+            # orders[alpha] = demand_dict["rdp_epsilons"][i]
+            epsilon = demand_dict["epsilon"]
             block_selection_policy = None
             if "block_selection_policy" in demand_dict:
                 block_selection_policy = BlockSelectionPolicy.from_str(
@@ -244,6 +246,6 @@ class Config:
                 budget=BasicBudget(epsilon),
                 name=os.path.basename(path),
             )
-            
+
         assert task_spec is not None
         return task_spec

@@ -8,11 +8,11 @@ import os
 
 app = typer.Typer()
 
+
 def main(config):
     conf = Config(config)
     logs = Simulator(conf).run()
     save_logs(conf, logs)
-
 
 
 @app.command()
@@ -27,6 +27,7 @@ def run(
     with open(config) as f:
         config = json.load(f)
         main(config)
+
 
 if __name__ == "__main__":
     app()

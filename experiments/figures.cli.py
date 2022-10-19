@@ -243,7 +243,7 @@ def plot_mixed_curves_online(fig_dir):
         data_path=["mixed_curves"],
         tasks_sampling="poisson",
         data_lifetime=[10],
-        avg_num_tasks_per_block=[500]
+        avg_num_tasks_per_block=[500],
     )
 
     fig = px.line(

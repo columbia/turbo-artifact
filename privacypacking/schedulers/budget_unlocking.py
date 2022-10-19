@@ -16,8 +16,8 @@ class UnlockingBlock(Block):
     def __init__(self, id: int, budget: Budget, n: int = 1):
         super().__init__(id, budget)
         self.unlocked_budget = BasicBudget(0)
-            # (
-            # ZeroCurve()
+        # (
+        # ZeroCurve()
         # )  # Will be gradually unlocking budget till we reach full capacity
         self.fair_share = self.initial_budget / n
 

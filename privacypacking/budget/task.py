@@ -119,7 +119,15 @@ class UniformTask(Task):
         A Task that requires (the same) `budget` for all blocks in `block_ids`
         """
         self.budget = budget
-        super().__init__(id, query_id, query_type, profit, block_selection_policy, n_blocks, name=name)
+        super().__init__(
+            id,
+            query_id,
+            query_type,
+            profit,
+            block_selection_policy,
+            n_blocks,
+            name=name,
+        )
 
     def set_budget_per_block(self, block_ids: Iterable[int]):
         for block_id in block_ids:

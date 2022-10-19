@@ -71,7 +71,7 @@ class Scheduler:
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
-        self.simulator_config = simulator_config        
+        self.simulator_config = simulator_config
         self.omegaconf = simulator_config.scheduler if simulator_config else None
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
             self.simulator_config.blocks.data_path
@@ -80,7 +80,7 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        self.block_size = self.omegaconf['block_size']
+        self.block_size = self.omegaconf["block_size"]
 
         # todo: avoid passing the scheduler as argument (circular reference)
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
@@ -136,7 +136,7 @@ class Scheduler:
             converged = True
 
             for task in sorted_tasks:
-                
+
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
                     self.tasks_info.tasks_lifetime[task.id]
@@ -144,28 +144,43 @@ class Scheduler:
                 ):
                     continue
 
-                print("\n\nwithout_cache_plans_ran", self.tasks_info.without_cache_plans_ran, "| with_cache_plans_ran", self.tasks_info.with_cache_plans_ran)
-                
+                print(
+                    "\n\nwithout_cache_plans_ran",
+                    self.tasks_info.without_cache_plans_ran,
+                    "| with_cache_plans_ran",
+                    self.tasks_info.with_cache_plans_ran,
+                )
+
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                without_cache_plan = R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)
+                without_cache_plan = R(
+                    query_id=task.query_id, blocks=bs_tuple, budget=task.budget
+                )
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.allow_caching:
-                    print(colored(f"Setting query {task.query_id}-{task.budget} " f" plan for {bs_tuple}", "blue",))
-                    plan = self.cache.get_execution_plan(task.query_id, bs_list, task.budget)
+                    print(
+                        colored(
+                            f"Setting query {task.query_id}-{task.budget} "
+                            f" plan for {bs_tuple}",
+                            "blue",
+                        )
+                    )
+                    plan = self.cache.get_execution_plan(
+                        task.query_id, bs_list, task.budget
+                    )
                 elif self.can_run(task.budget_per_block):
                     plan = without_cache_plan
 
-                print(colored(f"Original plan:     {without_cache_plan}", 'red'))
-                print(colored(f"Plan:              {plan}\n", 'yellow'))
+                print(colored(f"Original plan:     {without_cache_plan}", "red"))
+                print(colored(f"Plan:              {plan}\n", "yellow"))
 
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
                     self.update_allocated_task(task)
-                
+
                     # Run original plan just to store the result - for experiments
                     if str(without_cache_plan) != str(plan):
                         self.tasks_info.with_cache_plans_ran += 1
@@ -176,19 +191,29 @@ class Scheduler:
 
                     self.tasks_info.without_cache_plan_result[task.id] = result
 
-                    if (self.metric.is_dynamic() and self.n_allocated_tasks % self.omegaconf.metric_recomputation_period == 0):
+                    if (
+                        self.metric.is_dynamic()
+                        and self.n_allocated_tasks
+                        % self.omegaconf.metric_recomputation_period
+                        == 0
+                    ):
                         # We go back to the beginning of the while loop
                         converged = False
                         break
                 else:
-                    print(colored(f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n","blue",))
+                    print(
+                        colored(
+                            f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n",
+                            "blue",
+                        )
+                    )
 
         return self.allocated_task_ids
 
     def execute_plan(self, plan):
         result = None
         if isinstance(plan, R):
-            blocks_list = list(range(plan.blocks[0], plan.blocks[-1]+1))
+            blocks_list = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             # Run the task on blocks without looking at the cache
             result = self.run_task(plan.query_id, blocks_list, plan.budget)
             self.consume_budgets(blocks_list, plan.budget)
@@ -215,18 +240,24 @@ class Scheduler:
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
         df = pd.concat(df)
-        
+
         # This output is not noisy
         result = globals()[f"query{query_id}"](df)
-        
+
         if not disable_dp:
-            sensitivity = 1/len(df)
-            noise_sample = np.random.laplace(scale=sensitivity/budget.epsilon)  # todo: this is not compatible with renyi
+            sensitivity = 1 / len(df)
+            noise_sample = np.random.laplace(
+                scale=sensitivity / budget.epsilon
+            )  # todo: this is not compatible with renyi
             result += noise_sample
 
-        print(colored(f"Result (with_noise={not disable_dp}) of query {query_id} on blocks {blocks}: \n{result}","green",))
+        print(
+            colored(
+                f"Result (with_noise={not disable_dp}) of query {query_id} on blocks {blocks}: \n{result}",
+                "green",
+            )
+        )
         return result
-
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -263,7 +294,7 @@ class Scheduler:
         self.blocks.update({block.id: block})
         # Support blocks with custom support
         # if not self.alphas:
-            # self.alphas = block.initial_budget.alphas
+        # self.alphas = block.initial_budget.alphas
 
     def get_num_blocks(self) -> int:
         num_blocks = len(self.blocks)

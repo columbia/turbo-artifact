@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from loguru import logger
 
+
 class Task:
     def __init__(self, start_time, n_blocks, query_id, query_type):
         self.start_time = start_time
@@ -16,7 +17,9 @@ class PrivacyWorkload:
     csv-based privacy workload.
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.tasks = None
         self.blocks_num = 400
         self.num_types_of_queries = 2
@@ -24,17 +27,18 @@ class PrivacyWorkload:
         for i in range(self.blocks_num):
             self.tasks += self.generate_one_day_tasks(i, self.num_types_of_queries)
 
-
     def generate_one_day_tasks(self, start_time, num_types_of_queries):
         tasks = []
-        num_tasks = np.abs(np.random.normal(40, 20, 1)).astype(int)+1
+        num_tasks = np.abs(np.random.normal(40, 20, 1)).astype(int) + 1
         for _ in range(num_tasks[0]):
-            query_id = np.random.randint(1, num_types_of_queries+1)-1
+            query_id = np.random.randint(1, num_types_of_queries + 1) - 1
             query_type = "count"
             # start time is in block units, so it indicates how many blocks currently exist
             # we use this info so that a task does not request more blocks than those existing
-            num_existing_blocks = start_time+1
-            nblocks_options = [n for n in [1, 7, 14, 30, 60, 90, 120] if n <= num_existing_blocks]
+            num_existing_blocks = start_time + 1
+            nblocks_options = [
+                n for n in [1, 7, 14, 30, 60, 90, 120] if n <= num_existing_blocks
+            ]
             nblocks = np.random.choice(nblocks_options, 1)[0]
             tasks.append(Task(start_time, nblocks, query_id, query_type))
 
@@ -62,9 +66,9 @@ class PrivacyWorkload:
     def generate(self):
         dp_tasks = [self.create_dp_task(t) for t in self.tasks]
         logger.info(f"Collecting results in a dataframe...")
-        self.tasks = pd.DataFrame(dp_tasks).sort_values('submit_time')
+        self.tasks = pd.DataFrame(dp_tasks).sort_values("submit_time")
         self.tasks["relative_submit_time"] = (
-                self.tasks["submit_time"] - self.tasks["submit_time"].shift(periods=1)
+            self.tasks["submit_time"] - self.tasks["submit_time"].shift(periods=1)
         ).fillna(0)
 
         logger.info(self.tasks.head())
@@ -100,4 +104,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -2,11 +2,12 @@ from privacypacking.cache.utils import get_splits
 from privacypacking.cache.pmw import PMW
 from privacypacking.cache.cache import Cache, A, C
 
+
 class PerBlockPMW(Cache):
     def __init__(self, scheduler):
-        self.scheduler = scheduler      # todo: find a way to remove this
-        self.all_PMW = {}               # One PMW per block
-    
+        self.scheduler = scheduler  # todo: find a way to remove this
+        self.all_PMW = {}  # One PMW per block
+
     def addPMW(self, block):
         pmw = PMW(self.scheduler, block)
         self.all_PMW[block] = pmw
@@ -28,7 +29,7 @@ class PerBlockPMW(Cache):
         """
         For per-block-pmu all plans have this form: A(C(B1), C(B2), ... , C(Bn))
         """
-        num_aggregations = len(blocks)-1
+        num_aggregations = len(blocks) - 1
         plan = []
         splits = get_splits(blocks, num_aggregations)
         print(splits)
@@ -39,4 +40,3 @@ class PerBlockPMW(Cache):
                 plan += [C(query_id, x, budget)]
                 return A(plan)
         return None
-

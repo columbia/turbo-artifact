@@ -84,6 +84,6 @@ class BasicBudget:
 
     def __repr__(self):
         return f"epsilon: {self.epsilon}"
-    
+
     def __str__(self):
         return f"epsilon: {self.epsilon}"

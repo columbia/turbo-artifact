@@ -126,14 +126,14 @@ def grid_online(
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
         # DYNAMIC_FLAT_RELEVANCE,
-         FCFS,
+        FCFS,
         # DOMINANT_SHARES,
     ]
 
     # Read block size from metadata
     f = open(blocks_metadata)
     metadata = json.load(f)
-    block_size = metadata['block_size']
+    block_size = metadata["block_size"]
     f.close()
 
     # Instant unlocking
@@ -142,45 +142,47 @@ def grid_online(
     # n = [1_000]
 
     block_selection_policy = ["LatestBlocksFirst"]
-    config = {"omegaconf": {
-        "epsilon": 10,
-        "delta": 0.00001,
-        "scheduler": {
-            "metric_recomputation_period": tune.grid_search(
-                metric_recomputation_period
-            ),
-            # "log_warning_every_n_allocated_tasks": 500,
-            "scheduler_timeout_seconds": 20 * 60,
-            "data_lifetime": tune.grid_search(data_lifetime),
-            "task_lifetime": tune.grid_search(task_lifetime),
-            "block_size": block_size,
-            "max_aggregations_allowed": tune.grid_search(max_aggregations_allowed),
-            "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
-            "method": "batch",
-            "metric": tune.grid_search(scheduler_metrics),
-            "n": tune.grid_search(n),
-            "allow_caching": tune.grid_search(allow_caching),
-        },
-        "metric": {
-            "normalize_by": "available_budget",
-            "n_knapsack_solvers": 1,
-        },
-        "logs": {
-            "verbose": False,
-            "save": True,
-        },
-        "blocks": {
-            "initial_num": tune.grid_search(initial_blocks),
-            "max_num": tune.grid_search(max_blocks),
-            "data_path": blocks_data_path,
-        },
-        "tasks": {
-            "sampling": tasks_sampling,
-            "data_path": tune.grid_search(tasks_data_path),
-            "block_selection_policy": tune.grid_search(block_selection_policy),
-            "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
-        },
-    }}
+    config = {
+        "omegaconf": {
+            "epsilon": 10,
+            "delta": 0.00001,
+            "scheduler": {
+                "metric_recomputation_period": tune.grid_search(
+                    metric_recomputation_period
+                ),
+                # "log_warning_every_n_allocated_tasks": 500,
+                "scheduler_timeout_seconds": 20 * 60,
+                "data_lifetime": tune.grid_search(data_lifetime),
+                "task_lifetime": tune.grid_search(task_lifetime),
+                "block_size": block_size,
+                "max_aggregations_allowed": tune.grid_search(max_aggregations_allowed),
+                "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
+                "method": "batch",
+                "metric": tune.grid_search(scheduler_metrics),
+                "n": tune.grid_search(n),
+                "allow_caching": tune.grid_search(allow_caching),
+            },
+            "metric": {
+                "normalize_by": "available_budget",
+                "n_knapsack_solvers": 1,
+            },
+            "logs": {
+                "verbose": False,
+                "save": True,
+            },
+            "blocks": {
+                "initial_num": tune.grid_search(initial_blocks),
+                "max_num": tune.grid_search(max_blocks),
+                "data_path": blocks_data_path,
+            },
+            "tasks": {
+                "sampling": tasks_sampling,
+                "data_path": tune.grid_search(tasks_data_path),
+                "block_selection_policy": tune.grid_search(block_selection_policy),
+                "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+            },
+        }
+    }
 
     logger.info(f"Tune config: {config}")
 
@@ -200,8 +202,13 @@ def grid_online(
             # ),
         ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=["n_allocated_tasks", "total_tasks",
-                            "realized_profit", "budget_utilization", "realized_budget"],
+            metric_columns=[
+                "n_allocated_tasks",
+                "total_tasks",
+                "realized_profit",
+                "budget_utilization",
+                "realized_budget",
+            ],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/allow_caching": "allow_caching",
