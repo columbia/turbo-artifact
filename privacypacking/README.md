@@ -1,5 +1,6 @@
 # Package documentation
 
+- `privacy_packing.py`: an entrypoint for the simulator; useful for debugging
 - `budget.py`: defines the privacy budget abstraction with RDP
 - `curves.py`: RDP curves for some standard mechanisms
 - `offline_single_block.py`: packing on a single block with Gurobi
