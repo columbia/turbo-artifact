@@ -1,7 +1,8 @@
 from typing import List
 
 import numpy as np
-from opacus.accountants.analysis.rdp import compute_rdp
+
+# from opacus.accountants.analysis.rdp import compute_rdp
 from scipy.interpolate import interp1d, splev, splrep
 
 # from autodp.mechanism_zoo import LaplaceMechanism
@@ -110,38 +111,38 @@ class GaussianCurve(Budget):
         super().__init__(orders)
 
 
-class SubsampledGaussianCurve(Budget):
-    def __init__(
-        self,
-        sampling_probability: float,
-        sigma: float,
-        steps: float,
-        alpha_list: List[float] = ALPHAS,
-    ) -> None:
-        rdp = compute_rdp(
-            q=sampling_probability,
-            noise_multiplier=sigma,
-            steps=steps,
-            orders=alpha_list,
-        )
+# class SubsampledGaussianCurve(Budget):
+#     def __init__(
+#         self,
+#         sampling_probability: float,
+#         sigma: float,
+#         steps: float,
+#         alpha_list: List[float] = ALPHAS,
+#     ) -> None:
+#         rdp = compute_rdp(
+#             q=sampling_probability,
+#             noise_multiplier=sigma,
+#             steps=steps,
+#             orders=alpha_list,
+#         )
 
-        orders = {alpha: epsilon for (alpha, epsilon) in zip(alpha_list, rdp)}
-        super().__init__(orders)
+#         orders = {alpha: epsilon for (alpha, epsilon) in zip(alpha_list, rdp)}
+#         super().__init__(orders)
 
-    @classmethod
-    def from_training_parameters(
-        cls,
-        dataset_size: int,
-        batch_size: int,
-        epochs: int,
-        sigma: float,
-        alpha_list: List[float] = ALPHAS,
-    ) -> "SubsampledGaussianCurve":
-        """Helper function to build the SGM curve with more intuitive parameters."""
+#     @classmethod
+#     def from_training_parameters(
+#         cls,
+#         dataset_size: int,
+#         batch_size: int,
+#         epochs: int,
+#         sigma: float,
+#         alpha_list: List[float] = ALPHAS,
+#     ) -> "SubsampledGaussianCurve":
+#         """Helper function to build the SGM curve with more intuitive parameters."""
 
-        sampling_probability = batch_size / dataset_size
-        steps = (dataset_size * epochs) // batch_size
-        return cls(sampling_probability, sigma, steps, alpha_list)
+#         sampling_probability = batch_size / dataset_size
+#         steps = (dataset_size * epochs) // batch_size
+#         return cls(sampling_probability, sigma, steps, alpha_list)
 
 
 # class SubsampledLaplaceCurve(Budget):
