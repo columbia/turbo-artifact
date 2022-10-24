@@ -266,10 +266,11 @@ def plot_mixed_curves_online(fig_dir):
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
 
+
 def plot_heterogeneous_curves_offline(fig_dir):
     rdf = grid_offline(
         num_blocks=[10],
-        num_tasks=[100],  #, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
+        num_tasks=[100],  # , 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
         data_path=["heterogeneous/blocks"],
         # metric_recomputation_period=100,
         metric_recomputation_period=100,
@@ -301,13 +302,11 @@ def plot_heterogeneous_curves_offline(fig_dir):
                 "scheduler_metric",
             ]
         ]
-            .sort_values(["id", "total_tasks"])
-            .drop_duplicates()
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
     )
 
-    fig_path = fig_dir.joinpath(
-        "heterogeneous/heterogeneous_curves.png"
-    )
+    fig_path = fig_dir.joinpath("heterogeneous/heterogeneous_curves.png")
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
 
@@ -342,12 +341,10 @@ def plot_heterogeneous_curves_offline(fig_dir):
                 "scheduler_metric",
             ]
         ]
-            .sort_values(["id", "total_tasks"])
-            .drop_duplicates()
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
     )
-    fig_path = fig_dir.joinpath(
-        "heterogeneous/heterogeneous_curves_runtime.png"
-    )
+    fig_path = fig_dir.joinpath("heterogeneous/heterogeneous_curves_runtime.png")
     fig_path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_image(fig_path)
 

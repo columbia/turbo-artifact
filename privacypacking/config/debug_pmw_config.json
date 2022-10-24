@@ -1,0 +1,38 @@
+{
+    "omegaconf": {
+        "epsilon": 10,
+        "delta": 1e-05,
+        "scheduler": {
+            "metric_recomputation_period": 50,
+            "scheduler_timeout_seconds": 1200,
+            "data_lifetime": 0.1,
+            "task_lifetime": 1,
+            "block_size": 203828,
+            "max_aggregations_allowed": 10000,
+            "scheduling_wait_time": 1,
+            "method": "batch",
+            "metric": "Fcfs",
+            "n": 1,
+            "allow_caching": true
+        },
+        "metric": {
+            "normalize_by": "available_budget",
+            "n_knapsack_solvers": 1
+        },
+        "logs": {
+            "verbose": false,
+            "save": true
+        },
+        "blocks": {
+            "initial_num": 1,
+            "max_num": 50,
+            "data_path": "covid19/covid19_data/blocks"
+        },
+        "tasks": {
+            "sampling": "",
+            "data_path": "covid19/covid19_workload/privacy_tasks.csv",
+            "block_selection_policy": "LatestBlocksFirst",
+            "avg_num_tasks_per_block": 100
+        }
+    }
+}

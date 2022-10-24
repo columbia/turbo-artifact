@@ -5,8 +5,9 @@ from scipy.sparse import bsr_matrix, dok_matrix
 from scipy.sparse.construct import vstack
 
 from privacypacking.budget.block_selection import BlockSelectionPolicy
-from privacypacking.budget.budget import ALPHAS, Budget
+from privacypacking.budget.budget import Budget
 from privacypacking.budget.curves import ZeroCurve
+from privacypacking.budget.renyi_budget import ALPHAS
 from privacypacking.utils.utils import sample_one_from_string
 
 
@@ -14,17 +15,21 @@ class Task:
     def __init__(
         self,
         id: int,
-        profit: Union[float, str],
+        query_id: int,
+        query_type: str,
+        profit: float,
         block_selection_policy: BlockSelectionPolicy,
         n_blocks: Union[int, str],
         name: str = None,
     ):
+        # User request
         self.id = id
+        self.query_id = query_id
+        self.query_type = query_type
         self.profit = profit
         self.block_selection_policy = block_selection_policy
         self.n_blocks = n_blocks
         self.name = name
-
         # Scheduler dynamically updates the variables below
         self.budget_per_block = {}
         self.cost = 0
@@ -69,7 +74,7 @@ class Task:
     def dump(self, budget_per_block=True):
         d = {
             "id": self.id,
-            "name": self.name,
+            "query_id": self.query_id,
             "profit": self.profit,
             "start_time": None,
             "allocation_time": None,
@@ -119,6 +124,8 @@ class UniformTask(Task):
     def __init__(
         self,
         id: int,
+        query_id: int,
+        query_type: str,
         profit: float,
         block_selection_policy: Any,
         n_blocks: int,
@@ -129,17 +136,25 @@ class UniformTask(Task):
         A Task that requires (the same) `budget` for all blocks in `block_ids`
         """
         self.budget = budget
-        super().__init__(id, profit, block_selection_policy, n_blocks, name=name)
+        super().__init__(
+            id,
+            query_id,
+            query_type,
+            profit,
+            block_selection_policy,
+            n_blocks,
+            name=name,
+        )
 
     def set_budget_per_block(
         self, block_ids: Iterable[int], demands_tiebreaker: float = 0
     ):
 
-        # Add random noise (negligible) to break ties when we compare multiple copies of the same task
-        # We don't need this in real life when tasks come from a large pool or continuum of tasks
-        if demands_tiebreaker:
-            fraction_offset = np.random.random()
-            self.budget = self.budget * (1 + demands_tiebreaker * fraction_offset)
+        # # Add random noise (negligible) to break ties when we compare multiple copies of the same task
+        # # We don't need this in real life when tasks come from a large pool or continuum of tasks
+        # if demands_tiebreaker:
+        #     fraction_offset = np.random.random()
+        #     self.budget = self.budget * (1 + demands_tiebreaker * fraction_offset)
 
         for block_id in block_ids:
             self.budget_per_block[block_id] = self.budget

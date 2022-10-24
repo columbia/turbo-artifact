@@ -1,8 +1,5 @@
-import math
 import os
 import random
-import uuid
-from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import List
@@ -11,10 +8,10 @@ import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger
-from numpy.lib.arraysetops import isin
 from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
+from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.task import UniformTask
@@ -70,8 +67,9 @@ class Config:
                 self.omegaconf.tasks.data_path
             )
             self.tasks = pd.read_csv(self.data_path)
+            self.max_tasks = len(self.tasks)
             self.tasks_generator = self.tasks.iterrows()
-            self.sum_task_interval = self.tasks["relative_submit_time"].sum()
+            # self.sum_task_interval = self.tasks["relative_submit_time"].sum()
             self.task_arrival_interval_generator = self.tasks[
                 "relative_submit_time"
             ].iteritems()
@@ -109,6 +107,8 @@ class Config:
 
             task = UniformTask(
                 id=task_id,
+                query_id=0,
+                query_type="",
                 profit=task_spec.profit,
                 block_selection_policy=block_selection_policy,
                 n_blocks=task_spec.n_blocks,
@@ -118,23 +118,26 @@ class Config:
         # Not sampling but reading actual tasks sequentially from one file
         else:
             _, task_row = next(self.tasks_generator)
-            orders = {}
-            parsed_alphas = task_row["alphas"].strip("][").split(", ")
-            parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
+            # orders = {}
+            # parsed_alphas = task_row["alphas"].strip("][").split(", ")
+            # parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
 
-            for i, alpha in enumerate(parsed_alphas):
-                alpha = float(alpha)
-                epsilon = float(parsed_epsilons[i])
-                orders[alpha] = epsilon
+            # for i, alpha in enumerate(parsed_alphas):
+            #     alpha = float(alpha)
+            #     epsilon = float(parsed_epsilons[i])
+            #     orders[alpha] = epsilon
 
             task = UniformTask(
                 id=task_id,
+                query_id=int(task_row["query_id"]),
+                query_type=task_row["query_type"],
                 profit=float(task_row["profit"]),
                 block_selection_policy=BlockSelectionPolicy.from_str(
                     task_row["block_selection_policy"]
                 ),
                 n_blocks=int(task_row["n_blocks"]),
-                budget=Budget(orders),
+                budget=BasicBudget(float(task_row["epsilon"])),
+                # budget=RenyiBudget(parsed_epsilons[0]),
                 name=task_row["task_name"],
             )
 
@@ -142,12 +145,19 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        return Block.from_epsilon_delta(
+        block = Block(
             block_id,
-            self.omegaconf.epsilon,
-            self.omegaconf.delta,
-            alpha_list=self.omegaconf.alphas,
+            BasicBudget(self.omegaconf.epsilon),
+            f"{self.omegaconf.blocks.data_path}/block_{block_id}",
         )
+        # block = Block.from_epsilon_delta(
+        #                 block_id,
+        #                 self.omegaconf.epsilon,
+        #                 self.omegaconf.delta,
+        #                 alpha_list=self.omegaconf.alphas,
+        #             )
+        block.data_path = f"{self.omegaconf.blocks.data_path}/block_{block_id}"
+        return block
 
     def set_task_arrival_time(self):
         if self.omegaconf.tasks.sampling == "poisson":
@@ -159,10 +169,10 @@ class Config:
 
         else:
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
-            normalized_task_interval = task_arrival_interval / self.sum_task_interval
-            task_arrival_interval = (
-                normalized_task_interval * self.block_arrival_interval * self.max_blocks
-            )
+            # normalized_task_interval = task_arrival_interval / self.sum_task_interval
+            # task_arrival_interval = (
+            #     normalized_task_interval * self.block_arrival_interval * self.max_blocks
+            # )
         return task_arrival_interval
 
     def set_block_arrival_time(self):
@@ -178,9 +188,10 @@ class Config:
 
         with open(path, "r") as f:
             demand_dict = yaml.safe_load(f)
-            orders = {}
-            for i, alpha in enumerate(demand_dict["alphas"]):
-                orders[alpha] = demand_dict["rdp_epsilons"][i]
+            # orders = {}
+            # for i, alpha in enumerate(demand_dict["alphas"]):
+            # orders[alpha] = demand_dict["rdp_epsilons"][i]
+            epsilon = demand_dict["epsilon"]
             block_selection_policy = None
             if "block_selection_policy" in demand_dict:
                 block_selection_policy = BlockSelectionPolicy.from_str(
@@ -239,9 +250,10 @@ class Config:
             task_spec = TaskSpec(
                 profit=profit,
                 block_selection_policy=block_selection_policy,
-                n_blocks=n_blocks,
-                budget=Budget(orders),
+                n_blocks=int(n_blocks),
+                budget=BasicBudget(epsilon),
                 name=os.path.basename(path),
             )
+
         assert task_spec is not None
         return task_spec

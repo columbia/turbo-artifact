@@ -97,28 +97,43 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-            task_dump.update(
-                {
-                    "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
-                    "status": tasks_info.tasks_status[task.id],
-                    "creation_time": tasks_info.creation_time[task.id],
-                    "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
-                    "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
-                    "allocation_index": tasks_info.allocation_index.get(task.id, None),
-                }
-            )
-            log_tasks.append(
-                task_dump
-            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+        with_cache_plan_result = None
+        if task.id in tasks_info.with_cache_plan_result:
+            with_cache_plan_result = tasks_info.with_cache_plan_result[task.id]
+
+        without_cache_plan_result = None
+        if task.id in tasks_info.without_cache_plan_result:
+            without_cache_plan_result = tasks_info.without_cache_plan_result[task.id]
+
+        task_dump.update(
+            {
+                "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                "status": tasks_info.tasks_status[task.id],
+                "without_cache_plan_result": without_cache_plan_result,
+                "with_cache_plan_result": with_cache_plan_result,
+                "creation_time": tasks_info.creation_time[task.id],
+                "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                "allocation_index": tasks_info.allocation_index.get(task.id, None),
+            }
+        )
+        log_tasks.append(
+            task_dump
+        )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
 
     # TODO: Store scheduling times into the tasks directly?
 
+    dfs = []
     log_blocks = []
     if omegaconf.logs.save:
         for block in blocks.values():
             log_blocks.append(block.dump())
+            dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
+        df = pd.concat(dfs)
 
-    n_allocated_tasks = n_allocated_tasks
+        df["budget"] = 10 - df["budget"]
+        bu = df["budget"].mean()
+
     total_tasks = len(tasks)
     # tasks_info = tasks_info.dump()
     # tasks_scheduling_times = sorted(tasks_scheduling_times)
@@ -130,9 +145,14 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
+        "budget_utilization": bu,
+        "realized_budget": tasks_info.realized_budget,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
+        "without_cache_plans_ran": tasks_info.without_cache_plans_ran,
+        "with_cache_plans_ran": tasks_info.with_cache_plans_ran,
+        "max_aggregations_allowed": omegaconf.scheduler.max_aggregations_allowed,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,
