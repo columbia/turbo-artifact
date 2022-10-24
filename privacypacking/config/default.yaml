@@ -11,6 +11,7 @@ scheduler:
   metric_recomputation_period: 1
   log_warning_every_n_allocated_tasks: 0
   scheduler_timeout_seconds: 0
+  demands_tiebreaker: 0
   
 metric:
   normalize_by: ""
@@ -61,6 +62,6 @@ alphas:
 - 64
 
 epsilon: 10
-delta: 0.00001
+delta: 1e-7
 global_seed: 64
 k: 0.25

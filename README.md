@@ -2,6 +2,10 @@
 
 This repo contains code to simulate and evaluate different privacy packing policies, in different settings (offline/online, multi-block/single-block). We use Rényi DP only (not epsilon-delta DP).
 
+## Warnings
+
+- We need AutoDP's last version, which is not available on Pip. Clone their repo and run `pip install -e autodp`
+
 ## Organization
 
 -  See [privacypacking/](privacypacking/) for some documentation about the code

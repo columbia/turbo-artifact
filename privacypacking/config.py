@@ -2,19 +2,20 @@ import os
 import random
 from functools import partial
 from pathlib import Path
+from typing import List
 
+import numpy as np
 import pandas as pd
 import yaml
 from loguru import logger
 from omegaconf import OmegaConf
 
-import numpy as np
 from privacypacking.budget import Block, Task
+from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
-from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.task import UniformTask
-from privacypacking.utils.utils import REPO_ROOT, DEFAULT_CONFIG_FILE, TaskSpec
+from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT, TaskSpec
 
 
 # Configuration Reading Logic
@@ -197,50 +198,57 @@ class Config:
                     demand_dict["block_selection_policy"]
                 )
 
-            # Select num of blocks
-            if isinstance(demand_dict["n_blocks"], int):
-                n_blocks = demand_dict["n_blocks"]
-            elif isinstance(demand_dict["n_blocks"], str):
-                n_blocks_requests = demand_dict["n_blocks"].split(",")
-                num_blocks = [
-                    n_blocks_request.split(":")[0]
-                    for n_blocks_request in n_blocks_requests
-                ]
-                frequencies = [
-                    n_blocks_request.split(":")[1]
-                    for n_blocks_request in n_blocks_requests
-                ]
-                n_blocks = np.random.choice(
-                    num_blocks,
-                    1,
-                    p=frequencies,
-                )[0]
+            # # Select num of blocks
+            # if isinstance(demand_dict["n_blocks"], int):
+            #     n_blocks = demand_dict["n_blocks"]
+            # elif isinstance(demand_dict["n_blocks"], str):
+            #     n_blocks_requests = demand_dict["n_blocks"].split(",")
+            #     num_blocks = [
+            #         int(n_blocks_request.split(":")[0])
+            #         for n_blocks_request in n_blocks_requests
+            #     ]
+            #     frequencies = [
+            #         float(n_blocks_request.split(":")[1])
+            #         for n_blocks_request in n_blocks_requests
+            #     ]
+            #     n_blocks = np.random.choice(
+            #         num_blocks,
+            #         1,
+            #         p=frequencies,
+            #     )[0]
 
-            # Select profit
-            if "profit" in demand_dict:
-                if isinstance(demand_dict["profit"], (int, float)):
-                    profit = demand_dict["profit"]
-                elif isinstance(demand_dict["profit"], str):
-                    # TODO: not sure the typing makes sense here
-                    profit_requests = demand_dict["profit"].split(",")
-                    profits = [
-                        profit_request.split(":")[0]
-                        for profit_request in profit_requests
-                    ]
-                    frequencies = [
-                        profit_request.split(":")[1]
-                        for profit_request in profit_requests
-                    ]
-                    profit = np.random.choice(
-                        profits,
-                        1,
-                        p=frequencies,
-                    )[0]
-            else:
-                profit = 1
+            #     logger.warning(
+            #         f"nblocks: {n_blocks} frequencies {list(zip(num_blocks, frequencies))} of type {type(frequencies[0])}"
+            #     )
+
+            # # Select profit
+            # if "profit" in demand_dict:
+            #     if isinstance(demand_dict["profit"], (int, float)):
+            #         profit = demand_dict["profit"]
+            #     elif isinstance(demand_dict["profit"], str):
+            #         # TODO: not sure the typing makes sense here
+            #         profit_requests = demand_dict["profit"].split(",")
+            #         profits = [
+            #             profit_request.split(":")[0]
+            #             for profit_request in profit_requests
+            #         ]
+            #         frequencies = [
+            #             profit_request.split(":")[1]
+            #             for profit_request in profit_requests
+            #         ]
+            #         profit = np.random.choice(
+            #             profits,
+            #             1,
+            #             p=frequencies,
+            #         )[0]
+            # else:
+            #     profit = 1
+
+            n_blocks = demand_dict.get("n_blocks", 1)
+            profit = demand_dict.get("profit", 1)
 
             task_spec = TaskSpec(
-                profit=float(profit),
+                profit=profit,
                 block_selection_policy=block_selection_policy,
                 n_blocks=int(n_blocks),
                 budget=BasicBudget(epsilon),

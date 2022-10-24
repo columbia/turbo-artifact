@@ -1,9 +1,11 @@
+import json
 import os
-from typing import Any, Dict, List
+from datetime import datetime
+from functools import partial, update_wrapper
 from pathlib import Path
+from typing import Any, Dict, List
 
 import ray
-import json
 from loguru import logger
 from ray import tune
 
@@ -23,7 +25,8 @@ from privacypacking.utils.generate_curves import P_GRID
 from privacypacking.utils.utils import RAY_LOGS
 
 
-def run_and_report(config: dict) -> None:
+def run_and_report(config: dict, replace=False) -> None:
+
     sim = Simulator(Config(config))
     metrics = sim.run()
     # logger.info(f"Trial logs: {tune.get_trial_dir()}")
@@ -39,6 +42,7 @@ def grid_offline(
     metric_recomputation_period: int = 10,
     parallel: bool = False,
     gurobi_timeout_minutes: int = 1,
+    gurobi_threads: int = os.cpu_count() // 4,
 ):
     metrics = [
         SIMPLEX,
@@ -50,7 +54,6 @@ def grid_offline(
     block_selection_policy = ["RandomBlocks"]
     temperature = [-1]
     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
-    gurobi_threads = os.cpu_count() // 4
 
     config = {}
     config["omegaconf"] = {
@@ -59,7 +62,7 @@ def grid_offline(
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 50,
-            "scheduler_timeout_seconds": 20 * 60,
+            "scheduler_timeout_seconds": 20 * 60 * 60,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -76,6 +79,10 @@ def grid_offline(
             "initial_num": num_blocks,
             "max_num": num_blocks,
         },
+        # "blocks": {
+        #     "initial_num": tune.grid_search(num_blocks),
+        #     "max_num": tune.grid_search(num_blocks),
+        # },
         "tasks": {
             "initial_num": tune.grid_search(num_tasks),
             "data_path": tune.grid_search(data_path),
@@ -85,11 +92,12 @@ def grid_offline(
 
     experiment_analysis = tune.run(
         run_and_report,
+        raise_on_failed_trial=False,
         config=config,
         resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS,
         resume=False,
-        verbose=0,
+        verbose=1,
         callbacks=[
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
@@ -228,7 +236,7 @@ def grid_online(
 def grid_offline_heterogeneity_knob(
     num_tasks: List[int],
     num_blocks: List[int],
-    data_path: str = "",
+    data_path: str = "heterogeneous/default",
     optimal: bool = False,
     metric_recomputation_period: int = 10,
     parallel: bool = False,
@@ -238,9 +246,8 @@ def grid_offline_heterogeneity_knob(
     metrics = [
         # SIMPLEX,
         DOMINANT_SHARES,
-        # FLAT_RELEVANCE,
-        # OVERFLOW_RELEVANCE,
         ARGMAX_KNAPSACK,
+        FCFS,
     ]
 
     # tasks_paths = ["tasks"]
@@ -260,12 +267,14 @@ def grid_offline_heterogeneity_knob(
 
     config = {}
     config["omegaconf"] = {
+        "global_seed": 0,
         "scheduler": {
             "method": "offline",
             "metric": tune.grid_search(metrics),
             "metric_recomputation_period": metric_recomputation_period,
             "log_warning_every_n_allocated_tasks": 250,
             "scheduler_timeout_seconds": 20 * 60,
+            # "demands_tiebreaker": 0.001,
         },
         "metric": {
             "normalize_by": "available_budget",
@@ -285,7 +294,7 @@ def grid_offline_heterogeneity_knob(
         "tasks": {
             "data_path": data_path,
             "tasks_path": tune.grid_search(tasks_paths),
-            "frequencies_path": tune.grid_search(frequencies),
+            # "frequencies_path": tune.grid_search(frequencies),
             "block_selection_policy": tune.grid_search(block_selection_policies),
             "sampling": "poisson",
             "initial_num": tune.grid_search(num_tasks),
@@ -311,6 +320,8 @@ def grid_offline_heterogeneity_knob(
     all_trial_paths = experiment_analysis._get_trial_paths()
     experiment_dir = Path(all_trial_paths[0]).parent
 
+    logger.info(f"Experiment dir: {experiment_dir}")
+
     rdf = load_ray_experiment(experiment_dir)
 
     def get_variance(path):
@@ -324,24 +335,25 @@ def grid_offline_heterogeneity_knob(
         return float(path.split("sigma")[1])
 
     rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
+    rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
     rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
+
+    # TODO: load the hyperparemeters too
     return rdf
     # return experiment_analysis.dataframe()
 
 
 class CustomLoggerCallback(tune.logger.LoggerCallback):
+
     """Custom logger interface"""
 
-    def __init__(self) -> None:
+    def __init__(self, metrics=["scheduler_metric"]) -> None:
+        self.metrics = ["n_allocated_tasks", "realized_profit"]
+        self.metrics.extend(metrics)
         super().__init__()
 
     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-        logger.info(
-            [
-                f"{key}: {result[key]}"
-                for key in ["n_allocated_tasks", "realized_profit"]
-            ]
-        )
+        logger.info([f"{key}: {result[key]}" for key in self.metrics])
         return
 
     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):

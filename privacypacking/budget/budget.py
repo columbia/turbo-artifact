@@ -2,6 +2,22 @@ from collections import namedtuple
 from typing import Dict, List, Tuple
 
 import numpy as np
+from opacus.privacy_analysis import get_privacy_spent
+
+ALPHAS = [
+    1.5,
+    1.75,
+    2,
+    2.5,
+    3,
+    4,
+    5,
+    6,
+    8,
+    16,
+    32,
+    64,
+]
 
 
 # Default values for some datasets

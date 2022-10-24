@@ -297,6 +297,7 @@ class Scheduler:
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
         try:
+            task.sample_n_blocks_and_profit()
             self.task_set_block_ids(task)
             logger.debug(
                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. "
@@ -420,4 +421,6 @@ class Scheduler:
         #     )
         #     selected_block_ids = [-1]
         assert selected_block_ids is not None
-        task.set_budget_per_block(selected_block_ids)
+        task.set_budget_per_block(
+            selected_block_ids, demands_tiebreaker=self.omegaconf.demands_tiebreaker
+        )

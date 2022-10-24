@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 import plotly.express as px
@@ -11,6 +12,8 @@ from experiments.ray_runner import (
     grid_offline_heterogeneity_knob,
     grid_online,
 )
+from privacypacking.utils.generate_curves import DEFAULT_OUTPUT_PATH, heterogeneous
+from privacypacking.utils.utils import add_workload_args_to_results
 
 app = typer.Typer()
 
@@ -19,7 +22,8 @@ def map_metric_to_id(row):
     d = {
         "DominantShares": 0,
         "FlatRelevance": 1,
-        "OverflowRelevance": 2,
+        # "OverflowRelevance": 2,
+        "Fcfs": 2,
         "ArgmaxKnapsack": 3,
         "simplex": 4,
     }
@@ -150,7 +154,8 @@ def plot_mixed_curves_offline(fig_dir):
         # num_tasks=[50, 100, 200, 300, 500],
         num_tasks=[500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
         data_path=["mixed_curves"],
-        metric_recomputation_period=100,
+        # metric_recomputation_period=100,
+        metric_recomputation_period=1,
         parallel=False,  # We care about the runtime here
         gurobi_timeout_minutes=1,
     )
@@ -262,6 +267,121 @@ def plot_mixed_curves_online(fig_dir):
     fig.write_image(fig_path)
 
 
+def plot_heterogeneous_curves_offline(fig_dir):
+    rdf = grid_offline(
+        num_blocks=[10],
+        num_tasks=[100],  # , 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000],
+        data_path=["heterogeneous/blocks"],
+        # metric_recomputation_period=100,
+        metric_recomputation_period=100,
+        parallel=False,  # We care about the runtime here
+        gurobi_timeout_minutes=10,
+        gurobi_threads=1,
+    )
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Diverse RDP curves offline",
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "n_allocated_tasks",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
+    )
+
+    fig_path = fig_dir.joinpath("heterogeneous/heterogeneous_curves.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+    # Let's plot the runtime now
+
+    fig = px.line(
+        rdf.sort_values("total_tasks"),
+        x="total_tasks",
+        y="time_total_s",
+        color="scheduler_metric",
+        # log_x=True,
+        width=800,
+        height=600,
+        range_y=[0, 1_000],
+        # title="Number of allocated tasks depending on the scheduling step size<br><sup>Online mixed curves, 20 blocks, no initial blocks, 100 tasks per block on average, lifetime = 5 blocks</sup>"
+    )
+
+    gnuplot_df = rdf
+    gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
+    gnuplot_df = (
+        gnuplot_df[
+            [
+                "total_tasks",
+                "time_total_s",
+                "id",
+                "scheduler",
+                "scheduler_metric",
+            ]
+        ]
+        .sort_values(["id", "total_tasks"])
+        .drop_duplicates()
+    )
+    fig_path = fig_dir.joinpath("heterogeneous/heterogeneous_curves_runtime.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+    gnuplot_df.to_csv(
+        fig_path.with_suffix(".csv"),
+        index=False,
+    )
+
+
+def plot_heterogeneous_curves_online(fig_dir):
+    rdf = grid_online(
+        scheduler_scheduling_time=[2, 4, 6, 8, 10],
+        metric_recomputation_period=[50],
+        initial_blocks=[10],
+        max_blocks=[30],
+        data_path=["mixed_curves"],
+        tasks_sampling="poisson",
+        data_lifetime=[10],
+        avg_num_tasks_per_block=[500],
+    )
+
+    fig = px.line(
+        rdf.sort_values("T"),
+        x="T",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        range_y=[0, 1500],
+        title="Mixed curves online",
+    )
+
+    fig_path = fig_dir.joinpath("mixed-curves/online.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
+
+
 # TODO: remember to update delta if you are using something else than mixed curves.
 
 
@@ -278,13 +398,15 @@ def plot_fairness(fig_dir):
 
 def plot_alibaba(fig_dir):
     rdf = grid_online(
-        scheduler_scheduling_time=[0.01, 0.1, 1, 10],
+        # scheduler_scheduling_time=[0.01, 0.1, 1, 10],
+        scheduler_scheduling_time=[1, 10, 50],
         metric_recomputation_period=[50],
-        initial_blocks=[10],
-        max_blocks=[50],
+        initial_blocks=[20],
+        max_blocks=[50, 100, 200, 400],
         data_path=["alibaba-privacy-workload/outputs/privacy_tasks.csv"],
         tasks_sampling="",
-        data_lifetime=[10],
+        # data_lifetime=[1],
+        data_lifetime=[10, 50, 100],
     )
 
     fig = px.line(
@@ -303,57 +425,151 @@ def plot_alibaba(fig_dir):
     fig.write_image(fig_path)
 
 
-def plot_temp(fig_dir):
+def plot_heterogeneity(fig_dir, overwrite_tasks=True):
+
+    name = "best_alphas"
+    data_path_str = f"heterogeneous/{name}"
+    data_path = DEFAULT_OUTPUT_PATH.joinpath(data_path_str)
+
+    if overwrite_tasks and data_path.exists():
+        logger.info("Cleaning up existing tasks...")
+        shutil.rmtree(data_path)
+
+    if not data_path.exists():
+        logger.info(f"Generating the workload from first principles...")
+        heterogeneous(
+            config=name,
+            control_flatness=True,
+            block_selection_policy="RandomBlocks",
+            output_path=str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous")),
+            synthetic=False,
+            control_size=True,
+            min_epsilon=5e-2,
+            max_epsilon=1,
+        )
+    else:
+        logger.info(f"Path exists. Attempting to load tasks from {data_path}...")
+
     rdf = grid_offline_heterogeneity_knob(
-        num_blocks=[20],
-        # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
-        num_tasks=[10_000],
-        # num_tasks=[20_000],
-        data_path="heterogeneous",
-        metric_recomputation_period=100,
-        parallel=False,  # We care about the runtime here
+        num_blocks=[1],
+        num_tasks=[1000],
+        data_path=data_path_str,
+        metric_recomputation_period=1000,
+        parallel=False,
         gurobi_timeout_minutes=1,
     )
 
+    rdf = add_workload_args_to_results(rdf)
+
+    save_fig_and_csv(
+        rdf, x="alpha_std", fig_name="best_alpha_diversity", fig_dir=fig_dir
+    )
+
+    name = "blocks"
+    data_path_str = f"heterogeneous/{name}"
+    data_path = DEFAULT_OUTPUT_PATH.joinpath(data_path_str)
+
+    if overwrite_tasks and data_path.exists():
+        logger.info("Cleaning up existing tasks...")
+        shutil.rmtree(data_path)
+
+    if not data_path.exists():
+        logger.info(f"Generating the workload from first principles...")
+        heterogeneous(
+            config=name,
+            control_flatness=False,
+            block_selection_policy="RandomBlocks",
+            output_path=str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous")),
+            synthetic=False,
+            control_size=True,
+            min_epsilon=1e-2,
+            max_epsilon=1,
+        )
+    else:
+        logger.info(f"Path exists. Attempting to load tasks from {data_path}...")
+
+    rdf = grid_offline_heterogeneity_knob(
+        num_blocks=[20],
+        num_tasks=[1000],
+        data_path=data_path_str,
+        metric_recomputation_period=1000,
+        parallel=False,
+        gurobi_timeout_minutes=1,
+    )
+
+    rdf = add_workload_args_to_results(rdf)
+
+    save_fig_and_csv(rdf, x="block_std", fig_name="n_blocks_diversity", fig_dir=fig_dir)
+
+
+def save_fig_and_csv(
+    rdf,
+    x,
+    fig_dir: Path,
+    y="n_allocated_tasks",
+    fig_name="",
+):
     fig = px.line(
-        # rdf.sort_values("variance"),
-        # x="variance",
-        rdf.sort_values("block_std"),
-        x="block_std",
-        y="n_allocated_tasks",
+        rdf.sort_values(["scheduler_metric", x]),
+        x=x,
+        y=y,
         color="scheduler_metric",
         width=800,
         height=600,
-        log_x=True,
-        # range_y=[0, 3000],
         title="Heterogeneous RDP curves offline",
     )
     fig.update_yaxes(rangemode="tozero")
+    fig_path = fig_dir.joinpath(f"{fig_name}.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
 
     gnuplot_df = rdf
     gnuplot_df["id"] = gnuplot_df.scheduler_metric.apply(map_metric_to_id)
     gnuplot_df = (
-        gnuplot_df[
-            [
-                "total_tasks",
-                "n_allocated_tasks",
-                "id",
-                "scheduler",
-                "scheduler_metric",
-            ]
-        ]
-        .sort_values(["id", "total_tasks"])
+        rdf[[x, y, "id", "scheduler", "scheduler_metric", "total_tasks"]]
+        .sort_values(["id", x])
         .drop_duplicates()
     )
-
-    fig_path = fig_dir.joinpath("temp.png")
-    fig_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.write_image(fig_path)
 
     gnuplot_df.to_csv(
         fig_path.with_suffix(".csv"),
         index=False,
     )
+
+
+def plot_temp(fig_dir):
+    rdf = grid_offline_heterogeneity_knob(
+        num_blocks=[1],
+        # num_blocks=[20],
+        # num_tasks=[50, 100, 200, 300, 350, 400, 500, 750, 1000, 1500, 2000],
+        num_tasks=[25, 50, 100, 500, 1000, 2000, 5000],
+        # num_tasks=[1000],
+        # num_tasks=[100],
+        data_path="heterogeneous/best_alphas",
+        metric_recomputation_period=10000,
+        parallel=False,  # We care about the runtime here
+        gurobi_timeout_minutes=1,
+    )
+
+    rdf = add_workload_args_to_results(rdf)
+
+    fig = px.line(
+        rdf.sort_values("range_avg"),
+        x="range_avg",
+        # rdf.sort_values("block_std"),
+        # x="block_std",
+        y="n_allocated_tasks",
+        color="scheduler_metric",
+        width=800,
+        height=600,
+        # log_x=True,
+        # range_y=[0, 3000],
+        title="Heterogeneous RDP curves offline",
+    )
+    fig.update_yaxes(rangemode="tozero")
+    fig_path = fig_dir.joinpath("temp.png")
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.write_image(fig_path)
 
 
 @app.command()

@@ -50,9 +50,10 @@ class Metric:
 
 class DominantShares(Metric):
     def apply(
-        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None
+        self, task: Task, blocks: Dict[int, Block], tasks: List[Task] = None, clip=False
     ) -> List[float]:
-        demand_fractions = []
+        # Returns a multidimensional efficiency. We can do tie-breaking with lexicographic order.
+        profit_over_cost = []
         for block_id, demand_budget in task.budget_per_block.items():
             block = blocks[block_id]
             block_initial_budget = block.initial_budget
@@ -60,16 +61,24 @@ class DominantShares(Metric):
             for alpha in block_initial_budget.alphas:
                 # Drop RDP orders that are already negative
                 if block_initial_budget.epsilon(alpha) > 0:
-                    demand_fractions.append(
-                        1
-                        / (
-                            demand_budget.epsilon(alpha)
-                            / (block_initial_budget.epsilon(alpha) * task.profit)
-                        )
-                    )
+                    demand_fraction = demand_budget.epsilon(
+                        alpha
+                    ) / block_initial_budget.epsilon(alpha)
+                    if clip:
+                        demand_fraction = min(demand_fraction, 1)
+
+                    profit_over_cost.append(task.profit / demand_fraction)
+
+                    # demand_fractions.append(
+                    #     1
+                    #     / (
+                    #         demand_budget.epsilon(alpha)
+                    #         / (block_initial_budget.epsilon(alpha) * task.profit)
+                    #     )
+                    # )
         # Order by highest demand fraction first
-        demand_fractions.sort()
-        return demand_fractions
+        profit_over_cost.sort()
+        return profit_over_cost
 
 
 class Fcfs(Metric):

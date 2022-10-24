@@ -1,10 +1,12 @@
-from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import save_logs
-from privacypacking.config import Config
-from privacypacking.utils.utils import DEFAULT_CONFIG_FILE
-import typer
 import json
 import os
+
+import typer
+from omegaconf import OmegaConf
+
+from privacypacking.config import Config
+from privacypacking.simulator.simulator import Simulator
+from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, save_logs
 
 app = typer.Typer()
 
