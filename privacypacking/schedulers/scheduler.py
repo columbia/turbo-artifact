@@ -1,19 +1,21 @@
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
+
+import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
-import numpy as np
+from termcolor import colored
+
 from data.covid19.queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
+from privacypacking.cache.cache import A, C, R
+from privacypacking.cache.deterministic_cache import DeterministicCache
+from privacypacking.cache.per_block_pmw import PerBlockPMW
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
-from privacypacking.cache.per_block_pmw import PerBlockPMW
-from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.cache import A, R, C
-from termcolor import colored
 
 
 # TODO: efficient data structure here? (We have indices)
@@ -174,8 +176,18 @@ class Scheduler:
                     plan = without_cache_plan
 
                 print("\n")
-                print(colored(f"Without Caching plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}", "green"))
-                print(colored(f"With Caching Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}", "blue"))
+                print(
+                    colored(
+                        f"Without Caching plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}",
+                        "green",
+                    )
+                )
+                print(
+                    colored(
+                        f"With Caching Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}",
+                        "blue",
+                    )
+                )
 
                 # Execute Plan
                 if plan is not None:
@@ -201,7 +213,7 @@ class Scheduler:
                         )
 
                     # else:
-                        # self.tasks_info.without_cache_plans_ran += 1
+                    # self.tasks_info.without_cache_plans_ran += 1
 
                     self.tasks_info.without_cache_plan_result[task.id] = result
 
@@ -241,7 +253,10 @@ class Scheduler:
 
         elif isinstance(plan, A):
             agglist = [self.execute_plan(x) for x in plan.l]
-            result = sum(agglist) / len(agglist)        # for aggregation here we average (results are fractions)
+            result = sum(agglist) / len(agglist)
+            # TODO: weighted average instead
+            # TODO: blocks need to have a size
+            # for aggregation here we average (results are fractions)
 
         else:
             logger.error("Execution: no such operator")
@@ -252,9 +267,13 @@ class Scheduler:
     def run_task(self, query_id, blocks, budget, disable_dp=False):
         df = []
         # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
-        blocks = range(blocks[0],blocks[1]+1)
+        blocks = range(blocks[0], blocks[1] + 1)
         for block in blocks:
             df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
+
+        # TODO: insert smart mapping from attribute ids to whatever
+        # TODO: move this at init time? Read blocks only once
+        # TODO: update Block class and add df attribute +size attribute + date (+ csv path)
         df = pd.concat(df)
 
         # This output is not noisy

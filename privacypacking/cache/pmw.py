@@ -1,11 +1,13 @@
-from privacypacking.cache.utils import get_splits
-from termcolor import colored
-from privacypacking.cache import cache
 import math
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
+from termcolor import colored
+
 from privacypacking.budget import BasicBudget
-from copy import deepcopy
+from privacypacking.cache import cache
+from privacypacking.cache.utils import get_splits
 
 
 class Histogram:
@@ -102,7 +104,7 @@ class PMW:
                     "\tHard Query - oh no!",
                     "red",
                 )
-             )
+            )
             return True
         return False
 
