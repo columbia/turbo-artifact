@@ -9,7 +9,9 @@ import torch.nn.functional as F
 from termcolor import colored
 
 from privacypacking.budget import BasicBudget
+from privacypacking.budget.block import Block
 from privacypacking.cache import cache
+from privacypacking.cache.linear_queries import DenseHistogram
 from privacypacking.cache.utils import get_splits
 
 
@@ -58,140 +60,61 @@ class Histogram:
         return self.bins
 
 
-class DenseHistogram:
-    def __init__(self, attribute_sizes: List[int]) -> None:
-        # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
-        self.N = domain_size(attribute_sizes)
-        self.tensor = torch.ones(size=(1, self.N))
-        self.normalize()
-
-    def normalize(self) -> None:
-        F.normalize(self.tensor, p=1, out=self.tensor)
-
-    def run_query(self, query: torch.Tensor) -> float:
-        # sparse (1,N) x dense (N,1)
-        return torch.smm(query, self.tensor.t()).item()
-
-
-class SparseHistogram:
-    def __init__(self, attribute_sizes: List[int]) -> None:
-        # Flat representation of shape (1, N)
-        self.tensor = build_sparse_tensor(
-            bin_indices=[],
-            values=[],
-            attribute_sizes=attribute_sizes,
-        )
-
-    def run_query(self, query: torch.Tensor) -> float:
-        # `query` has shape (1, N), we need the dot product, or matrix mult with (1,N)x(N,1)
-        return torch.mm(self.tensor, query.t()).item()
-
-
-def get_flat_bin_index(
-    multidim_bin_index: List[int], attribute_sizes: List[int]
-) -> int:
-    index = 0
-    size = 1
-    # Row-major order like PyTorch (inner rows first)
-    for dim in range(len(attribute_sizes) - 1, -1, -1):
-        index += multidim_bin_index[dim] * size
-        size *= attribute_sizes[dim]
-    return index
-
-
-# TODO: write the inverse conversion
-
-
-def domain_size(attribute_sizes: List[int]) -> int:
-    domain_size = 1
-    for s in attribute_sizes:
-        domain_size *= s
-    return domain_size
-
-
-def build_sparse_tensor(
-    bin_indices: List[List[int]], values: List, attribute_sizes: List[int]
-):
-    # One row only
-    column_ids = []
-    for b, v in zip(bin_indices, values):
-        column_ids.append(get_flat_bin_index(b, attribute_sizes))
-
-    return torch.sparse_coo_tensor(
-        [[0] * len(column_ids), column_ids],
-        values,
-        size=(1, domain_size(attribute_sizes)),
-    )
-
-
-def build_sparse_tensor_multidim(
-    bin_indices: List[List[int]], values: List, attribute_sizes: List[int]
-):
-    return torch.sparse_coo_tensor(
-        list(zip(*bin_indices)), values, size=attribute_sizes
-    )
-
-
+# TODO: generalize to list of blocks
 class PMW:
     def __init__(
         self,
-        scheduler,
-        blocks,
+        block: Block,
         epsilon=0.1,
         delta=1e-4,
         beta=1e-3,
         k=100,
-        attribute_sizes=(2, 2),
     ):
-        self.scheduler = scheduler
-        self.blocks = blocks
+        self.dataset = block.data
+        self.n = len(block)
         self.epsilon = epsilon
         self.delta = delta
         self.beta = beta
-        self.attribute_sizes = attribute_sizes
         self.k = k
-        self.M = domain_size(attribute_sizes)
+        self.M = block.data.domain_size
+        self.queries_ran = 0
 
         # Initializations as per the Hardt and Rothblum 2010 paper
         self.w = 0
         self.sigma = (
-            (10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4))
-            / math.sqrt(self.n)
-            * self.epsilon
-        )
+            10 * math.log(1 / self.delta) * math.pow(math.log(self.M), 1 / 4)
+        ) / (math.sqrt(self.n) / self.epsilon)
         self.learning_rate = math.pow(math.log(self.M), 1 / 4) / math.sqrt(self.n)
         self.T = 4 * self.sigma * (math.log(self.k) + math.log(1 / self.beta))
 
-        self.histogram = DenseHistogram(attribute_sizes)
-        # We consume the whole budget once at initialization
-        self.scheduler.consume_budgets(blocks, BasicBudget(self.epsilon))
+        self.histogram = DenseHistogram(self.M)
 
-    def dump(
-        self,
-    ):
-        # histogram = yaml.dump(self.histogram)
-        print("Histogram", self.histogram)
+        # We consume the whole budget once at initialization
+        self.init_budget = BasicBudget(self.epsilon)
 
     def is_query_hard(self, error):
         return abs(error) > self.T
 
-    def run_cache(self, query_id, blocks, _):
+    def run_cache(self, query_tensor):
+
+        # We consume the whole budget once at initialization (or rather: at the first call)
+        run_budget = None
+        if self.init_budget is not None:
+            run_budget = self.init_budget
+            self.init_budget = None
+
         # Too many rounds - breaking privacy
         if self.queries_ran >= self.k:
+            # TODO: proper error handling/return values
             exit(0)
 
-        # Runs the PMW algorithm
         self.queries_ran += 1
-        # Compute the true noisy output
-        noise_sample = np.random.laplace(scale=self.sigma)
 
         # TODO: use efficient dot product here (blocks as sparse histograms)
-        true_output = self.scheduler.run_task(
-            query_id, blocks, budget=None, disable_dp=True
-        )
-
-        # TODO: get the query (SparseHistogram) itself from the task type
-        predicted_output = self.histogram.run_task(query_id)
+        true_output = self.dataset.run_query(query_tensor)
+        noise_sample = np.random.laplace(scale=self.sigma)
+        noisy_output = true_output + noise_sample
+        predicted_output = self.histogram.run_query(query_tensor)
 
         # TODO: log error
         # print(
@@ -207,42 +130,25 @@ class PMW:
         #     )
         # )
 
-        error = true_output - predicted_output
+        noisy_error = noisy_output - predicted_output
 
-        if self.is_query_hard(error):  # Is the query hard
-            indices_reached = self.histogram.get_bins_idx(
-                query_id
-            )  # get the indices that are "reached" by the query
-            copy_histogram = deepcopy(self.histogram)
+        if not self.is_query_hard(noisy_error):
+            return predicted_output, run_budget
 
-            # TODO(P1): write as proper vector operations
+        # NOTE: we need to increment w before checking, not after!
+        self.w += 1
+        # Too many hard queries - breaking privacy
+        if self.w > self.n * math.sqrt(math.log(self.M)):
+            # Also: I exit before updating the histogram, to be on the safe side
+            # (so we won't leak extra privacy if we decide to reuse the histogram without accuracy guarantees later)
+            exit(0)
 
-            ### UPDATING IS TAILORED ONLY FOR COUNT QUERIES NOW ##
-            if error > 0:
-                # r_i is 1 for reached indices and 0 for unreached -- update only for reached indices - unreached remain the same
-                copy_histogram.bins[indices_reached] *= math.exp(-self.learning_rate)
-            else:
-                # r_i is 0 for reached indices and 1 for unreached -- update only for unreached indices - reached remain the same
-                copy_histogram.bins *= math.exp(-self.learning_rate)
-                copy_histogram.bins[indices_reached] = self.histogram.bins[
-                    indices_reached
-                ]  # Re-write original values to reached indices
+        self.histogram.multiply(
+            torch.exp(-self.learning_rate * np.sign(noisy_error) * query_tensor)
+        )
+        self.histogram.normalize()
 
-            # Now we need to normalize1
-            normalizing_factor = np.sum(copy_histogram.bins)  # reduces to a scalar
-            copy_histogram.bins *= 1 / normalizing_factor
-
-            self.histogram.normalize()
-
-            # Too many hard queries - breaking privacy
-            if self.w > self.n * math.pow(math.log(self.M), 1 / 2):
-                exit(0)
-
-            self.w += 1
-            return true_output
-
-        else:
-            return predicted_output
+        return true_output, run_budget
 
 
 # This is for one instance of PMW
@@ -393,63 +299,5 @@ def debug1():
     # self.k = 100
 
 
-def debug2():
-
-    attribute_sizes = [2, 2, 10]
-
-    print(
-        get_flat_bin_index(
-            multidim_bin_index=(0, 0, 0), attribute_sizes=attribute_sizes
-        )
-    )
-
-    print(
-        get_flat_bin_index(
-            multidim_bin_index=(0, 1, 2), attribute_sizes=attribute_sizes
-        )
-    )
-
-    h = DenseHistogram(attribute_sizes)
-    print(h.tensor)
-    # q = build_sparse_tensor({(0, 0, 0): 1.0, (0, 1, 5): 1.0})
-
-    block = build_sparse_tensor(
-        bin_indices=[[0, 0, 1], [0, 1, 5], [0, 0, 0]],
-        values=[1.0, 4.0, 3.0],
-        attribute_sizes=attribute_sizes,
-    )
-
-    q = build_sparse_tensor(
-        bin_indices=[[0, 0, 0], [0, 1, 5]],
-        values=[1.0, 1.0],
-        attribute_sizes=attribute_sizes,
-    )
-    print(q)
-
-    print(torch.sparse.mm(block, q.t()).item())
-
-    print(
-        build_sparse_tensor(
-            bin_indices=[],
-            values=[],
-            attribute_sizes=attribute_sizes,
-        )
-    )
-
-    print(h.run_query(q))
-
-    v = torch.sparse_coo_tensor(
-        indices=[[0, 0, 0], [0, 1, 2]], values=[1.0, 1.0, 1.0], size=(1, 40)
-    )
-    q = torch.sparse_coo_tensor(
-        indices=[[0, 0], [1, 2]], values=[3.0, 4.0], size=(1, 40)
-    )
-    print(torch.sparse.mm(v, q.t()).item())
-
-    # print(h)
-    # print(q)
-    # print(h.run_query(q))
-
-
 if __name__ == "__main__":
-    debug2()
+    debug1()

@@ -25,7 +25,7 @@
         },
         "blocks": {
             "initial_num": 1,
-            "max_num": 50,
+            "max_num": 40,
             "data_path": "covid19/covid19_data/blocks"
         },
         "tasks": {

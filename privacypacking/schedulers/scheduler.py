@@ -3,16 +3,21 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 import numpy as np
+import torch
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
+from torch import Tensor
 
 from data.covid19.queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, C, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
+
+# TODO: Later on, store blocks as sparse histogram directly
+from privacypacking.cache.linear_queries import load_csv_block_data as load_block_data
 from privacypacking.cache.per_block_pmw import PerBlockPMW
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
@@ -84,9 +89,8 @@ class Scheduler:
         self.n_allocated_tasks = 0
         self.block_size = self.omegaconf["block_size"]
 
-        # todo: avoid passing the scheduler as argument (circular reference)
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
-        self.cache = PerBlockPMW(self)
+        self.cache = PerBlockPMW()
 
     def consume_budgets(self, blocks, budget):
         """
@@ -249,7 +253,23 @@ class Scheduler:
 
         elif isinstance(plan, C):
             # Run cache to get a result
-            result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
+
+            print(f"plan.blocks: {plan.blocks}")
+
+            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+            if isinstance(self.cache, PerBlockPMW):
+                assert len(block_ids) == 1
+                result, budget = self.cache.run_cache(
+                    query_tensor=self.get_linear_query_tensor(plan.query_id),
+                    block=self.blocks[block_ids[0]],
+                )
+
+            else:
+                result, budget = self.cache.run_cache(
+                    plan.query_id, plan.blocks, plan.budget
+                )
+            if budget is not None:
+                self.consume_budgets(block_ids, budget)
 
         elif isinstance(plan, A):
             agglist = [self.execute_plan(x) for x in plan.l]
@@ -264,23 +284,49 @@ class Scheduler:
 
         return result
 
-    def run_task(self, query_id, blocks, budget, disable_dp=False):
-        df = []
-        # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
-        blocks = range(blocks[0], blocks[1] + 1)
-        for block in blocks:
-            df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
+    def get_linear_query_tensor(self, query_id: int) -> Optional[Tensor]:
+        # returns None if the query is not linear or vector is unknown
+        # TODO: where should this live? In a config file somewhere? In privacy_tasks.csv?
+        return torch.sparse_coo_tensor(
+            indices=[[0, 0], [1, 2]],
+            values=[3.0, 4.0],
+            size=(1, 40),
+            dtype=torch.float64,
+        )
 
-        # TODO: insert smart mapping from attribute ids to whatever
-        # TODO: move this at init time? Read blocks only once
-        # TODO: update Block class and add df attribute +size attribute + date (+ csv path)
-        df = pd.concat(df)
+    def run_task(self, query_id, blocks, budget, disable_dp=False, linear_query=False):
 
-        # This output is not noisy
-        result = globals()[f"query{query_id}"](df)
+        q = self.get_linear_query_tensor(query_id)
+        if q is not None:
+            # Weighted average of dot products
+            result = 0
+            size = 0
+            for block_id in range(blocks[0], blocks[1] + 1):
+                b = self.blocks[block_id]
+                result += len(b) * b.data.run_query(q)
+                size += len(b)
+            result /= size
+            sensitivity = 1 / size
+
+        else:
+            # Old implem, or non-linear queries
+            df = []
+            # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
+            blocks = range(blocks[0], blocks[1] + 1)
+            for block in blocks:
+                df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
+
+            # TODO: insert smart mapping from attribute ids to whatever
+            # TODO: move this at init time? Read blocks only once
+            # TODO: update Block class and add df attribute +size attribute + date (+ csv path)
+            df = pd.concat(df)
+
+            # This output is not noisy
+            result = globals()[f"query{query_id}"](df)
+            sensitivity = 1 / len(df)
 
         if not disable_dp:
-            sensitivity = 1 / len(df)
+            # TODO: sticking to normalized linear queries?
             noise_sample = np.random.laplace(
                 scale=sensitivity / budget.epsilon
             )  # todo: this is not compatible with renyi
@@ -327,6 +373,11 @@ class Scheduler:
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
+
+        # TODO: load the data directly when the resource manager creates the block?
+        if hasattr(self, "blocks_path"):
+            block.data, block.size = load_block_data(block.id, self.blocks_path)
+
         self.blocks.update({block.id: block})
         # Support blocks with custom support
         # if not self.alphas:

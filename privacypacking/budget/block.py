@@ -9,6 +9,7 @@ class Block:
         self.initial_budget = budget
         self.budget = budget
         self.data_path = data_path
+        self.size = None
 
     @classmethod
     def from_epsilon_delta(
@@ -31,6 +32,9 @@ class Block:
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
         }
+
+    def __len__(self) -> int:
+        return self.size
 
     @property
     def remaining_budget(self) -> Budget:
