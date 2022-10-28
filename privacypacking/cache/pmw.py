@@ -117,19 +117,6 @@ class PMW:
         predicted_output = self.histogram.run_query(query_tensor)
 
         # TODO: log error
-        # print(
-        #     colored(
-        #         f"\tNoisy True Result of query {query_id} on blocks {blocks}: {true_output}",
-        #         "magenta",
-        #     )
-        # )
-        # print(
-        #     colored(
-        #         f"\tNoisy Predicted Result of query {query_id} on blocks {blocks}: {predicted_output}",
-        #         "grey",
-        #     )
-        # )
-
         noisy_error = noisy_output - predicted_output
 
         if not self.is_query_hard(noisy_error):
@@ -143,6 +130,7 @@ class PMW:
             # (so we won't leak extra privacy if we decide to reuse the histogram without accuracy guarantees later)
             exit(0)
 
+        # TODO: check how sparse exponential looks like
         self.histogram.multiply(
             torch.exp(-self.learning_rate * np.sign(noisy_error) * query_tensor)
         )
