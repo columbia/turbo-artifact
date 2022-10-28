@@ -94,44 +94,18 @@ def load_and_preprocess_datasets(metadata):
 
     return covid, age, gender, ethnicity
 
-
-def get_num_per_age(population_size, rates):
+  
+def get_num_per_info(population_size, rates):
     rates = rates / np.sum(rates)  # normalizing to sum up to 1 in case it doesn't
-    age = (rates * population_size).astype(np.int64)
-    groups_num = age.size
-    remaining = population_size - np.sum(age)
-    age += int(remaining / groups_num)
+    info = (rates * population_size).astype(np.int64)
+    groups_num = info.size
+    remaining = population_size - np.sum(info)
+    info += int(remaining / groups_num)
     res = int(remaining % groups_num)
     if res > 0:
         idx = np.random.choice(range(groups_num), size=res, replace=False)
-        age[idx] += 1
-    return age
-
-
-def get_num_per_gender(population_size, rates):
-    rates = rates / np.sum(rates)  # normalizing to sum up to 1 in case it doesn't
-    gender = (rates * population_size).astype(np.int64)
-    groups_num = gender.size
-    remaining = population_size - np.sum(gender)
-    gender += int(remaining / groups_num)
-    res = int(remaining % groups_num)
-    if res > 0:
-        idx = np.random.choice(range(groups_num), size=res, replace=False)
-        gender[idx] += 1
-    return gender
-
-
-def get_num_per_ethnicity(population_size, rates):
-    rates = rates / np.sum(rates)  # normalizing to sum up to 1 in case it doesn't
-    ethnicity = (rates * population_size).astype(np.int64)
-    groups_num = ethnicity.size
-    remaining = population_size - np.sum(ethnicity)
-    ethnicity += int(remaining / groups_num)
-    res = int(remaining % groups_num)
-    if res > 0:
-        idx = np.random.choice(range(groups_num), size=res, replace=False)
-        ethnicity[idx] += 1
-    return ethnicity
+        info[idx] += 1
+    return info
 
 
 def day_data(
@@ -149,13 +123,13 @@ def day_data(
     negative_users_num = tested_users_num - positive_users_num
 
     # Choose demographic info for positives
-    num_positive_per_age = get_num_per_age(
+    num_positive_per_age = get_num_per_info(
         positive_users_num, date_ages["age_based_case_rate"].to_numpy()
     )
-    num_positive_per_gender = get_num_per_gender(
+    num_positive_per_gender = get_num_per_info(
         positive_users_num, date_genders["gender_based_case_rate"].to_numpy()
     )
-    num_positive_per_ethnicity = get_num_per_ethnicity(
+    num_positive_per_ethnicity = get_num_per_info(
         positive_users_num, date_ethnicities["ethnicity_based_case_rate"].to_numpy()
     )
 
@@ -174,9 +148,9 @@ def day_data(
     np.random.shuffle(pos_ethnicities)
 
     # Choose demographic info for negatives
-    num_negative_per_age = get_num_per_age(negative_users_num, us_census_ages)
-    num_negative_per_gender = get_num_per_gender(negative_users_num, us_census_genders)
-    num_negative_per_ethnicity = get_num_per_ethnicity(
+    num_negative_per_age = get_num_per_info(negative_users_num, us_census_ages)
+    num_negative_per_gender = get_num_per_info(negative_users_num, us_census_genders)
+    num_negative_per_ethnicity = get_num_per_info(
         negative_users_num, us_census_ethnicities
     )
 
