@@ -340,8 +340,8 @@ def main(
     us_census_ages = np.array([0.224, 0.312, 0.312, 0.152])
     us_census_genders = np.array([0.5, 0.5])
     us_census_ethnicities = np.array(
-        [0.017, 0.159, 0.402, 0.042, 0.005, 0, 0.352, 0.065]
-    )
+        [0.002, 0.15, 0.402, 0.042, 0.004, 0.006, 0.343, 0.053]
+    )	
 
     covid, age, gender, ethnicity = load_and_preprocess_datasets(metadata)
 
