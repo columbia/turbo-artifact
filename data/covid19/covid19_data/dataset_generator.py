@@ -1,26 +1,21 @@
 import os
-import random
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from random import randint
-from collections import OrderedDict
 import math
 import json
+from loguru import logger
+import typer
+from multiprocessing import Process, Manager
 
 
 def load_and_preprocess_datasets(metadata):
 
-    format = "%Y-%m-%d"
-
     # --- Covid dataset --- #
     covid = pd.read_csv("covid19cases_test.csv")
     covid = covid.loc[covid["area"] == "California"]
-    covid = covid.astype({"date": "string"})
     covid = covid[covid["date"].notna()]
     covid = covid[covid["total_tests"].notna()]
-    covid["date"] = covid["date"].apply(lambda x: datetime.strptime(x, format))
-    covid = covid.sort_values(["date"])
+    # covid = covid.sort_values(["date"])
     covid = covid[["date", "cases", "total_tests"]]
     covid.rename(columns={"total_tests": "tests"}, inplace=True)
     covid = covid.reset_index(drop=True)
@@ -30,13 +25,11 @@ def load_and_preprocess_datasets(metadata):
     age.rename(columns={"Age Group": "age_group"}, inplace=True)
     age.replace(metadata["age_mapping"], inplace=True)
 
-    age = age.astype({"date": "string"})
     age = age[age["date"].notna()]
-    age["date"] = age["date"].apply(lambda x: datetime.strptime(x, format))
     age = age[age.age_group != "missing"]
     age = age[age.age_group != "Missing"]
     age = age[age.age_group != "Total"]
-    age = age.sort_values(["date"])
+    # age = age.sort_values(["date"])
     age.drop(
         columns=["total_cases_by_age", "age_based_deaths", "age_based_death_rate"],
         inplace=True,
@@ -60,12 +53,10 @@ def load_and_preprocess_datasets(metadata):
         inplace=True,
     )
 
-    gender = gender.astype({"date": "string"})
     gender = gender[gender["date"].notna()]
-    gender["date"] = gender["date"].apply(lambda x: datetime.strptime(x, format))
     gender = gender[gender.Gender != "Unknown"]
     gender = gender[gender.Gender != "Total"]
-    gender = gender.sort_values(["date"])
+    # gender = gender.sort_values(["date"])
     gender = gender.rename(columns={"Gender": "gender"})
     gender = gender.reset_index(drop=True)
 
@@ -86,11 +77,9 @@ def load_and_preprocess_datasets(metadata):
         ],
         inplace=True,
     )
-    ethnicity = ethnicity.astype({"date": "string"})
     ethnicity = ethnicity[ethnicity["date"].notna()]
-    ethnicity["date"] = ethnicity["date"].apply(lambda x: datetime.strptime(x, format))
     ethnicity = ethnicity[ethnicity.Ethnicity != "Total"]
-    ethnicity = ethnicity.sort_values(["date"])
+    # ethnicity = ethnicity.sort_values(["date"])
     ethnicity = ethnicity.rename(columns={"Ethnicity": "ethnicity"})
     ethnicity = ethnicity.reset_index(drop=True)
 
@@ -145,7 +134,15 @@ def get_num_per_ethnicity(population_size, rates):
     return ethnicity
 
 
-def day_data(date_ages, date_genders, date_ethnicities, date_covid):
+def day_data(
+    date_ages,
+    date_genders,
+    date_ethnicities,
+    date_covid,
+    us_census_ages,
+    us_census_genders,
+    us_census_ethnicities,
+):
 
     tested_users_num = int(date_covid["tests"].values[0])
     positive_users_num = int(date_covid["cases"].values[0])
@@ -225,14 +222,14 @@ def print_analysis(
     us_census_genders,
     us_census_ethnicities,
 ):
-    print(
+    logger.info(
         "Generated block size",
         len(block),
         " - ",
         "\nOriginal number of tests",
         date_covid["tests"].values,
     )
-    print(
+    logger.info(
         "\nGenerated number of positives:",
         block["positive"].sum(),
         " - ",
@@ -241,21 +238,21 @@ def print_analysis(
     )
 
     positives = block.query("positive == 1")
-    print(
+    logger.info(
         "\nGenerated rate ages positive:\n",
         (positives.groupby("age")["age"].count() / len(positives)).values,
         " - ",
         "\nOriginal rate ages positives:\n",
         date_ages["age_based_case_rate"].values,
     )
-    print(
+    logger.info(
         "\nGenerated rate genders positive:\n",
         (positives.groupby("gender")["gender"].count() / len(positives)).values,
         " - ",
         "\nOriginal rate gender positives:\n",
         date_genders["gender_based_case_rate"].values,
     )
-    print(
+    logger.info(
         "\nGenerated rate ethnicities positive:\n",
         (positives.groupby("ethnicity")["ethnicity"].count() / len(positives)).values,
         " - ",
@@ -264,7 +261,7 @@ def print_analysis(
     )
 
     # See how far off is the implementaion from the assumption that the tested people where sampled wrt the US census rates
-    print(
+    logger.info(
         "\nGenerated rate ages tested:\n",
         (block.groupby("age")["age"].count() / len(block)).values,
         " - ",
@@ -272,7 +269,7 @@ def print_analysis(
         us_census_ages,
     )
 
-    print(
+    logger.info(
         "\nGenerated rate gender tested:\n",
         (block.groupby("gender")["gender"].count() / len(block)).values,
         " - ",
@@ -280,7 +277,7 @@ def print_analysis(
         us_census_genders,
     )
 
-    print(
+    logger.info(
         "\nGenerated rate ethnicity tested:\n",
         (block.groupby("ethnicity")["ethnicity"].count() / len(block)).values,
         " - ",
@@ -341,7 +338,13 @@ def custom_unit_test(
     )
 
 
-def main():
+app = typer.Typer()
+
+
+@app.command()
+def main(
+    parallel: bool = True,
+):
     metadata = {}
     metadata["age_mapping"] = {"0-17": 0, "18-49": 1, "50-64": 2, "65+": 3}
     metadata["ethnicity_mapping"] = {
@@ -365,48 +368,97 @@ def main():
 
     covid, age, gender, ethnicity = load_and_preprocess_datasets(metadata)
 
-    i = 0
-    metadata["blocks"] = dict()
-
     # Generating and saving blocks one by one to avoid memory issues.
-    for date in covid["date"].values:
-        date_covid = covid.query(f"date == '{date}'")
-        date_ages = age.query(f"date == '{date}'").sort_values("age_group")
-        date_ethnicities = ethnicity.query(f"date == '{date}'").sort_values("ethnicity")
-        date_genders = gender.query(f"date == '{date}'").sort_values("gender")
-
-        # Specific date must exist in all four covid-datasets
-
-        if not (
-            date_covid.empty
-            or date_ages.empty
-            or date_ethnicities.empty
-            or date_genders.empty
-        ):
-            block = day_data(date_ages, date_genders, date_ethnicities, date_covid)
-            # print_analysis(block, date_ages, date_genders, date_ethnicities, date_covid, us_census_ages, us_census_genders, us_census_ethnicities)
-            custom_unit_test(
-                block,
-                date_ages,
-                date_genders,
-                date_ethnicities,
-                date_covid,
-                us_census_ages,
-                us_census_genders,
-                us_census_ethnicities,
-                abs_err=0.05,
+    def save_blocks(i, dates, metadata):
+        for date in dates:
+            date_covid = covid.query(f"date == '{date}'")
+            date_ages = age.query(f"date == '{date}'").sort_values("age_group")
+            date_ethnicities = ethnicity.query(f"date == '{date}'").sort_values(
+                "ethnicity"
             )
-            metadata["blocks"][i] = dict()
-            metadata["blocks"][i]["date"] = str(date)
-            metadata["blocks"][i]["size"] = len(block)
-            i += 1
-            block.to_csv(f"blocks/covid_block_{i}.csv", index=False)
+            date_genders = gender.query(f"date == '{date}'").sort_values("gender")
+
+            # Specific date must exist in all four covid-datasets
+            if not (
+                date_covid.empty
+                or date_ages.empty
+                or date_ethnicities.empty
+                or date_genders.empty
+            ):
+                block = day_data(
+                    date_ages,
+                    date_genders,
+                    date_ethnicities,
+                    date_covid,
+                    us_census_ages,
+                    us_census_genders,
+                    us_census_ethnicities,
+                )
+                # print_analysis(block, date_ages, date_genders, date_ethnicities, date_covid, us_census_ages, us_census_genders, us_census_ethnicities)
+                custom_unit_test(
+                    block,
+                    date_ages,
+                    date_genders,
+                    date_ethnicities,
+                    date_covid,
+                    us_census_ages,
+                    us_census_genders,
+                    us_census_ethnicities,
+                    abs_err=0.1,
+                )
+
+                metadata[i] = (date, len(block))
+
+                i += 1
+                block.to_csv(f"blocks/covid_block_{i}.csv", index=False)
+                logger.info(f"Saved Block {i} - Date {date}")
+
+    if not parallel:
+        # Sequential
+        return_dict = dict()
+        for i, date in enumerate(covid["date"]):
+            save_blocks(i, date, return_dict)
+    else:
+        # Parallel
+        processes = []
+        num_processes = os.cpu_count()
+        manager = Manager()
+        return_dict = manager.dict()
+
+        k = len(covid["date"]) // num_processes
+        for n in range(num_processes - 1):
+            processes.append(
+                Process(
+                    target=save_blocks,
+                    args=(n * k, covid["date"][n * k : n * k + k], return_dict),
+                )
+            )
+            processes[n].start()
+        n += 1
+        processes.append(
+            Process(
+                target=save_blocks, args=(n * k, covid["date"][n * k :], return_dict)
+            )
+        )
+        processes[n].start()
+
+        for n in range(num_processes):
+            processes[n].join()
+
+    # Write blocks metadata
+    metadata["blocks"] = dict()
+    for idx, key in enumerate(sorted(list(return_dict.keys()))):
+        (date, size) = return_dict[key]
+        metadata["blocks"][idx] = dict()
+        metadata["blocks"][idx]["date"] = date
+        metadata["blocks"][idx]["size"] = size
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)
     with open("metadata.json", "w") as outfile:
         outfile.write(json_object)
+    logger.info("Saved metadata")
 
 
 if __name__ == "__main__":
-    main()
+    app()
