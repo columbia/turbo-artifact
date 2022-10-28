@@ -1,11 +1,13 @@
-import os
-import pandas as pd
-import numpy as np
-import math
 import json
-from loguru import logger
+import math
+import os
+from multiprocessing import Manager, Process
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 import typer
-from multiprocessing import Process, Manager
+from loguru import logger
 
 
 def load_and_preprocess_datasets(metadata):
@@ -94,7 +96,7 @@ def load_and_preprocess_datasets(metadata):
 
     return covid, age, gender, ethnicity
 
-  
+
 def get_num_per_info(population_size, rates):
     rates = rates / np.sum(rates)  # normalizing to sum up to 1 in case it doesn't
     info = (rates * population_size).astype(np.int64)
@@ -317,7 +319,8 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    sequencial: bool = False,
+    sequential: bool = False,
+    output_dir="blocks",
 ):
     metadata = {}
     metadata["age_mapping"] = {"0-17": 0, "18-49": 1, "50-64": 2, "65+": 3}
@@ -341,6 +344,9 @@ def main(
     )
 
     covid, age, gender, ethnicity = load_and_preprocess_datasets(metadata)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     # Generating and saving blocks one by one to avoid memory issues.
     def save_blocks(i, dates, metadata):
@@ -384,10 +390,10 @@ def main(
                 metadata[i] = (date, len(block))
 
                 i += 1
-                block.to_csv(f"blocks/covid_block_{i}.csv", index=False)
+                block.to_csv(output_dir.joinpath(f"covid_block_{i}.csv"), index=False)
                 logger.info(f"Saved block for day {i} - Date {date}")
 
-    if sequencial:
+    if sequential:
         # Sequential
         return_dict = dict()
         for i, date in enumerate(covid["date"]):
