@@ -343,7 +343,7 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    parallel: bool = True,
+    sequencial: bool = False,
 ):
     metadata = {}
     metadata["age_mapping"] = {"0-17": 0, "18-49": 1, "50-64": 2, "65+": 3}
@@ -411,13 +411,13 @@ def main(
 
                 i += 1
                 block.to_csv(f"blocks/covid_block_{i}.csv", index=False)
-                logger.info(f"Saved Block {i} - Date {date}")
+                logger.info(f"Saved block for day {i} - Date {date}")
 
-    if not parallel:
+    if sequencial:
         # Sequential
         return_dict = dict()
         for i, date in enumerate(covid["date"]):
-            save_blocks(i, date, return_dict)
+            save_blocks(i, [date], return_dict)
     else:
         # Parallel
         processes = []
