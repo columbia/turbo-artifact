@@ -9,8 +9,8 @@ from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
 from torch import Tensor
-
-from data.covid19.queries import *
+import pandas as pd
+from data.covid19.covid_queries.queries import *
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, C, R

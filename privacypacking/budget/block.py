@@ -10,6 +10,7 @@ class Block:
         self.budget = budget
         self.data_path = data_path
         self.size = None
+        self.data = None
 
     @classmethod
     def from_epsilon_delta(

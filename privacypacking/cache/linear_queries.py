@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 
-class DenseHistogram:
+class DenseHistogram:   # We use it to represent the PMW Histogram
     def __init__(
         self,
         domain_size: Optional[int] = None,
@@ -14,7 +14,7 @@ class DenseHistogram:
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
-        self.tensor = torch.ones(
+        self.tensor = torch.ones(       # TODO: consider naming this bins to hide internal implem
             size=(1, self.N),
             dtype=torch.float64,
         )
@@ -32,7 +32,7 @@ class DenseHistogram:
         return torch.smm(query, self.tensor.t()).item()
 
 
-class SparseHistogram:
+class SparseHistogram:  # We use it to represent the block data
     def __init__(
         self, bin_indices: List[List[int]], values: List, attribute_sizes: List[int]
     ) -> None:
@@ -66,7 +66,7 @@ def get_flat_bin_index(
 
 
 def get_domain_size(attribute_sizes: List[int]) -> int:
-    domain_size = 1
+    domain_size = 1 if attribute_sizes else 0
     for s in attribute_sizes:
         domain_size *= s
     return domain_size
@@ -101,6 +101,12 @@ def build_sparse_tensor_multidim(
 
 def load_csv_block_data(block_id: int, blocks_path: str) -> SparseHistogram:
     df = pd.read_csv(f"{blocks_path}/covid_block_{block_id}.csv")
+    
+
+
+
+
+
     # TODO: where do we fix the encoding for attributes? Using fake blocks for now
     h = SparseHistogram(
         bin_indices=[(0, 0, 1), (1, 0, 5), (0, 1, 2)],
