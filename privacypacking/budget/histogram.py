@@ -1,10 +1,9 @@
 from typing import List, Optional
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn.functional as F
-
+import math
 
 class DenseHistogram:   # We use it to represent the PMW Histogram
     def __init__(
@@ -27,7 +26,7 @@ class DenseHistogram:   # We use it to represent the PMW Histogram
         # elementwise multiplication
         torch.mul(self.tensor, tensor, out=self.tensor)
 
-    def run_query(self, query: torch.Tensor) -> float:
+    def run(self, query: torch.Tensor) -> float:
         # sparse (1,N) x dense (N,1)
         return torch.smm(query, self.tensor.t()).item()
 
@@ -44,12 +43,36 @@ class SparseHistogram:  # We use it to represent the block data
         )
         self.domain_size = self.tensor.shape[1]  # N
 
-    def run_query(self, query: torch.Tensor) -> float:
+    @classmethod
+    def from_dataframe(
+        cls,
+        df,
+        attribute_domain_sizes,
+    ) -> "SparseHistogram":
+
+        cols = list(df.columns)
+        df = df.groupby(cols).size()
+        df = df[df > 0]
+        return cls(
+            bin_indices=list(df.index),              # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
+            values=list(df.values),                  # [4, 1, 2],
+            attribute_sizes=attribute_domain_sizes,  # [2, 2, 10],
+        )
+
+    def dump(self):
+        return {
+            "id": self.id,
+            "initial_budget": self.initial_budget.dump(),
+            "budget": self.budget.dump(),
+        }
+
+    def run(self, query: torch.Tensor) -> float:
         # `query` has shape (1, N), we need the dot product, or matrix mult with (1,N)x(N,1)
         # return torch.mm(self.tensor, query.t()).item()
         return torch.sparse.mm(self.tensor, query.t()).item()
 
 
+# ------------- Helper functions ------------- #
 def get_flat_bin_index(
     multidim_bin_index: List[int], attribute_sizes: List[int]
 ) -> int:
@@ -61,15 +84,10 @@ def get_flat_bin_index(
         size *= attribute_sizes[dim]
     return index
 
-
 # TODO: write the inverse conversion
 
-
 def get_domain_size(attribute_sizes: List[int]) -> int:
-    domain_size = 1 if attribute_sizes else 0
-    for s in attribute_sizes:
-        domain_size *= s
-    return domain_size
+    return math.prod(attribute_sizes)
 
 
 def build_sparse_tensor(
@@ -97,24 +115,7 @@ def build_sparse_tensor_multidim(
         size=attribute_sizes,
         dtype=torch.float64,
     )
-
-
-def load_csv_block_data(block_id: int, blocks_path: str) -> SparseHistogram:
-    df = pd.read_csv(f"{blocks_path}/covid_block_{block_id}.csv")
-    
-
-
-
-
-
-    # TODO: where do we fix the encoding for attributes? Using fake blocks for now
-    h = SparseHistogram(
-        bin_indices=[(0, 0, 1), (1, 0, 5), (0, 1, 2)],
-        values=[4, 1, 2],
-        attribute_sizes=[2, 2, 10],
-    )
-    size = 3
-    return h, size
+# ------------- / Help functions ------------- #
 
 
 def debug2():

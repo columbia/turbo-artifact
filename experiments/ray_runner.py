@@ -125,7 +125,7 @@ def grid_online(
     data_lifetime: List[float],
     task_lifetime: List[int],
     max_aggregations_allowed: List[int],
-    allow_caching: List[bool],
+    enable_caching: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
 ):
     # ray.init(log_to_driver=False)
@@ -162,7 +162,7 @@ def grid_online(
                 "method": "batch",
                 "metric": tune.grid_search(scheduler_metrics),
                 "n": tune.grid_search(n),
-                "allow_caching": tune.grid_search(allow_caching),
+                "enable_caching": tune.grid_search(enable_caching),
             },
             "metric": {
                 "normalize_by": "available_budget",
@@ -214,7 +214,7 @@ def grid_online(
             ],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
-                "omegaconf/scheduler/allow_caching": "allow_caching",
+                "omegaconf/scheduler/enable_caching": "enable_caching",
                 "omegaconf/scheduler/max_aggregations_allowed": "max_aggregations_allowed",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",

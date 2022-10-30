@@ -3,7 +3,7 @@ import math
 import os
 from multiprocessing import Manager, Process
 from pathlib import Path
-
+import math
 import numpy as np
 import pandas as pd
 import typer
@@ -323,6 +323,12 @@ def main(
     output_dir="blocks",
 ):
     metadata = {}
+    attribute_names = ["positive", "gender", "age", "ethnicity"]
+    attributes_domain_sizes = [2, 2, 4, 8]
+    domain_size = math.prod(attributes_domain_sizes) 
+    metadata["domain_size"] = domain_size
+    metadata["attribute_names"] = attribute_names
+    metadata["attributes_domain_sizes"] = attributes_domain_sizes
     metadata["age_mapping"] = {"0-17": 0, "18-49": 1, "50-64": 2, "65+": 3}
     metadata["ethnicity_mapping"] = {
         "American Indian or Alaska Native": 0,

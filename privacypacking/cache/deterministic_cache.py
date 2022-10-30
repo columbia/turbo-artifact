@@ -1,9 +1,6 @@
-from queue import Empty
-
-from privacypacking.cache.cache import Cache, R, C, A
+from privacypacking.cache.cache import Cache, R, A
 from privacypacking.cache.utils import get_splits
-from termcolor import colored
-
+import yaml
 
 class DeterministicCache(Cache):
     def __init__(self, max_aggregations_allowed, scheduler):
@@ -32,11 +29,21 @@ class DeterministicCache(Cache):
         if blocks not in self.results[query_id]:
             self.results[query_id].update({blocks: (budget.epsilon, result)})
 
-    def run_cache(self, query_id, blocks, _):
+    def run(self, query_id, query, blocks, block_ids):
+        result, budget = None
         if query_id in self.results:
-            if blocks in self.results[query_id]:
-                (_, result) = self.results[query_id][blocks]
-                return result
+            if block_ids in self.results[query_id]:
+                (_, result) = self.results[query_id][block_ids]
+
+        # If result is not in the cache run fresh and store
+        if not result:
+            result = self.scheduler.run_task(query_id, blocks, budget)
+            # self.consume_budgets(blocks_list, plan.budget)
+            # Add result in cache
+            self.add_result(query_id, blocks, budget, result)
+
+        return result, budget
+
 
     def get_execution_plan(self, query_id, blocks, budget):
 
@@ -54,10 +61,7 @@ class DeterministicCache(Cache):
                     x = (x[0], x[-1])
                     # print("         x", x)
 
-                    if self.run_cache(query_id, x, budget) is not None:
-                        plan += [C(query_id, x, budget)]
-
-                    elif self.can_run(self.scheduler, x, budget):
+                    if self.run(query_id, x, budget) is not None or self.can_run(self.scheduler, x, budget):
                         plan += [R(query_id, x, budget)]
 
                     else:

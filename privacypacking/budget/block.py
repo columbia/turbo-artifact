@@ -1,10 +1,8 @@
-from curses import raw
 from typing import List
-
 from privacypacking.budget import ALPHAS, Budget
 from privacypacking.budget import SparseHistogram
 import pandas as pd
-
+    
 
 class Block:
     def __init__(self, block_id, budget, data_path=""):
@@ -65,13 +63,39 @@ class Block:
         raw_data = self.raw_data
         if raw_data is None:
             raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
+        self.histogram_data = SparseHistogram.from_dataframe(raw_data)
 
-        self.bns = {}
-        # raw_data.groupby(raw_data.head()).count()
+    def run(query, budget, disable_dp=False):
+        if isinstance(query, Tensor):
+            result = self.histogram_data.run(query)
+            result /= self.size
+            sensitivity = 1 / self.size
+
+        elif isinstance(query, DataFrame):
+            pass
+
+        if not disable_dp:
+            noise_sample = np.random.laplace(
+                scale=sensitivity / budget.epsilon
+            )  # todo: this is not compatible with renyi
+            result += noise_sample
+        return result
+
+
+# Block comprising multiple partial blocks
+class HyperBlock(Block):
+    def __init__(self, block_ids, blocks):
+        self.id = block_ids
+        self.blocks = blocks
         
-        self.histogram_data = SparseHistogram(
-            bin_indices=[(0, 0, 1), (1, 0, 5), (0, 1, 2)],
-            values=[4, 1, 2],
-            attribute_sizes=attribute_domain_sizes, #[2, 2, 10],
-        )
-        self.size = 3
+        self.size = 0
+        self.raw_data = []
+        for block in blocks:
+            self.size += block.size
+            if block.raw_data:
+                self.raw_data += block.raw_data
+            else:
+                self.raw_data += pd.read_csv(f"{block.data_path}/block_{block.id}.csv")
+
+        # TODO: build hyperhistogram from partial histograms instead
+        self.histogram_data = SparseHistogram.from_dataframe(raw_data)

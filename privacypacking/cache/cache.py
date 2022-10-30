@@ -9,19 +9,6 @@ class R:
     ):
         return f"Run({self.blocks})"
 
-
-class C:
-    def __init__(self, query_id, blocks, budget) -> None:
-        self.query_id = query_id
-        self.blocks = blocks
-        self.budget = budget
-
-    def __str__(
-        self,
-    ):
-        return f"Cache{self.blocks}"
-
-
 class A:
     def __init__(self, l) -> None:
         self.l = l
@@ -43,7 +30,7 @@ class Cache:
     ):
         pass
 
-    def run_cache(
+    def run(
         self,
     ):
         pass

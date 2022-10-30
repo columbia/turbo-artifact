@@ -1,18 +1,10 @@
 import math
-from copy import deepcopy
-from typing import Dict, List, Tuple
-
 import numpy as np
-import pandas as pd
 import torch
-import torch.nn.functional as F
-from termcolor import colored
-
 from privacypacking.budget import BasicBudget
 from privacypacking.budget.block import Block
-from privacypacking.cache import cache
 from privacypacking.budget.histogram import DenseHistogram
-from privacypacking.cache.utils import get_splits
+from privacypacking.budget.queries import Tensor
 
 
 # TODO: generalize to list of blocks
@@ -26,6 +18,7 @@ class PMW:
         k=100,
     ):
         self.dataset = block.histogram_data     # for more blocks aggregate multiple histograms
+        self.block = block
         self.n = len(block)
         self.epsilon = epsilon
         self.delta = delta
@@ -50,7 +43,8 @@ class PMW:
     def is_query_hard(self, error):
         return abs(error) > self.T
 
-    def run_cache(self, query_tensor):
+    def run(self, query):
+        assert isinstance(query, torch.Tensor)
 
         # We consume the whole budget once at initialization (or rather: at the first call)
         run_budget = None
@@ -66,10 +60,11 @@ class PMW:
         self.queries_ran += 1
 
         # TODO: use efficient dot product here (blocks as sparse histograms)
-        true_output = self.dataset.run_query(query_tensor)
+        # true_output = self.dataset.run_query(query_tensor)
+        true_output = self.block.run(query)
         noise_sample = np.random.laplace(scale=self.sigma)
         noisy_output = true_output + noise_sample
-        predicted_output = self.histogram.run_query(query_tensor)
+        predicted_output = self.histogram.run(query)
 
         # TODO: log error
         noisy_error = noisy_output - predicted_output
@@ -94,32 +89,5 @@ class PMW:
         return true_output, run_budget
 
 
-
-def debug1():
-    pass
-    # # Testing ...
-    # num_features = 2
-    # domain_size_per_feature = {"new_cases": 2, "new_deaths": 2}
-
-    # domain_size = 1
-    # for v in domain_size_per_feature.values():
-    #     domain_size *= v
-
-    # histogram = Histogram(num_features, domain_size_per_feature, domain_size)
-
-    # histogram.update_bins([(1, 0), (1, 1)], [1, 2])
-    # histogram.update_bins([(0, 1), (1, 1)], [3, 4])
-    # bins = histogram.get_bins(0)
-    # bins = histogram.get_bins(1)
-    # histogram.run_task(0)
-
-    # self.n = 100         # block size
-    # self.epsilon = 0.1
-    # self.delta = 0.01
-    # self.beta = 0.001
-    # self.M = domain_size
-    # self.k = 100
-
-
-if __name__ == "__main__":
-    debug1()
+# if __name__ == "__main__":
+#     debug1()

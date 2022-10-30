@@ -18,23 +18,16 @@ class PerBlockPMW(Cache):
             return self.all_PMW[block_id]
         return None
 
-    def run_cache(self, query_tensor, block: Block):
+    def run(self, query_tensor, block: Block):
         pmw = self.getPMW(block.id)
         # If there is no PMW for the block then create it (creation happens on demand not eagerly)
         if pmw is None:
             pmw = self.addPMW(block)
 
-        result, run_budget = pmw.run_cache(query_tensor)
+        result, run_budget = pmw.run(query_tensor)
         return result, run_budget
 
-    def run_cache_outdated(self, query_id, block, budget):
-        pmw = self.getPMW(block)
-        # If there is no PMW for the block then create it (creation happens on demand not eagerly)
-        if pmw is None:
-            pmw = self.addPMW(block)
-        result, run_budget = pmw.run_cache(query_id, block, budget)
-        return result, run_budget
-
+    # TODO: Consider moving this functionality to a planner data structure
     def get_execution_plan(self, query_id, blocks, budget):
         """
         For per-block-pmu all plans have this form: A(C(B1), C(B2), ... , C(Bn))

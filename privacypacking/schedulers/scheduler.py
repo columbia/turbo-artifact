@@ -8,11 +8,13 @@ from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
 import json
-from data.covid19.covid19_queries.queries import Queries
+from torch import Tensor
+from pandas import DataFrame
+from privacypacking.budget.queries import Queries
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
-from privacypacking.cache.cache import A, C, R
-# from privacypacking.cache.deterministic_cache import DeterministicCache
+from privacypacking.cache.cache import A, R
+from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.per_block_pmw import PerBlockPMW
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
@@ -83,7 +85,7 @@ class Scheduler:
         self.blocks_metadata = None
         with open(self.blocks_metadata_path) as f:
             self.blocks_metadata = json.load(f)
-
+        
         self.queries = Queries(self.blocks_metadata['domain_size'])
 
         self.alphas = None
@@ -152,13 +154,6 @@ class Scheduler:
                 ):
                     continue
 
-                # print(
-                #     "\n\nwithout_cache_plans_ran",
-                #     self.tasks_info.without_cache_plans_ran,
-                #     "| with_cache_plans_ran",
-                #     self.tasks_info.with_cache_plans_ran,
-                # )
-
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
@@ -167,14 +162,7 @@ class Scheduler:
                 )
                 # Find a plan to run the query using caching
                 plan = None
-                if self.omegaconf.allow_caching:
-                    # print(
-                    #     colored(
-                    #         f"Setting query {task.query_id}"
-                    #         f" plan for {bs_tuple}",
-                    #         "blue",
-                    #     )
-                    # )
+                if self.omegaconf.enable_caching:
                     plan = self.cache.get_execution_plan(
                         task.query_id, bs_list, task.budget
                     )
@@ -240,36 +228,24 @@ class Scheduler:
 
     def execute_plan(self, plan):
         result = None
-        if isinstance(plan, R):
-            # The R (Run) operator is used only for the deterministic cache
-            blocks_list = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-            # Run the task on blocks without looking at the cache
-            result = self.run_task(plan.query_id, blocks_list, plan.budget)
-            self.consume_budgets(blocks_list, plan.budget)
-            # Add result in cache
-            self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
-
-        elif isinstance(plan, C):
-            # Run cache to get a result
-
+        
+        if isinstance(plan, R):     # Run Query    
             print(f"plan.blocks: {plan.blocks}")
-
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-            if isinstance(self.cache, PerBlockPMW):
-                assert len(block_ids) == 1
-                result, budget = self.cache.run_cache(
-                    query_tensor=self.queries(plan.query_id),
-                    block=self.blocks[block_ids[0]],
-                )
 
-            else:
-                result, budget = self.cache.run_cache(
-                    plan.query_id, plan.blocks, plan.budget
-                )
+            # if isinstance(self.cache, PerBlockPMW):
+                # assert len(block_ids) == 1
+            result, budget = self.cache.run(
+                query_id=plan.query_id,
+                query=self.queries(plan.query_id),
+                block_ids=plan.blocks
+                blocks=self.blocks[block_ids],
+            )
+
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
 
-        elif isinstance(plan, A):
+        elif isinstance(plan, A):   # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
             result = sum(agglist) / len(agglist)
             # TODO: weighted average instead
@@ -283,33 +259,6 @@ class Scheduler:
         return result
 
 
-    def run_task(self, query_id, blocks, budget, disable_dp=False):
-        q = self.queries(query_id)
-        if q is not None:
-            # Weighted average of dot products
-            result = 0
-            size = 0
-            for block_id in range(blocks[0], blocks[1] + 1):
-                b = self.blocks[block_id]
-                result += len(b) * b.histogram_data.run_query(q)
-                size += len(b)
-            result /= size
-            sensitivity = 1 / size
-
-        if not disable_dp:
-            # TODO: sticking to normalized linear queries?
-            noise_sample = np.random.laplace(
-                scale=sensitivity / budget.epsilon
-            )  # todo: this is not compatible with renyi
-            result += noise_sample
-
-            # print(
-            #     colored(
-            #         f"Noisy Result of query {query_id} on blocks {blocks}: \n{result}",
-            #         "green",
-            #     )
-            # )
-        return result
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -357,7 +306,7 @@ class Scheduler:
         block.load_histogram(self.blocks_metadata['attribute_domain_sizes'])
         block.date = self.blocks_metadata['blocks'][block.id]['date']
         block.size = self.blocks_metadata['blocks'][block.id]['size']
-
+        # block.attributes_domain_sizes = self.blocks_metadata['attributes_domain_sizes']
 
         self.blocks.update({block.id: block})
         # Support blocks with custom support

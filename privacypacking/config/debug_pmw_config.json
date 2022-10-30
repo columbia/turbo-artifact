@@ -12,7 +12,7 @@
             "method": "batch",
             "metric": "Fcfs",
             "n": 1,
-            "allow_caching": true
+            "enable_caching": true
         },
         "metric": {
             "normalize_by": "available_budget",
