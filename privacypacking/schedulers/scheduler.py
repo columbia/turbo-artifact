@@ -233,8 +233,6 @@ class Scheduler:
             print(f"plan.blocks: {plan.blocks}")
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
 
-            # if isinstance(self.cache, PerBlockPMW):
-                # assert len(block_ids) == 1
             result, budget = self.cache.run(
                 query_id=plan.query_id,
                 query=self.queries(plan.query_id),

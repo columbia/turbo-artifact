@@ -2,6 +2,7 @@ from privacypacking.cache.cache import Cache, R, A
 from privacypacking.cache.utils import get_splits
 import yaml
 
+
 class DeterministicCache(Cache):
     def __init__(self, max_aggregations_allowed, scheduler):
         self.max_aggregations_allowed = max_aggregations_allowed
@@ -44,7 +45,6 @@ class DeterministicCache(Cache):
 
         return result, budget
 
-
     def get_execution_plan(self, query_id, blocks, budget):
 
         max_num_aggregations = min(self.max_aggregations_allowed, len(blocks))
@@ -61,7 +61,9 @@ class DeterministicCache(Cache):
                     x = (x[0], x[-1])
                     # print("         x", x)
 
-                    if self.run(query_id, x, budget) is not None or self.can_run(self.scheduler, x, budget):
+                    if self.run(query_id, x, budget) is not None or self.can_run(
+                        self.scheduler, x, budget
+                    ):
                         plan += [R(query_id, x, budget)]
 
                     else:

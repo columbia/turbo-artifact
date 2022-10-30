@@ -9,6 +9,7 @@ class R:
     ):
         return f"Run({self.blocks})"
 
+
 class A:
     def __init__(self, l) -> None:
         self.l = l

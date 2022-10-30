@@ -9,12 +9,16 @@ from torch import Tensor
 from pandas import DataFrame
 
 path = Path(__file__).resolve().parent.parent.joinpath("covid19_queries/queries.json")
-blocks_metadata_path = Path(__file__).resolve().parent.parent.joinpath("covid19_data/metadata.json")
+blocks_metadata_path = (
+    Path(__file__).resolve().parent.parent.joinpath("covid19_data/metadata.json")
+)
+
 
 def powerset(iter):
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iter)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
 
 def create_queries(attributes_domain_sizes):
     queries = []
@@ -33,7 +37,7 @@ def create_queries(attributes_domain_sizes):
     queries = {}
     for i, query in enumerate(query_tensors):
         queries[i] = query
-    
+
     json_object = json.dumps(queries, indent=4)
 
     # Writing to queries.json
@@ -47,7 +51,7 @@ class Queries:
         self.queries = None
         with open(path) as f:
             self.queries = json.load(f)
- 
+
     def get_query_sql(self, f, query_id: int) -> Optional[str]:
         # TODO: allow sql like queries too
         pass
@@ -58,7 +62,8 @@ class Queries:
         query_tensor = self.queries[query_id]
         return sparse_coo_tensor(
             indices=query_tensor,
-            values=[1.0] * len(query_tensor),   # add this as part of the query in queries.json
+            values=[1.0]
+            * len(query_tensor),  # add this as part of the query in queries.json
             size=(1, self.domain_size),
             dtype=float64,
         )
@@ -68,23 +73,25 @@ class Queries:
             query = Tensor(self.get_query_tensor(query_id))
         else:
             query = DataFrame(get_query_sql(query_id))
-        
+
         assert query is not None
         return query
-        
 
 
 def main():
     try:
         f = open(blocks_metadata_path)
         blocks_metadata = json.load(f)
-    except: 
+    except:
         logger.error("Dataset metadata must have been created first..")
         exit(1)
     finally:
         f.close()
 
-    create_queries(blocks_metadata['attributes_domain_sizes'])  # Query space size: 34425
+    create_queries(
+        blocks_metadata["attributes_domain_sizes"]
+    )  # Query space size: 34425
+
 
 if __name__ == "__main__":
     main()

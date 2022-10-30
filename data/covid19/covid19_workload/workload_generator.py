@@ -29,7 +29,9 @@ class PrivacyWorkload:
 
     def generate_one_day_tasks(self, start_time, num_types_of_queries):
         tasks = []
-        num_tasks = np.abs(np.random.normal(1, 2, 1)).astype(int) + 1       # todo: increase the number of daily tasks when we have more queries
+        num_tasks = (
+            np.abs(np.random.normal(1, 2, 1)).astype(int) + 1
+        )  # todo: increase the number of daily tasks when we have more queries
         for _ in range(num_tasks[0]):
             query_id = np.random.randint(1, num_types_of_queries + 1) - 1
             query_type = "count"

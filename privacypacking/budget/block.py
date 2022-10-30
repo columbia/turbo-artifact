@@ -2,7 +2,7 @@ from typing import List
 from privacypacking.budget import ALPHAS, Budget
 from privacypacking.budget import SparseHistogram
 import pandas as pd
-    
+
 
 class Block:
     def __init__(self, block_id, budget, data_path=""):
@@ -56,7 +56,9 @@ class Block:
     def available_unlocked_budget(self) -> Budget:
         return self.budget
 
-    def load_raw_data(self,):
+    def load_raw_data(
+        self,
+    ):
         self.raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
@@ -87,7 +89,7 @@ class HyperBlock(Block):
     def __init__(self, block_ids, blocks):
         self.id = block_ids
         self.blocks = blocks
-        
+
         self.size = 0
         self.raw_data = []
         for block in blocks:

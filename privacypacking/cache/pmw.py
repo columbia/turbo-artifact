@@ -17,7 +17,9 @@ class PMW:
         beta=1e-3,
         k=100,
     ):
-        self.dataset = block.histogram_data     # for more blocks aggregate multiple histograms
+        self.dataset = (
+            block.histogram_data
+        )  # for more blocks aggregate multiple histograms
         self.block = block
         self.n = len(block)
         self.epsilon = epsilon

@@ -325,7 +325,7 @@ def main(
     metadata = {}
     attribute_names = ["positive", "gender", "age", "ethnicity"]
     attributes_domain_sizes = [2, 2, 4, 8]
-    domain_size = math.prod(attributes_domain_sizes) 
+    domain_size = math.prod(attributes_domain_sizes)
     metadata["domain_size"] = domain_size
     metadata["attribute_names"] = attribute_names
     metadata["attributes_domain_sizes"] = attributes_domain_sizes
@@ -347,7 +347,7 @@ def main(
     us_census_genders = np.array([0.5, 0.5])
     us_census_ethnicities = np.array(
         [0.002, 0.15, 0.402, 0.042, 0.004, 0.006, 0.343, 0.053]
-    )	
+    )
 
     covid, age, gender, ethnicity = load_and_preprocess_datasets(metadata)
 

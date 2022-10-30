@@ -5,7 +5,8 @@ import torch
 import torch.nn.functional as F
 import math
 
-class DenseHistogram:   # We use it to represent the PMW Histogram
+
+class DenseHistogram:  # We use it to represent the PMW Histogram
     def __init__(
         self,
         domain_size: Optional[int] = None,
@@ -13,9 +14,11 @@ class DenseHistogram:   # We use it to represent the PMW Histogram
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
-        self.tensor = torch.ones(       # TODO: consider naming this bins to hide internal implem
-            size=(1, self.N),
-            dtype=torch.float64,
+        self.tensor = (
+            torch.ones(  # TODO: consider naming this bins to hide internal implem
+                size=(1, self.N),
+                dtype=torch.float64,
+            )
         )
         self.normalize()
 
@@ -54,8 +57,8 @@ class SparseHistogram:  # We use it to represent the block data
         df = df.groupby(cols).size()
         df = df[df > 0]
         return cls(
-            bin_indices=list(df.index),              # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
-            values=list(df.values),                  # [4, 1, 2],
+            bin_indices=list(df.index),  # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
+            values=list(df.values),  # [4, 1, 2],
             attribute_sizes=attribute_domain_sizes,  # [2, 2, 10],
         )
 
@@ -84,7 +87,9 @@ def get_flat_bin_index(
         size *= attribute_sizes[dim]
     return index
 
+
 # TODO: write the inverse conversion
+
 
 def get_domain_size(attribute_sizes: List[int]) -> int:
     return math.prod(attribute_sizes)
@@ -115,6 +120,8 @@ def build_sparse_tensor_multidim(
         size=attribute_sizes,
         dtype=torch.float64,
     )
+
+
 # ------------- / Help functions ------------- #
 
 
