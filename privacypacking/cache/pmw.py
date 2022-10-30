@@ -11,7 +11,7 @@ from termcolor import colored
 from privacypacking.budget import BasicBudget
 from privacypacking.budget.block import Block
 from privacypacking.cache import cache
-from privacypacking.cache.linear_queries import DenseHistogram
+from privacypacking.budget.histogram import DenseHistogram
 from privacypacking.cache.utils import get_splits
 
 
@@ -25,13 +25,13 @@ class PMW:
         beta=1e-3,
         k=100,
     ):
-        self.dataset = block.data
+        self.dataset = block.histogram_data     # for more blocks aggregate multiple histograms
         self.n = len(block)
         self.epsilon = epsilon
         self.delta = delta
         self.beta = beta
         self.k = k
-        self.M = block.data.domain_size
+        self.M = block.histogram_data.domain_size
         self.queries_ran = 0
 
         # Initializations as per the Hardt and Rothblum 2010 paper

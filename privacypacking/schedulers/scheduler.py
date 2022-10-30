@@ -3,21 +3,16 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 import numpy as np
-import torch
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
-from torch import Tensor
-import pandas as pd
-from data.covid19.covid19_queries.queries import *
+import json
+from data.covid19.covid19_queries.queries import Queries
 from privacypacking.budget import Block, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, C, R
-from privacypacking.cache.deterministic_cache import DeterministicCache
-
-# TODO: Later on, store blocks as sparse histogram directly
-from privacypacking.cache.linear_queries import load_csv_block_data as load_block_data
+# from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.per_block_pmw import PerBlockPMW
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
@@ -74,7 +69,6 @@ class Scheduler:
             logger.warning("Verbose logs. Might be slow and noisy!")
             # Counts the number of scheduling passes for each scheduling step (fixpoint)
             self.iteration_counter = defaultdict(int)
-
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
@@ -83,11 +77,19 @@ class Scheduler:
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
             self.simulator_config.blocks.data_path
         )
+        self.blocks_metadata_path = REPO_ROOT.joinpath("data").joinpath(
+            self.simulator_config.blocks.metadata
+        )
+        self.blocks_metadata = None
+        with open(self.blocks_metadata_path) as f:
+            self.blocks_metadata = json.load(f)
+
+        self.queries = Queries(self.blocks_metadata['domain_size'])
+
         self.alphas = None
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        self.block_size = self.omegaconf["block_size"]
 
         # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
         self.cache = PerBlockPMW()
@@ -206,7 +208,6 @@ class Scheduler:
 
                     # Run original plan just to store the result - for experiments
                     if str(without_cache_plan) != str(plan):
-                        # self.tasks_info.with_cache_plans_ran += 1
                         self.tasks_info.with_cache_plan_result[task.id] = result
                         result = self.run_task(task.query_id, bs_tuple, task.budget)
                         print(
@@ -215,9 +216,6 @@ class Scheduler:
                                 "green",
                             )
                         )
-
-                    # else:
-                    # self.tasks_info.without_cache_plans_ran += 1
 
                     self.tasks_info.without_cache_plan_result[task.id] = result
 
@@ -260,7 +258,7 @@ class Scheduler:
             if isinstance(self.cache, PerBlockPMW):
                 assert len(block_ids) == 1
                 result, budget = self.cache.run_cache(
-                    query_tensor=self.get_linear_query_tensor(plan.query_id),
+                    query_tensor=self.queries(plan.query_id),
                     block=self.blocks[block_ids[0]],
                 )
 
@@ -284,46 +282,19 @@ class Scheduler:
 
         return result
 
-    def get_linear_query_tensor(self, query_id: int) -> Optional[Tensor]:
-        # returns None if the query is not linear or vector is unknown
-        # TODO: where should this live? In a config file somewhere? In privacy_tasks.csv?
-        return torch.sparse_coo_tensor(
-            indices=[[0, 0], [1, 2]],
-            values=[3.0, 4.0],
-            size=(1, 40),
-            dtype=torch.float64,
-        )
 
-    def run_task(self, query_id, blocks, budget, disable_dp=False, linear_query=False):
-
-        q = self.get_linear_query_tensor(query_id)
+    def run_task(self, query_id, blocks, budget, disable_dp=False):
+        q = self.queries(query_id)
         if q is not None:
             # Weighted average of dot products
             result = 0
             size = 0
             for block_id in range(blocks[0], blocks[1] + 1):
                 b = self.blocks[block_id]
-                result += len(b) * b.data.run_query(q)
+                result += len(b) * b.histogram_data.run_query(q)
                 size += len(b)
             result /= size
             sensitivity = 1 / size
-
-        else:
-            # Old implem, or non-linear queries
-            df = []
-            # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
-            blocks = range(blocks[0], blocks[1] + 1)
-            for block in blocks:
-                df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
-
-            # TODO: insert smart mapping from attribute ids to whatever
-            # TODO: move this at init time? Read blocks only once
-            # TODO: update Block class and add df attribute +size attribute + date (+ csv path)
-            df = pd.concat(df)
-
-            # This output is not noisy
-            result = globals()[f"query{query_id}"](df)
-            sensitivity = 1 / len(df)
 
         if not disable_dp:
             # TODO: sticking to normalized linear queries?
@@ -375,8 +346,18 @@ class Scheduler:
             raise Exception("This block id is already present in the scheduler.")
 
         # TODO: load the data directly when the resource manager creates the block?
-        if hasattr(self, "blocks_path"):
-            block.data, block.size = load_block_data(block.id, self.blocks_path)
+        # I think I prefer the resource manager being dumb and just "creating" the block and corresponding csv (csvs in reality already exist though)
+        # the scheduler can load in memory or load as histogram for better performance or sth
+        # if hasattr(self, "blocks_path"):
+        assert self.blocks_path is not None
+        assert self.blocks_metadata is not None
+
+        # TODO: Later on, store blocks as sparse histogram directly?
+        # block.load_raw_data()
+        block.load_histogram(self.blocks_metadata['attribute_domain_sizes'])
+        block.date = self.blocks_metadata['blocks'][block.id]['date']
+        block.size = self.blocks_metadata['blocks'][block.id]['size']
+
 
         self.blocks.update({block.id: block})
         # Support blocks with custom support

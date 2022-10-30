@@ -1,6 +1,9 @@
+from curses import raw
 from typing import List
 
 from privacypacking.budget import ALPHAS, Budget
+from privacypacking.budget import SparseHistogram
+import pandas as pd
 
 
 class Block:
@@ -10,7 +13,8 @@ class Block:
         self.budget = budget
         self.data_path = data_path
         self.size = None
-        self.data = None
+        self.raw_data = None
+        self.histogram_data = None
 
     @classmethod
     def from_epsilon_delta(
@@ -53,3 +57,21 @@ class Block:
     @property
     def available_unlocked_budget(self) -> Budget:
         return self.budget
+
+    def load_raw_data(self,):
+        self.raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
+
+    def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
+        raw_data = self.raw_data
+        if raw_data is None:
+            raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
+
+        self.bns = {}
+        # raw_data.groupby(raw_data.head()).count()
+        
+        self.histogram_data = SparseHistogram(
+            bin_indices=[(0, 0, 1), (1, 0, 5), (0, 1, 2)],
+            values=[4, 1, 2],
+            attribute_sizes=attribute_domain_sizes, #[2, 2, 10],
+        )
+        self.size = 3

@@ -1,9 +1,13 @@
 import json
 from pathlib import Path
 from itertools import chain, combinations, product
+from xml import dom
+from torch import Tensor, sparse_coo_tensor, float64
+from typing import Optional
 
-# Attributes
+# Covid19 Dataset Attributes
 attributes = {"positive": 2, "gender": 2, "age": 4, "ethnicity": 8}
+path = Path(__file__).resolve().parent.parent.joinpath("covid19_queries/queries.json")
 
 # Query space size: 34425
 
@@ -27,7 +31,6 @@ def create_queries():
         query_tensors.append(query)
     # print(query_tensors)
 
-
     # Write queries to a json file
     queries = {}
     for i, query in enumerate(query_tensors):
@@ -36,14 +39,30 @@ def create_queries():
     json_object = json.dumps(queries, indent=4)
 
     # Writing to queries.json
-    path = Path(__file__).resolve().parent.parent.joinpath("covid19_queries/queries.json")
     with open(path, "w") as outfile:
         outfile.write(json_object)
 
 
+class Queries:
+    def __init__(self, domain_size) -> None:
+        self.domain_size = domain_size
+        self.queries = None
+        with open(path) as f:
+            self.queries = json.load(f)
+ 
+    def get_linear_query_tensor(self, query_id: int) -> Optional[Tensor]:
+        if self.queries is None or query_id not in self.queries:
+            return None
+        query_tensor = self.queries[query_id]
+        return sparse_coo_tensor(
+            indices=query_tensor,
+            values=[1.0] * len(query_tensor),   # add this as part of the query in queries.json
+            size=(1, self.domain_size),
+            dtype=float64,
+        )
 
-def debug():
+def main():
     create_queries()
 
 if __name__ == "__main__":
-    debug()
+    main()

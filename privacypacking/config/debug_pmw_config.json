@@ -7,7 +7,6 @@
             "scheduler_timeout_seconds": 1200,
             "data_lifetime": 0.1,
             "task_lifetime": 1,
-            "block_size": 203828,
             "max_aggregations_allowed": 10000,
             "scheduling_wait_time": 1,
             "method": "batch",
@@ -26,7 +25,8 @@
         "blocks": {
             "initial_num": 1,
             "max_num": 40,
-            "data_path": "covid19/covid19_data/blocks"
+            "data_path": "covid19/covid19_data/blocks",
+            "metadata": "covid19/covid19_data/metadata.json"
         },
         "tasks": {
             "sampling": "",

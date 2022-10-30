@@ -138,12 +138,6 @@ def grid_online(
         # DOMINANT_SHARES,
     ]
 
-    # Read block size from metadata
-    f = open(blocks_metadata)
-    metadata = json.load(f)
-    block_size = metadata["block_size"]
-    f.close()
-
     # Instant unlocking
     n = [1]
     # Progressive unlocking
@@ -182,6 +176,7 @@ def grid_online(
                 "initial_num": tune.grid_search(initial_blocks),
                 "max_num": tune.grid_search(max_blocks),
                 "data_path": blocks_data_path,
+                "metadata": blocks_metadata,
             },
             "tasks": {
                 "sampling": tasks_sampling,
