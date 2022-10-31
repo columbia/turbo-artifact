@@ -59,9 +59,7 @@ class Block:
     def available_unlocked_budget(self) -> Budget:
         return self.budget
 
-    def load_raw_data(
-        self,
-    ):
+    def load_raw_data(self,):
         self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
@@ -72,7 +70,7 @@ class Block:
             raw_data, attribute_domain_sizes
         )
 
-    def run(self, query):  # Runs with DP
+    def run(self, query):
         if isinstance(query, Tensor):
             result = self.histogram_data.run(query)
             result /= self.size
@@ -85,7 +83,7 @@ class Block:
         sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
-        )  # todo: this is not compatible with renyi
+        )  # TODO: this is not compatible with renyi
         result += noise_sample
         return result
 
@@ -121,7 +119,7 @@ class HyperBlock:
         sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
-        )  # todo: this is not compatible with renyi
+        )  # TODO: this is not compatible with renyi
         result += noise_sample
         return result
 

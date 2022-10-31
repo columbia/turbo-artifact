@@ -55,10 +55,9 @@ class SparseHistogram:  # We use it to represent the block data
 
         cols = list(df.columns)
         df = df.groupby(cols).size()
-        df = df[df > 0]
         return cls(
-            bin_indices=list(df.index),  # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
-            values=list(df.values),  # [4, 1, 2],
+            bin_indices=list(df.index),              # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
+            values=list(df.values),                  # [4, 1, 2],
             attribute_sizes=attribute_domain_sizes,  # [2, 2, 10],
         )
 

@@ -200,18 +200,19 @@ class Scheduler:
                     )
                     self.update_allocated_task(task)
 
+                    if self.omegaconf.enable_caching:
                     # Run the original plan without cache just to store the result - for experiments
-                    self.tasks_info.with_cache_plan_result[task.id] = result
-                    result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
-                        self.query_pool.get_query(task.query_id), task.budget
-                    )
-                    print(
-                            colored(
-                                f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
-                                "green",
-                            )
+                        self.tasks_info.with_cache_plan_result[task.id] = result
+                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
+                            self.query_pool.get_query(task.query_id), task.budget
                         )
-                    self.tasks_info.without_cache_plan_result[task.id] = result
+                        print(
+                                colored(
+                                    f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                    "green",
+                                )
+                            )
+                        self.tasks_info.without_cache_plan_result[task.id] = result
 
                     if (
                         self.metric.is_dynamic()
@@ -232,7 +233,7 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):       # Consider making an executor class
+    def execute_plan(self, plan):       # TODO: Consider making an executor class
         if isinstance(plan, R):  # Run Query
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})

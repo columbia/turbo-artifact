@@ -34,10 +34,10 @@ class PerBlockPlanner(Planner):
 
 # Cost model
 def get_cost(plan, cache, blocks):     # Cost is either infinite or 0 in this implementation
-    if isinstance(plan, A):     # Get cost of arguments/operators
+    if isinstance(plan, A):     # Aggregate cost of arguments/operators
         return sum([get_cost(x, cache, blocks) for x in plan.l])
 
-    elif isinstance(plan, R):   # Get cost of Run
+    elif isinstance(plan, R):   # Get cost of Run operator
         block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
         hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
         
