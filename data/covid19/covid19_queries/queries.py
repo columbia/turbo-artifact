@@ -16,7 +16,7 @@ def powerset(iter):
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
 # TODO: Prune the query space - not all queries are important
-def create_queries(queries_path, attributes_domain_sizes):
+def create_all_queries(queries_path, attributes_domain_sizes):
     queries = []
     attr_values = []
     for domain_size in attributes_domain_sizes:
@@ -85,7 +85,7 @@ def main(
         logger.error("Dataset metadata must have be created first..")
         exit(1)
 
-    create_queries(
+    create_all_queries(
         queries_path,
         blocks_metadata["attributes_domain_sizes"]
     )  # Query space size for covid dataset: 34425

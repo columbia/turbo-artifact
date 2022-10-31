@@ -234,7 +234,6 @@ class Scheduler:
 
     def execute_plan(self, plan):       # Consider making an executor class
         if isinstance(plan, R):  # Run Query
-            print(f"plan.blocks: {plan.blocks}, {plan.budget}")
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
             

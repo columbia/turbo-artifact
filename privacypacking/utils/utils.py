@@ -158,14 +158,12 @@ def get_logs(
         "n_initial_blocks": omegaconf.blocks.initial_num,
         "maximum_profit": maximum_profit,
         "mean_task_per_block": omegaconf.tasks.avg_num_tasks_per_block,
-        "data_path": omegaconf.tasks.data_path,
+        "path": omegaconf.tasks.path,
         "allocated_tasks_scheduling_delays": allocated_tasks_scheduling_delays,
         "initial_blocks": omegaconf.blocks.initial_num,
         "max_blocks": omegaconf.blocks.max_num,
         "tasks": log_tasks,
         "blocks": log_blocks,
-        "task_frequencies_path": omegaconf.tasks.frequencies_path,
-        "tasks_path": omegaconf.tasks.tasks_path,
         "metric_recomputation_period": omegaconf.scheduler.metric_recomputation_period,
         "normalize_by": omegaconf.metric.normalize_by,
         "temperature": omegaconf.metric.temperature,
@@ -195,10 +193,3 @@ def save_logs(config, log_dict, compact=False, compressed=False):
                 json_object = json.dumps(log_dict, indent=4)
 
             fp.write(json_object)
-
-
-# def global_metrics(logs: dict, verbose=False) -> dict:
-#     if not verbose:
-#         logs["tasks"] = ""
-#         logs["blocks"] = ""
-#     return logs
