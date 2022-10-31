@@ -1,6 +1,7 @@
-from privacypacking.cache.cache import Cache
+from privacypacking.cache.cache import Cache, R, A
 from privacypacking.budget.block import HyperBlock
 import yaml
+import math
 
 
 class DeterministicCache(Cache):
@@ -27,8 +28,24 @@ class DeterministicCache(Cache):
             self.add_entry(query_id, hyperblock.id, result)  # Add result in cache
         return result, run_budget
 
-    def dump(
-        self,
-    ):
+    def dump(self):
         res = yaml.dump(self.key_values)
         print("Results", res)
+
+    # Cost model    # TODO: remove this functionality from the Cache
+    def get_cost(self, plan, blocks):   # Cost is either infinite or 0 in this implementation
+        if isinstance(plan, A):         # Aggregate cost of arguments/operators
+            return sum([self.get_cost(x, blocks) for x in plan.l])
+
+        elif isinstance(plan, R):       # Get cost of Run operator
+            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+            hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
+            
+            if self.get_entry(plan.query_id, hyperblock.id):
+                return 0                # Already cached
+            else:
+                demand = {key: plan.budget for key in block_ids}
+                if not hyperblock.can_run(demand):
+                    return math.inf     # This hyperblock does not have enough budget
+
+                return 0    # Even if there is at least a little budget left in the hyperblock we assume the cost is 0 TODO: change this

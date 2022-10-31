@@ -2,7 +2,6 @@
 from privacypacking.planner.planner import Planner
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.utils import get_splits
-from privacypacking.budget.block import HyperBlock
 import math
 
 # This planner instance is naive - has only one option for a plan
@@ -24,31 +23,13 @@ class PerBlockPlanner(Planner):
             plan += [R(query_id, x, budget)]
         plan = A(plan)
 
-        cost = get_cost(plan, self.cache, self.blocks)
+        cost = self.cache.get_cost(plan, self.blocks)
         print("Get cost of plan", plan, "cost", cost)
 
         if not math.isinf(cost):    # Get the cost of the plan - if infinite it's not eligible
             return plan
         return None
 
-
-# Cost model
-def get_cost(plan, cache, blocks):     # Cost is either infinite or 0 in this implementation
-    if isinstance(plan, A):     # Aggregate cost of arguments/operators
-        return sum([get_cost(x, cache, blocks) for x in plan.l])
-
-    elif isinstance(plan, R):   # Get cost of Run operator
-        block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-        hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
-        
-        if cache.get_entry(plan.query_id, hyperblock.id) is not None:
-            return 0        # Already cached
-        else:
-            demand = {key: plan.budget for key in block_ids}
-            if not hyperblock.can_run(demand):
-                return math.inf     # This hyperblock does not have enough budget
-
-            return 0     # Even if there is at least a little budget left in the hyperblock we assume the cost is 0 TODO: change this
 
 
 

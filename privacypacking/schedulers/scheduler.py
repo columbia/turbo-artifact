@@ -98,8 +98,8 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        self.cache = DeterministicCache()
-        # self.cache = ProbabilicticCache()
+        # self.cache = DeterministicCache()
+        self.cache = ProbabilicticCache()
         self.planner = PerBlockPlanner(self.cache, self.blocks)
 
     def consume_budgets(self, blocks, budget):
@@ -155,7 +155,7 @@ class Scheduler:
 
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                    self.tasks_info.tasks_lifetime[task.id]
+                        self.tasks_info.tasks_lifetime[task.id]
                     < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
