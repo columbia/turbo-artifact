@@ -1,7 +1,9 @@
-from typing import List
+from typing import List, Dict
 from privacypacking.budget import ALPHAS, Budget
 from privacypacking.budget import SparseHistogram
+from torch import Tensor
 import pandas as pd
+import numpy as np
 
 
 class Block:
@@ -65,39 +67,63 @@ class Block:
         raw_data = self.raw_data
         if raw_data is None:
             raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
-        self.histogram_data = SparseHistogram.from_dataframe(raw_data)
+        self.histogram_data = SparseHistogram.from_dataframe(
+            raw_data, attribute_domain_sizes
+        )
 
-    def run(query, budget, disable_dp=False):
+    def run(self, query, budget):  # Runs with DP
         if isinstance(query, Tensor):
             result = self.histogram_data.run(query)
             result /= self.size
             sensitivity = 1 / self.size
 
-        elif isinstance(query, DataFrame):
+        elif isinstance(query, pd.DataFrame):
             pass
 
-        if not disable_dp:
-            noise_sample = np.random.laplace(
-                scale=sensitivity / budget.epsilon
-            )  # todo: this is not compatible with renyi
-            result += noise_sample
+        noise_sample = np.random.laplace(
+            scale=sensitivity / budget.epsilon
+        )  # todo: this is not compatible with renyi
+        result += noise_sample
         return result
 
 
-# Block comprising multiple partial blocks
-class HyperBlock(Block):
-    def __init__(self, block_ids, blocks):
-        self.id = block_ids
+# Comprises multiple partial blocks
+class HyperBlock:
+    def __init__(self, blocks: Dict):
         self.blocks = blocks
+        block_ids = blocks.keys()
+        self.id = tuple(block_ids[0], block_ids[-1])
 
-        self.size = 0
-        self.raw_data = []
-        for block in blocks:
-            self.size += block.size
-            if block.raw_data:
-                self.raw_data += block.raw_data
-            else:
-                self.raw_data += pd.read_csv(f"{block.data_path}/block_{block.id}.csv")
+    def run(self, query, budget):
+        if isinstance(query, Tensor):
+            # Weighted average of dot products
+            size = 0
+            result = 0
+            for block in self.blocks:
+                result += len(block) * block.data.run(query)
+                size += len(block)
+            result /= size
+            sensitivity = 1 / size
 
-        # TODO: build hyperhistogram from partial histograms instead
-        self.histogram_data = SparseHistogram.from_dataframe(raw_data)
+        elif isinstance(query, pd.DataFrame):
+            pass
+
+        noise_sample = np.random.laplace(
+            scale=sensitivity / budget.epsilon
+        )  # todo: this is not compatible with renyi
+        result += noise_sample
+        return result
+
+    def can_run(self, demand) -> bool:
+        """
+        A task can run only if we can allocate the demand budget
+        for all the blocks requested
+        """
+        for block_id, demand_budget in demand.items():
+            if block_id not in self.blocks:
+                return False
+            block = self.blocks[block_id]
+
+            if not block.budget.can_allocate(demand_budget):
+                return False
+        return True

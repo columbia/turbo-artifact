@@ -1,26 +1,22 @@
 import json
 from pathlib import Path
 from itertools import chain, combinations, product
-from xml import dom
 from torch import Tensor, sparse_coo_tensor, float64
 from typing import Optional
 from loguru import logger
-from torch import Tensor
-from pandas import DataFrame
+import typer
+from privacypacking.utils.utils import REPO_ROOT
 
-path = Path(__file__).resolve().parent.parent.joinpath("covid19_queries/queries.json")
-blocks_metadata_path = (
-    Path(__file__).resolve().parent.parent.joinpath("covid19_data/metadata.json")
-)
+app = typer.Typer()
 
+# Note: this file is independent to the covid dataset - applies to all datasets
 
 def powerset(iter):
-    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
-
-def create_queries(attributes_domain_sizes):
+# TODO: Prune the query space - not all queries are important
+def create_queries(queries_path, attributes_domain_sizes):
     queries = []
     attr_values = []
     for domain_size in attributes_domain_sizes:
@@ -41,20 +37,16 @@ def create_queries(attributes_domain_sizes):
     json_object = json.dumps(queries, indent=4)
 
     # Writing to queries.json
-    with open(path, "w") as outfile:
+    with open(queries_path, "w") as outfile:
         outfile.write(json_object)
 
 
-class Queries:
-    def __init__(self, domain_size) -> None:
+class QueryPool:
+    def __init__(self, domain_size, queries_path) -> None:
         self.domain_size = domain_size
         self.queries = None
-        with open(path) as f:
+        with open(queries_path) as f:
             self.queries = json.load(f)
-
-    def get_query_sql(self, f, query_id: int) -> Optional[str]:
-        # TODO: allow sql like queries too
-        pass
 
     def get_query_tensor(self, query_id: int) -> Optional[Tensor]:
         if self.queries is None or query_id not in self.queries:
@@ -68,29 +60,37 @@ class Queries:
             dtype=float64,
         )
 
-    def get_query(self, query_id: int):
-        if True:
-            query = Tensor(self.get_query_tensor(query_id))
-        else:
-            query = DataFrame(get_query_sql(query_id))
+    def get_query_sql(self, f, query_id: int) -> Optional[str]:
+        # TODO: allow sql like queries too
+        pass
 
+    def get_query(self, query_id: int):
+        if query_id in self.queries:
+            query = self.get_query_tensor(query_id)
+        else:
+            exit(1)     # not implemented for now
+            query = self.get_query_sql(query_id)
         assert query is not None
         return query
 
 
-def main():
+@app.command()
+def main(
+    queries_path: str = REPO_ROOT.joinpath("data/covid19/covid19_queries/queries.json"),
+    blocks_metadata_path: str = REPO_ROOT.joinpath("data/covid19/covid19_data/metadata.json"),
+):
+
     try:
-        f = open(blocks_metadata_path)
-        blocks_metadata = json.load(f)
-    except:
-        logger.error("Dataset metadata must have been created first..")
+        with  open(blocks_metadata_path) as f:
+            blocks_metadata = json.load(f)
+    except NameError:
+        logger.error("Dataset metadata must have be created first..")
         exit(1)
-    finally:
-        f.close()
 
     create_queries(
+        queries_path,
         blocks_metadata["attributes_domain_sizes"]
-    )  # Query space size: 34425
+    )  # Query space size for covid dataset: 34425
 
 
 if __name__ == "__main__":

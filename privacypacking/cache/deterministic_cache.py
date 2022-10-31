@@ -1,12 +1,12 @@
 from privacypacking.cache.cache import Cache, R, A
 from privacypacking.cache.utils import get_splits
+from privacypacking.budget.block import Block
 import yaml
 
 
 class DeterministicCache(Cache):
-    def __init__(self, max_aggregations_allowed, scheduler):
+    def __init__(self, max_aggregations_allowed):
         self.max_aggregations_allowed = max_aggregations_allowed
-        self.scheduler = scheduler
         self.results = {}
 
     def dump(
@@ -19,29 +19,25 @@ class DeterministicCache(Cache):
         demand = {}
         for block in range(blocks[0], blocks[-1] + 1):
             demand[block] = budget
-        # Add other constraints too here
-        # for block in demand.keys():
-        # print(f"             block {block} - available - {scheduler.blocks[block].remaining_budget}")
         return scheduler.can_run(demand)
 
-    def add_result(self, query_id, blocks, budget, result):
+    def add_result(self, query_id, block_id, budget, result):
         if query_id not in self.results:
             self.results[query_id] = {}
-        if blocks not in self.results[query_id]:
-            self.results[query_id].update({blocks: (budget.epsilon, result)})
+        if block_id not in self.results[query_id]:
+            self.results[query_id].update({block_id: (budget.epsilon, result)})
 
-    def run(self, query_id, query, blocks, block_ids):
+    def run(self, query_id, query, block: Block):      # Block might be a hyperblock
         result, budget = None
         if query_id in self.results:
-            if block_ids in self.results[query_id]:
-                (_, result) = self.results[query_id][block_ids]
+            if block.id in self.results[query_id]:
+                (_, result) = self.results[query_id][block.id]
 
         # If result is not in the cache run fresh and store
         if not result:
-            result = self.scheduler.run_task(query_id, blocks, budget)
-            # self.consume_budgets(blocks_list, plan.budget)
+            result = self.block.run(query)            
             # Add result in cache
-            self.add_result(query_id, blocks, budget, result)
+            self.add_result(query_id, block.id, budget, result)
 
         return result, budget
 
