@@ -17,7 +17,7 @@ class ProbabilicticCache(Cache):
             return self.key_values[hyperblock_id]
         return None
 
-    def run(self, query_id, query, hyperblock: HyperBlock):
+    def run(self, query_id, query, run_budget, hyperblock: HyperBlock):
         pmw = self.get_entry(hyperblock.id)
         # If there is no PMW for the hyperblock then create it (creation happens on demand not eagerly)
         if pmw is None:

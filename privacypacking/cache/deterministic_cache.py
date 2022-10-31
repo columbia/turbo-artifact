@@ -20,13 +20,11 @@ class DeterministicCache(Cache):
                 result = self.key_values[query_id][hyperblock_id]
         return result
 
-    def run(self, query_id, query, hyperblock: HyperBlock):
-        run_budget = None
+    def run(self, query_id, query, run_budget, hyperblock: HyperBlock):
         result = self.get_entry(query_id, hyperblock.id)
         
         if not result:  # If result is not in the cache run fresh and store
-            result = self.hyperblock.run_dp(query, run_budget)
-            run_budget = 0.5    # TODO: Determine this
+            result = hyperblock.run_dp(query, run_budget)
             self.add_entry(query_id, hyperblock.id, result)  # Add result in cache
 
         return result, run_budget

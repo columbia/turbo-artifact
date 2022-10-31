@@ -22,20 +22,18 @@ class PerBlockPlanner(Planner):
         for x in split:
             x = (x[0], x[-1])
             plan += [R(query_id, x, budget)]
-            
-            if len(plan) == 1:
-                plan = plan[0]
-            else:
-                plan = A(plan)
+        plan = A(plan)
 
-        if not math.isinf(get_cost(plan, self.cache, self.blocks)):    # Get the cost of the plan - if infinite it's not eligible
+        cost = get_cost(plan, self.cache, self.blocks)
+        print("Get cost of plan", plan, "cost", cost)
+
+        if not math.isinf(cost):    # Get the cost of the plan - if infinite it's not eligible
             return plan
         return None
 
 
 # Cost model
 def get_cost(plan, cache, blocks):     # Cost is either infinite or 0 in this implementation
-    print("Get cost of plan", plan)
     if isinstance(plan, A):     # Get cost of arguments/operators
         return sum([get_cost(x, cache, blocks) for x in plan.l])
 

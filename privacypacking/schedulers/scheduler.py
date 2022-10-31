@@ -90,7 +90,7 @@ class Scheduler:
         assert self.blocks_metadata
 
         self.query_pool = QueryPool(
-            self.blocks_metadata["domain_size"], self.queries_path
+            self.blocks_metadata["attributes_domain_sizes"], self.queries_path
         )
 
         self.alphas = None
@@ -163,9 +163,9 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                without_cache_plan = R(
+                without_cache_plan = A([R(
                     query_id=task.query_id, blocks=bs_tuple, budget=task.budget
-                )
+                )])
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.enable_caching:
@@ -202,9 +202,9 @@ class Scheduler:
 
                     # Run the original plan without cache just to store the result - for experiments
                     self.tasks_info.with_cache_plan_result[task.id] = result
-                    result, _ = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
-                        self.query_pool.get_query(plan.query_id), plan.budget
-                    ) # Ignore the "run-budget" - we run only for experiments
+                    result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
+                        self.query_pool.get_query(task.query_id), task.budget
+                    )
                     print(
                             colored(
                                 f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
@@ -234,7 +234,7 @@ class Scheduler:
 
     def execute_plan(self, plan):       # Consider making an executor class
         if isinstance(plan, R):  # Run Query
-            print(f"plan.blocks: {plan.blocks}")
+            print(f"plan.blocks: {plan.blocks}, {plan.budget}")
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
             
@@ -242,7 +242,8 @@ class Scheduler:
                 result, budget = self.cache.run(
                     query_id=plan.query_id,
                     query=self.query_pool.get_query(plan.query_id),
-                    block=hyperblock,
+                    run_budget=plan.budget,     # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
+                    hyperblock=hyperblock,
                 )
             else:                                   # Not using cache
                 result = hyperblock.run_dp(

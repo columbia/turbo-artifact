@@ -109,15 +109,15 @@ class HyperBlock:
         if isinstance(query, Tensor):
             # Weighted average of dot products
             result = 0
-            for block in self.blocks:
-                result += len(block) * block.data.run(query)
+            for block in self.blocks.values():
+                result += len(block) * block.run(query)
             result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
         return result
 
     def run_dp(self, query, budget):
-        result, _ = self.run(query)
+        result = self.run(query)
         sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon

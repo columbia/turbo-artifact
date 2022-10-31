@@ -1,10 +1,10 @@
 import json
-from pathlib import Path
 from itertools import chain, combinations, product
-from torch import Tensor, sparse_coo_tensor, float64
+from privacypacking.budget.histogram import build_sparse_tensor
 from typing import Optional
 from loguru import logger
 import typer
+import math
 from privacypacking.utils.utils import REPO_ROOT
 
 app = typer.Typer()
@@ -42,34 +42,32 @@ def create_queries(queries_path, attributes_domain_sizes):
 
 
 class QueryPool:
-    def __init__(self, domain_size, queries_path) -> None:
-        self.domain_size = domain_size
+    def __init__(self, attribute_domain_sizes, queries_path) -> None:
+        self.attribute_domain_sizes = attribute_domain_sizes
+        self.domain_size = math.prod(attribute_domain_sizes)
         self.queries = None
         with open(queries_path) as f:
             self.queries = json.load(f)
-
-    def get_query_tensor(self, query_id: int) -> Optional[Tensor]:
-        if self.queries is None or query_id not in self.queries:
-            return None
-        query_tensor = self.queries[query_id]
-        return sparse_coo_tensor(
-            indices=query_tensor,
-            values=[1.0]
-            * len(query_tensor),  # add this as part of the query in queries.json
-            size=(1, self.domain_size),
-            dtype=float64,
-        )
 
     def get_query_sql(self, f, query_id: int) -> Optional[str]:
         # TODO: allow sql like queries too
         pass
 
     def get_query(self, query_id: int):
-        if query_id in self.queries:
-            query = self.get_query_tensor(query_id)
+        query_id_str = str(query_id)
+        if query_id_str in self.queries:
+            query_tensor = self.queries[query_id_str]
+            # print(query_tensor)
+            query = build_sparse_tensor(
+                bin_indices=query_tensor, 
+                values=[1.0] * len(query_tensor),  # TODO: add values as part of the query in queries.json
+                attribute_sizes=self.attribute_domain_sizes
+            )
         else:
+            logger.error("Not implemented")
             exit(1)     # not implemented for now
-            query = self.get_query_sql(query_id)
+            query = self.get_query_sql(query_id_str)
+
         assert query is not None
         return query
 
