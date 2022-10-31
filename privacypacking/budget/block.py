@@ -6,15 +6,15 @@ import numpy as np
 
 
 class Block:
-    def __init__(self, block_id, budget, domain_size=None, data_path=None):
+    def __init__(self, block_id, budget):
         self.id = block_id
         self.initial_budget = budget
         self.budget = budget
-        self.data_path = data_path
-        self.domain_size= domain_size
         self.size = None
         self.raw_data = None
         self.histogram_data = None
+        self.domain_size= None
+        self.data_path = None
 
     @classmethod
     def from_epsilon_delta(
@@ -36,6 +36,7 @@ class Block:
             "id": self.id,
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
+            "data_path": self.data_path,
         }
 
     def __len__(self) -> int:
@@ -61,12 +62,12 @@ class Block:
     def load_raw_data(
         self,
     ):
-        self.raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
+        self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
         raw_data = self.raw_data
         if raw_data is None:
-            raw_data = pd.read_csv(f"{self.data_path}/block_{self.id}.csv")
+            raw_data = pd.read_csv(self.data_path)
         self.histogram_data = SparseHistogram.from_dataframe(
             raw_data, attribute_domain_sizes
         )
@@ -86,23 +87,23 @@ class Block:
             scale=sensitivity / budget.epsilon
         )  # todo: this is not compatible with renyi
         result += noise_sample
-        return result, self.size
+        return result
 
 
 # Wraps one or more blocks
 class HyperBlock:
     def __init__(self, blocks: Dict):
         self.blocks = blocks
-        block_ids = blocks.keys()
-        self.id = tuple(block_ids[0], block_ids[-1])
+        block_ids = list(blocks.keys())
+        self.id = (block_ids[0], block_ids[-1])
         self.size = 0
 
         for block in self.blocks.values():
             self.size += len(block)
         
         self.domain_size = 0
-        if self.blocks:
-            self.domain_size = self.blocks[0].domain_size
+        if block_ids:
+            self.domain_size = self.blocks[block_ids[0]].domain_size
 
     def run(self, query):
         if isinstance(query, Tensor):
@@ -113,15 +114,16 @@ class HyperBlock:
             result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
+        return result
 
     def run_dp(self, query, budget):
-        result = self.run(query)
+        result, _ = self.run(query)
         sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
         )  # todo: this is not compatible with renyi
         result += noise_sample
-        return result, self.size  
+        return result
 
     def can_run(self, demand) -> bool:
         """

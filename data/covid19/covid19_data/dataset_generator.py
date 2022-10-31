@@ -179,8 +179,8 @@ def day_data(
 
     users = {
         "positive": user_positivity,
-        "age": user_ages,
         "gender": user_genders,
+        "age": user_ages,
         "ethnicity": user_ethnicities,
     }
     df = pd.DataFrame(data=users)
@@ -395,9 +395,10 @@ def main(
 
                 metadata[i] = (date, len(block))
 
-                i += 1
                 block.to_csv(output_dir.joinpath(f"block_{i}.csv"), index=False)
                 logger.info(f"Saved block for day {i} - Date {date}")
+                i += 1
+
 
     if sequential:
         # Sequential
@@ -438,6 +439,11 @@ def main(
         metadata["blocks"][idx] = dict()
         metadata["blocks"][idx]["date"] = date
         metadata["blocks"][idx]["size"] = size
+        
+        if not sequential:
+            # Fix the names of the stored blocks
+            os.rename(output_dir.joinpath(f"block_{key}.csv"), output_dir.joinpath(f"block_{idx}.csv"))
+
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)

@@ -22,22 +22,22 @@ class PerBlockPlanner(Planner):
         for x in split:
             x = (x[0], x[-1])
             plan += [R(query_id, x, budget)]
-
-        if not math.isinf(self.get_cost(plan, self.blocks)):    # Get the cost of the plan - if infinite it's not eligible
-            # Only one split for per-block - we stop here
+            
             if len(plan) == 1:
-                return plan[0]
+                plan = plan[0]
             else:
-                return A(plan)
+                plan = A(plan)
 
+        if not math.isinf(get_cost(plan, self.cache, self.blocks)):    # Get the cost of the plan - if infinite it's not eligible
+            return plan
         return None
 
 
 # Cost model
 def get_cost(plan, cache, blocks):     # Cost is either infinite or 0 in this implementation
-
+    print("Get cost of plan", plan)
     if isinstance(plan, A):     # Get cost of arguments/operators
-        cost = sum([get_cost(x) for x in plan.l])
+        return sum([get_cost(x, cache, blocks) for x in plan.l])
 
     elif isinstance(plan, R):   # Get cost of Run
         block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
@@ -51,8 +51,6 @@ def get_cost(plan, cache, blocks):     # Cost is either infinite or 0 in this im
                 return math.inf     # This hyperblock does not have enough budget
 
             return 0     # Even if there is at least a little budget left in the hyperblock we assume the cost is 0 TODO: change this
-
-    return cost
 
 
 

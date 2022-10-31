@@ -100,12 +100,15 @@ def build_sparse_tensor(
 ):
     # One row only
     column_ids = []
+    column_values = []
+
     for b, v in zip(bin_indices, values):
         column_ids.append(get_flat_bin_index(b, attribute_sizes))
+        column_values.append(v)     # In case we lose the correct order?
 
     return torch.sparse_coo_tensor(
         [[0] * len(column_ids), column_ids],
-        values,
+        column_values,
         size=(1, get_domain_size(attribute_sizes)),
         dtype=torch.float64,
     )

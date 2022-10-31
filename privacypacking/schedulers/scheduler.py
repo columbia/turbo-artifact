@@ -200,13 +200,12 @@ class Scheduler:
                     )
                     self.update_allocated_task(task)
 
-                    # Run the without_cache_plan just to store the result - for experiments
-                    if str(without_cache_plan) != str(plan):
-                        self.tasks_info.with_cache_plan_result[task.id] = result
-                        result, _ = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
-                            self.query_pool.get_query(plan.query_id), plan.budget
-                        ) # Ignore the "run-budget" - we run only for experiments
-                        print(
+                    # Run the original plan without cache just to store the result - for experiments
+                    self.tasks_info.with_cache_plan_result[task.id] = result
+                    result, _ = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
+                        self.query_pool.get_query(plan.query_id), plan.budget
+                    ) # Ignore the "run-budget" - we run only for experiments
+                    print(
                             colored(
                                 f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
                                 "green",
@@ -233,22 +232,26 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):
-
+    def execute_plan(self, plan):       # Consider making an executor class
         if isinstance(plan, R):  # Run Query
             print(f"plan.blocks: {plan.blocks}")
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
-            result, budget = self.cache.run(
-                query_id=plan.query_id,
-                query=self.query_pool.get_query(plan.query_id),
-                block=hyperblock,
-            )
+            
+            if self.omegaconf.enable_caching:       # Using cache
+                result, budget = self.cache.run(
+                    query_id=plan.query_id,
+                    query=self.query_pool.get_query(plan.query_id),
+                    block=hyperblock,
+                )
+            else:                                   # Not using cache
+                result = hyperblock.run_dp(
+                    self.query_pool.get_query(plan.query_id), plan.budget
+                    )
+                budget = plan.budget
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-
             return (result, hyperblock.size)
 
         elif isinstance(plan, A):  # Aggregate Partial Results
@@ -265,7 +268,7 @@ class Scheduler:
 
             return result / total_size
 
-        else:
+        else:       
             logger.error("Execution: no such operator")
             exit(1)
         
@@ -305,11 +308,11 @@ class Scheduler:
             raise Exception("This block id is already present in the scheduler.")
 
         # block.load_raw_data()
+        block.data_path = f"{self.blocks_path}/block_{block.id}.csv"
         block.load_histogram(self.blocks_metadata["attributes_domain_sizes"])
-        block.date = self.blocks_metadata["blocks"][block.id]["date"]
-        block.size = self.blocks_metadata["blocks"][block.id]["size"]
+        block.date = self.blocks_metadata["blocks"][str(block.id)]["date"]
+        block.size = self.blocks_metadata["blocks"][str(block.id)]["size"]
         block.domain_size = self.blocks_metadata["domain_size"]
-
         self.blocks.update({block.id: block})
 
     def get_num_blocks(self) -> int:

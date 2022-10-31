@@ -26,6 +26,7 @@ class Config:
         default_omegaconf = OmegaConf.load(DEFAULT_CONFIG_FILE)
         custom_omegaconf = OmegaConf.create(config.get("omegaconf", {}))
         self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
+        # print(self.omegaconf)
 
         # Rest of the configuration below
         self.global_seed = self.omegaconf.global_seed
@@ -87,7 +88,6 @@ class Config:
         block = Block(
             block_id,
             BasicBudget(self.omegaconf.epsilon),
-            f"{self.omegaconf.blocks.path}/block_{block_id}",
         )
         # block = Block.from_epsilon_delta(
         #                 block_id,
@@ -95,7 +95,6 @@ class Config:
         #                 self.omegaconf.delta,
         #                 alpha_list=self.omegaconf.alphas,
         #             )
-        block.data_path = f"{self.omegaconf.blocks.path}/block_{block_id}"
         return block
 
     def set_task_arrival_time(self):

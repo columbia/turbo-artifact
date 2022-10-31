@@ -24,7 +24,7 @@
         },
         "blocks": {
             "initial_num": 1,
-            "max_num": 40,
+            "max_num": 100,
             "path": "covid19/covid19_data/blocks",
             "metadata": "covid19/covid19_data/metadata.json"
         },
