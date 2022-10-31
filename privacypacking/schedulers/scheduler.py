@@ -9,9 +9,10 @@ import json
 from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget import Block, Task, HyperBlock
 from privacypacking.budget.block_selection import NotEnoughBlocks
+from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.per_block_pmw import PerBlockPMW
+from privacypacking.cache.probabilistic_cache import ProbabilicticCache
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
 
@@ -84,15 +85,22 @@ class Scheduler:
         ) as f:
             self.blocks_metadata = json.load(f)
 
-        self.query_pool = QueryPool(self.blocks_metadata["domain_size"], self.queries_path)
+        assert self.blocks_path
+        assert self.queries_path
+        assert self.blocks_metadata
+
+        self.query_pool = QueryPool(
+            self.blocks_metadata["domain_size"], self.queries_path
+        )
 
         self.alphas = None
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed)
-        self.cache = PerBlockPMW()
+        self.cache = DeterministicCache()
+        # self.cache = ProbabilicticCache()
+        self.planner = PerBlockPlanner(self.cache, self.blocks)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -161,7 +169,7 @@ class Scheduler:
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.enable_caching:
-                    plan = self.cache.get_execution_plan(
+                    plan = self.planner.get_execution_plan(
                         task.query_id, bs_list, task.budget
                     )
                 elif self.can_run(task.budget_per_block):
@@ -195,10 +203,9 @@ class Scheduler:
                     # Run the without_cache_plan just to store the result - for experiments
                     if str(without_cache_plan) != str(plan):
                         self.tasks_info.with_cache_plan_result[task.id] = result
-                        blocks = {key: self.blocks[b] for b in bs_list} 
-                        result = HyperBlock(blocks).run(
+                        result, _ = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
                             self.query_pool.get_query(plan.query_id), plan.budget
-                        )
+                        ) # Ignore the "run-budget" - we run only for experiments
                         print(
                             colored(
                                 f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
@@ -227,35 +234,41 @@ class Scheduler:
         return self.allocated_task_ids
 
     def execute_plan(self, plan):
-        result = None
 
         if isinstance(plan, R):  # Run Query
             print(f"plan.blocks: {plan.blocks}")
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
 
-            # We could save hyperblocks so that we don't recompute their histograms
-            blocks = {key: self.blocks[b] for b in bs_list} 
+            hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
             result, budget = self.cache.run(
                 query_id=plan.query_id,
                 query=self.query_pool.get_query(plan.query_id),
-                block=HyperBlock(blocks),
+                block=hyperblock,
             )
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
 
+            return (result, hyperblock.size)
+
         elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
-            result = sum(agglist) / len(agglist)
-            # TODO: weighted average instead
-            # TODO: blocks need to have a size
-            # for aggregation here we average (results are fractions)
+            if not agglist:
+                return None
+
+            result = 0
+            total_size = 0
+            
+            for (res, size) in agglist:
+                result += size * res
+                total_size += size
+
+            return result / total_size
 
         else:
             logger.error("Execution: no such operator")
             exit(1)
-
-        return result
+        
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -291,17 +304,11 @@ class Scheduler:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
 
-        # TODO: load the data directly when the resource manager creates the block?
-        # I think I prefer the resource manager being dumb and just "creating" the block and corresponding csv (csvs in reality already exist though)
-        # the scheduler can load data in memory or load as histogram for better performance if configured
-        assert self.blocks_path is not None
-        assert self.blocks_metadata is not None
-
-        # TODO: Later on, store blocks as sparse histogram directly?
         # block.load_raw_data()
-        block.load_histogram(self.blocks_metadata["attribute_domain_sizes"])
+        block.load_histogram(self.blocks_metadata["attributes_domain_sizes"])
         block.date = self.blocks_metadata["blocks"][block.id]["date"]
         block.size = self.blocks_metadata["blocks"][block.id]["size"]
+        block.domain_size = self.blocks_metadata["domain_size"]
 
         self.blocks.update({block.id: block})
 
@@ -369,16 +376,9 @@ class Scheduler:
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, demand) -> bool:
-        """
-        A task can run only if we can allocate the demand budget
-        for all the blocks requested
-        """
+        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run()
 
-        blocks = {key: self.blocks[b] for b in demand.keys()} 
-        return HyperBlock(blocks).can_run()
-        
-        
-        def task_set_block_ids(self, task: Task) -> None:
+    def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
         # try:
         selected_block_ids = task.block_selection_policy.select_blocks(

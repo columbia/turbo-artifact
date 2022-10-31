@@ -2,31 +2,26 @@ import math
 import numpy as np
 import torch
 from privacypacking.budget import BasicBudget
-from privacypacking.budget.block import Block
+from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.histogram import DenseHistogram
-from privacypacking.budget.queries import Tensor
 
 
-# TODO: generalize to list of blocks
 class PMW:
     def __init__(
         self,
-        block: Block,
+        hyperblock: HyperBlock,
         epsilon=0.1,
         delta=1e-4,
         beta=1e-3,
         k=100,
     ):
-        self.dataset = (
-            block.histogram_data
-        )  # for more blocks aggregate multiple histograms
-        self.block = block
-        self.n = len(block)
+        self.hyperblock = hyperblock
+        self.n = hyperblock.size
         self.epsilon = epsilon
         self.delta = delta
         self.beta = beta
         self.k = k
-        self.M = block.histogram_data.domain_size
+        self.M = hyperblock.domain_size
         self.queries_ran = 0
 
         # Initializations as per the Hardt and Rothblum 2010 paper
@@ -62,8 +57,7 @@ class PMW:
         self.queries_ran += 1
 
         # TODO: use efficient dot product here (blocks as sparse histograms)
-        # true_output = self.dataset.run_query(query_tensor)
-        true_output = self.block.run(query)
+        true_output = self.hyperblock.run(query)
         noise_sample = np.random.laplace(scale=self.sigma)
         noisy_output = true_output + noise_sample
         predicted_output = self.histogram.run(query)
@@ -84,7 +78,7 @@ class PMW:
 
         # TODO: check how sparse exponential looks like
         self.histogram.multiply(
-            torch.exp(-self.learning_rate * np.sign(noisy_error) * query_tensor)
+            torch.exp(-self.learning_rate * np.sign(noisy_error) * query)
         )
         self.histogram.normalize()
 

@@ -87,7 +87,7 @@ class Config:
         block = Block(
             block_id,
             BasicBudget(self.omegaconf.epsilon),
-            f"{self.omegaconf.blocks.data_path}/block_{block_id}",
+            f"{self.omegaconf.blocks.path}/block_{block_id}",
         )
         # block = Block.from_epsilon_delta(
         #                 block_id,
@@ -95,7 +95,7 @@ class Config:
         #                 self.omegaconf.delta,
         #                 alpha_list=self.omegaconf.alphas,
         #             )
-        block.data_path = f"{self.omegaconf.blocks.data_path}/block_{block_id}"
+        block.data_path = f"{self.omegaconf.blocks.path}/block_{block_id}"
         return block
 
     def set_task_arrival_time(self):

@@ -1,17 +1,17 @@
 from typing import List, Dict
-from privacypacking.budget import ALPHAS, Budget
-from privacypacking.budget import SparseHistogram
+from privacypacking.budget import ALPHAS, Budget, SparseHistogram
 from torch import Tensor
 import pandas as pd
 import numpy as np
 
 
 class Block:
-    def __init__(self, block_id, budget, data_path=""):
+    def __init__(self, block_id, budget, domain_size=None, data_path=None):
         self.id = block_id
         self.initial_budget = budget
         self.budget = budget
         self.data_path = data_path
+        self.domain_size= domain_size
         self.size = None
         self.raw_data = None
         self.histogram_data = None
@@ -71,48 +71,57 @@ class Block:
             raw_data, attribute_domain_sizes
         )
 
-    def run(self, query, budget):  # Runs with DP
+    def run(self, query):  # Runs with DP
         if isinstance(query, Tensor):
             result = self.histogram_data.run(query)
             result /= self.size
-            sensitivity = 1 / self.size
-
         elif isinstance(query, pd.DataFrame):
             pass
+        return result
 
+    def run_dp(self, query, budget):
+        result = self.run(query)
+        sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
         )  # todo: this is not compatible with renyi
         result += noise_sample
-        return result
+        return result, self.size
 
 
-# Comprises multiple partial blocks
+# Wraps one or more blocks
 class HyperBlock:
     def __init__(self, blocks: Dict):
         self.blocks = blocks
         block_ids = blocks.keys()
         self.id = tuple(block_ids[0], block_ids[-1])
+        self.size = 0
 
-    def run(self, query, budget):
+        for block in self.blocks.values():
+            self.size += len(block)
+        
+        self.domain_size = 0
+        if self.blocks:
+            self.domain_size = self.blocks[0].domain_size
+
+    def run(self, query):
         if isinstance(query, Tensor):
             # Weighted average of dot products
-            size = 0
             result = 0
             for block in self.blocks:
                 result += len(block) * block.data.run(query)
-                size += len(block)
-            result /= size
-            sensitivity = 1 / size
-
+            result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
 
+    def run_dp(self, query, budget):
+        result = self.run(query)
+        sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
         )  # todo: this is not compatible with renyi
         result += noise_sample
-        return result
+        return result, self.size  
 
     def can_run(self, demand) -> bool:
         """

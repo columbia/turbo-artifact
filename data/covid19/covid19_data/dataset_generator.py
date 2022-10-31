@@ -396,7 +396,7 @@ def main(
                 metadata[i] = (date, len(block))
 
                 i += 1
-                block.to_csv(output_dir.joinpath(f"covid_block_{i}.csv"), index=False)
+                block.to_csv(output_dir.joinpath(f"block_{i}.csv"), index=False)
                 logger.info(f"Saved block for day {i} - Date {date}")
 
     if sequential:
