@@ -1,72 +1,51 @@
-from queue import Empty
-
-from privacypacking.cache.cache import Cache, R, C, A
-from privacypacking.cache.utils import get_splits
-from termcolor import colored
+from privacypacking.cache.cache import Cache, R, A
+from privacypacking.budget.block import HyperBlock
+import yaml
+import math
 
 
 class DeterministicCache(Cache):
-    def __init__(self, max_aggregations_allowed, scheduler):
-        self.max_aggregations_allowed = max_aggregations_allowed
-        self.scheduler = scheduler
-        self.results = {}
+    def __init__(self,):
+        self.key_values = {}
 
-    def dump(
-        self,
-    ):
-        res = yaml.dump(self.results)
+    def add_entry(self, query_id, hyperblock_id, result):
+        if query_id not in self.key_values:
+            self.key_values[query_id] = {}
+        if hyperblock_id not in self.key_values[query_id]:
+            self.key_values[query_id].update({hyperblock_id: result})
+
+    def get_entry(self, query_id, hyperblock_id):
+        result = None
+        if query_id in self.key_values:
+            if hyperblock_id in self.key_values[query_id]:
+                result = self.key_values[query_id][hyperblock_id]
+        return result
+
+    def run(self, query_id, query, run_budget, hyperblock: HyperBlock):     # TODO: strip the caches from the 'run' functionality?
+        result = self.get_entry(query_id, hyperblock.id)
+        if not result:  # If result is not in the cache run fresh and store
+            result = hyperblock.run_dp(query, run_budget)
+            self.add_entry(query_id, hyperblock.id, result)  # Add result in cache
+        return result, run_budget
+
+    def dump(self):
+        res = yaml.dump(self.key_values)
         print("Results", res)
 
-    def can_run(self, scheduler, blocks, budget):
-        demand = {}
-        for block in range(blocks[0], blocks[-1] + 1):
-            demand[block] = budget
-        # Add other constraints too here
-        # for block in demand.keys():
-        # print(f"             block {block} - available - {scheduler.blocks[block].remaining_budget}")
-        return scheduler.can_run(demand)
+    # Cost model    # TODO: remove this functionality from the Cache
+    def get_cost(self, plan, blocks):   # Cost is either infinite or 0 in this implementation
+        if isinstance(plan, A):         # Aggregate cost of arguments/operators
+            return sum([self.get_cost(x, blocks) for x in plan.l])
 
-    def add_result(self, query_id, blocks, budget, result):
-        if query_id not in self.results:
-            self.results[query_id] = {}
-        if blocks not in self.results[query_id]:
-            self.results[query_id].update({blocks: (budget.epsilon, result)})
+        elif isinstance(plan, R):       # Get cost of Run operator
+            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+            hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
+            
+            if self.get_entry(plan.query_id, hyperblock.id):
+                return 0                # Already cached
+            else:
+                demand = {key: plan.budget for key in block_ids}
+                if not hyperblock.can_run(demand):
+                    return math.inf     # This hyperblock does not have enough budget
 
-    def run_cache(self, query_id, blocks, _):
-        if query_id in self.results:
-            if blocks in self.results[query_id]:
-                (_, result) = self.results[query_id][blocks]
-                return result
-
-    def get_execution_plan(self, query_id, blocks, budget):
-
-        max_num_aggregations = min(self.max_aggregations_allowed, len(blocks))
-
-        plan = []
-        for i in range(
-            max_num_aggregations + 1
-        ):  # Prioritizing smallest number of aggregations
-            splits = get_splits(blocks, i)
-            for split in splits:
-                # print("split", split)
-
-                for x in split:
-                    x = (x[0], x[-1])
-                    # print("         x", x)
-
-                    if self.run_cache(query_id, x, budget) is not None:
-                        plan += [C(query_id, x, budget)]
-
-                    elif self.can_run(self.scheduler, x, budget):
-                        plan += [R(query_id, x, budget)]
-
-                    else:
-                        plan = []
-                        break
-
-                if plan:
-                    if len(plan) == 1:
-                        return plan[0]
-                    else:
-                        return A(plan)
-        return None
+                return 0    # Even if there is at least a little budget left in the hyperblock we assume the cost is 0 TODO: change this

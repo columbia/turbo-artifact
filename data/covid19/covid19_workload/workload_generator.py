@@ -22,16 +22,18 @@ class PrivacyWorkload:
     ):
         self.tasks = None
         self.blocks_num = 400
-        self.num_types_of_queries = 2
+        self.query_types = [33479, 34408]
         self.tasks = []
         for i in range(self.blocks_num):
-            self.tasks += self.generate_one_day_tasks(i, self.num_types_of_queries)
+            self.tasks += self.generate_one_day_tasks(i, self.query_types)
 
-    def generate_one_day_tasks(self, start_time, num_types_of_queries):
+    def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
-        num_tasks = np.abs(np.random.normal(1, 2, 1)).astype(int) + 1       # todo: increase the number of daily tasks when we have more queries
+        num_tasks = (
+            np.abs(np.random.normal(1, 2, 1)).astype(int) + 1
+        )  # todo: increase the number of daily tasks when we have more queries
         for _ in range(num_tasks[0]):
-            query_id = np.random.randint(1, num_types_of_queries + 1) - 1
+            query_id = np.random.choice(query_types)
             query_type = "count"
             # start time is in block units, so it indicates how many blocks currently exist
             # we use this info so that a task does not request more blocks than those existing

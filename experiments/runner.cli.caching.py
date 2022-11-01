@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 import typer
 
 from experiments.ray_runner import (
@@ -22,7 +21,7 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         max_aggregations_allowed=[1],  # [0, 2, 4, 6, 8, 10],
-        allow_caching=[True],
+        enable_caching=[True],
     )
 
 
@@ -32,14 +31,15 @@ def pmw():
         metric_recomputation_period=[50],
         initial_blocks=[1],
         max_blocks=[400],
-        tasks_data_path=["covid19/covid19_workload/privacy_tasks.csv"],
-        blocks_data_path="covid19/covid19_data/blocks",
+        tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
+        queries_path=["covid19/covid19_queries/queries.json"],
+        blocks_path="covid19/covid19_data/blocks",
         blocks_metadata="data/covid19/covid19_data/metadata.json",
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
         max_aggregations_allowed=[10000],
-        allow_caching=[True],
+        enable_caching=[True],
     )
 
 

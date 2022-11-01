@@ -1,13 +1,12 @@
+# TODO: we need to clean this
 scheduler: 
   method: offline
   metric: DominantShares
   n: 100
-  budget_unlocking_time: 1
   solver: gurobi
   scheduling_wait_time: 1
   data_lifetime: 10
   task_lifetime: 10
-  max_substitutes_allowed: 10
   metric_recomputation_period: 1
   log_warning_every_n_allocated_tasks: 0
   scheduler_timeout_seconds: 0
@@ -29,19 +28,8 @@ blocks:
   max_num: 10
 
 tasks:
-  data_path: "heterogeneous"
-  frequencies_path: "frequencies.yaml"
-  tasks_path: "tasks"
+  path: "tasks"
   initial_num: 100
-
-  # One of: poisson, constant. If empty, will attempt to read tasks from a csv file.
-  sampling: "poisson"
-  avg_num_tasks_per_block: 100
-
-  # Set to RandomBlocks or LatestBlocksFirst for instance.
-  # Will override the selection given by individual tasks specs.
-  # Leave empty to follow the tasks specs.
-  block_selection_policy: ""
 
 logs:
   verbose: False
@@ -64,4 +52,3 @@ alphas:
 epsilon: 10
 delta: 1e-7
 global_seed: 64
-k: 0.25

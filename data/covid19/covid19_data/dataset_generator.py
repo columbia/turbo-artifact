@@ -3,7 +3,7 @@ import math
 import os
 from multiprocessing import Manager, Process
 from pathlib import Path
-
+import math
 import numpy as np
 import pandas as pd
 import typer
@@ -179,8 +179,8 @@ def day_data(
 
     users = {
         "positive": user_positivity,
-        "age": user_ages,
         "gender": user_genders,
+        "age": user_ages,
         "ethnicity": user_ethnicities,
     }
     df = pd.DataFrame(data=users)
@@ -323,6 +323,12 @@ def main(
     output_dir="blocks",
 ):
     metadata = {}
+    attribute_names = ["positive", "gender", "age", "ethnicity"]
+    attributes_domain_sizes = [2, 2, 4, 8]
+    domain_size = math.prod(attributes_domain_sizes)
+    metadata["domain_size"] = domain_size
+    metadata["attribute_names"] = attribute_names
+    metadata["attributes_domain_sizes"] = attributes_domain_sizes
     metadata["age_mapping"] = {"0-17": 0, "18-49": 1, "50-64": 2, "65+": 3}
     metadata["ethnicity_mapping"] = {
         "American Indian or Alaska Native": 0,
@@ -341,7 +347,7 @@ def main(
     us_census_genders = np.array([0.5, 0.5])
     us_census_ethnicities = np.array(
         [0.002, 0.15, 0.402, 0.042, 0.004, 0.006, 0.343, 0.053]
-    )	
+    )
 
     covid, age, gender, ethnicity = load_and_preprocess_datasets(metadata)
 
@@ -389,9 +395,10 @@ def main(
 
                 metadata[i] = (date, len(block))
 
-                i += 1
-                block.to_csv(output_dir.joinpath(f"covid_block_{i}.csv"), index=False)
+                block.to_csv(output_dir.joinpath(f"block_{i}.csv"), index=False)
                 logger.info(f"Saved block for day {i} - Date {date}")
+                i += 1
+
 
     if sequential:
         # Sequential
@@ -432,6 +439,11 @@ def main(
         metadata["blocks"][idx] = dict()
         metadata["blocks"][idx]["date"] = date
         metadata["blocks"][idx]["size"] = size
+        
+        if not sequential:
+            # Fix the names of the stored blocks
+            os.rename(output_dir.joinpath(f"block_{key}.csv"), output_dir.joinpath(f"block_{idx}.csv"))
+
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)

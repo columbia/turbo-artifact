@@ -1,19 +1,18 @@
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
-
-import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
-
-from data.covid19.queries import *
-from privacypacking.budget import Block, Task
+import json
+from data.covid19.covid19_queries.queries import QueryPool
+from privacypacking.budget import Block, Task, HyperBlock
 from privacypacking.budget.block_selection import NotEnoughBlocks
-from privacypacking.cache.cache import A, C, R
+from privacypacking.planner.per_block_planner import PerBlockPlanner
+from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.per_block_pmw import PerBlockPMW
+from privacypacking.cache.probabilistic_cache import ProbabilicticCache
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
 
@@ -69,24 +68,39 @@ class Scheduler:
             logger.warning("Verbose logs. Might be slow and noisy!")
             # Counts the number of scheduling passes for each scheduling step (fixpoint)
             self.iteration_counter = defaultdict(int)
-
             # Stores metrics every time we recompute the scheduling queue
             self.scheduling_queue_info = []
 
         self.simulator_config = simulator_config
         self.omegaconf = simulator_config.scheduler if simulator_config else None
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
-            self.simulator_config.blocks.data_path
+            self.simulator_config.blocks.path
         )
+        self.queries_path = REPO_ROOT.joinpath("data").joinpath(
+            self.simulator_config.tasks.queries_path
+        )
+        self.blocks_metadata = None
+        with open(
+            REPO_ROOT.joinpath("data").joinpath(self.simulator_config.blocks.metadata)
+        ) as f:
+            self.blocks_metadata = json.load(f)
+
+        assert self.blocks_path
+        assert self.queries_path
+        assert self.blocks_metadata
+
+        self.query_pool = QueryPool(
+            self.blocks_metadata["attributes_domain_sizes"], self.queries_path
+        )
+
         self.alphas = None
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        self.block_size = self.omegaconf["block_size"]
 
-        # todo: avoid passing the scheduler as argument (circular reference)
-        # self.cache = cache.DeterministicCache(self.omegaconf.max_aggregations_allowed, self)
-        self.cache = PerBlockPMW(self)
+        # self.cache = DeterministicCache()
+        self.cache = ProbabilicticCache()
+        self.planner = PerBlockPlanner(self.cache, self.blocks)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -141,35 +155,21 @@ class Scheduler:
 
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                    self.tasks_info.tasks_lifetime[task.id]
+                        self.tasks_info.tasks_lifetime[task.id]
                     < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 
-                # print(
-                #     "\n\nwithout_cache_plans_ran",
-                #     self.tasks_info.without_cache_plans_ran,
-                #     "| with_cache_plans_ran",
-                #     self.tasks_info.with_cache_plans_ran,
-                # )
-
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                without_cache_plan = R(
+                without_cache_plan = A([R(
                     query_id=task.query_id, blocks=bs_tuple, budget=task.budget
-                )
+                )])
                 # Find a plan to run the query using caching
                 plan = None
-                if self.omegaconf.allow_caching:
-                    # print(
-                    #     colored(
-                    #         f"Setting query {task.query_id}"
-                    #         f" plan for {bs_tuple}",
-                    #         "blue",
-                    #     )
-                    # )
-                    plan = self.cache.get_execution_plan(
+                if self.omegaconf.enable_caching:
+                    plan = self.planner.get_execution_plan(
                         task.query_id, bs_list, task.budget
                     )
                 elif self.can_run(task.budget_per_block):
@@ -200,22 +200,19 @@ class Scheduler:
                     )
                     self.update_allocated_task(task)
 
-                    # Run original plan just to store the result - for experiments
-                    if str(without_cache_plan) != str(plan):
-                        # self.tasks_info.with_cache_plans_ran += 1
+                    if self.omegaconf.enable_caching:
+                    # Run the original plan without cache just to store the result - for experiments
                         self.tasks_info.with_cache_plan_result[task.id] = result
-                        result = self.run_task(task.query_id, bs_tuple, task.budget)
-                        print(
-                            colored(
-                                f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
-                                "green",
-                            )
+                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
+                            self.query_pool.get_query(task.query_id), task.budget
                         )
-
-                    # else:
-                    # self.tasks_info.without_cache_plans_ran += 1
-
-                    self.tasks_info.without_cache_plan_result[task.id] = result
+                        print(
+                                colored(
+                                    f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                    "green",
+                                )
+                            )
+                        self.tasks_info.without_cache_plan_result[task.id] = result
 
                     if (
                         self.metric.is_dynamic()
@@ -236,63 +233,46 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):
-        result = None
-        if isinstance(plan, R):
-            # The R (Run) operator is used only for the deterministic cache
-            blocks_list = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-            # Run the task on blocks without looking at the cache
-            result = self.run_task(plan.query_id, blocks_list, plan.budget)
-            self.consume_budgets(blocks_list, plan.budget)
-            # Add result in cache
-            self.cache.add_result(plan.query_id, plan.blocks, plan.budget, result)
+    def execute_plan(self, plan):       # TODO: Consider making an executor class
+        if isinstance(plan, R):  # Run Query
+            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+            hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
+            
+            if self.omegaconf.enable_caching:       # Using cache
+                result, budget = self.cache.run(
+                    query_id=plan.query_id,
+                    query=self.query_pool.get_query(plan.query_id),
+                    run_budget=plan.budget,     # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
+                    hyperblock=hyperblock,
+                )
+            else:                                   # Not using cache
+                result = hyperblock.run_dp(
+                    self.query_pool.get_query(plan.query_id), plan.budget
+                    )
+                budget = plan.budget
 
-        elif isinstance(plan, C):
-            # Run cache to get a result
-            result = self.cache.run_cache(plan.query_id, plan.blocks, plan.budget)
+            if budget is not None:
+                self.consume_budgets(block_ids, budget)
+            return (result, hyperblock.size)
 
-        elif isinstance(plan, A):
+        elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
-            result = sum(agglist) / len(agglist)
-            # TODO: weighted average instead
-            # TODO: blocks need to have a size
-            # for aggregation here we average (results are fractions)
+            if not agglist:
+                return None
 
-        else:
+            result = 0
+            total_size = 0
+            
+            for (res, size) in agglist:
+                result += size * res
+                total_size += size
+
+            return result / total_size
+
+        else:       
             logger.error("Execution: no such operator")
             exit(1)
-
-        return result
-
-    def run_task(self, query_id, blocks, budget, disable_dp=False):
-        df = []
-        # print(colored(f"Running query type {query_id} on blocks {blocks}", "green"))
-        blocks = range(blocks[0], blocks[1] + 1)
-        for block in blocks:
-            df += [pd.read_csv(f"{self.blocks_path}/covid_block_{block}.csv")]
-
-        # TODO: insert smart mapping from attribute ids to whatever
-        # TODO: move this at init time? Read blocks only once
-        # TODO: update Block class and add df attribute +size attribute + date (+ csv path)
-        df = pd.concat(df)
-
-        # This output is not noisy
-        result = globals()[f"query{query_id}"](df)
-
-        if not disable_dp:
-            sensitivity = 1 / len(df)
-            noise_sample = np.random.laplace(
-                scale=sensitivity / budget.epsilon
-            )  # todo: this is not compatible with renyi
-            result += noise_sample
-
-            # print(
-            #     colored(
-            #         f"Noisy Result of query {query_id} on blocks {blocks}: \n{result}",
-            #         "green",
-            #     )
-            # )
-        return result
+        
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -327,10 +307,14 @@ class Scheduler:
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
+
+        # block.load_raw_data()
+        block.data_path = f"{self.blocks_path}/block_{block.id}.csv"
+        block.load_histogram(self.blocks_metadata["attributes_domain_sizes"])
+        block.date = self.blocks_metadata["blocks"][str(block.id)]["date"]
+        block.size = self.blocks_metadata["blocks"][str(block.id)]["size"]
+        block.domain_size = self.blocks_metadata["domain_size"]
         self.blocks.update({block.id: block})
-        # Support blocks with custom support
-        # if not self.alphas:
-        # self.alphas = block.initial_budget.alphas
 
     def get_num_blocks(self) -> int:
         num_blocks = len(self.blocks)
@@ -396,17 +380,7 @@ class Scheduler:
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, demand) -> bool:
-        """
-        A task can run only if we can allocate the demand budget
-        for all the blocks requested
-        """
-        for block_id, demand_budget in demand.items():
-            if block_id not in self.blocks:
-                return False
-            block = self.blocks[block_id]
-            if not block.budget.can_allocate(demand_budget):
-                return False
-        return True
+        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run()
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
