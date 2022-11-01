@@ -41,7 +41,7 @@ class SparseHistogram:  # We use it to represent the block data
         # Flat representation of shape (1, N)
         self.tensor = build_sparse_tensor(
             bin_indices=bin_indices,
-            values=np.array(values) / len(values),
+            values=np.array(values) / sum(values),
             attribute_sizes=attribute_sizes,
         )
         self.domain_size = self.tensor.shape[1]  # N

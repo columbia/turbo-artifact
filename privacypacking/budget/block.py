@@ -73,7 +73,8 @@ class Block:
     def run(self, query):
         if isinstance(query, Tensor):
             result = self.histogram_data.run(query)
-            result /= self.size
+            # print(f"Size: {self.size}, Result: {result}")
+            # result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
         return result
@@ -83,8 +84,10 @@ class Block:
         sensitivity = 1 / self.size
         noise_sample = np.random.laplace(
             scale=sensitivity / budget.epsilon
-        )  # TODO: this is not compatible with renyi
+        )  # TODO: this is not compatible with renyi        
         result += noise_sample
+        # print("Noisy Result", result)
+
         return result
 
 

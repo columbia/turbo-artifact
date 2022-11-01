@@ -380,7 +380,7 @@ class Scheduler:
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, demand) -> bool:
-        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run()
+        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run(demand)
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
