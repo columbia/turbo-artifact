@@ -14,38 +14,21 @@ def caching():
         metric_recomputation_period=[50],
         initial_blocks=[1],
         max_blocks=[400],
-        tasks_data_path=["covid19/covid19_workload/privacy_tasks.csv"],
-        blocks_data_path="covid19/covid19_data/blocks",
-        blocks_metadata="data/covid19/covid19_data/metadata.json",
-        tasks_sampling="",
-        data_lifetime=[0.1],
-        task_lifetime=[1],
-        max_aggregations_allowed=[1],  # [0, 2, 4, 6, 8, 10],
-        enable_caching=[True],
-    )
-
-
-def pmw():
-    grid_online(
-        scheduler_scheduling_time=[1],
-        metric_recomputation_period=[50],
-        initial_blocks=[1],
-        max_blocks=[400],
         tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
         queries_path=["covid19/covid19_queries/queries.json"],
         blocks_path="covid19/covid19_data/blocks",
-        blocks_metadata="data/covid19/covid19_data/metadata.json",
+        blocks_metadata="covid19/covid19_data/metadata.json",
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
-        max_aggregations_allowed=[10000],
+        planner=["PerBlockPlanner"],
         enable_caching=[True],
     )
 
 
 @app.command()
 def run(
-    exp: str = "pmw",
+    exp: str = "caching",
     loguru_level: str = "WARNING",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level

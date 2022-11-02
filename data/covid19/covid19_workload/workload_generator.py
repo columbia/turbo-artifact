@@ -22,7 +22,7 @@ class PrivacyWorkload:
     ):
         self.tasks = None
         self.blocks_num = 400
-        self.query_types = [33479, 34408]
+        self.query_types = [0] #[33479, 34408]
         self.tasks = []
         for i in range(self.blocks_num):
             self.tasks += self.generate_one_day_tasks(i, self.query_types)
@@ -39,7 +39,7 @@ class PrivacyWorkload:
             # we use this info so that a task does not request more blocks than those existing
             num_existing_blocks = start_time + 1
             nblocks_options = [
-                n for n in [1, 7, 14, 30, 60, 90, 120] if n <= num_existing_blocks
+                n for n in [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360] if n <= num_existing_blocks
             ]
             nblocks = np.random.choice(nblocks_options, 1)[0]
             tasks.append(Task(start_time, nblocks, query_id, query_type))
@@ -89,7 +89,7 @@ class PrivacyWorkload:
     # Todo: this is obsolete -> users will not define their epsilon demand from now on
     def compute_budget(self, query_id, n_blocks):
         delta = 0.00001
-        epsilon = [0.5]
+        epsilon = [0.01]
         return epsilon, delta
 
     def compute_block_selection_policy(self):

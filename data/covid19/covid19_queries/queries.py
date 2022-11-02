@@ -40,6 +40,33 @@ def create_all_queries(queries_path, attributes_domain_sizes):
     with open(queries_path, "w") as outfile:
         outfile.write(json_object)
 
+def create_specific_queries(queries_path):
+    queries = []
+
+    # Postiive cases
+    queries = [[[1], [0,1], [0,1,2,3], [0,1,2,3,4,5,6,7]]]
+
+    print(queries)
+    query_tensors = []
+    for query in queries:
+        query = [list(tup) for tup in query]
+        query = [list(tup) for tup in product(*query)]
+        query_tensors.append(query)
+
+    # Write queries to a json file
+    queries = {}
+    for i, query in enumerate(query_tensors):
+        queries[i] = query
+
+    json_object = json.dumps(queries, indent=4)
+
+    # Writing to queries.json
+    with open(queries_path, "w") as outfile:
+        outfile.write(json_object)
+
+
+
+
 
 class QueryPool:
     def __init__(self, attribute_domain_sizes, queries_path) -> None:
@@ -85,11 +112,14 @@ def main(
         logger.error("Dataset metadata must have be created first..")
         exit(1)
 
-    create_all_queries(
-        queries_path,
-        blocks_metadata["attributes_domain_sizes"]
-    )  # Query space size for covid dataset: 34425
+    # create_all_queries(
+    #     queries_path,
+    #     blocks_metadata["attributes_domain_sizes"]
+    # )  # Query space size for covid dataset: 34425
 
+    create_specific_queries(
+        queries_path,
+    )
 
 if __name__ == "__main__":
     main()

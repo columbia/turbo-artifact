@@ -97,29 +97,34 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-        with_cache_plan_result = None
-        if task.id in tasks_info.with_cache_plan_result:
-            with_cache_plan_result = tasks_info.with_cache_plan_result[task.id]
+            result_planner_cache_dp = None
+            if task.id in tasks_info.result_planner_cache_dp:
+                result_planner_cache_dp = tasks_info.result_planner_cache_dp[task.id]
 
-        without_cache_plan_result = None
-        if task.id in tasks_info.without_cache_plan_result:
-            without_cache_plan_result = tasks_info.without_cache_plan_result[task.id]
+            result_no_planner_no_cache_dp = None
+            if task.id in tasks_info.result_no_planner_no_cache_dp:
+                result_no_planner_no_cache_dp = tasks_info.result_no_planner_no_cache_dp[task.id]
 
-        task_dump.update(
-            {
-                "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
-                "status": tasks_info.tasks_status[task.id],
-                "without_cache_plan_result": without_cache_plan_result,
-                "with_cache_plan_result": with_cache_plan_result,
-                "creation_time": tasks_info.creation_time[task.id],
-                "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
-                "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
-                "allocation_index": tasks_info.allocation_index.get(task.id, None),
-            }
-        )
-        log_tasks.append(
-            task_dump
-        )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+            result_no_planner_no_cache_no_dp = None
+            if task.id in tasks_info.result_no_planner_no_cache_no_dp:
+                result_no_planner_no_cache_no_dp = tasks_info.result_no_planner_no_cache_no_dp[task.id]
+
+            task_dump.update(
+                {
+                    "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
+                    "status": tasks_info.tasks_status[task.id],
+                    "result_no_planner_no_cache_dp": result_no_planner_no_cache_dp,
+                    "result_no_planner_no_cache_no_dp": result_no_planner_no_cache_no_dp,
+                    "result_planner_cache_dp": result_planner_cache_dp,
+                    "creation_time": tasks_info.creation_time[task.id],
+                    "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
+                    "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
+                    "allocation_index": tasks_info.allocation_index.get(task.id, None),
+                }
+            )
+            log_tasks.append(
+                task_dump
+            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
 
     # TODO: Store scheduling times into the tasks directly?
 
@@ -150,9 +155,7 @@ def get_logs(
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
-        "without_cache_plans_ran": tasks_info.without_cache_plans_ran,
-        "with_cache_plans_ran": tasks_info.with_cache_plans_ran,
-        "max_aggregations_allowed": omegaconf.scheduler.max_aggregations_allowed,
+        "planner": omegaconf.scheduler.planner,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,

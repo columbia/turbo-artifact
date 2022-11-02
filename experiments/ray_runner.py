@@ -1,10 +1,6 @@
-import json
 import os
-from datetime import datetime
-from functools import partial, update_wrapper
 from pathlib import Path
 from typing import Any, Dict, List
-
 import ray
 from loguru import logger
 from ray import tune
@@ -21,7 +17,6 @@ from privacypacking.schedulers.utils import (
     SIMPLEX,
 )
 from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.generate_curves import P_GRID
 from privacypacking.utils.utils import RAY_LOGS
 
 
@@ -125,7 +120,7 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    max_aggregations_allowed: List[int],
+    planner: List[str],
     enable_caching: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
 ):
@@ -157,7 +152,7 @@ def grid_online(
                 "scheduler_timeout_seconds": 20 * 60,
                 "data_lifetime": tune.grid_search(data_lifetime),
                 "task_lifetime": tune.grid_search(task_lifetime),
-                "max_aggregations_allowed": tune.grid_search(max_aggregations_allowed),
+                "planner": tune.grid_search(planner),
                 "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
                 "method": "batch",
                 "metric": tune.grid_search(scheduler_metrics),
@@ -216,7 +211,7 @@ def grid_online(
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/enable_caching": "enable_caching",
-                "omegaconf/scheduler/max_aggregations_allowed": "max_aggregations_allowed",
+                "omegaconf/scheduler/panner": "planner",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
             },

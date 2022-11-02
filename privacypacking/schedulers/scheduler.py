@@ -15,6 +15,7 @@ from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilicticCache
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
+import numpy as np
 
 
 # TODO: efficient data structure here? (We have indices)
@@ -34,10 +35,10 @@ class TasksInfo:
         self.allocation_index = {}
         self.tasks_lifetime = {}
         self.tasks_submit_time = {}
-        self.with_cache_plans_ran = 0
-        self.without_cache_plans_ran = 0
-        self.without_cache_plan_result = {}
-        self.with_cache_plan_result = {}
+
+        self.result_no_planner_no_cache_no_dp = {}
+        self.result_no_planner_no_cache_dp = {}
+        self.result_planner_cache_dp = {}
         self.realized_budget = 0
 
     def dump(self):
@@ -98,9 +99,9 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        # self.cache = DeterministicCache()
-        self.cache = ProbabilicticCache()
-        self.planner = PerBlockPlanner(self.cache, self.blocks)
+        self.cache = DeterministicCache()
+        # self.cache = ProbabilicticCache()
+        self.planner = globals()[self.omegaconf['planner']](self.cache, self.blocks)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -163,7 +164,7 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                without_cache_plan = A([R(
+                original_plan = A([R(
                     query_id=task.query_id, blocks=bs_tuple, budget=task.budget
                 )])
                 # Find a plan to run the query using caching
@@ -173,28 +174,28 @@ class Scheduler:
                         task.query_id, bs_list, task.budget
                     )
                 elif self.can_run(task.budget_per_block):
-                    plan = without_cache_plan
+                    plan = original_plan
 
-                print("\n")
-                print(
-                    colored(
-                        f"Without Caching plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}",
-                        "green",
-                    )
-                )
-                print(
-                    colored(
-                        f"With Caching Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}",
-                        "blue",
-                    )
-                )
+                # print("\n")
+                # print(
+                #     colored(
+                #         f"Original plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}",
+                #         "green",
+                #     )
+                # )
+                # print(
+                #     colored(
+                #         f"Alternative Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}",
+                #         "blue",
+                #     )
+                # )
 
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
                     print(
                         colored(
-                            f"With Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                            f"Plan's Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
                             "blue",
                         )
                     )
@@ -202,17 +203,23 @@ class Scheduler:
 
                     if self.omegaconf.enable_caching:
                     # Run the original plan without cache just to store the result - for experiments
-                        self.tasks_info.with_cache_plan_result[task.id] = result
+                        self.tasks_info.result_planner_cache_dp[task.id] = result
+
                         result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
                             self.query_pool.get_query(task.query_id), task.budget
                         )
+                        self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
+
                         print(
                                 colored(
-                                    f"Without Cache Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                    f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
                                     "green",
                                 )
                             )
-                        self.tasks_info.without_cache_plan_result[task.id] = result
+                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run(
+                            self.query_pool.get_query(task.query_id)
+                        )
+                        self.tasks_info.result_no_planner_no_cache_no_dp[task.id] = result
 
                     if (
                         self.metric.is_dynamic()
@@ -260,6 +267,15 @@ class Scheduler:
             if not agglist:
                 return None
 
+
+            total_noise = 0
+            for (_, size) in agglist:
+                sensitivity = 1 / size
+                total_noise += np.random.laplace(
+                scale=sensitivity / 0.01
+            )
+
+            
             result = 0
             total_size = 0
             
@@ -267,6 +283,7 @@ class Scheduler:
                 result += size * res
                 total_size += size
 
+            print("Size", total_size, "agg Noise", total_noise, "Result", result, "RResult", result/total_size)
             return result / total_size
 
         else:       
