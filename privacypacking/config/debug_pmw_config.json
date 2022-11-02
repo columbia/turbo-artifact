@@ -21,7 +21,8 @@
         },
         "logs": {
             "verbose": false,
-            "save": true
+            "save": true,
+            "mlflow": true
         },
         "blocks": {
             "initial_num": 1,
