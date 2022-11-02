@@ -12,6 +12,7 @@ from privacypacking.budget import Block, Task
 from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
+from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
 
@@ -76,25 +77,30 @@ class Config:
                 task_row["block_selection_policy"]
             ),
             n_blocks=int(task_row["n_blocks"]),
-            budget=BasicBudget(float(task_row["epsilon"])),
+            # budget=BasicBudget(float(task_row["epsilon"])),
             # budget=RenyiBudget(parsed_epsilons[0]),
+            budget=RenyiBudget.from_epsilon_delta(
+                float(task_row["epsilon"]), delta=1e-6
+            ),
             name=task_row["task_name"],
         )
+
+        # TODO: handle both budgets properly.
 
         assert task is not None
         return task
 
     def create_block(self, block_id: int) -> Block:
-        block = Block(
+        # block = Block(
+        #     block_id,
+        #     BasicBudget(self.omegaconf.epsilon),
+        # )
+        block = Block.from_epsilon_delta(
             block_id,
-            BasicBudget(self.omegaconf.epsilon),
+            self.omegaconf.epsilon,
+            self.omegaconf.delta,
+            alpha_list=self.omegaconf.alphas,
         )
-        # block = Block.from_epsilon_delta(
-        #                 block_id,
-        #                 self.omegaconf.epsilon,
-        #                 self.omegaconf.delta,
-        #                 alpha_list=self.omegaconf.alphas,
-        #             )
         return block
 
     def set_task_arrival_time(self):

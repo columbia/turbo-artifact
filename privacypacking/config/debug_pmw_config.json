@@ -8,6 +8,7 @@
             "data_lifetime": 0.1,
             "task_lifetime": 1,
             "planner": "PerBlockPlanner",
+            "cache": "ProbabilicticCache",
             "scheduling_wait_time": 1,
             "method": "batch",
             "metric": "Fcfs",

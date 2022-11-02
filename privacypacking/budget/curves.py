@@ -7,16 +7,16 @@ from scipy.interpolate import interp1d, splev, splrep
 
 # from autodp.mechanism_zoo import LaplaceMechanism
 # from autodp.transformer_zoo import AmplificationBySampling
-from privacypacking.budget import ALPHAS, Budget
+from privacypacking.budget import ALPHAS, RenyiBudget
 
 
-class ZeroCurve(Budget):
+class ZeroCurve(RenyiBudget):
     def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: 0 for alpha in alpha_list}
         super().__init__(orders)
 
 
-class SyntheticPolynomialCurve(Budget):
+class SyntheticPolynomialCurve(RenyiBudget):
     def __init__(
         self,
         best_alpha,
@@ -40,7 +40,7 @@ class SyntheticPolynomialCurve(Budget):
         # if best_alpha not in [epsilon_left, epsilon_right]:
         #     orders = {alpha: lagrange_3(alpha) for alpha in alpha_list}
 
-        block = Budget.from_epsilon_delta(epsilon=block_epsilon, delta=block_delta)
+        block = RenyiBudget.from_epsilon_delta(epsilon=block_epsilon, delta=block_delta)
 
         non_zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) > 0]
         zero_alphas = [alpha for alpha in block.alphas if block.epsilon(alpha) == 0]
@@ -74,7 +74,7 @@ class SyntheticPolynomialCurve(Budget):
         super().__init__(orders)
 
 
-class LaplaceCurve(Budget):
+class LaplaceCurve(RenyiBudget):
     """
     RDP curve for a Laplace mechanism with sensitivity 1.
     """
@@ -105,9 +105,21 @@ class LaplaceCurve(Budget):
         super().__init__(orders)
 
 
-class GaussianCurve(Budget):
+class GaussianCurve(RenyiBudget):
     def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
+        super().__init__(orders)
+
+
+class BoundedOneShotSVT(RenyiBudget):
+    def __init__(
+        self, nu: float, ro: float, kmax: int, alpha_list: List[float] = ALPHAS
+    ) -> None:
+        # Remark on top of page 5 after Theorem 8 in the RDP SVT paper
+        # (https://papers.nips.cc/paper/2020/file/e9bf14a419d77534105016f5ec122d62-Paper.pdf)
+        l = np.log(1 + kmax)
+        g = 1 / (2 * (nu ** 2)) + 1 / (2 * (ro ** 2))
+        orders = {alpha: alpha * g + l / (alpha - 1) for alpha in alpha_list}
         super().__init__(orders)
 
 
