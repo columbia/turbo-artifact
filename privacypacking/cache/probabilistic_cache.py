@@ -39,11 +39,12 @@ class ProbabilicticCache(Cache):
             hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
 
             pmw = self.get_entry(plan.query_id, hyperblock.id)
-            if pmw and (
-                pmw.queries_ran >= pmw.k
-                or pmw.hard_queries_answered >= pmw.max_hard_queries
-            ):
-                return math.inf
+            # TODO(P1): check budget in advance
+            # if pmw and (
+            #     pmw.queries_ran >= pmw.k
+            #     or pmw.hard_queries_answered >= pmw.max_hard_queries
+            # ):
+            #     return math.inf
 
             # Creation of a new PMW costs 0: only one block per pmw so the block has all its budget
             # and no queries ran on it yet
