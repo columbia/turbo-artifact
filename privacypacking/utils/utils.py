@@ -103,11 +103,15 @@ def get_logs(
 
             result_no_planner_no_cache_dp = None
             if task.id in tasks_info.result_no_planner_no_cache_dp:
-                result_no_planner_no_cache_dp = tasks_info.result_no_planner_no_cache_dp[task.id]
+                result_no_planner_no_cache_dp = (
+                    tasks_info.result_no_planner_no_cache_dp[task.id]
+                )
 
             result_no_planner_no_cache_no_dp = None
             if task.id in tasks_info.result_no_planner_no_cache_no_dp:
-                result_no_planner_no_cache_no_dp = tasks_info.result_no_planner_no_cache_no_dp[task.id]
+                result_no_planner_no_cache_no_dp = (
+                    tasks_info.result_no_planner_no_cache_no_dp[task.id]
+                )
 
             task_dump.update(
                 {
@@ -133,10 +137,15 @@ def get_logs(
     if omegaconf.logs.save:
         for block in blocks.values():
             log_blocks.append(block.dump())
-            dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
+            dfs.append(
+                pd.DataFrame(
+                    [{"budget": block.budget.dp_budget(delta=omegaconf.delta).epsilon}]
+                )
+            )
         df = pd.concat(dfs)
 
-        df["budget"] = 10 - df["budget"]
+        # Heuristic for budget utilized (TODO: maybe substract in RDP world and convert after?)
+        df["budget"] = omegaconf.epsilon - df["budget"]
         bu = df["budget"].mean()
 
     total_tasks = len(tasks)

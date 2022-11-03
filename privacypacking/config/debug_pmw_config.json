@@ -26,7 +26,7 @@
         },
         "blocks": {
             "initial_num": 1,
-            "max_num": 1,
+            "max_num": 2,
             "path": "covid19/covid19_data/blocks",
             "metadata": "covid19/covid19_data/metadata.json"
         },
@@ -35,7 +35,7 @@
             "path": "covid19/covid19_workload/privacy_tasks.csv",
             "queries_path": "covid19/covid19_queries/queries.json",
             "block_selection_policy": "LatestBlocksFirst",
-            "avg_num_tasks_per_block": 100
+            "avg_num_tasks_per_block": 1000
         }
     }
 }
