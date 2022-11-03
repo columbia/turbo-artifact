@@ -21,8 +21,16 @@ class PrivacyWorkload:
         self,
     ):
         self.tasks = None
-        self.blocks_num = 400
+
+        #   ------------  Configure  ------------ #
+        self.blocks_num = 683   # days
+        self.initial_blocks_num = 1
         self.query_types = [0] #[33479, 34408]
+        self.std_num_tasks = 5
+        self.requested_blocks_num = [1, 50, 100,  200, 400, 600] # [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
+        #   ------------  /Configure  ------------ #
+
+
         self.tasks = []
         for i in range(self.blocks_num):
             self.tasks += self.generate_one_day_tasks(i, self.query_types)
@@ -30,16 +38,16 @@ class PrivacyWorkload:
     def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
         num_tasks = (
-            np.abs(np.random.normal(1, 2, 1)).astype(int) + 1
+            np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
         )  # todo: increase the number of daily tasks when we have more queries
         for _ in range(num_tasks[0]):
             query_id = np.random.choice(query_types)
             query_type = "count"
             # start time is in block units, so it indicates how many blocks currently exist
             # we use this info so that a task does not request more blocks than those existing
-            num_existing_blocks = start_time + 1
+            num_existing_blocks = self.initial_blocks_num + start_time + 1
             nblocks_options = [
-                n for n in [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360] if n <= num_existing_blocks
+                n for n in self.requested_blocks_num if n <= num_existing_blocks
             ]
             nblocks = np.random.choice(nblocks_options, 1)[0]
             tasks.append(Task(start_time, nblocks, query_id, query_type))

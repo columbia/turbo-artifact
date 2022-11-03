@@ -76,6 +76,7 @@ class Scheduler:
 
         self.simulator_config = simulator_config
         self.omegaconf = simulator_config.scheduler if simulator_config else None
+        self.initial_blocks_num = self.simulator_config.blocks.initial_num
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
             self.simulator_config.blocks.path
         )
@@ -158,11 +159,10 @@ class Scheduler:
             converged = True
 
             for task in sorted_tasks:
-
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                    self.tasks_info.tasks_lifetime[task.id]
-                    < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
+                        self.tasks_info.tasks_lifetime[task.id]
+                    < (self.get_num_blocks() - self.initial_blocks_num) - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 
@@ -181,26 +181,12 @@ class Scheduler:
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
 
-                # print("\n")
-                # print(
-                #     colored(
-                #         f"Original plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}",
-                #         "green",
-                #     )
-                # )
-                # print(
-                #     colored(
-                #         f"Alternative Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}",
-                #         "blue",
-                #     )
-                # )
-
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
                     print(
                         colored(
-                            f"Plan's Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                            f"Plan's Noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result}",
                             "blue",
                         )
                     )
@@ -216,7 +202,6 @@ class Scheduler:
 
                         result = hyperblock.run_dp(query, task.budget)
                         self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
-
                         print(
                             colored(
                                 f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
@@ -273,28 +258,12 @@ class Scheduler:
             if not agglist:
                 return None
 
-            total_noise = 0
-            for (_, size) in agglist:
-                sensitivity = 1 / size
-                total_noise += np.random.laplace(scale=sensitivity / 0.01)
-
             result = 0
             total_size = 0
 
             for (res, size) in agglist:
                 result += size * res
                 total_size += size
-
-            print(
-                "Size",
-                total_size,
-                "agg Noise",
-                total_noise,
-                "Result",
-                result,
-                "RResult",
-                result / total_size,
-            )
             return result / total_size
 
         else:

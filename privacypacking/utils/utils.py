@@ -97,30 +97,15 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-            result_planner_cache_dp = None
-            if task.id in tasks_info.result_planner_cache_dp:
-                result_planner_cache_dp = tasks_info.result_planner_cache_dp[task.id]
-
-            result_no_planner_no_cache_dp = None
-            if task.id in tasks_info.result_no_planner_no_cache_dp:
-                result_no_planner_no_cache_dp = (
-                    tasks_info.result_no_planner_no_cache_dp[task.id]
-                )
-
-            result_no_planner_no_cache_no_dp = None
-            if task.id in tasks_info.result_no_planner_no_cache_no_dp:
-                result_no_planner_no_cache_no_dp = (
-                    tasks_info.result_no_planner_no_cache_no_dp[task.id]
-                )
-
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result_no_planner_no_cache_dp": result_no_planner_no_cache_dp,
-                    "result_no_planner_no_cache_no_dp": result_no_planner_no_cache_no_dp,
-                    "result_planner_cache_dp": result_planner_cache_dp,
+                    "result_no_planner_no_cache_dp": tasks_info.result_no_planner_no_cache_dp[task.id],
+                    "result_no_planner_no_cache_no_dp": tasks_info.result_no_planner_no_cache_no_dp[task.id],
+                    "result_planner_cache_dp": tasks_info.result_planner_cache_dp[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
+                    "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
                     "scheduling_delay": tasks_info.scheduling_delay.get(task.id, None),
                     "allocation_index": tasks_info.allocation_index.get(task.id, None),
@@ -132,21 +117,16 @@ def get_logs(
 
     # TODO: Store scheduling times into the tasks directly?
 
-    dfs = []
+    # dfs = []
     log_blocks = []
     if omegaconf.logs.save:
         for block in blocks.values():
             log_blocks.append(block.dump())
-            dfs.append(
-                pd.DataFrame(
-                    [{"budget": block.budget.dp_budget(delta=omegaconf.delta).epsilon}]
-                )
-            )
-        df = pd.concat(dfs)
+            # dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
+        # df = pd.concat(dfs)
 
-        # Heuristic for budget utilized (TODO: maybe substract in RDP world and convert after?)
-        df["budget"] = omegaconf.epsilon - df["budget"]
-        bu = df["budget"].mean()
+        # df["budget"] = 10 - df["budget"]
+        # bu = df["budget"].mean()
 
     total_tasks = len(tasks)
     # tasks_info = tasks_info.dump()
@@ -159,8 +139,8 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
-        "budget_utilization": bu,
-        "realized_budget": tasks_info.realized_budget,
+        # "budget_utilization": bu,
+        # "realized_budget": tasks_info.realized_budget,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,

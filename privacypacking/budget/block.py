@@ -45,7 +45,6 @@ class Block:
             "id": self.id,
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
-            "data_path": self.data_path,
         }
 
     def __len__(self) -> int:
