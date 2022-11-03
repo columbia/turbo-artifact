@@ -140,7 +140,6 @@ class RenyiBudget:
 
         Assumes that the demand_budget is positive for all alphas.
         """
-        # TODO: remove if this is too slow
         assert demand_budget.is_positive_all_alphas()
         diff = self - demand_budget
         max_order = max(diff.epsilons)

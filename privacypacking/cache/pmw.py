@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from loguru import logger
 
-from privacypacking.budget import BasicBudget
+from privacypacking.budget import BasicBudget, Budget
 from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import BoundedOneShotSVT, GaussianCurve, ZeroCurve
 from privacypacking.budget.histogram import DenseHistogram, flat_items
@@ -16,10 +16,10 @@ class PMW:
     def __init__(
         self,
         hyperblock: HyperBlock,
-        nu=0.5,  # Scale of noise added on queries
+        nu=485,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty.
         alpha=0.2,  # Max error guarantee (or order of magnitude)
-        k=100,  # Max number of queries for each OneShot SVT instance
+        k=10,  # Max number of queries for each OneShot SVT instance
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
@@ -58,12 +58,18 @@ class PMW:
 
     def log(self, key, value):
         if self.mlflow_run:
-            print(f"{key}:{value}:step={self.queries_ran}")
             mlflow.log_metric(
                 f"{self.id}/{key}",
                 value,
                 step=self.queries_ran,
             )
+
+    def worst_case_cost(self) -> Budget:
+        # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
+        # and we still do a cache miss, so we pay for a true query on top of that
+        return BoundedOneShotSVT(
+            ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+        ) + GaussianCurve(sigma=self.nu)
 
     def run(self, query):
         assert isinstance(query, torch.Tensor)

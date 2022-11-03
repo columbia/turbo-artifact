@@ -1,6 +1,6 @@
 import math
 
-from privacypacking.budget.block import HyperBlock
+from privacypacking.budget.block import Block, HyperBlock
 from privacypacking.cache.cache import A, Cache, R
 from privacypacking.cache.pmw import PMW
 
@@ -8,6 +8,14 @@ from privacypacking.cache.pmw import PMW
 class ProbabilicticCache(Cache):
     def __init__(self):
         self.key_values = {}
+
+        # To get a worst-case cost even if we don't have any PMW yet
+        # TODO: what if PMWs have different parameters? Then fake_pmw should be the worst possible PMW
+        fake_block = Block(-1, None)
+        fake_block.size = 42
+        fake_block.domain_size = 13
+        fake_hyperblock = HyperBlock({-1: fake_block})
+        self.fake_pmw = PMW(fake_hyperblock)
 
     def add_entry(self, hyperblock: HyperBlock):
         pmw = PMW(hyperblock)
@@ -38,14 +46,18 @@ class ProbabilicticCache(Cache):
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
 
+            # NOTE: This is different from the deterministic cache. Any run might cost budget,
+            # whether the cache is empty or not, and whether we hit or not.
             pmw = self.get_entry(plan.query_id, hyperblock.id)
-            # TODO(P1): check budget in advance
-            # if pmw and (
-            #     pmw.queries_ran >= pmw.k
-            #     or pmw.hard_queries_answered >= pmw.max_hard_queries
-            # ):
-            #     return math.inf
+            if pmw is None:
+                pmw = self.fake_pmw
+            budget = pmw.worst_case_cost()
+            demand = {key: budget for key in block_ids}
+            if not hyperblock.can_run(demand):
+                return math.inf  # This hyperblock does not have enough budget
 
             # Creation of a new PMW costs 0: only one block per pmw so the block has all its budget
             # and no queries ran on it yet
+            # Pierre: actually no, in the general case some queries might want to run out of the cache
+            # e.g. deep learning job. So we might be almost out of budget and still have no PMW.
             return 0
