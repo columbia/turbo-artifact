@@ -209,10 +209,12 @@ class Scheduler:
                     if self.omegaconf.enable_caching:
                         # Run the original plan without cache just to store the result - for experiments
                         self.tasks_info.result_planner_cache_dp[task.id] = result
-
-                        result = HyperBlock(
+                        hyperblock = HyperBlock(
                             {key: self.blocks[key] for key in bs_list}
-                        ).run_dp(self.query_pool.get_query(task.query_id), task.budget)
+                        )
+                        query = self.query_pool.get_query(task.query_id)
+
+                        result = hyperblock.run_dp(query, task.budget)
                         self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
 
                         print(
@@ -221,9 +223,7 @@ class Scheduler:
                                 "green",
                             )
                         )
-                        result = HyperBlock(
-                            {key: self.blocks[key] for key in bs_list}
-                        ).run(self.query_pool.get_query(task.query_id))
+                        result = hyperblock.run(query)
                         self.tasks_info.result_no_planner_no_cache_no_dp[
                             task.id
                         ] = result
@@ -251,18 +251,17 @@ class Scheduler:
         if isinstance(plan, R):  # Run Query
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
+            query = self.query_pool.get_query(plan.query_id)
 
             if self.omegaconf.enable_caching:  # Using cache
                 result, budget = self.cache.run(
                     query_id=plan.query_id,
-                    query=self.query_pool.get_query(plan.query_id),
+                    query=query,
                     run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
-                result = hyperblock.run_dp(
-                    self.query_pool.get_query(plan.query_id), plan.budget
-                )
+                result = hyperblock.run_dp(query, plan.budget)
                 budget = plan.budget
 
             if budget is not None:

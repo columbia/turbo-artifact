@@ -108,6 +108,7 @@ class LaplaceCurve(RenyiBudget):
 class GaussianCurve(RenyiBudget):
     def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
+        self.sigma = sigma
         super().__init__(orders)
 
 

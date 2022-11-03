@@ -12,12 +12,15 @@ from privacypacking.budget import Block, Task
 from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
+from privacypacking.budget.curves import GaussianCurve
 from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
 
 
 # Configuration Reading Logic
+# TODO: why are the task utils here again? It doesn't seem to make sense.
+# Maybe we can just pass omegaconf.tasks to Tasks?
 class Config:
     def __init__(self, config):
 
@@ -70,19 +73,31 @@ class Config:
     def dump(self) -> dict:
         return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
 
-    def create_task(self, task_id: int) -> Task:
-        task = None
-        # Reading workload
+    def create_task(self, task_id: int, convert_to_rdp=True, gaussian=True) -> Task:
+        # TODO: New omegaconf option for this? Or just use RDP really everywhere?
         _, task_row = next(self.tasks_generator)
 
-        # orders = {}
-        # parsed_alphas = task_row["alphas"].strip("][").split(", ")
-        # parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
+        if "rdp_espilons" in task_row:
+            orders = {}
+            parsed_alphas = task_row["alphas"].strip("][").split(", ")
+            parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
 
-        # for i, alpha in enumerate(parsed_alphas):
-        #     alpha = float(alpha)
-        #     epsilon = float(parsed_epsilons[i])
-        #     orders[alpha] = epsilon
+            for i, alpha in enumerate(parsed_alphas):
+                alpha = float(alpha)
+                epsilon = float(parsed_epsilons[i])
+                orders[alpha] = epsilon
+
+            budget = RenyiBudget(parsed_epsilons[0])
+        elif convert_to_rdp:
+            epsilon, delta = float(task_row["epsilon"]), float(task_row["delta"])
+            if gaussian:
+                sigma = np.sqrt(2 * np.log(1.25 / delta)) / epsilon
+                budget = GaussianCurve(sigma=sigma)
+            else:
+                # It doesn't really make sense (not a real mechanism) but this is just for debugging
+                budget = RenyiBudget.from_epsilon_delta(epsilon, delta)
+        else:
+            budget = BasicBudget(float(task_row["epsilon"]))
 
         task = UniformTask(
             id=task_id,
@@ -93,17 +108,9 @@ class Config:
                 task_row["block_selection_policy"]
             ),
             n_blocks=int(task_row["n_blocks"]),
-            # budget=BasicBudget(float(task_row["epsilon"])),
-            # budget=RenyiBudget(parsed_epsilons[0]),
-            budget=RenyiBudget.from_epsilon_delta(
-                float(task_row["epsilon"]), delta=1e-6
-            ),
+            budget=budget,
             name=task_row["task_name"],
         )
-
-        # TODO: handle both budgets properly.
-
-        assert task is not None
         return task
 
     def create_block(self, block_id: int) -> Block:

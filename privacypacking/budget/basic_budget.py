@@ -1,8 +1,9 @@
 from collections import namedtuple
 from typing import Dict, List, Tuple
-import numpy as np
-from privacypacking.budget.budget import Budget
 
+import numpy as np
+
+from privacypacking.budget.budget import Budget
 
 # Default values for some datasets
 DELTA_MNIST = 1e-5
@@ -16,6 +17,7 @@ DPBudget = namedtuple("ConvertedDPBudget", ["epsilon", "delta"])
 
 
 class BasicBudget:
+    # This means PureDP
     def __init__(self, epsilon) -> None:
         self.epsilon = epsilon
 

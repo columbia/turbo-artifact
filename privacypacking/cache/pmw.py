@@ -58,6 +58,7 @@ class PMW:
 
     def log(self, key, value):
         if self.mlflow_run:
+            print(f"{key}:{value}:step={self.queries_ran}")
             mlflow.log_metric(
                 f"{self.id}/{key}",
                 value,
@@ -92,8 +93,6 @@ class PMW:
         self.queries_ran += 1
         self.local_svt_queries_ran += 1
 
-        self.log("queries_ran", self.queries_ran)
-
         # `noisy_error` is a DP query with sensitivity self.Delta, Sparse Vector needs twice that
         noisy_error = abs(true_output - predicted_output) + np.random.normal(
             0, 2 * self.Delta * self.nu
@@ -102,51 +101,49 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             logger.info("easy query")
-
-            # TODO: update logging to multiple PMWs
-            self.log(
-                "true_abs_error",
-                abs(predicted_output - true_output),
-            )
-            return predicted_output, run_budget
-
-        # Hard query, i.e. "Output top" in SVT
-        # We'll start a new sparse vector at the beginning of the next query (and pay for it)
-        self.local_svt_queries_ran = 0
-
-        self.hard_queries_ran += 1
-        self.log("hard_queries_ran", self.hard_queries_ran)
-
-        logger.info(f"Predicted: {predicted_output}, true: {true_output}, hard query")
-
-        # if not self.is_query_hard(noisy_error):
-        #     return predicted_output, run_budget
-
-        # NOTE: cut-off = 1 and pay as you go -> no limit on the number of hard queries
-        # # Too many hard queries - breaking privacy. Don't update histogram or return query result.
-        # if self.hard_queries_answered >= self.max_hard_queries:
-        #     # TODO: what do you pay exactly here?
-        #     logger.warning("The planner shouldn't let you do this.")
-        #     return None, run_budget
-
-        # NOTE: Salil's PMW samples fresh noise here, it makes more sense I think.
-        #       We could also use yet another noise scaling parameter
-        noisy_output = true_output + np.random.normal(0, self.Delta * self.nu)
-        run_budget += GaussianCurve(sigma=self.nu)
-
-        # Multiplicative weights update for the relevant bins
-        values = query.values()
-        if noisy_output > predicted_output:
-            # We need to make the estimated count higher to be closer to reality
-            updates = torch.exp(values * self.alpha / 8)
+            output = predicted_output
         else:
-            updates = torch.exp(-values * self.alpha / 8)
-        for i, u in zip(query.indices()[1], updates):
-            self.histogram.tensor[0, i] *= u
-        self.histogram.normalize()
+            # Hard query, i.e. "Output top" in SVT
+            # We'll start a new sparse vector at the beginning of the next query (and pay for it)
+            self.local_svt_queries_ran = 0
+            self.hard_queries_ran += 1
 
-        self.log("true_abs_error", abs(noisy_output - true_output))
-        return noisy_output, run_budget
+            logger.info(
+                f"Predicted: {predicted_output}, true: {true_output}, hard query"
+            )
+
+            # if not self.is_query_hard(noisy_error):
+            #     return predicted_output, run_budget
+
+            # NOTE: cut-off = 1 and pay as you go -> no limit on the number of hard queries
+            # # Too many hard queries - breaking privacy. Don't update histogram or return query result.
+            # if self.hard_queries_answered >= self.max_hard_queries:
+            #     # TODO: what do you pay exactly here?
+            #     logger.warning("The planner shouldn't let you do this.")
+            #     return None, run_budget
+
+            # NOTE: Salil's PMW samples fresh noise here, it makes more sense I think.
+            #       We could also use yet another noise scaling parameter
+            noisy_output = true_output + np.random.normal(0, self.Delta * self.nu)
+            run_budget += GaussianCurve(sigma=self.nu)
+
+            # Multiplicative weights update for the relevant bins
+            values = query.values()
+            if noisy_output > predicted_output:
+                # We need to make the estimated count higher to be closer to reality
+                updates = torch.exp(values * self.alpha / 8)
+            else:
+                updates = torch.exp(-values * self.alpha / 8)
+            for i, u in zip(query.indices()[1], updates):
+                self.histogram.tensor[0, i] *= u
+            self.histogram.normalize()
+            output = noisy_output
+
+        # TODO: maybe pass a dict to the planner to log the same things for deterministic cache (or aggregates)
+        self.log("queries_ran", self.queries_ran)
+        self.log("hard_queries_ran", self.hard_queries_ran)
+        self.log("true_abs_error", abs(predicted_output - true_output))
+        return output, run_budget
 
 
 # if __name__ == "__main__":
