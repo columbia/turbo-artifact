@@ -31,11 +31,13 @@
             "metadata": "covid19/covid19_data/metadata.json"
         },
         "tasks": {
-            "sampling": "",
+            "sampling": "poisson",
             "path": "covid19/covid19_workload/privacy_tasks.csv",
             "queries_path": "covid19/covid19_queries/queries.json",
             "block_selection_policy": "LatestBlocksFirst",
-            "avg_num_tasks_per_block": 1000
+            "avg_num_tasks_per_block": 1000,
+            "max_num": 500,
+            "initial_num": 500
         }
     }
 }

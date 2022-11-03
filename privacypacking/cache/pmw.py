@@ -115,10 +115,7 @@ class PMW:
         self.local_svt_queries_ran = 0
 
         self.hard_queries_ran += 1
-        self.log(
-            "n_hard_queries",
-            self.queries_ran,
-        )
+        self.log("hard_queries_ran", self.hard_queries_ran)
 
         logger.info(f"Predicted: {predicted_output}, true: {true_output}, hard query")
 

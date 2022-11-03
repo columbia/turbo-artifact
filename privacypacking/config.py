@@ -46,11 +46,26 @@ class Config:
         # Read one CSV that contains all tasks
         self.tasks_path = REPO_ROOT.joinpath("data").joinpath(self.omegaconf.tasks.path)
         self.tasks = pd.read_csv(self.tasks_path)
-        self.max_tasks = len(self.tasks)
-        self.tasks_generator = self.tasks.iterrows()
-        self.task_arrival_interval_generator = self.tasks[
-            "relative_submit_time"
-        ].iteritems()
+
+        if self.omegaconf.tasks.sampling:
+            logger.info("Poisson sampling.")
+            # Uniform sampling with Poisson arrival from the CSV file
+            def row_sampler(df):
+                while True:  # Don't stop, `max_tasks` will take care of that
+                    d = df.sample(1)
+                    yield 0, d.squeeze()  # Same signature as iterrows()
+
+            self.tasks_generator = row_sampler(self.tasks)
+            self.max_tasks = self.omegaconf.tasks.max_num
+
+        else:
+            logger.info("Reading tasks in order with hardcoded arrival times.")
+            # Browse tasks in order with hardcoded arrival times
+            self.tasks_generator = self.tasks.iterrows()
+            self.max_tasks = len(self.tasks)
+            self.task_arrival_interval_generator = self.tasks[
+                "relative_submit_time"
+            ].iteritems()
 
     def dump(self) -> dict:
         return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
@@ -59,6 +74,7 @@ class Config:
         task = None
         # Reading workload
         _, task_row = next(self.tasks_generator)
+
         # orders = {}
         # parsed_alphas = task_row["alphas"].strip("][").split(", ")
         # parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
@@ -105,9 +121,9 @@ class Config:
 
     def set_task_arrival_time(self):
         if self.omegaconf.tasks.sampling == "poisson":
-            task_arrival_interval = partial(
-                random.expovariate, 1 / self.task_arrival_interval
-            )()
+            task_arrival_interval = random.expovariate(
+                1 / self.omegaconf.tasks.avg_num_tasks_per_block
+            )
         elif self.omegaconf.tasks.sampling == "constant":
             task_arrival_interval = self.task_arrival_interval
 

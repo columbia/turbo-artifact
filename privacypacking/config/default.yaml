@@ -30,6 +30,8 @@ blocks:
 tasks:
   path: "tasks"
   initial_num: 100
+  sampling: ""
+  max_num: 100
 
 logs:
   verbose: False
