@@ -1,8 +1,17 @@
-from typing import List, Dict
-from privacypacking.budget import ALPHAS, Budget, SparseHistogram
-from torch import Tensor
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
+import pandas as pd
+from torch import Tensor
+
+from privacypacking.budget import (
+    ALPHAS,
+    BasicBudget,
+    Budget,
+    RenyiBudget,
+    SparseHistogram,
+)
+from privacypacking.budget.curves import GaussianCurve
 
 
 class Block:
@@ -13,7 +22,7 @@ class Block:
         self.size = None
         self.raw_data = None
         self.histogram_data = None
-        self.domain_size= None
+        self.domain_size = None
         self.data_path = None
 
     @classmethod
@@ -23,10 +32,10 @@ class Block:
         epsilon: float,
         delta: float,
         alpha_list: List[float] = ALPHAS,
-    ) -> "Block":
+    ) -> "RenyiBudget":
         return cls(
             block_id,
-            Budget.from_epsilon_delta(
+            RenyiBudget.from_epsilon_delta(
                 epsilon=epsilon, delta=delta, alpha_list=alpha_list
             ),
         )
@@ -59,7 +68,9 @@ class Block:
     def available_unlocked_budget(self) -> Budget:
         return self.budget
 
-    def load_raw_data(self,):
+    def load_raw_data(
+        self,
+    ):
         self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
@@ -83,10 +94,10 @@ class Block:
     #     sensitivity = 1 / self.size
     #     noise_sample = np.random.laplace(
     #         scale=sensitivity / budget.epsilon
-    #     )  # TODO: this is not compatible with renyi        
+    #     )  # TODO: this is not compatible with renyi
     #     result += noise_sample
     #     print("Noise", noise_sample)
-        # return result
+    # return result
 
 
 # Wraps one or more blocks
@@ -99,7 +110,7 @@ class HyperBlock:
 
         for block in self.blocks.values():
             self.size += len(block)
-        
+
         self.domain_size = 0
         if block_ids:
             self.domain_size = self.blocks[block_ids[0]].domain_size
@@ -121,11 +132,26 @@ class HyperBlock:
     def run_dp(self, query, budget):
         result = self.run(query)
         sensitivity = 1 / self.size
-        noise_sample = np.random.laplace(
-            scale=sensitivity / budget.epsilon
-        )  # TODO: this is not compatible with renyi
+        noise_sample = 0
+
+        if isinstance(budget, BasicBudget):
+            noise_sample = np.random.laplace(scale=sensitivity / budget.epsilon)
+        elif isinstance(budget, GaussianCurve):
+            noise_sample = np.random.normal(scale=sensitivity * budget.sigma)
+        elif isinstance(budget, RenyiBudget):
+            raise NotImplementedError("Try to find the best sigma?")
+
         result += noise_sample
-        print("Size", self.size, "Noise", noise_sample, "Result", result*self.size, "RResult", result)
+        print(
+            "Size",
+            self.size,
+            "Noise",
+            noise_sample,
+            "Result",
+            result * self.size,
+            "RResult",
+            result,
+        )
 
         return result
 
@@ -138,7 +164,6 @@ class HyperBlock:
             if block_id not in self.blocks:
                 return False
             block = self.blocks[block_id]
-
             if not block.budget.can_allocate(demand_budget):
                 return False
         return True

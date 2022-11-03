@@ -1,18 +1,28 @@
 import json
 import os
 
+import mlflow
 import typer
+
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, save_logs
+from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, save_logs
 
 app = typer.Typer()
 
 
 def main(config):
     conf = Config(config)
-    logs = Simulator(conf).run()
-    save_logs(conf, logs)
+
+    if conf.omegaconf.logs.mlflow:
+        os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
+        with mlflow.start_run():  # Should work with nested Ray experiments too
+            logs = Simulator(conf).run()
+            save_logs(conf, logs)
+            # TODO: dump relevant logs into MLflow
+    else:
+        logs = Simulator(conf).run()
+        save_logs(conf, logs)
 
 
 @app.command()

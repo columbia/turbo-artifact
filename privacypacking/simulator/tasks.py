@@ -31,21 +31,22 @@ class Tasks:
         logger.debug("Done producing all the initial tasks.")
 
         if self.config.omegaconf.scheduler.method != "offline":
+            logger.debug(
+                f"Generating online tasks now. Current count is: {self.task_count}"
+            )
             while not self.resource_manager.task_production_terminated:
-                task_arrival_interval = self.config.set_task_arrival_time()
                 task_id = next(self.task_count)
-                self.env.process(self.task(task_id))
-                yield self.env.timeout(task_arrival_interval)
-
-                # Todo: Is max-tasks ever not-None anymore?
-                if (
-                    self.config.max_tasks is not None
-                    and task_id == self.config.max_tasks - 1
-                ):
+                if self.config.max_tasks and task_id > self.config.max_tasks - 1:
+                    # Send a special message to close the channel
                     self.resource_manager.task_production_terminated = True
+                    self.resource_manager.new_tasks_queue.put(LastItem())
+                    return
+                else:
+                    task_arrival_interval = self.config.set_task_arrival_time()
+                    self.env.process(self.task(task_id))
+                    yield self.env.timeout(task_arrival_interval)
 
-            # Send a special message to close the channel
-            self.resource_manager.new_tasks_queue.put(LastItem())
+        logger.info(f"Done generating tasks. Current count is: {self.task_count}")
 
     def task(self, task_id: int) -> None:
         """

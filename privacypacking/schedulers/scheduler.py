@@ -1,21 +1,23 @@
+import json
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
+
+import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
-import json
+
 from data.covid19.covid19_queries.queries import QueryPool
-from privacypacking.budget import Block, Task, HyperBlock
+from privacypacking.budget import Block, HyperBlock, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
-from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilicticCache
+from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
-import numpy as np
 
 
 # TODO: efficient data structure here? (We have indices)
@@ -99,9 +101,10 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        self.cache = DeterministicCache()
+        # self.cache = DeterministicCache()
         # self.cache = ProbabilicticCache()
-        self.planner = globals()[self.omegaconf['planner']](self.cache, self.blocks)
+        self.cache = globals()[self.omegaconf["cache"]]()
+        self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
 
     def consume_budgets(self, blocks, budget):
         """
@@ -110,7 +113,9 @@ class Scheduler:
         for block_id in blocks:
             block = self.blocks[block_id]
             block.budget -= budget
-            self.tasks_info.realized_budget += budget.epsilon
+
+            # TODO: what's this?
+            # self.tasks_info.realized_budget += budget.epsilon
 
     def now(self) -> Optional[float]:
         return self.env.now if hasattr(self, "env") else 0
@@ -156,7 +161,7 @@ class Scheduler:
 
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                        self.tasks_info.tasks_lifetime[task.id]
+                    self.tasks_info.tasks_lifetime[task.id]
                     < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
@@ -164,9 +169,9 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = A([R(
-                    query_id=task.query_id, blocks=bs_tuple, budget=task.budget
-                )])
+                original_plan = A(
+                    [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
+                )
                 # Find a plan to run the query using caching
                 plan = None
                 if self.omegaconf.enable_caching:
@@ -202,24 +207,26 @@ class Scheduler:
                     self.update_allocated_task(task)
 
                     if self.omegaconf.enable_caching:
-                    # Run the original plan without cache just to store the result - for experiments
+                        # Run the original plan without cache just to store the result - for experiments
                         self.tasks_info.result_planner_cache_dp[task.id] = result
-
-                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
-                            self.query_pool.get_query(task.query_id), task.budget
+                        hyperblock = HyperBlock(
+                            {key: self.blocks[key] for key in bs_list}
                         )
+                        query = self.query_pool.get_query(task.query_id)
+
+                        result = hyperblock.run_dp(query, task.budget)
                         self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
 
                         print(
-                                colored(
-                                    f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
-                                    "green",
-                                )
+                            colored(
+                                f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                "green",
                             )
-                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run(
-                            self.query_pool.get_query(task.query_id)
                         )
-                        self.tasks_info.result_no_planner_no_cache_no_dp[task.id] = result
+                        result = hyperblock.run(query)
+                        self.tasks_info.result_no_planner_no_cache_no_dp[
+                            task.id
+                        ] = result
 
                     if (
                         self.metric.is_dynamic()
@@ -240,22 +247,21 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):       # TODO: Consider making an executor class
+    def execute_plan(self, plan):  # TODO: Consider making an executor class
         if isinstance(plan, R):  # Run Query
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
-            
-            if self.omegaconf.enable_caching:       # Using cache
+            query = self.query_pool.get_query(plan.query_id)
+
+            if self.omegaconf.enable_caching:  # Using cache
                 result, budget = self.cache.run(
                     query_id=plan.query_id,
-                    query=self.query_pool.get_query(plan.query_id),
-                    run_budget=plan.budget,     # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
+                    query=query,
+                    run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
                     hyperblock=hyperblock,
                 )
-            else:                                   # Not using cache
-                result = hyperblock.run_dp(
-                    self.query_pool.get_query(plan.query_id), plan.budget
-                    )
+            else:  # Not using cache
+                result = hyperblock.run_dp(query, plan.budget)
                 budget = plan.budget
 
             if budget is not None:
@@ -267,29 +273,33 @@ class Scheduler:
             if not agglist:
                 return None
 
-
             total_noise = 0
             for (_, size) in agglist:
                 sensitivity = 1 / size
-                total_noise += np.random.laplace(
-                scale=sensitivity / 0.01
-            )
+                total_noise += np.random.laplace(scale=sensitivity / 0.01)
 
-            
             result = 0
             total_size = 0
-            
+
             for (res, size) in agglist:
                 result += size * res
                 total_size += size
 
-            print("Size", total_size, "agg Noise", total_noise, "Result", result, "RResult", result/total_size)
+            print(
+                "Size",
+                total_size,
+                "agg Noise",
+                total_noise,
+                "Result",
+                result,
+                "RResult",
+                result / total_size,
+            )
             return result / total_size
 
-        else:       
+        else:
             logger.error("Execution: no such operator")
             exit(1)
-        
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -397,7 +407,9 @@ class Scheduler:
         return sorted(tasks, reverse=True, key=task_key)
 
     def can_run(self, demand) -> bool:
-        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run(demand)
+        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run(
+            demand
+        )
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's constraints

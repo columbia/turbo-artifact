@@ -1,9 +1,9 @@
+import math
 from typing import List, Optional
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-import math
 
 
 class DenseHistogram:  # We use it to represent the PMW Histogram
@@ -34,7 +34,7 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
         return torch.smm(query, self.tensor.t()).item()
 
 
-class SparseHistogram:  # We use it to represent the block data
+class SparseHistogram:  # We use it to represent the block data and queries
     def __init__(
         self, bin_indices: List[List[int]], values: List, attribute_sizes: List[int]
     ) -> None:
@@ -56,8 +56,8 @@ class SparseHistogram:  # We use it to represent the block data
         cols = list(df.columns)
         df = df.groupby(cols).size()
         return cls(
-            bin_indices=list(df.index),              # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
-            values=list(df.values),                  # [4, 1, 2],
+            bin_indices=list(df.index),  # [(0, 0, 1), (1, 0, 5), (0, 1, 2)],
+            values=list(df.values),  # [4, 1, 2],
             attribute_sizes=attribute_domain_sizes,  # [2, 2, 10],
         )
 
@@ -80,6 +80,7 @@ def get_flat_bin_index(
 ) -> int:
     index = 0
     size = 1
+    # TODO: write the inverse conversion
     # Row-major order like PyTorch (inner rows first)
     for dim in range(len(attribute_sizes) - 1, -1, -1):
         index += multidim_bin_index[dim] * size
@@ -87,7 +88,11 @@ def get_flat_bin_index(
     return index
 
 
-# TODO: write the inverse conversion
+def flat_items(sparse_tensor):
+    # Iterates through (bin_index, value) pairs
+    for index, value in zip(sparse_tensor.indices()[1], sparse_tensor.values()):
+        # indices()[0] is always 0 (row tensor)
+        yield index, value
 
 
 def get_domain_size(attribute_sizes: List[int]) -> int:
@@ -103,14 +108,14 @@ def build_sparse_tensor(
 
     for b, v in zip(bin_indices, values):
         column_ids.append(get_flat_bin_index(b, attribute_sizes))
-        column_values.append(v)     # In case we lose the correct order?
+        column_values.append(v)  # In case we lose the correct order?
 
     return torch.sparse_coo_tensor(
         [[0] * len(column_ids), column_ids],
         column_values,
         size=(1, get_domain_size(attribute_sizes)),
         dtype=torch.float64,
-    )
+    ).coalesce()  # Sums duplicated bins & puts indices in lexicographic order
 
 
 def build_sparse_tensor_multidim(
@@ -121,7 +126,7 @@ def build_sparse_tensor_multidim(
         values,
         size=attribute_sizes,
         dtype=torch.float64,
-    )
+    ).coalesce()
 
 
 # ------------- / Help functions ------------- #
