@@ -164,9 +164,6 @@ class HyperBlock:
             if block_id not in self.blocks:
                 return False
             block = self.blocks[block_id]
-
-            print(block.budget)
-
             if not block.budget.can_allocate(demand_budget):
                 return False
         return True
