@@ -74,6 +74,7 @@ class Scheduler:
 
         self.simulator_config = simulator_config
         self.omegaconf = simulator_config.scheduler if simulator_config else None
+        self.initial_blocks_num = self.simulator_config.blocks.initial_num
         self.blocks_path = REPO_ROOT.joinpath("data").joinpath(
             self.simulator_config.blocks.path
         )
@@ -153,11 +154,10 @@ class Scheduler:
             converged = True
 
             for task in sorted_tasks:
-
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
                         self.tasks_info.tasks_lifetime[task.id]
-                    < self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
+                    < (self.get_num_blocks() - self.initial_blocks_num) - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 
@@ -176,46 +176,33 @@ class Scheduler:
                 elif self.can_run(task.budget_per_block):
                     plan = original_plan
 
-                # print("\n")
-                # print(
-                #     colored(
-                #         f"Original plan of query {task.query_id} on blocks {bs_tuple}:     {without_cache_plan}",
-                #         "green",
-                #     )
-                # )
-                # print(
-                #     colored(
-                #         f"Alternative Plan of query {task.query_id} on blocks {bs_tuple}:        {plan}",
-                #         "blue",
-                #     )
-                # )
-
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
                     print(
                         colored(
-                            f"Plan's Noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                            f"Plan's Noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result}",
                             "blue",
                         )
                     )
                     self.update_allocated_task(task)
 
                     if self.omegaconf.enable_caching:
-                    # Run the original plan without cache just to store the result - for experiments
+                        # Run the original plan without cache just to store the result - for experiments
                         self.tasks_info.result_planner_cache_dp[task.id] = result
-
-                        result = HyperBlock({key: self.blocks[key] for key in bs_list}).run_dp(
+                        hyperblock = HyperBlock({key: self.blocks[key] for key in bs_list})
+                        result, noise = hyperblock.run_dp(
                             self.query_pool.get_query(task.query_id), task.budget
                         )
                         self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
-
+                        print(f"Noise: {noise}, size: {hyperblock.size}, result: {result*hyperblock.size}, result_no_noise: {(result-noise)*hyperblock.size}")
                         print(
                                 colored(
-                                    f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
+                                    f"Original plan's noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result}",
                                     "green",
                                 )
                             )
+                        print("\n\n")
                         result = HyperBlock({key: self.blocks[key] for key in bs_list}).run(
                             self.query_pool.get_query(task.query_id)
                         )
@@ -246,44 +233,41 @@ class Scheduler:
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
             
             if self.omegaconf.enable_caching:       # Using cache
-                result, budget = self.cache.run(
+                result, noise, budget = self.cache.run(
                     query_id=plan.query_id,
                     query=self.query_pool.get_query(plan.query_id),
                     run_budget=plan.budget,     # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
                     hyperblock=hyperblock,
                 )
             else:                                   # Not using cache
-                result = hyperblock.run_dp(
+                result, noise = hyperblock.run_dp(
                     self.query_pool.get_query(plan.query_id), plan.budget
                     )
                 budget = plan.budget
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-            return (result, hyperblock.size)
+            return (result, noise, hyperblock.size)
 
         elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
             if not agglist:
                 return None
 
-
-            total_noise = 0
-            for (_, size) in agglist:
-                sensitivity = 1 / size
-                total_noise += np.random.laplace(
-                scale=sensitivity / 0.01
-            )
-
-            
             result = 0
+            result_nonoise = 0
             total_size = 0
+            total_noise = 0
             
-            for (res, size) in agglist:
+            for (res, noise, size) in agglist:
+                print("     noise", noise, "size", size, "res", res, "result", size * res)
                 result += size * res
+                result_nonoise += size * (res-noise)
                 total_size += size
+                total_noise += noise
+            print("total size", total_size, "Result", result, "Result_no_noise", result_nonoise)
+            print(f"Noise: {total_noise}")
 
-            print("Size", total_size, "agg Noise", total_noise, "Result", result, "RResult", result/total_size)
             return result / total_size
 
         else:       

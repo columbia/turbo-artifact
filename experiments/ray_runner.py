@@ -11,7 +11,6 @@ from privacypacking.config import Config
 from privacypacking.schedulers.utils import (
     ARGMAX_KNAPSACK,
     DOMINANT_SHARES,
-    DYNAMIC_FLAT_RELEVANCE,
     FCFS,
     FLAT_RELEVANCE,
     SIMPLEX,
@@ -117,7 +116,6 @@ def grid_online(
     queries_path: List[str],
     blocks_path: str,
     blocks_metadata: str,
-    tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
     planner: List[str],
@@ -129,7 +127,6 @@ def grid_online(
         # ARGMAX_KNAPSACK,
         # BATCH_OVERFLOW_RELEVANCE,
         #  FLAT_RELEVANCE,
-        # DYNAMIC_FLAT_RELEVANCE,
         FCFS,
         # DOMINANT_SHARES,
     ]
@@ -174,7 +171,6 @@ def grid_online(
                 "metadata": blocks_metadata,
             },
             "tasks": {
-                "sampling": tasks_sampling,
                 "path": tune.grid_search(tasks_path),
                 "queries_path": tune.grid_search(queries_path),
                 "block_selection_policy": tune.grid_search(block_selection_policy),
@@ -211,7 +207,7 @@ def grid_online(
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/enable_caching": "enable_caching",
-                "omegaconf/scheduler/panner": "planner",
+                "omegaconf/scheduler/planner": "planner",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
             },
