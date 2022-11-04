@@ -57,7 +57,7 @@ class PrivacyWorkload:
     def create_dp_task(self, task) -> dict:
         submit_time = task.start_time
         n_blocks = task.n_blocks
-        epsilon, delta = self.compute_budget(task.query_id, n_blocks)
+        epsilon, delta = self.compute_budget()
         task_name = f"task-{task.query_id}-{n_blocks}-{submit_time}"
 
         task = {
