@@ -22,11 +22,13 @@ class DeterministicCache(Cache):
         return result
 
     def run(self, query_id, query, run_budget, hyperblock: HyperBlock):     # TODO: strip the caches from the 'run' functionality?
+        budget = None
         result = self.get_entry(query_id, hyperblock.id)
         if not result:  # If result is not in the cache run fresh and store
             result = hyperblock.run_dp(query, run_budget)
             self.add_entry(query_id, hyperblock.id, result)  # Add result in cache
-        return result, run_budget
+            budget = run_budget
+        return result, budget
 
     def dump(self):
         res = yaml.dump(self.key_values)
@@ -48,4 +50,4 @@ class DeterministicCache(Cache):
                 if not hyperblock.can_run(demand):
                     return math.inf     # This hyperblock does not have enough budget
 
-                return 0    # Even if there is at least a little budget left in the hyperblock we assume the cost is 0 TODO: change this
+                return 0    # Even if there is at least a little budget left in the hyperblock we assume the cost is 0
