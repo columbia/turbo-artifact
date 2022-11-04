@@ -319,7 +319,7 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    sequential: bool = False,
+    same_size_blocks: bool = False,
     output_dir="blocks",
 ):
     metadata = {}
@@ -399,14 +399,66 @@ def main(
                 logger.info(f"Saved block for day {i} - Date {date}")
                 i += 1
 
+    def get_all_blocks(dates):
+        blocks = []
+        for date in dates:
+            date_covid = covid.query(f"date == '{date}'")
+            date_ages = age.query(f"date == '{date}'").sort_values("age_group")
+            date_ethnicities = ethnicity.query(f"date == '{date}'").sort_values(
+                "ethnicity"
+            )
+            date_genders = gender.query(f"date == '{date}'").sort_values("gender")
 
-    if sequential:
-        # Sequential
-        return_dict = dict()
-        for i, date in enumerate(covid["date"]):
-            save_blocks(i, [date], return_dict)
+            # Specific date must exist in all four covid-datasets
+            if not (
+                date_covid.empty
+                or date_ages.empty
+                or date_ethnicities.empty
+                or date_genders.empty
+            ):
+                block = day_data(
+                    date_ages,
+                    date_genders,
+                    date_ethnicities,
+                    date_covid,
+                    us_census_ages,
+                    us_census_genders,
+                    us_census_ethnicities,
+                )
+                # print_analysis(block, date_ages, date_genders, date_ethnicities, date_covid, us_census_ages, us_census_genders, us_census_ethnicities)
+                custom_unit_test(
+                    block,
+                    date_ages,
+                    date_genders,
+                    date_ethnicities,
+                    date_covid,
+                    us_census_ages,
+                    us_census_genders,
+                    us_census_ethnicities,
+                    abs_err=0.1,
+                )
+
+                blocks.append(block)
+        return pd.concat(blocks)
+
+
+    if same_size_blocks:
+        # Running Sequentially
+        blocks = get_all_blocks(covid["date"].values)
+        # print(blocks)
+       
+        k = 1000
+        block_size = 1000
+        metadata["blocks"] = dict()
+
+        for idx in range(k):
+            metadata["blocks"][idx] = dict()
+            metadata["blocks"][idx]["size"] = block_size
+            blocks[block_size*idx:block_size*(idx+1)].to_csv(output_dir.joinpath(f"block_{idx}.csv"), index=False)
+            logger.info(f"Saved block {idx}")
+
     else:
-        # Parallel
+        # Running in Parallel
         processes = []
         num_processes = os.cpu_count()
         manager = Manager()
@@ -432,15 +484,14 @@ def main(
         for n in range(num_processes):
             processes[n].join()
 
-    # Write blocks metadata
-    metadata["blocks"] = dict()
-    for idx, key in enumerate(sorted(list(return_dict.keys()))):
-        (date, size) = return_dict[key]
-        metadata["blocks"][idx] = dict()
-        metadata["blocks"][idx]["date"] = date
-        metadata["blocks"][idx]["size"] = size
-        
-        if not sequential:
+        # Write blocks metadata
+        metadata["blocks"] = dict()
+        for idx, key in enumerate(sorted(list(return_dict.keys()))):
+            (date, size) = return_dict[key]
+            metadata["blocks"][idx] = dict()
+            metadata["blocks"][idx]["date"] = date
+            metadata["blocks"][idx]["size"] = size
+            
             # Fix the names of the stored blocks
             os.rename(output_dir.joinpath(f"block_{key}.csv"), output_dir.joinpath(f"block_{idx}.csv"))
 
