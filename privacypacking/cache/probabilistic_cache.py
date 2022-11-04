@@ -55,9 +55,4 @@ class ProbabilicticCache(Cache):
             demand = {key: budget for key in block_ids}
             if not hyperblock.can_run(demand):
                 return math.inf  # This hyperblock does not have enough budget
-
-            # Creation of a new PMW costs 0: only one block per pmw so the block has all its budget
-            # and no queries ran on it yet
-            # Pierre: actually no, in the general case some queries might want to run out of the cache
-            # e.g. deep learning job. So we might be almost out of budget and still have no PMW.
             return 0

@@ -1,12 +1,9 @@
-import math
-from time import sleep
-
 import mlflow
 import numpy as np
 import torch
 from loguru import logger
 
-from privacypacking.budget import BasicBudget, Budget
+from privacypacking.budget import Budget
 from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import BoundedOneShotSVT, GaussianCurve, ZeroCurve
 from privacypacking.budget.histogram import DenseHistogram, flat_items
@@ -48,13 +45,11 @@ class PMW:
         self.noisy_threshold = self.alpha / 2 + np.random.normal(
             0, self.Delta * self.ro
         )
-        self.init_budget = BoundedOneShotSVT(
-            ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-        )
+        # self.init_budget = BoundedOneShotSVT(
+        #     ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+        # ) # TODO: will this be used?
+        
         self.mlflow_run = mlflow.active_run()
-
-    def is_query_hard(self, error):
-        return abs(error) > self.T
 
     def log(self, key, value):
         if self.mlflow_run:
@@ -118,9 +113,6 @@ class PMW:
                 f"Predicted: {predicted_output}, true: {true_output}, hard query"
             )
 
-            # if not self.is_query_hard(noisy_error):
-            #     return predicted_output, run_budget
-
             # NOTE: cut-off = 1 and pay as you go -> no limit on the number of hard queries
             # # Too many hard queries - breaking privacy. Don't update histogram or return query result.
             # if self.hard_queries_answered >= self.max_hard_queries:
@@ -150,7 +142,3 @@ class PMW:
         self.log("hard_queries_ran", self.hard_queries_ran)
         self.log("true_abs_error", abs(predicted_output - true_output))
         return output, run_budget
-
-
-# if __name__ == "__main__":
-#     debug1()
