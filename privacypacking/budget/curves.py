@@ -124,6 +124,30 @@ class BoundedOneShotSVT(RenyiBudget):
         super().__init__(orders)
 
 
+class PureDPtoRDP(RenyiBudget):
+    # https://papers.nips.cc/paper/2020/file/e9bf14a419d77534105016f5ec122d62-Paper.pdf
+    # Originally from the CDP paper by Bun and Steinke 2016
+    def __init__(self, epsilon: float, alpha_list: List[float] = ALPHAS) -> None:
+        orders = {
+            alpha: (1 / (alpha - 1))
+            * np.log(
+                (np.sinh(alpha * epsilon) - np.sinh((alpha - 1) * epsilon))
+                / (np.sinh(epsilon))
+            )
+            for alpha in alpha_list
+        }
+        self.pure_epsilon = epsilon
+        super().__init__(orders)
+
+
+class PureDPtoRDP_loose(RenyiBudget):
+    # Loose upper bound
+    def __init__(self, epsilon: float, alpha_list: List[float] = ALPHAS) -> None:
+        orders = {alpha: alpha * epsilon ** 2 / 2 for alpha in alpha_list}
+        self.pure_epsilon = epsilon
+        super().__init__(orders)
+
+
 # class SubsampledGaussianCurve(Budget):
 #     def __init__(
 #         self,

@@ -5,7 +5,12 @@ from loguru import logger
 
 from privacypacking.budget import Budget
 from privacypacking.budget.block import HyperBlock
-from privacypacking.budget.curves import BoundedOneShotSVT, GaussianCurve, ZeroCurve
+from privacypacking.budget.curves import (
+    BoundedOneShotSVT,
+    GaussianCurve,
+    PureDPtoRDP,
+    ZeroCurve,
+)
 from privacypacking.budget.histogram import DenseHistogram, flat_items
 
 
@@ -17,6 +22,7 @@ class PMW:
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty.
         alpha=0.2,  # Max error guarantee (or order of magnitude)
         k=10,  # Max number of queries for each OneShot SVT instance
+        standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
@@ -40,15 +46,18 @@ class PMW:
         self.local_svt_max_queries = k
         self.ro = ro if ro else nu
         self.Delta = 1 / self.n  # Query sensitivity
+        self.standard_svt = standard_svt
 
         # The initial threshold should be noisy too if we want to use Sparse Vector
-        self.noisy_threshold = self.alpha / 2 + np.random.normal(
-            0, self.Delta * self.ro
-        )
-        # self.init_budget = BoundedOneShotSVT(
-        #     ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-        # ) # TODO: will this be used?
-        
+        if self.standard_svt:
+            # ro=1/eps1 and nu=1/eps2
+            self.noisy_threshold = self.alpha / 2 + np.random.laplace(
+                self.Delta * self.ro
+            )
+        else:
+            self.noisy_threshold = self.alpha / 2 + np.random.normal(
+                0, self.Delta * self.ro
+            )
         self.mlflow_run = mlflow.active_run()
 
     def log(self, key, value):
@@ -60,16 +69,24 @@ class PMW:
             )
 
     def worst_case_cost(self) -> Budget:
+        query_cost = GaussianCurve(sigma=self.nu)
+        if self.standard_svt:
+            svt_cost = PureDPtoRDP(epsilon=1 / self.ro + 1 / self.nu)
+        else:
+            svt_cost = BoundedOneShotSVT(
+                ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+            )
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
         # and we still do a cache miss, so we pay for a true query on top of that
-        return BoundedOneShotSVT(
-            ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-        ) + GaussianCurve(sigma=self.nu)
+        return svt_cost + query_cost
 
     def run(self, query):
         assert isinstance(query, torch.Tensor)
 
-        if self.local_svt_queries_ran >= self.local_svt_max_queries:
+        if (not self.standard_svt) and (
+            self.local_svt_queries_ran >= self.local_svt_max_queries
+        ):
+            # The Laplace sparse vector can run forever as long as queries are easy
             self.local_svt_queries_ran = 0
             logger.warning(
                 "Local sparse vector is exhausted (too many easy queries). Starting a new one..."
@@ -77,12 +94,19 @@ class PMW:
 
         # Pay the initialization budget if it's the first call
         if self.local_svt_queries_ran == 0:
-            self.noisy_threshold = self.alpha / 2 + np.random.normal(
-                0, self.Delta * self.ro
-            )
-            run_budget = BoundedOneShotSVT(
-                ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-            )
+
+            if self.standard_svt:
+                self.noisy_threshold = self.alpha / 2 + np.random.laplace(
+                    self.Delta * self.ro
+                )
+                run_budget = PureDPtoRDP(epsilon=1 / self.ro + 1 / self.nu)
+            else:
+                self.noisy_threshold = self.alpha / 2 + np.random.normal(
+                    0, self.Delta * self.ro
+                )
+                run_budget = BoundedOneShotSVT(
+                    ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+                )
         else:
             run_budget = ZeroCurve()
 
@@ -95,9 +119,13 @@ class PMW:
         self.local_svt_queries_ran += 1
 
         # `noisy_error` is a DP query with sensitivity self.Delta, Sparse Vector needs twice that
-        noisy_error = abs(true_output - predicted_output) + np.random.normal(
-            0, 2 * self.Delta * self.nu
+        true_error = abs(true_output - predicted_output)
+        error_noise = (
+            np.random.laplace(2 * self.Delta * self.nu)
+            if self.standard_svt
+            else np.random.normal(0, 2 * self.Delta * self.nu)
         )
+        noisy_error = true_error + error_noise
 
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
