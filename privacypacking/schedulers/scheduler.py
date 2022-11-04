@@ -102,8 +102,6 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        # self.cache = DeterministicCache()
-        # self.cache = ProbabilicticCache()
         self.cache = globals()[self.omegaconf["cache"]]()
         self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
 
@@ -114,9 +112,6 @@ class Scheduler:
         for block_id in blocks:
             block = self.blocks[block_id]
             block.budget -= budget
-
-            # TODO: what's this?
-            # self.tasks_info.realized_budget += budget.epsilon
 
     def now(self) -> Optional[float]:
         return self.env.now if hasattr(self, "env") else 0
@@ -307,7 +302,7 @@ class Scheduler:
         # block.load_raw_data()
         block.data_path = f"{self.blocks_path}/block_{block.id}.csv"
         block.load_histogram(self.blocks_metadata["attributes_domain_sizes"])
-        block.date = self.blocks_metadata["blocks"][str(block.id)]["date"]
+        # block.date = self.blocks_metadata["blocks"][str(block.id)]["date"]
         block.size = self.blocks_metadata["blocks"][str(block.id)]["size"]
         block.domain_size = self.blocks_metadata["domain_size"]
         self.blocks.update({block.id: block})

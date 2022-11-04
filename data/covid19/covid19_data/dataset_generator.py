@@ -183,7 +183,11 @@ def day_data(
         "age": user_ages,
         "ethnicity": user_ethnicities,
     }
+
     df = pd.DataFrame(data=users)
+    df = df.sample(frac=1)   # This shuffles the rows
+    # print(df)
+
     return df
 
 
@@ -401,6 +405,7 @@ def main(
 
     def get_all_blocks(dates):
         blocks = []
+        total_size = 0
         for date in dates:
             date_covid = covid.query(f"date == '{date}'")
             date_ages = age.query(f"date == '{date}'").sort_values("age_group")
@@ -425,30 +430,20 @@ def main(
                     us_census_genders,
                     us_census_ethnicities,
                 )
-                # print_analysis(block, date_ages, date_genders, date_ethnicities, date_covid, us_census_ages, us_census_genders, us_census_ethnicities)
-                custom_unit_test(
-                    block,
-                    date_ages,
-                    date_genders,
-                    date_ethnicities,
-                    date_covid,
-                    us_census_ages,
-                    us_census_genders,
-                    us_census_ethnicities,
-                    abs_err=0.1,
-                )
-
+                # print(len(block))
+                total_size += len(block)
                 blocks.append(block)
-        return pd.concat(blocks)
+        print("total size", total_size)
+        return total_size, pd.concat(blocks)
 
 
     if same_size_blocks:
         # Running Sequentially
-        blocks = get_all_blocks(covid["date"].values)
+        total_size, blocks = get_all_blocks(covid["date"].values)
         # print(blocks)
-       
-        k = 1000
-        block_size = 1000
+        # 151279 929
+        k = 800
+        block_size = total_size // k
         metadata["blocks"] = dict()
 
         for idx in range(k):

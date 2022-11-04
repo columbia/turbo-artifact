@@ -23,11 +23,11 @@ class PrivacyWorkload:
         self.tasks = None
 
         #   ------------  Configure  ------------ #
-        self.blocks_num = 683   # days
+        self.blocks_num = 800   # days
         self.initial_blocks_num = 1
         self.query_types = [0] #[33479, 34408]
         self.std_num_tasks = 5
-        self.requested_blocks_num = [1, 50, 100,  200, 400, 600] # [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
+        self.requested_blocks_num = [1, 50, 100,  200, 400, 600, 800] # [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
         #   ------------  /Configure  ------------ #
 
 
@@ -39,7 +39,7 @@ class PrivacyWorkload:
         tasks = []
         num_tasks = (
             np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
-        )  # todo: increase the number of daily tasks when we have more queries
+        )
         for _ in range(num_tasks[0]):
             query_id = np.random.choice(query_types)
             query_type = "count"
@@ -89,23 +89,20 @@ class PrivacyWorkload:
         .resolve()
         .parent.parent.joinpath("covid19_workload/privacy_tasks.csv"),
     ):
-        # self.tasks = self.tasks.sort_values(["submit_time"])
         logger.info("Saving the privacy workload...")
         self.tasks.to_csv(path, index=False)
         logger.info(f"Saved {len(self.tasks)} tasks at {path}.")
 
     # Todo: this is obsolete -> users will not define their epsilon demand from now on
-    def compute_budget(self, query_id, n_blocks):
+    def compute_budget(self,):
         delta = 0.00001
-        epsilon = [0.01]
+        epsilon = [0.1]
         return epsilon, delta
 
     def compute_block_selection_policy(self):
         return "LatestBlocksFirst"
 
 
-# @hydra.main(config_path="config", config_name="_default")
-# def main(cfg: DictConfig) -> None:
 def main() -> None:
     privacy_workload = PrivacyWorkload()
     privacy_workload.generate()

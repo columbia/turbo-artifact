@@ -120,6 +120,7 @@ def grid_online(
     data_lifetime: List[float],
     task_lifetime: List[int],
     planner: List[str],
+    cache: List[str],
     enable_caching: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
 ):
@@ -151,6 +152,7 @@ def grid_online(
                 "data_lifetime": tune.grid_search(data_lifetime),
                 "task_lifetime": tune.grid_search(task_lifetime),
                 "planner": tune.grid_search(planner),
+                "cache": tune.grid_search(cache),
                 "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
                 "method": "batch",
                 "metric": tune.grid_search(scheduler_metrics),

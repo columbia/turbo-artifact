@@ -13,7 +13,7 @@ def caching():
         scheduler_scheduling_time=[1],
         metric_recomputation_period=[50],
         initial_blocks=[1],
-        max_blocks=[400],
+        max_blocks=[800],
         tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
         queries_path=["covid19/covid19_queries/queries.json"],
         blocks_path="covid19/covid19_data/blocks",
@@ -22,6 +22,7 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         planner=["PerBlockPlanner"],
+        cache=["DeterministicCache"],
         enable_caching=[True],
     )
 
