@@ -29,10 +29,12 @@ class ResourceManager:
         # Stopping conditions
         self.block_production_terminated = False
         self.task_production_terminated = False
-        self.simulation_terminated = False
+
+    def terminate_simulation(self):
+        self.scheduling.interrupt()
+        self.daemon_clock.interrupt()
 
     def start(self):
-
         # Start the processes
         self.env.process(self.block_consumer())
         task_consumed_event = self.env.process(self.task_consumer())
@@ -40,9 +42,9 @@ class ResourceManager:
         # In the online case, start a clock to terminate the simulation
         if self.config.omegaconf.scheduler.method == "batch":
             self.block_arrival_interval = self.config.set_block_arrival_time()
-            self.env.process(self.daemon_clock())
+            self.daemon_clock = self.env.process(self.daemon_clock())
             self.env.process(self.termination_clock())
-            self.env.process(
+            self.scheduling = self.env.process(
                 self.scheduler.run_batch_scheduling(
                     period=self.config.omegaconf.scheduler.scheduling_wait_time
                 )
@@ -79,12 +81,15 @@ class ResourceManager:
         yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
-        self.simulation_terminated = True
+        self.terminate_simulation()
 
     def daemon_clock(self):
-        while not self.simulation_terminated:
-            yield self.env.timeout(1)
-            logger.info(f"Simulation Time is: {self.env.now}")
+        while True:
+            try:
+                yield self.env.timeout(1)
+                logger.info(f"Simulation Time is: {self.env.now}")
+            except simpy.Interrupt as i:
+                return
 
     def block_consumer(self):
         def consume():
@@ -114,11 +119,10 @@ class ResourceManager:
 
         # Consume initial tasks
         initial_tasks_num = self.config.get_initial_tasks_num()
-        # for _ in range(initial_tasks_num - 1):
         for _ in range(initial_tasks_num):
             yield self.env.process(consume())
 
         while not self.task_production_terminated:
             yield self.env.process(consume())
         # Ask the scheduler to stop adding new scheduling steps
-        self.scheduler.simulation_terminated = True
+        self.terminate_simulation()
