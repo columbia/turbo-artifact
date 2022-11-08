@@ -24,7 +24,7 @@ class PerBlockPlanner(Planner):
         plan = A(plan)
 
         cost = self.cache.get_cost(plan, self.blocks)
-        print("Get cost of plan", plan, "cost", cost)
+        # print("Get cost of plan", plan, "cost", cost)
 
         if not math.isinf(cost):    # Get the cost of the plan - if infinite it's not eligible
             return plan

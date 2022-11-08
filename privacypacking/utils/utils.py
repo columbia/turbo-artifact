@@ -1,5 +1,6 @@
 import json
 import uuid
+import mlflow
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,15 @@ TaskSpec = namedtuple(
 import numpy as np
 
 
+def mlflow_log(key, value, step):
+    mlflow_run = mlflow.active_run()
+    if mlflow_run:
+        mlflow.log_metric(
+            key,
+            value,
+            step=step,
+        )
+        
 def sample_one_from_string(stochastic_string: str) -> float:
     events = stochastic_string.split(",")
     values = [float(event.split(":")[0]) for event in events]
