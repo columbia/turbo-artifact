@@ -1,8 +1,10 @@
 import json
 import os
+import sys
 
 import mlflow
 import typer
+from loguru import logger
 
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
@@ -30,7 +32,11 @@ def run(
     config: str = "privacypacking/config/debug_pmw_config.json",
     loguru_level: str = "WARNING",
 ):
-    os.environ["LOGURU_LEVEL"] = loguru_level
+    # Try environment variable first, CLI arg otherwise
+    level = os.environ.get("LOGURU_LEVEL", loguru_level)
+    logger.remove(0)
+    logger.add(sys.stderr, level=level)
+
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     # Read config file
