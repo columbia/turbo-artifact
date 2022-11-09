@@ -68,16 +68,18 @@ class PMW:
                 step=self.queries_ran,
             )
 
-    def worst_case_cost(self) -> Budget:
-        query_cost = GaussianCurve(sigma=self.nu)
-        if self.standard_svt:
-            svt_cost = PureDPtoRDP(epsilon=1 / self.ro + 1 / self.nu)
-        else:
-            svt_cost = BoundedOneShotSVT(
-                ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-            )
+    @classmethod
+    def worst_case_cost(
+        cls, nu=485, ro=None, standard_svt=True, local_svt_max_queries=None
+    ) -> Budget:
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
         # and we still do a cache miss, so we pay for a true query on top of that
+        ro = ro if ro else nu
+        query_cost = GaussianCurve(sigma=nu)
+        if standard_svt:
+            svt_cost = PureDPtoRDP(epsilon=1 / ro + 1 / nu)
+        else:
+            svt_cost = BoundedOneShotSVT(ro=ro, nu=nu, kmax=local_svt_max_queries)
         return svt_cost + query_cost
 
     def run(self, query):

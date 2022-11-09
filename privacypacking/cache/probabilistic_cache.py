@@ -5,20 +5,13 @@ from privacypacking.cache.cache import A, Cache, R
 from privacypacking.cache.pmw import PMW
 
 
-class ProbabilicticCache(Cache):
-    def __init__(self):
+class ProbabilisticCache(Cache):
+    def __init__(self, **pmw_args):
         self.key_values = {}
-
-        # To get a worst-case cost even if we don't have any PMW yet
-        # TODO: what if PMWs have different parameters? Then fake_pmw should be the worst possible PMW
-        fake_block = Block(-1, None)
-        fake_block.size = 42
-        fake_block.domain_size = 13
-        fake_hyperblock = HyperBlock({-1: fake_block})
-        self.fake_pmw = PMW(fake_hyperblock)
+        self.pmw_args = pmw_args
 
     def add_entry(self, hyperblock: HyperBlock):
-        pmw = PMW(hyperblock)
+        pmw = PMW(hyperblock, **self.pmw_args)
         self.key_values[hyperblock.id] = pmw
         return pmw
 
@@ -50,8 +43,13 @@ class ProbabilicticCache(Cache):
             # whether the cache is empty or not, and whether we hit or not.
             pmw = self.get_entry(plan.query_id, hyperblock.id)
             if pmw is None:
-                pmw = self.fake_pmw
-            budget = pmw.worst_case_cost()
+                # Use the defaults or the same config as `add_entry`
+                budget = PMW.worst_case_cost(**self.pmw_args)
+            else:
+                budget = PMW.worst_case_cost(
+                    pmw.nu, pmw.ro, pmw.standard_svt, pmw.local_svt_max_queries
+                )
+
             demand = {key: budget for key in block_ids}
             if not hyperblock.can_run(demand):
                 return math.inf  # This hyperblock does not have enough budget

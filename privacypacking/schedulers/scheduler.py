@@ -14,7 +14,7 @@ from privacypacking.budget import Block, HyperBlock, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.probabilistic_cache import ProbabilicticCache
+from privacypacking.cache.probabilistic_cache import ProbabilisticCache
 from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
@@ -156,8 +156,9 @@ class Scheduler:
             for task in sorted_tasks:
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                        self.tasks_info.tasks_lifetime[task.id]
-                    < (self.get_num_blocks() - self.initial_blocks_num) - self.tasks_info.tasks_submit_time[task.id]
+                    self.tasks_info.tasks_lifetime[task.id]
+                    < (self.get_num_blocks() - self.initial_blocks_num)
+                    - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 
