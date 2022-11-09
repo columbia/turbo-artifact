@@ -106,11 +106,7 @@ def grid_online(
         path = LOGS_PATH.joinpath("mlruns")
         os.environ["MLFLOW_TRACKING_URI"] = str(path)
         os.environ["MLFLOW_EXPERIMENT_NAME"] = exp_name
-        print(exp_name)
         mlflow.create_experiment(exp_name, artifact_location=str(path))
-        # mlflow.set_experiment(experiment_name=exp_name)
-
-
 
     logger.info(f"Tune config: {config}")
 
