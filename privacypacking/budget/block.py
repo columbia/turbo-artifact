@@ -73,6 +73,8 @@ class Block:
         self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
+        # TODO: when blocks become too big, take a look at Arrow/Feather as a CSV replacement:
+        # https://arrow.apache.org/docs/python/feather.html
         raw_data = self.raw_data
         if raw_data is None:
             raw_data = pd.read_csv(self.data_path)
@@ -87,16 +89,6 @@ class Block:
         elif isinstance(query, pd.DataFrame):
             pass
         return result
-
-    # def run_dp(self, query, budget):
-    #     result = self.run(query)
-    #     sensitivity = 1 / self.size
-    #     noise_sample = np.random.laplace(
-    #         scale=sensitivity / budget.epsilon
-    #     )  # TODO: this is not compatible with renyi
-    #     result += noise_sample
-    #     print("Noise", noise_sample)
-    # return result
 
 
 # Wraps one or more blocks

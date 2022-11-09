@@ -228,7 +228,9 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):  # TODO: Consider making an executor class
+    def execute_plan(self, plan):
+        # TODO: Consider making an executor class
+        # TODO: simplify? Just R then A, no need for recursion. plan = list of cuts?
         if isinstance(plan, R):  # Run Query
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
