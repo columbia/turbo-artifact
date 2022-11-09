@@ -122,7 +122,7 @@ def day_data(
 
     tested_users_num = int(date_covid["tests"].values[0])
     positive_users_num = int(date_covid["cases"].values[0])
-    positive_users_num = int(0.7*tested_users_num)              # For testing
+    # positive_users_num = int(0.7*tested_users_num)              # For testing
     negative_users_num = tested_users_num - positive_users_num
 
     # Choose demographic info for positives
@@ -442,7 +442,7 @@ def main(
         total_size, blocks = get_all_blocks(covid["date"].values)
         # print(blocks)
         # 151279929
-        k = 5000
+        k = 6000
         block_size = total_size // k
         metadata["blocks"] = dict()
 

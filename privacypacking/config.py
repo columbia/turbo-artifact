@@ -16,7 +16,6 @@ from privacypacking.budget.curves import GaussianCurve
 from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
-import time
 
 # Configuration Reading Logic
 # TODO: why are the task utils here again? It doesn't seem to make sense.

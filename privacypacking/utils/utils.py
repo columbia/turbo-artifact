@@ -95,6 +95,7 @@ def get_logs(
         for task in tasks:
             task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
 
+            result = error = None
             maximum_profit += task.profit
             if tasks_info.tasks_status[task.id] == ALLOCATED:
                 n_allocated_tasks += 1
@@ -103,17 +104,16 @@ def get_logs(
                 allocated_tasks_scheduling_delays.append(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
-                task_dump.update(
-                    {
-                        "result": tasks_info.result[task.id],
-                        "error": tasks_info.error[task.id],
-                    }
-                )
+
+                result = tasks_info.result[task.id]
+                error = tasks_info.error[task.id]
 
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
+                    "result": result,
+                    "error": error,
                     "planning_time": tasks_info.planning_time[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
@@ -122,27 +122,13 @@ def get_logs(
                     "allocation_index": tasks_info.allocation_index.get(task.id, None),
                 }
             )
+            log_tasks.append(task_dump)
 
-            log_tasks.append(
-                task_dump
-            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
-
-    # TODO: Store scheduling times into the tasks directly?
-
-    # dfs = []
     log_blocks = []
     if omegaconf.logs.save:
         for block in blocks.values():
             log_blocks.append(block.dump())
-            # dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
-        # df = pd.concat(dfs)
-
-        # df["budget"] = 10 - df["budget"]
-        # bu = df["budget"].mean()
-
     total_tasks = len(tasks)
-    # tasks_info = tasks_info.dump()
-    # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
 
     datapoint = {
@@ -152,11 +138,11 @@ def get_logs(
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
         # "budget_utilization": bu,
-        # "realized_budget": tasks_info.realized_budget,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "planner": omegaconf.scheduler.planner,
+        "cache": omegaconf.scheduler.cache,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,

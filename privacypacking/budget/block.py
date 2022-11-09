@@ -45,6 +45,7 @@ class Block:
             "id": self.id,
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
+            # "budget_utilization": self.initial_budget-self.budget,
         }
 
     def __len__(self) -> int:
@@ -138,6 +139,8 @@ class HyperBlock:
             if block_id not in self.blocks:
                 return False
             block = self.blocks[block_id]
+            # print("demand", demand_budget)
+            # print("budget", block.budget)
             if not block.budget.can_allocate(demand_budget):
                 return False
         return True
