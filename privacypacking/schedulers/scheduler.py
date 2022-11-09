@@ -7,14 +7,15 @@ from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
 from privacypacking.utils.utils import mlflow_log
-
 from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget import Block, HyperBlock, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilicticCache
+from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
 from privacypacking.planner.per_block_planner import PerBlockPlanner
+from privacypacking.planner.no_planner import NoPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
 
@@ -36,11 +37,8 @@ class TasksInfo:
         self.allocation_index = {}
         self.tasks_lifetime = {}
         self.tasks_submit_time = {}
-
-        self.result_no_planner_no_cache_no_dp = {}
-        self.result_no_planner_no_cache_dp = {}
-        self.result_planner_cache_dp = {}
-        self.realized_budget = 0
+        self.result = {}
+        # self.realized_budget = 0
 
     def dump(self):
         tasks_info = {
@@ -162,64 +160,21 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = A(
-                    [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
-                )
-                # Find a plan to run the query using caching
                 plan = None
-                if self.omegaconf.enable_caching:
-                    plan = self.planner.get_execution_plan(
+                if self.omegaconf.enable_caching:             # Find a plan to run the query using caching
+                    plan = self.planner.get_execution_plan(   # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
                     )
-                elif self.can_run(task.budget_per_block):
-                    plan = original_plan
+                elif self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp:
+                    plan = A([R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
 
                 # Execute Plan
                 if plan is not None:
-                    result_planner_cache_dp = self.execute_plan(plan)
+                    result = self.execute_plan(plan)
                     self.update_allocated_task(task)
 
-                    self.tasks_info.result_planner_cache_dp[task.id] = result_planner_cache_dp
-                    mlflow_log(f"accuracy/result_planner_cache_dp", result_planner_cache_dp, task.id)
-                    print(
-                        colored(
-                            f"Alternative Plan Noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result_planner_cache_dp}",
-                            "blue",
-                        )
-                    )
-
-                     # ----------- Experiments ----------- #
-                    if self.omegaconf.enable_caching:
-                        hyperblock = HyperBlock(
-                            {key: self.blocks[key] for key in bs_list}
-                        )
-                        query = self.query_pool.get_query(task.query_id)
-                        result_no_planner_no_cache_dp, noise = hyperblock.run_dp(query, task.budget)
-                        self.tasks_info.result_no_planner_no_cache_dp[task.id] = result_no_planner_no_cache_dp
-                        mlflow_log(f"accuracy/result_no_planner_no_cache_dp", result_no_planner_no_cache_dp, task.id)
-                        print("Noise", noise)
-                        print(
-                            colored(
-                                f"Original Plan Noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result_no_planner_no_cache_dp}",
-                                "green",
-                            )
-                        )
-                        result_no_planner_no_cache_no_dp = hyperblock.run(query)
-                        self.tasks_info.result_no_planner_no_cache_no_dp[
-                            task.id
-                        ] = result_no_planner_no_cache_no_dp
-                        print(
-                            colored(
-                                f"Original Plan Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result_no_planner_no_cache_no_dp}",
-                                "yellow",
-                            )
-                        )
-                        print("\n")
-                        mlflow_log(f"accuracy/result_no_planner_no_cache_no_dp", result_no_planner_no_cache_no_dp, task.id)
-
-                        mlflow_log(f"error/error_no_planner_no_cache_dp", abs(result_no_planner_no_cache_no_dp-result_no_planner_no_cache_dp), task.id)
-                        mlflow_log(f"error/error_planner_cache_dp", abs(result_no_planner_no_cache_no_dp-result_planner_cache_dp), task.id)
-                     # ----------- /Experiments ----------- #
+                    self.tasks_info.result[task.id] = result
+                    mlflow_log(f"accuracy/result", result, task.id)
 
                     if (
                         self.metric.is_dynamic()
@@ -254,9 +209,14 @@ class Scheduler:
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
-                result,noise = hyperblock.run_dp(query, plan.budget)
-                budget = plan.budget
-
+                if self.omegaconf.enable_dp:    # Add DP noise
+                    result, noise = hyperblock.run_dp(query, plan.budget)
+                    budget = plan.budget
+                else:
+                    result = hyperblock.run(query, plan.budget)
+                    noise = 0
+                    budget = None
+                
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
             return (result, noise, hyperblock.size)
@@ -276,7 +236,7 @@ class Scheduler:
                 total_size += size
                 total_noise += noise
             # print("Agg noise", total_noise/len(agglist))
-            print("Agg noise", total_noise)
+            # print("Agg noise", total_noise)
             return result #/ total_size
 
         else:

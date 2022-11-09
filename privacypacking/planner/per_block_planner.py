@@ -17,7 +17,6 @@ class PerBlockPlanner(Planner):
         num_aggregations = len(blocks) - 1
         plan = []
         split = get_splits(blocks, num_aggregations)[0]     # only one split in this case
-        # print("split", split)
         for x in split:
             x = (x[0], x[-1])
             plan += [R(query_id, x, budget)]

@@ -41,9 +41,6 @@ def sample_one_from_string(stochastic_string: str) -> float:
 
 def add_workload_args_to_results(results_df: pd.DataFrame):
     def get_row_parameters(row):
-        # print(row)
-        # print(type(row))
-        # print(row.task_path)
         task_path = row["tasks_path"]
         args = get_args_from_taskname(task_path)
         args["trial_id"] = row["trial_id"]
@@ -111,9 +108,7 @@ def get_logs(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result_no_planner_no_cache_dp": tasks_info.result_no_planner_no_cache_dp[task.id],
-                    "result_no_planner_no_cache_no_dp": tasks_info.result_no_planner_no_cache_no_dp[task.id],
-                    "result_planner_cache_dp": tasks_info.result_planner_cache_dp[task.id],
+                    "result": tasks_info.result[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),

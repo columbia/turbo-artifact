@@ -122,9 +122,10 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    planner: List[str],
-    cache: List[str],
+    planner: List[str],     # Options = {DynamicProgramming, PerBlock}
+    cache: List[str],       # Options = {Deterministic, Probabilistic}
     enable_caching: List[bool],
+    enable_dp: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
 ):
     # Progressive unlocking
@@ -150,6 +151,7 @@ def grid_online(
                 "metric": tune.grid_search(scheduler_metrics),
                 "n": tune.grid_search(n),
                 "enable_caching": tune.grid_search(enable_caching),
+                "enable_dp": tune.grid_search(enable_dp),
             },
             "metric": {
                 "normalize_by": "available_budget",

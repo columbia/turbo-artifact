@@ -23,11 +23,11 @@ class PrivacyWorkload:
         self.tasks = None
 
         #   ------------  Configure  ------------ #
-        self.blocks_num = 5000   # days
+        self.blocks_num = 100   # days
         self.initial_blocks_num = 1
         self.query_types = [0] #[33479, 34408]
         self.std_num_tasks = 5
-        self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800] 
+        # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800] 
         #   ------------  /Configure  ------------ #
 
         self.tasks = []
@@ -36,9 +36,9 @@ class PrivacyWorkload:
 
     def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
-        num_tasks = (
-            np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
-        )
+        # num_tasks = (
+        #     np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
+        # )
         num_tasks = [1]
         for _ in range(num_tasks[0]):
             query_id = np.random.choice(query_types)
@@ -52,7 +52,6 @@ class PrivacyWorkload:
             # nblocks = np.random.choice(nblocks_options, 1)[0]
             nblocks = num_existing_blocks
             tasks.append(Task(start_time, nblocks, query_id, query_type))
-
         return tasks
 
     def create_dp_task(self, task) -> dict:

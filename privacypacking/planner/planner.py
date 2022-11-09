@@ -1,5 +1,4 @@
 
-
 class Planner:
     def __init__(self, cache):
         self.cache = cache
