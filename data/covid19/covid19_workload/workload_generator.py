@@ -23,10 +23,10 @@ class PrivacyWorkload:
         self.tasks = None
 
         #   ------------  Configure  ------------ #
-        self.blocks_num = 100   # days
+        self.blocks_num = 400   # days
         self.initial_blocks_num = 1
         self.query_types = [0] #[33479, 34408]
-        self.std_num_tasks = 5
+        # self.std_num_tasks = 5
         # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800] 
         #   ------------  /Configure  ------------ #
 
@@ -96,7 +96,7 @@ class PrivacyWorkload:
     # Todo: this is obsolete -> users will not define their epsilon demand from now on
     def compute_budget(self,):
         delta = 0.00001
-        epsilon = [0.001]
+        epsilon = [1]
         return epsilon, delta
 
     def compute_block_selection_policy(self):

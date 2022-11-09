@@ -9,103 +9,19 @@ from experiments.ray.analysis import load_ray_experiment
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import RAY_LOGS, LOGS_PATH
-
+import datetime
 
 def run_and_report(config: dict, replace=False) -> None:
-
     if config["omegaconf"]['logs']['mlflow']:
-        os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
-        with mlflow.start_run():
-            mlflow.log_param("config", config)
-            metrics = Simulator(Config(config)).run()
-
+        omegaconf = config['omegaconf']
+        run_name = f"{omegaconf['repetition']}/{omegaconf['scheduler']['cache']}/{omegaconf['scheduler']['planner']}"
+        with mlflow.start_run(run_name=run_name):
+            mlflow.log_param("config", config)        
+            metrics = Simulator(Config(config)).run()    
     else:
         metrics = Simulator(Config(config)).run()
 
     tune.report(**metrics)
-
-    # logger.info(f"Trial logs: {tune.get_trial_dir()}")
-    # return tune.get_trial_dir()
-
-
-def grid_offline(
-    num_tasks: List[int],
-    num_blocks: List[int],
-    data_path: List[str],
-    optimal: bool = False,
-    metric_recomputation_period: int = 10,
-    parallel: bool = False,
-    gurobi_timeout_minutes: int = 1,
-    gurobi_threads: int = os.cpu_count() // 4,
-):
-    metrics = [
-        SIMPLEX,
-        DOMINANT_SHARES,
-        FLAT_RELEVANCE,
-        ARGMAX_KNAPSACK,
-    ]
-
-    block_selection_policy = ["RandomBlocks"]
-    temperature = [-1]
-    n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
-
-    config = {}
-    config["omegaconf"] = {
-        "scheduler": {
-            "method": "offline",
-            "metric": tune.grid_search(metrics),
-            "metric_recomputation_period": metric_recomputation_period,
-            "log_warning_every_n_allocated_tasks": 50,
-            "scheduler_timeout_seconds": 20 * 60 * 60,
-        },
-        "metric": {
-            "normalize_by": "available_budget",
-            "temperature": tune.grid_search(temperature),
-            "n_knapsack_solvers": n_knapsack_solvers,
-            "gurobi_timeout": 60 * gurobi_timeout_minutes,
-            "gurobi_threads": gurobi_threads,
-        },
-        "logs": {
-            "verbose": False,
-            "save": True,
-        },
-        "blocks": {
-            "initial_num": num_blocks,
-            "max_num": num_blocks,
-        },
-        # "blocks": {
-        #     "initial_num": tune.grid_search(num_blocks),
-        #     "max_num": tune.grid_search(num_blocks),
-        # },
-        "tasks": {
-            "initial_num": tune.grid_search(num_tasks),
-            "data_path": tune.grid_search(data_path),
-            "block_selection_policy": tune.grid_search(block_selection_policy),
-        },
-    }
-
-    experiment_analysis = tune.run(
-        run_and_report,
-        raise_on_failed_trial=False,
-        config=config,
-        resources_per_trial={"cpu": 1},
-        local_dir=RAY_LOGS,
-        resume=False,
-        verbose=1,
-        callbacks=[
-            CustomLoggerCallback(),
-            tune.logger.JsonLoggerCallback(),
-            # tune.integration.mlflow.MLflowLoggerCallback(
-            #     experiment_name="grid_offline",
-            # ),
-        ],
-    )
-
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-    rdf = load_ray_experiment(experiment_dir)
-    return rdf
-
 
 def grid_online(
     scheduler_scheduling_time: List[float],
@@ -122,20 +38,26 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    planner: List[str],     # Options = {DynamicProgramming, PerBlock}
-    cache: List[str],       # Options = {Deterministic, Probabilistic}
+    planner: List[str],      # Options = {DynamicProgrammingPlanner, PerBlockPlanner}
+    cache: List[str],        # Options = {DeterministicCache, ProbabilisticCache}
     enable_caching: List[bool],
     enable_dp: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
+    repetitions: int = 1,
+    enable_random_seed: bool = False,
 ):
     # Progressive unlocking
     # n = [1_000]
+    exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
+    print(exp_name)
 
+    enable_mlflow = True
     block_selection_policy = ["LatestBlocksFirst"]
     config = {
         "omegaconf": {
             "epsilon": 10,
             "delta": 0.00001,
+            "enable_random_seed": enable_random_seed,
             "scheduler": {
                 "metric_recomputation_period": tune.grid_search(
                     metric_recomputation_period
@@ -160,7 +82,7 @@ def grid_online(
             "logs": {
                 "verbose": False,
                 "save": True,
-                "mlflow": True,
+                "mlflow": enable_mlflow,
             },
             "blocks": {
                 "initial_num": tune.grid_search(initial_blocks),
@@ -176,8 +98,19 @@ def grid_online(
                 "block_selection_policy": tune.grid_search(block_selection_policy),
                 "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
             },
+            "repetition": tune.grid_search(list(range(1, repetitions+1))),
         }
     }
+    
+    if enable_mlflow:
+        path = LOGS_PATH.joinpath("mlruns")
+        os.environ["MLFLOW_TRACKING_URI"] = str(path)
+        os.environ["MLFLOW_EXPERIMENT_NAME"] = exp_name
+        print(exp_name)
+        mlflow.create_experiment(exp_name, artifact_location=str(path))
+        # mlflow.set_experiment(experiment_name=exp_name)
+
+
 
     logger.info(f"Tune config: {config}")
 
@@ -193,7 +126,7 @@ def grid_online(
             CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
             # tune.integration.mlflow.MLflowLoggerCallback(
-            #     experiment_name="grid-online",
+            #     experiment_name=f"{datetime.now().strftime('%m%d-%H%M%S')}",
             # ),
         ],
         progress_reporter=ray.tune.CLIReporter(
@@ -208,126 +141,15 @@ def grid_online(
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/enable_caching": "enable_caching",
                 "omegaconf/scheduler/planner": "planner",
+                "omegaconf/scheduler/cache": "cache",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
             },
             max_report_frequency=60,
         ),
     )
-    all_trial_paths = experiment_analysis._get_trial_paths()
-    experiment_dir = Path(all_trial_paths[0]).parent
-    # rdf = load_ray_experiment(experiment_dir)
-    # return rdf
-
-
-# def grid_offline_heterogeneity_knob(
-#     num_tasks: List[int],
-#     num_blocks: List[int],
-#     data_path: str = "heterogeneous/default",
-#     optimal: bool = False,
-#     metric_recomputation_period: int = 10,
-#     parallel: bool = False,
-#     gurobi_timeout_minutes: int = 1,
-# ):
-
-#     metrics = [
-#         # SIMPLEX,
-#         DOMINANT_SHARES,
-#         ARGMAX_KNAPSACK,
-#         FCFS,
-#     ]
-
-#     # tasks_paths = ["tasks"]
-
-#     # frequencies = [f"frequencies-{p}.yaml" for p in P_GRID]
-#     # tasks_paths = [f"tasks-mu10-sigma0"]
-
-#     frequencies = ["frequencies-0.95.yaml"]
-#     tasks_paths = [f"tasks-mu10-sigma{s}" for s in [0, 1, 2, 4, 6, 10]]
-
-#     num_blocks = tune.grid_search(num_blocks)
-#     block_selection_policies = ["RandomBlocks"]
-#     temperature = [-1]
-
-#     n_knapsack_solvers = os.cpu_count() // 8 if parallel else 1
-#     gurobi_threads = os.cpu_count() // 4
-
-#     config = {}
-#     config["omegaconf"] = {
-#         "global_seed": 0,
-#         "scheduler": {
-#             "method": "offline",
-#             "metric": tune.grid_search(metrics),
-#             "metric_recomputation_period": metric_recomputation_period,
-#             "log_warning_every_n_allocated_tasks": 250,
-#             "scheduler_timeout_seconds": 20 * 60,
-#             # "demands_tiebreaker": 0.001,
-#         },
-#         "metric": {
-#             "normalize_by": "available_budget",
-#             "temperature": tune.grid_search(temperature),
-#             "n_knapsack_solvers": n_knapsack_solvers,
-#             "gurobi_timeout": 60 * gurobi_timeout_minutes,
-#             "gurobi_threads": gurobi_threads,
-#         },
-#         "logs": {
-#             "verbose": False,
-#             "save": True,
-#         },
-#         "blocks": {
-#             "initial_num": num_blocks,
-#             "max_num": num_blocks,
-#         },
-#         "tasks": {
-#             "data_path": data_path,
-#             "tasks_path": tune.grid_search(tasks_paths),
-#             # "frequencies_path": tune.grid_search(frequencies),
-#             "block_selection_policy": tune.grid_search(block_selection_policies),
-#             "sampling": "poisson",
-#             "initial_num": tune.grid_search(num_tasks),
-#         },
-#     }
-
-#     experiment_analysis = tune.run(
-#         run_and_report,
-#         config=config,
-#         resources_per_trial={"cpu": 1},
-#         local_dir=RAY_LOGS,
-#         resume=False,
-#         verbose=0,
-#         callbacks=[
-#             CustomLoggerCallback(),
-#             tune.logger.JsonLoggerCallback(),
-#             # tune.integration.mlflow.MLflowLoggerCallback(
-#             #     experiment_name="grid_offline",
-#             # ),
-#         ],
-#     )
-
-#     all_trial_paths = experiment_analysis._get_trial_paths()
-#     experiment_dir = Path(all_trial_paths[0]).parent
-
-#     logger.info(f"Experiment dir: {experiment_dir}")
-
-#     rdf = load_ray_experiment(experiment_dir)
-
-#     def get_variance(path):
-#         _, d = path.split("-")
-#         p = float(d.replace(".yaml", ""))
-#         return (1 - p) / p ** 2
-
-#     def get_block_std(path):
-#         if "sigma" not in path:
-#             return 0
-#         return float(path.split("sigma")[1])
-
-#     rdf["variance"] = rdf["task_frequencies_path"].apply(get_variance)
-#     rdf["alpha_std"] = rdf["task_frequencies_path"].apply(get_alpha_std)
-#     rdf["block_std"] = rdf["tasks_path"].apply(get_block_std)
-
-#     # TODO: load the hyperparemeters too
-#     return rdf
-#     # return experiment_analysis.dataframe()
+    # all_trial_paths = experiment_analysis._get_trial_paths()
+    # experiment_dir = Path(all_trial_paths[0]).parent
 
 
 class CustomLoggerCallback(tune.logger.LoggerCallback):

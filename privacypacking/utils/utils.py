@@ -103,12 +103,18 @@ def get_logs(
                 allocated_tasks_scheduling_delays.append(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
+                task_dump.update(
+                    {
+                        "result": tasks_info.result[task.id],
+                        "error": tasks_info.error[task.id],
+                    }
+                )
 
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result": tasks_info.result[task.id],
+                    "planning_time": tasks_info.planning_time[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
@@ -116,6 +122,7 @@ def get_logs(
                     "allocation_index": tasks_info.allocation_index.get(task.id, None),
                 }
             )
+
             log_tasks.append(
                 task_dump
             )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups

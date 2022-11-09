@@ -37,12 +37,12 @@ class DeterministicCache(Cache):
 
     # Minimizing aggragations
     # Cost model    # TODO: remove this functionality from the Cache
-    def get_cost(self, plan, blocks):
+    def get_cost(self, plan, blocks, structure_constraint=False):
         if isinstance(plan, A):         # Aggregate cost of arguments/operators
             return sum([self.get_cost(x, blocks) for x in plan.l])
 
         elif isinstance(plan, R):       # Get cost of Run operator
-            if not self.satisfies_constraint(plan.blocks):
+            if structure_constraint and not self.satisfies_constraint(plan.blocks):
                 return math.inf
 
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))

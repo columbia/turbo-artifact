@@ -16,7 +16,7 @@ from privacypacking.budget.curves import GaussianCurve
 from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
-
+import time
 
 # Configuration Reading Logic
 # TODO: why are the task utils here again? It doesn't seem to make sense.
@@ -33,9 +33,12 @@ class Config:
         # print(self.omegaconf)
 
         # Rest of the configuration below
-        self.global_seed = self.omegaconf.global_seed
-        random.seed(self.global_seed)
-        np.random.seed(self.global_seed)
+        if self.omegaconf.enable_random_seed:
+            random.seed(None)
+            np.random.seed(None)
+        else:
+            random.seed(self.omegaconf.global_seed)
+            np.random.seed(self.omegaconf.global_seed)
 
         # BLOCKS
         self.initial_blocks_num = self.omegaconf.blocks.initial_num

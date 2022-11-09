@@ -18,7 +18,7 @@ from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.planner.no_planner import NoPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT
-
+import time
 
 # TODO: efficient data structure here? (We have indices)
 class TaskQueue:
@@ -36,8 +36,10 @@ class TasksInfo:
         self.scheduling_delay = {}
         self.allocation_index = {}
         self.tasks_lifetime = {}
+        self.planning_time = {}
         self.tasks_submit_time = {}
         self.result = {}
+        self.error = {}
         # self.realized_budget = 0
 
     def dump(self):
@@ -97,9 +99,11 @@ class Scheduler:
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-
+        
         self.cache = globals()[self.omegaconf["cache"]]()
         self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
+
+        self.experiment_prefix = "" #f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
     def consume_budgets(self, blocks, budget):
         """
@@ -160,6 +164,8 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
+                
+                start = time.time()
                 plan = None
                 if self.omegaconf.enable_caching:             # Find a plan to run the query using caching
                     plan = self.planner.get_execution_plan(   # The plan returned here if not None is eligible for execution - cost not infinite
@@ -167,14 +173,26 @@ class Scheduler:
                     )
                 elif self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp:
                     plan = A([R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
+                self.tasks_info.planning_time[task.id] = time.time() - start
+                print(f"Planning time", self.tasks_info.planning_time[task.id])
+                mlflow_log(f"{self.experiment_prefix}performance/planning_time", self.tasks_info.planning_time[task.id], task.id)
 
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
                     self.update_allocated_task(task)
 
+                    # ----------- Logging ----------- #
                     self.tasks_info.result[task.id] = result
-                    mlflow_log(f"accuracy/result", result, task.id)
+                    mlflow_log(f"{self.experiment_prefix}accuracy/result", result, task.id)
+                    query = self.query_pool.get_query(task.query_id)
+                    true_result = HyperBlock(
+                            {key: self.blocks[key] for key in bs_list}
+                        ).run(query)
+                    error = abs(true_result-result)
+                    mlflow_log(f"{self.experiment_prefix}accuracy/error", error, task.id)
+                    self.tasks_info.error[task.id] = error
+                    # ----------- /Logging ----------- #
 
                     if (
                         self.metric.is_dynamic()
@@ -188,7 +206,7 @@ class Scheduler:
                 else:
                     print(
                         colored(
-                            f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n",
+                            f"Task {task.id} cannot run.",
                             "blue",
                         )
                     )
