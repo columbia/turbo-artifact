@@ -69,6 +69,7 @@ class DeterministicCache(Cache):
         size = blocks[1] - blocks[0] + 1
         if not math.log(size, bf).is_integer():
             return False
-        if size > 1 and not (blocks[1] % bf):
+        # if size > 1 and not (blocks[1] % bf):
+        if (blocks[0] % size) != 0:
             return False
         return True
