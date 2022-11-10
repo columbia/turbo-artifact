@@ -132,7 +132,6 @@ class TBudgetUnlocking(Scheduler):
             except Interrupt as i:
                 return
 
-
     def can_run(self, demand):
         for block_id, demand_budget in demand.items():
             block = self.blocks[block_id]

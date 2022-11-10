@@ -8,6 +8,7 @@ from privacypacking.budget.curves import BoundedOneShotSVT, GaussianCurve, ZeroC
 from privacypacking.budget.histogram import DenseHistogram, flat_items
 from privacypacking.utils.utils import mlflow_log
 
+
 class PMW:
     def __init__(
         self,
@@ -127,6 +128,12 @@ class PMW:
             output = noisy_output
 
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)
-        mlflow_log(f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran)
-        mlflow_log(f"{self.id}/true_abs_error", abs(predicted_output - true_output), self.queries_ran)
+        mlflow_log(
+            f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran
+        )
+        mlflow_log(
+            f"{self.id}/true_abs_error",
+            abs(predicted_output - true_output),
+            self.queries_ran,
+        )
         return output, run_budget

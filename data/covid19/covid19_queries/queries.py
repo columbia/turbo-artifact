@@ -11,9 +11,11 @@ app = typer.Typer()
 
 # Note: this file is independent to the covid dataset - applies to all datasets
 
+
 def powerset(iter):
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
 
 # TODO: Prune the query space - not all queries are important
 def create_all_queries(queries_path, attributes_domain_sizes):
@@ -40,11 +42,12 @@ def create_all_queries(queries_path, attributes_domain_sizes):
     with open(queries_path, "w") as outfile:
         outfile.write(json_object)
 
+
 def create_specific_queries(queries_path):
     queries = []
 
     # Postiive cases
-    queries = [[[1], [0,1], [0,1,2,3], [0,1,2,3,4,5,6,7]]]
+    queries = [[[1], [0, 1], [0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6, 7]]]
 
     print(queries)
     query_tensors = []
@@ -65,9 +68,6 @@ def create_specific_queries(queries_path):
         outfile.write(json_object)
 
 
-
-
-
 class QueryPool:
     def __init__(self, attribute_domain_sizes, queries_path) -> None:
         self.attribute_domain_sizes = attribute_domain_sizes
@@ -86,13 +86,16 @@ class QueryPool:
             query_tensor = self.queries[query_id_str]
             # print(query_tensor)
             query = build_sparse_tensor(
-                bin_indices=query_tensor, 
-                values=[1.0] * len(query_tensor),  # TODO: add values as part of the query in queries.json
-                attribute_sizes=self.attribute_domain_sizes
+                bin_indices=query_tensor,
+                values=[1.0]
+                * len(
+                    query_tensor
+                ),  # TODO: add values as part of the query in queries.json
+                attribute_sizes=self.attribute_domain_sizes,
             )
         else:
             logger.error("Not implemented")
-            exit(1)     # not implemented for now
+            exit(1)  # not implemented for now
             query = self.get_query_sql(query_id_str)
 
         assert query is not None
@@ -102,11 +105,13 @@ class QueryPool:
 @app.command()
 def main(
     queries_path: str = REPO_ROOT.joinpath("data/covid19/covid19_queries/queries.json"),
-    blocks_metadata_path: str = REPO_ROOT.joinpath("data/covid19/covid19_data/metadata.json"),
+    blocks_metadata_path: str = REPO_ROOT.joinpath(
+        "data/covid19/covid19_data/metadata.json"
+    ),
 ):
 
     try:
-        with  open(blocks_metadata_path) as f:
+        with open(blocks_metadata_path) as f:
             blocks_metadata = json.load(f)
     except NameError:
         logger.error("Dataset metadata must have be created first..")
@@ -120,6 +125,7 @@ def main(
     create_specific_queries(
         queries_path,
     )
+
 
 if __name__ == "__main__":
     main()

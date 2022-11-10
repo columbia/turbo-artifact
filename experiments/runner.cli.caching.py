@@ -27,7 +27,7 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         planner=["DynamicProgrammingPlanner", "PerBlockPlanner", "NoPlanner"],
-        cache=["DeterministicCache"],   # ProbabilisticCache
+        cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
         enable_dp=[True],
         repetitions=5,

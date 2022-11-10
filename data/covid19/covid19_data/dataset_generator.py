@@ -186,7 +186,7 @@ def day_data(
     }
 
     df = pd.DataFrame(data=users)
-    df = df.sample(frac=1)   # This shuffles the rows
+    df = df.sample(frac=1)  # This shuffles the rows
     # print(df)
 
     return df
@@ -436,7 +436,6 @@ def main(
         print("total size", total_size)
         return total_size, pd.concat(blocks)
 
-
     if same_size_blocks:
         # Running Sequentially
         total_size, blocks = get_all_blocks(covid["date"].values)
@@ -449,7 +448,9 @@ def main(
         for idx in range(k):
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["size"] = block_size
-            blocks[block_size*idx:block_size*(idx+1)].to_csv(output_dir.joinpath(f"block_{idx}.csv"), index=False)
+            blocks[block_size * idx : block_size * (idx + 1)].to_csv(
+                output_dir.joinpath(f"block_{idx}.csv"), index=False
+            )
             logger.info(f"Saved block {idx}")
 
     else:
@@ -486,10 +487,12 @@ def main(
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["date"] = date
             metadata["blocks"][idx]["size"] = size
-            
-            # Fix the names of the stored blocks
-            os.rename(output_dir.joinpath(f"block_{key}.csv"), output_dir.joinpath(f"block_{idx}.csv"))
 
+            # Fix the names of the stored blocks
+            os.rename(
+                output_dir.joinpath(f"block_{key}.csv"),
+                output_dir.joinpath(f"block_{idx}.csv"),
+            )
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)

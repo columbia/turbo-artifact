@@ -94,16 +94,16 @@ class Scheduler:
         self.query_pool = QueryPool(
             self.blocks_metadata["attributes_domain_sizes"], self.queries_path
         )
-        
+
         self.alphas = None
         self.start_time = datetime.now()
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
-        
+
         self.cache = globals()[self.omegaconf["cache"]]()
         self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
 
-        self.experiment_prefix = "" #f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
+        self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
     def consume_budgets(self, blocks, budget):
         """
@@ -156,26 +156,36 @@ class Scheduler:
             for task in sorted_tasks:
                 # Do not schedule tasks whose lifetime has been exceeded
                 if (
-                        self.tasks_info.tasks_lifetime[task.id]
-                    < (self.get_num_blocks() - self.initial_blocks_num) - self.tasks_info.tasks_submit_time[task.id]
+                    self.tasks_info.tasks_lifetime[task.id]
+                    < (self.get_num_blocks() - self.initial_blocks_num)
+                    - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                
                 start = time.time()
                 plan = None
-                if self.omegaconf.enable_caching:             # Find a plan to run the query using caching
-                    plan = self.planner.get_execution_plan(   # The plan returned here if not None is eligible for execution - cost not infinite
+                if (
+                    self.omegaconf.enable_caching
+                ):  # Find a plan to run the query using caching
+                    plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
                     )
-                elif self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp:
-                    plan = A([R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)])
+                elif (
+                    self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
+                ):
+                    plan = A(
+                        [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
+                    )
                 self.tasks_info.planning_time[task.id] = time.time() - start
                 print(f"Planning time", self.tasks_info.planning_time[task.id])
-                mlflow_log(f"{self.experiment_prefix}performance/planning_time", self.tasks_info.planning_time[task.id], task.id)
+                mlflow_log(
+                    f"{self.experiment_prefix}performance/planning_time",
+                    self.tasks_info.planning_time[task.id],
+                    task.id,
+                )
 
                 # Execute Plan
                 if plan is not None:
@@ -184,13 +194,17 @@ class Scheduler:
 
                     # ----------- Logging ----------- #
                     self.tasks_info.result[task.id] = result
-                    mlflow_log(f"{self.experiment_prefix}accuracy/result", result, task.id)
+                    mlflow_log(
+                        f"{self.experiment_prefix}accuracy/result", result, task.id
+                    )
                     query = self.query_pool.get_query(task.query_id)
                     true_result = HyperBlock(
-                            {key: self.blocks[key] for key in bs_list}
-                        ).run(query)
-                    error = abs(true_result-result)
-                    mlflow_log(f"{self.experiment_prefix}accuracy/error", error, task.id)
+                        {key: self.blocks[key] for key in bs_list}
+                    ).run(query)
+                    error = abs(true_result - result)
+                    mlflow_log(
+                        f"{self.experiment_prefix}accuracy/error", error, task.id
+                    )
                     self.tasks_info.error[task.id] = error
                     # ----------- /Logging ----------- #
 
@@ -227,14 +241,14 @@ class Scheduler:
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
-                if self.omegaconf.enable_dp:    # Add DP noise
+                if self.omegaconf.enable_dp:  # Add DP noise
                     result, noise = hyperblock.run_dp(query, plan.budget)
                     budget = plan.budget
                 else:
                     result = hyperblock.run(query, plan.budget)
                     noise = 0
                     budget = None
-                
+
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
             return (result, noise, hyperblock.size)
@@ -255,7 +269,7 @@ class Scheduler:
                 total_noise += noise
             # print("Agg noise", total_noise/len(agglist))
             # print("Agg noise", total_noise)
-            return result #/ total_size
+            return result  # / total_size
 
         else:
             logger.error("Execution: no such operator")

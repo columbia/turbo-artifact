@@ -14,11 +14,9 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
-        self.tensor = (
-            torch.ones(
-                size=(1, self.N),
-                dtype=torch.float64,
-            )
+        self.tensor = torch.ones(
+            size=(1, self.N),
+            dtype=torch.float64,
         )
         self.normalize()
 

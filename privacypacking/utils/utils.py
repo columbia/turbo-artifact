@@ -31,7 +31,8 @@ def mlflow_log(key, value, step):
             value,
             step=step,
         )
-        
+
+
 def sample_one_from_string(stochastic_string: str) -> float:
     events = stochastic_string.split(",")
     values = [float(event.split(":")[0]) for event in events]

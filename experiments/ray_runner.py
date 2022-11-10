@@ -11,17 +11,19 @@ from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import RAY_LOGS, LOGS_PATH
 import datetime
 
+
 def run_and_report(config: dict, replace=False) -> None:
-    if config["omegaconf"]['logs']['mlflow']:
-        omegaconf = config['omegaconf']
+    if config["omegaconf"]["logs"]["mlflow"]:
+        omegaconf = config["omegaconf"]
         run_name = f"{omegaconf['repetition']}/{omegaconf['scheduler']['cache']}/{omegaconf['scheduler']['planner']}"
         with mlflow.start_run(run_name=run_name):
-            mlflow.log_param("config", config)        
-            metrics = Simulator(Config(config)).run()    
+            mlflow.log_param("config", config)
+            metrics = Simulator(Config(config)).run()
     else:
         metrics = Simulator(Config(config)).run()
 
     tune.report(**metrics)
+
 
 def grid_online(
     scheduler_scheduling_time: List[float],
@@ -38,8 +40,8 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    planner: List[str],      # Options = {DynamicProgrammingPlanner, PerBlockPlanner}
-    cache: List[str],        # Options = {DeterministicCache, ProbabilisticCache}
+    planner: List[str],  # Options = {DynamicProgrammingPlanner, PerBlockPlanner}
+    cache: List[str],  # Options = {DeterministicCache, ProbabilisticCache}
     enable_caching: List[bool],
     enable_dp: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
@@ -98,10 +100,10 @@ def grid_online(
                 "block_selection_policy": tune.grid_search(block_selection_policy),
                 "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
             },
-            "repetition": tune.grid_search(list(range(1, repetitions+1))),
+            "repetition": tune.grid_search(list(range(1, repetitions + 1))),
         }
     }
-    
+
     if enable_mlflow:
         path = LOGS_PATH.joinpath("mlruns")
         os.environ["MLFLOW_TRACKING_URI"] = str(path)
