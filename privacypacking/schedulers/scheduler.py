@@ -165,21 +165,23 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                start = time.time()
+                start = time.process_time()
+                end = None
+
                 plan = None
                 if (
                     self.omegaconf.enable_caching
                 ):  # Find a plan to run the query using caching
                     plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
-                    )
+                    )                    
                 elif (
                     self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
                 ):
                     plan = A(
                         [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
                     )
-                self.tasks_info.planning_time[task.id] = time.time() - start
+                self.tasks_info.planning_time[task.id] = time.process_time() - start
                 print(f"Planning time", self.tasks_info.planning_time[task.id])
                 mlflow_log(
                     f"{self.experiment_prefix}performance/planning_time",

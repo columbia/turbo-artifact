@@ -16,7 +16,7 @@ def caching():
         metric_recomputation_period=[50],
         scheduler_metrics=[FCFS],
         n=[1],  # Instant unlocking
-        max_blocks=[400],
+        max_blocks=[600],
         initial_blocks=[1],
         initial_tasks=[0],
         tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
@@ -30,7 +30,7 @@ def caching():
         cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
         enable_dp=[True],
-        repetitions=5,
+        repetitions=10,
         enable_random_seed=True,
     )
 

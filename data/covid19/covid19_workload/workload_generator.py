@@ -23,11 +23,11 @@ class PrivacyWorkload:
         self.tasks = None
 
         #   ------------  Configure  ------------ #
-        self.blocks_num = 400   # days
+        self.blocks_num = 600  # days
         self.initial_blocks_num = 1
-        self.query_types = [0] #[33479, 34408]
+        self.query_types = [0]  # [33479, 34408]
         # self.std_num_tasks = 5
-        # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800] 
+        # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800]
         #   ------------  /Configure  ------------ #
 
         self.tasks = []
@@ -45,7 +45,7 @@ class PrivacyWorkload:
             query_type = "count"
             # start time is in block units, so it indicates how many blocks currently exist
             # we use this info so that a task does not request more blocks than those existing
-            num_existing_blocks = start_time+self.initial_blocks_num
+            num_existing_blocks = start_time + self.initial_blocks_num
             # nblocks_options = [
             #     n for n in self.requested_blocks_num if n <= num_existing_blocks
             # ]
@@ -94,7 +94,9 @@ class PrivacyWorkload:
         logger.info(f"Saved {len(self.tasks)} tasks at {path}.")
 
     # Todo: this is obsolete -> users will not define their epsilon demand from now on
-    def compute_budget(self,):
+    def compute_budget(
+        self,
+    ):
         delta = 0.00001
         epsilon = [1]
         return epsilon, delta
