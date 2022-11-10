@@ -11,7 +11,7 @@ class DynamicProgrammingPlanner(Planner):
 
     def get_execution_plan(self, query_id, blocks, budget):
         blocks = (blocks[0], blocks[-1])
-        self.create_table(query_id, budget)
+        self.create_table(query_id, blocks, budget)
         idx = mapping_blocks_to_cell(blocks)
         plan = self.get_plan_from_path(idx)
         if plan is not None:
@@ -19,15 +19,19 @@ class DynamicProgrammingPlanner(Planner):
         print(f"Got plan for blocks {blocks}: {plan}")
         return plan
 
-    def create_table(self, query_id, budget):
+    def create_table(self, query_id, block_request, budget):
         n = len(self.blocks)
         self.cost_table = np.full([n, n], math.inf)
         self.path_table = []
         for i in range(n):
             self.path_table.append([None for _ in range(n - i)])
 
-        for i in range(n):
-            for j in range(n - i):
+        # for i in range(n):
+        #     for j in range(n - i):
+        start = block_request[0]
+        end = block_request[1]+1
+        for i in range(end-start):
+            for j in range(start, end - i):
                 blocks = (j, j + i)
                 Cij_plan = R(query_id, blocks, budget)  # Cost of [j,j+i] with no cuts
                 Cij = self.cache.get_cost(Cij_plan, self.blocks, True)
@@ -65,38 +69,35 @@ def mapping_blocks_to_cell(blocks):
     return (i, j)
 
 
-# def get_cost(plan, requested_blocks, blocks, budget):
-#     if not satisfies_constraint(requested_blocks):
-#         return math.inf
-#     return 1
+def get_cost(plan, requested_blocks, blocks, budget):
+    return 1
 
 
 def test():
-    blocks = [0, 1, 2, 3, 4, 5]
-    dplanner = DynamicProgrammingPlanner(None, blocks)
-    dplanner.create_table(0, 0)
+    def run(request):
+        blocks = [0, 1, 2, 3, 4, 5]
+        dplanner = DynamicProgrammingPlanner(None, blocks)       
+        dplanner.create_table(0, request, 0)
+        n = len(blocks)
+        for i in range(n):
+            for j in range(n - i):
+                print(dplanner.cost_table[i][j], end=" ")
+            print("\n")
 
-    n = len(blocks)
-    for i in range(n):
-        for j in range(n - i):
-            print(dplanner.cost_table[i][j], end=" ")
-        print("\n")
-
-    for i in range(n):
-        for j in range(n - i):
-            print(dplanner.path_table[i][j], end=" ")
-        print("\n")
+        for i in range(n):
+            for j in range(n - i):
+                print(dplanner.path_table[i][j], end=" ")
+            print("\n")
+        idx = mapping_blocks_to_cell(request)
+        plan = A(dplanner.get_plan_from_path(idx))
+        print(f"Get plan for blocks {request}: {plan}")
 
     request = (0, 1)
-    idx = mapping_blocks_to_cell(request)
-    plan = A(dplanner.get_plan_from_path(idx))
-    print(f"Get plan for blocks {request}: {plan}")
-
+    run(request)
     request = (0, 4)
-    idx = mapping_blocks_to_cell(request)
-    plan = A(dplanner.get_plan_from_path(idx))
-    print(f"Get plan for blocks {request}: {plan}")
-
+    run(request)
+    request = (2, 4)
+    run(request)    
 
 if __name__ == "__main__":
     test()
