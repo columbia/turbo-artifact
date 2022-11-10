@@ -1,4 +1,3 @@
-import mlflow
 import numpy as np
 import torch
 from loguru import logger
@@ -7,6 +6,7 @@ from privacypacking.budget import Budget
 from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import BoundedOneShotSVT, GaussianCurve, ZeroCurve
 from privacypacking.budget.histogram import DenseHistogram, flat_items
+from privacypacking.utils.utils import mlflow_log
 
 
 class PMW:
@@ -48,16 +48,6 @@ class PMW:
         # self.init_budget = BoundedOneShotSVT(
         #     ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
         # ) # TODO: will this be used?
-        
-        self.mlflow_run = mlflow.active_run()
-
-    def log(self, key, value):
-        if self.mlflow_run:
-            mlflow.log_metric(
-                f"{self.id}/{key}",
-                value,
-                step=self.queries_ran,
-            )
 
     def worst_case_cost(self) -> Budget:
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
@@ -137,8 +127,13 @@ class PMW:
             self.histogram.normalize()
             output = noisy_output
 
-        # TODO: maybe pass a dict to the planner to log the same things for deterministic cache (or aggregates)
-        self.log("queries_ran", self.queries_ran)
-        self.log("hard_queries_ran", self.hard_queries_ran)
-        self.log("true_abs_error", abs(predicted_output - true_output))
+        mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)
+        mlflow_log(
+            f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran
+        )
+        mlflow_log(
+            f"{self.id}/true_abs_error",
+            abs(predicted_output - true_output),
+            self.queries_ran,
+        )
         return output, run_budget

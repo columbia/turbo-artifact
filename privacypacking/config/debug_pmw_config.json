@@ -13,7 +13,9 @@
             "method": "batch",
             "metric": "Fcfs",
             "n": 1,
-            "enable_caching": true
+            "enable_caching": true,
+            "enable_dp": true,
+            "enable_random_seed": true
         },
         "metric": {
             "normalize_by": "available_budget",

@@ -29,7 +29,7 @@ blocks:
 
 tasks:
   path: "tasks"
-  initial_num: 100
+  initial_num: 1
   sampling: ""
   max_num: 100
 

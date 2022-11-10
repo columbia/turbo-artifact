@@ -122,6 +122,7 @@ def day_data(
 
     tested_users_num = int(date_covid["tests"].values[0])
     positive_users_num = int(date_covid["cases"].values[0])
+    # positive_users_num = int(0.7*tested_users_num)              # For testing
     negative_users_num = tested_users_num - positive_users_num
 
     # Choose demographic info for positives
@@ -185,7 +186,7 @@ def day_data(
     }
 
     df = pd.DataFrame(data=users)
-    df = df.sample(frac=1)   # This shuffles the rows
+    df = df.sample(frac=1)  # This shuffles the rows
     # print(df)
 
     return df
@@ -430,26 +431,26 @@ def main(
                     us_census_genders,
                     us_census_ethnicities,
                 )
-                # print(len(block))
                 total_size += len(block)
                 blocks.append(block)
         print("total size", total_size)
         return total_size, pd.concat(blocks)
 
-
     if same_size_blocks:
         # Running Sequentially
         total_size, blocks = get_all_blocks(covid["date"].values)
         # print(blocks)
-        # 151279 929
-        k = 800
+        # 151279929
+        k = 6000
         block_size = total_size // k
         metadata["blocks"] = dict()
 
         for idx in range(k):
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["size"] = block_size
-            blocks[block_size*idx:block_size*(idx+1)].to_csv(output_dir.joinpath(f"block_{idx}.csv"), index=False)
+            blocks[block_size * idx : block_size * (idx + 1)].to_csv(
+                output_dir.joinpath(f"block_{idx}.csv"), index=False
+            )
             logger.info(f"Saved block {idx}")
 
     else:
@@ -486,10 +487,12 @@ def main(
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["date"] = date
             metadata["blocks"][idx]["size"] = size
-            
-            # Fix the names of the stored blocks
-            os.rename(output_dir.joinpath(f"block_{key}.csv"), output_dir.joinpath(f"block_{idx}.csv"))
 
+            # Fix the names of the stored blocks
+            os.rename(
+                output_dir.joinpath(f"block_{key}.csv"),
+                output_dir.joinpath(f"block_{idx}.csv"),
+            )
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)

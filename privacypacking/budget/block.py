@@ -45,6 +45,7 @@ class Block:
             "id": self.id,
             "initial_budget": self.initial_budget.dump(),
             "budget": self.budget.dump(),
+            # "budget_utilization": self.initial_budget-self.budget,
         }
 
     def __len__(self) -> int:
@@ -83,20 +84,9 @@ class Block:
     def run(self, query):
         if isinstance(query, Tensor):
             result = self.histogram_data.run(query)
-            # print(f"Size: {self.size}, Result: {result}")
         elif isinstance(query, pd.DataFrame):
             pass
         return result
-
-    # def run_dp(self, query, budget):
-    #     result = self.run(query)
-    #     sensitivity = 1 / self.size
-    #     noise_sample = np.random.laplace(
-    #         scale=sensitivity / budget.epsilon
-    #     )  # TODO: this is not compatible with renyi
-    #     result += noise_sample
-    #     print("Noise", noise_sample)
-    # return result
 
 
 # Wraps one or more blocks
@@ -120,19 +110,16 @@ class HyperBlock:
             result = 0
             for block in self.blocks.values():
                 result += len(block) * block.run(query)
-            # print(f"Size: {self.size}, Result: {result}")
-            result /= self.size
-            # print(f"Size: {self.size}, Result: {result}")
-
+            # result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
         return result
 
     def run_dp(self, query, budget):
         result = self.run(query)
-        sensitivity = 1 / self.size
+        # sensitivity = 1 / self.size
+        sensitivity = 1
         noise_sample = 0
-
         if isinstance(budget, BasicBudget):
             noise_sample = np.random.laplace(scale=sensitivity / budget.epsilon)
         elif isinstance(budget, GaussianCurve):
@@ -141,18 +128,7 @@ class HyperBlock:
             raise NotImplementedError("Try to find the best sigma?")
 
         result += noise_sample
-        print(
-            "Size",
-            self.size,
-            "Noise",
-            noise_sample,
-            "Result",
-            result * self.size,
-            "RResult",
-            result,
-        )
-
-        return result
+        return result, noise_sample
 
     def can_run(self, demand) -> bool:
         """
@@ -163,6 +139,8 @@ class HyperBlock:
             if block_id not in self.blocks:
                 return False
             block = self.blocks[block_id]
+            # print("demand", demand_budget)
+            # print("budget", block.budget)
             if not block.budget.can_allocate(demand_budget):
                 return False
         return True

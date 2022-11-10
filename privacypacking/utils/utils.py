@@ -1,5 +1,6 @@
 import json
 import uuid
+import mlflow
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,16 @@ TaskSpec = namedtuple(
 import numpy as np
 
 
+def mlflow_log(key, value, step):
+    mlflow_run = mlflow.active_run()
+    if mlflow_run:
+        mlflow.log_metric(
+            key,
+            value,
+            step=step,
+        )
+
+
 def sample_one_from_string(stochastic_string: str) -> float:
     events = stochastic_string.split(",")
     values = [float(event.split(":")[0]) for event in events]
@@ -31,9 +42,6 @@ def sample_one_from_string(stochastic_string: str) -> float:
 
 def add_workload_args_to_results(results_df: pd.DataFrame):
     def get_row_parameters(row):
-        # print(row)
-        # print(type(row))
-        # print(row.task_path)
         task_path = row["tasks_path"]
         args = get_args_from_taskname(task_path)
         args["trial_id"] = row["trial_id"]
@@ -88,6 +96,7 @@ def get_logs(
         for task in tasks:
             task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
 
+            result = error = None
             maximum_profit += task.profit
             if tasks_info.tasks_status[task.id] == ALLOCATED:
                 n_allocated_tasks += 1
@@ -97,13 +106,16 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
+                result = tasks_info.result[task.id]
+                error = tasks_info.error[task.id]
+
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result_no_planner_no_cache_dp": tasks_info.result_no_planner_no_cache_dp[task.id],
-                    "result_no_planner_no_cache_no_dp": tasks_info.result_no_planner_no_cache_no_dp[task.id],
-                    "result_planner_cache_dp": tasks_info.result_planner_cache_dp[task.id],
+                    "result": result,
+                    "error": error,
+                    "planning_time": tasks_info.planning_time[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
@@ -111,26 +123,13 @@ def get_logs(
                     "allocation_index": tasks_info.allocation_index.get(task.id, None),
                 }
             )
-            log_tasks.append(
-                task_dump
-            )  # todo change allocated_task_ids from list to a set or sth more efficient for lookups
+            log_tasks.append(task_dump)
 
-    # TODO: Store scheduling times into the tasks directly?
-
-    # dfs = []
     log_blocks = []
     if omegaconf.logs.save:
         for block in blocks.values():
             log_blocks.append(block.dump())
-            # dfs.append(pd.DataFrame([{"budget": block.budget.epsilon}]))
-        # df = pd.concat(dfs)
-
-        # df["budget"] = 10 - df["budget"]
-        # bu = df["budget"].mean()
-
     total_tasks = len(tasks)
-    # tasks_info = tasks_info.dump()
-    # tasks_scheduling_times = sorted(tasks_scheduling_times)
     allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
 
     datapoint = {
@@ -140,11 +139,11 @@ def get_logs(
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
         # "budget_utilization": bu,
-        # "realized_budget": tasks_info.realized_budget,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "planner": omegaconf.scheduler.planner,
+        "cache": omegaconf.scheduler.cache,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
         "n_initial_blocks": omegaconf.blocks.initial_num,
