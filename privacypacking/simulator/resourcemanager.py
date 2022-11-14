@@ -81,7 +81,7 @@ class ResourceManager:
         yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
-        self.terminate_simulation()
+        # self.terminate_simulation()
 
     def daemon_clock(self):
         while True:

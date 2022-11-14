@@ -11,7 +11,8 @@ scheduler:
   log_warning_every_n_allocated_tasks: 0
   scheduler_timeout_seconds: 0
   demands_tiebreaker: 0
-  
+  enable_random_seed: True
+
 metric:
   normalize_by: ""
   temperature: 1

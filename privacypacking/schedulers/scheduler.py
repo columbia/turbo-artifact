@@ -38,7 +38,7 @@ class TasksInfo:
         self.scheduling_delay = {}
         self.allocation_index = {}
         self.tasks_lifetime = {}
-        self.planning_time = {}
+        self.planning_time = defaultdict(lambda: None)
         self.tasks_submit_time = {}
         self.result = {}
         self.error = {}
