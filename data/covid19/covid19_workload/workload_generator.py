@@ -23,13 +23,12 @@ class PrivacyWorkload:
         self.tasks = None
 
         #   ------------  Configure  ------------ #
-        self.blocks_num = 800   # days
+        self.blocks_num = 600  # days
         self.initial_blocks_num = 1
-        self.query_types = [0] #[33479, 34408]
-        self.std_num_tasks = 5
-        self.requested_blocks_num = [1, 50, 100,  200, 400, 600, 800] # [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360]
+        self.query_types = [0]  # [33479, 34408]
+        # self.std_num_tasks = 5
+        # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800]
         #   ------------  /Configure  ------------ #
-
 
         self.tasks = []
         for i in range(self.blocks_num):
@@ -37,21 +36,22 @@ class PrivacyWorkload:
 
     def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
-        num_tasks = (
-            np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
-        )
+        # num_tasks = (
+        #     np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
+        # )
+        num_tasks = [1]
         for _ in range(num_tasks[0]):
             query_id = np.random.choice(query_types)
             query_type = "count"
             # start time is in block units, so it indicates how many blocks currently exist
             # we use this info so that a task does not request more blocks than those existing
-            num_existing_blocks = self.initial_blocks_num + start_time + 1
-            nblocks_options = [
-                n for n in self.requested_blocks_num if n <= num_existing_blocks
-            ]
-            nblocks = np.random.choice(nblocks_options, 1)[0]
+            num_existing_blocks = start_time + self.initial_blocks_num
+            # nblocks_options = [
+            #     n for n in self.requested_blocks_num if n <= num_existing_blocks
+            # ]
+            # nblocks = np.random.choice(nblocks_options, 1)[0]
+            nblocks = num_existing_blocks
             tasks.append(Task(start_time, nblocks, query_id, query_type))
-
         return tasks
 
     def create_dp_task(self, task) -> dict:
@@ -79,7 +79,7 @@ class PrivacyWorkload:
         self.tasks = pd.DataFrame(dp_tasks).sort_values("submit_time")
         self.tasks["relative_submit_time"] = (
             self.tasks["submit_time"] - self.tasks["submit_time"].shift(periods=1)
-        ).fillna(0)
+        ).fillna(1)
 
         logger.info(self.tasks.head())
 
@@ -94,9 +94,11 @@ class PrivacyWorkload:
         logger.info(f"Saved {len(self.tasks)} tasks at {path}.")
 
     # Todo: this is obsolete -> users will not define their epsilon demand from now on
-    def compute_budget(self,):
+    def compute_budget(
+        self,
+    ):
         delta = 0.00001
-        epsilon = [0.1]
+        epsilon = [1]
         return epsilon, delta
 
     def compute_block_selection_policy(self):

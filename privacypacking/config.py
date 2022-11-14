@@ -17,7 +17,6 @@ from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
 
-
 # Configuration Reading Logic
 # TODO: why are the task utils here again? It doesn't seem to make sense.
 # Maybe we can just pass omegaconf.tasks to Tasks?
@@ -33,16 +32,18 @@ class Config:
         # print(self.omegaconf)
 
         # Rest of the configuration below
-        self.global_seed = self.omegaconf.global_seed
-        random.seed(self.global_seed)
-        np.random.seed(self.global_seed)
+        if self.omegaconf.enable_random_seed:
+            random.seed(None)
+            np.random.seed(None)
+        else:
+            random.seed(self.omegaconf.global_seed)
+            np.random.seed(self.omegaconf.global_seed)
 
         # BLOCKS
         self.initial_blocks_num = self.omegaconf.blocks.initial_num
         if self.omegaconf.scheduler.method == "offline":
             self.omegaconf.blocks.max_num = self.initial_blocks_num
         self.max_blocks = self.omegaconf.blocks.max_num
-        self.max_tasks = None
         self.block_arrival_interval = 1
 
         # TASKS
@@ -60,12 +61,14 @@ class Config:
 
             self.tasks_generator = row_sampler(self.tasks)
             self.max_tasks = self.omegaconf.tasks.max_num
+            self.initial_tasks_num = self.omegaconf.tasks.initial_num
 
         else:
             logger.info("Reading tasks in order with hardcoded arrival times.")
             # Browse tasks in order with hardcoded arrival times
             self.tasks_generator = self.tasks.iterrows()
             self.max_tasks = len(self.tasks)
+            self.initial_tasks_num = 0
             self.task_arrival_interval_generator = self.tasks[
                 "relative_submit_time"
             ].iteritems()
@@ -142,7 +145,7 @@ class Config:
         return self.block_arrival_interval
 
     def get_initial_tasks_num(self) -> int:
-        return self.omegaconf.tasks.initial_num
+        return self.initial_tasks_num
 
     def get_initial_blocks_num(self) -> int:
         return self.initial_blocks_num

@@ -8,7 +8,6 @@ from privacypacking.utils.utils import get_logs
 
 class Simulator:
     def __init__(self, config):
-        # self.env = simpy.rt.RealtimeEnvironment(factor=0.1, strict=False)
         self.env = simpy.Environment()
         self.config = config
 
@@ -23,13 +22,10 @@ class Simulator:
     def run(self):
         start = datetime.now()
 
-        # TODO: make this configurable
-        # self.env.run(until=200)
         self.env.run()
 
         # Rough estimate of the scheduler's performance
         simulation_duration = (datetime.now() - start).total_seconds()
-
         logs = get_logs(
             self.rm.scheduler.task_queue.tasks
             + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
@@ -42,6 +38,4 @@ class Simulator:
             if hasattr(self.rm.scheduler, "scheduling_queue_info")
             else None,
         )
-        # verbose = self.config.omegaconf.logs.save  # Saves tasks and blocks logs too
-        # return global_metrics(logs, verbose)
         return logs

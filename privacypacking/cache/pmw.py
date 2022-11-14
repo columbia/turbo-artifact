@@ -1,4 +1,3 @@
-import mlflow
 import numpy as np
 import torch
 from loguru import logger
@@ -12,6 +11,7 @@ from privacypacking.budget.curves import (
     ZeroCurve,
 )
 from privacypacking.budget.histogram import DenseHistogram, flat_items
+from privacypacking.utils.utils import mlflow_log
 
 
 class PMW:
@@ -57,15 +57,6 @@ class PMW:
         else:
             self.noisy_threshold = self.alpha / 2 + np.random.normal(
                 0, self.Delta * self.ro
-            )
-        self.mlflow_run = mlflow.active_run()
-
-    def log(self, key, value):
-        if self.mlflow_run:
-            mlflow.log_metric(
-                f"{self.id}/{key}",
-                value,
-                step=self.queries_ran,
             )
 
     @classmethod
@@ -167,8 +158,13 @@ class PMW:
             self.histogram.normalize()
             output = noisy_output
 
-        # TODO: maybe pass a dict to the planner to log the same things for deterministic cache (or aggregates)
-        self.log("queries_ran", self.queries_ran)
-        self.log("hard_queries_ran", self.hard_queries_ran)
-        self.log("true_abs_error", abs(predicted_output - true_output))
+        mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)
+        mlflow_log(
+            f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran
+        )
+        mlflow_log(
+            f"{self.id}/true_abs_error",
+            abs(predicted_output - true_output),
+            self.queries_ran,
+        )
         return output, run_budget

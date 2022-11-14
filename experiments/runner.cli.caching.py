@@ -5,6 +5,8 @@ from experiments.ray_runner import (
     grid_online,
 )
 
+from privacypacking.schedulers.utils import FCFS
+
 app = typer.Typer()
 
 
@@ -12,8 +14,11 @@ def caching():
     grid_online(
         scheduler_scheduling_time=[1],
         metric_recomputation_period=[50],
+        scheduler_metrics=[FCFS],
+        n=[1],  # Instant unlocking
+        max_blocks=[600],
         initial_blocks=[1],
-        max_blocks=[800],
+        initial_tasks=[0],
         tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
         queries_path=["covid19/covid19_queries/queries.json"],
         blocks_path="covid19/covid19_data/blocks",
@@ -21,9 +26,12 @@ def caching():
         tasks_sampling="",
         data_lifetime=[0.1],
         task_lifetime=[1],
-        planner=["PerBlockPlanner"],
-        cache=["DeterministicCache"],
+        planner=["DynamicProgrammingPlanner", "PerBlockPlanner", "NoPlanner"],
+        cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
+        enable_dp=[True],
+        repetitions=10,
+        enable_random_seed=True,
     )
 
 

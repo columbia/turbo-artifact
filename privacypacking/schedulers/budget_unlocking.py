@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 from loguru import logger
 from omegaconf import DictConfig
-from simpy import Event
+from simpy import Event, Interrupt
 
 from privacypacking.budget import BasicBudget, Block, Budget, Task, ZeroCurve
 from privacypacking.schedulers.scheduler import Scheduler
@@ -125,9 +125,12 @@ class TBudgetUnlocking(Scheduler):
         self.env.process(unlocking_block.wait_and_unlock())
 
     def run_batch_scheduling(self, period: float) -> List[int]:
-        while not self.simulation_terminated:
-            yield self.env.timeout(period)
-            super().schedule_queue()
+        while True:
+            try:
+                yield self.env.timeout(period)
+                super().schedule_queue()
+            except Interrupt as i:
+                return
 
     def can_run(self, demand):
         for block_id, demand_budget in demand.items():

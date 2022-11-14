@@ -18,10 +18,10 @@ def main(config):
 
     if conf.omegaconf.logs.mlflow:
         os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
-        with mlflow.start_run():  # Should work with nested Ray experiments too
+        with mlflow.start_run():
+            mlflow.log_param("config", conf)
             logs = Simulator(conf).run()
             save_logs(conf, logs)
-            # TODO: dump relevant logs into MLflow
     else:
         logs = Simulator(conf).run()
         save_logs(conf, logs)

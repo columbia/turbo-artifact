@@ -1,9 +1,9 @@
 import json
+import time
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-import numpy as np
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
@@ -15,9 +15,11 @@ from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilisticCache
+from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
+from privacypacking.planner.no_planner import NoPlanner
 from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
-from privacypacking.utils.utils import REPO_ROOT
+from privacypacking.utils.utils import REPO_ROOT, mlflow_log
 
 
 # TODO: efficient data structure here? (We have indices)
@@ -36,12 +38,11 @@ class TasksInfo:
         self.scheduling_delay = {}
         self.allocation_index = {}
         self.tasks_lifetime = {}
+        self.planning_time = {}
         self.tasks_submit_time = {}
-
-        self.result_no_planner_no_cache_no_dp = {}
-        self.result_no_planner_no_cache_dp = {}
-        self.result_planner_cache_dp = {}
-        self.realized_budget = 0
+        self.result = {}
+        self.error = {}
+        # self.realized_budget = 0
 
     def dump(self):
         tasks_info = {
@@ -65,7 +66,6 @@ class Scheduler:
         self.task_queue = TaskQueue()
         self.blocks = {}
         self.tasks_info = TasksInfo()
-        self.simulation_terminated = False
         self.allocation_counter = 0
         if verbose_logs:
             logger.warning("Verbose logs. Might be slow and noisy!")
@@ -104,6 +104,8 @@ class Scheduler:
 
         self.cache = globals()[self.omegaconf["cache"]]()
         self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
+
+        self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
     def consume_budgets(self, blocks, budget):
         """
@@ -165,49 +167,50 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                original_plan = A(
-                    [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
-                )
-                # Find a plan to run the query using caching
+                start = time.process_time()
+                end = None
+
                 plan = None
-                if self.omegaconf.enable_caching:
-                    plan = self.planner.get_execution_plan(
+                if (
+                    self.omegaconf.enable_caching
+                ):  # Find a plan to run the query using caching
+                    plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
                     )
-                elif self.can_run(task.budget_per_block):
-                    plan = original_plan
+                elif (
+                    self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
+                ):
+                    plan = A(
+                        [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
+                    )
+                self.tasks_info.planning_time[task.id] = time.process_time() - start
+                print(f"Planning time", self.tasks_info.planning_time[task.id])
+                mlflow_log(
+                    f"{self.experiment_prefix}performance/planning_time",
+                    self.tasks_info.planning_time[task.id],
+                    task.id,
+                )
 
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
-                    print(
-                        colored(
-                            f"Plan's Noisy Result of task {task.id} query {task.query_id} on blocks {bs_tuple}: {result}",
-                            "blue",
-                        )
-                    )
                     self.update_allocated_task(task)
 
-                    if self.omegaconf.enable_caching:
-                        # Run the original plan without cache just to store the result - for experiments
-                        self.tasks_info.result_planner_cache_dp[task.id] = result
-                        hyperblock = HyperBlock(
-                            {key: self.blocks[key] for key in bs_list}
-                        )
-                        query = self.query_pool.get_query(task.query_id)
-
-                        result = hyperblock.run_dp(query, task.budget)
-                        self.tasks_info.result_no_planner_no_cache_dp[task.id] = result
-                        print(
-                            colored(
-                                f"Original plan's noisy Result of query {task.query_id} on blocks {bs_tuple}: {result}",
-                                "green",
-                            )
-                        )
-                        result = hyperblock.run(query)
-                        self.tasks_info.result_no_planner_no_cache_no_dp[
-                            task.id
-                        ] = result
+                    # ----------- Logging ----------- #
+                    self.tasks_info.result[task.id] = result
+                    mlflow_log(
+                        f"{self.experiment_prefix}accuracy/result", result, task.id
+                    )
+                    query = self.query_pool.get_query(task.query_id)
+                    true_result = HyperBlock(
+                        {key: self.blocks[key] for key in bs_list}
+                    ).run(query)
+                    error = abs(true_result - result)
+                    mlflow_log(
+                        f"{self.experiment_prefix}accuracy/error", error, task.id
+                    )
+                    self.tasks_info.error[task.id] = error
+                    # ----------- /Logging ----------- #
 
                     if (
                         self.metric.is_dynamic()
@@ -221,7 +224,7 @@ class Scheduler:
                 else:
                     print(
                         colored(
-                            f"Task {task.id} cannot run. Demand budget: {task.budget_per_block}\n",
+                            f"Task {task.id} cannot run.",
                             "blue",
                         )
                     )
@@ -237,19 +240,24 @@ class Scheduler:
             query = self.query_pool.get_query(plan.query_id)
 
             if self.omegaconf.enable_caching:  # Using cache
-                result, budget = self.cache.run(
+                result, budget, noise = self.cache.run(
                     query_id=plan.query_id,
                     query=query,
                     run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
-                result = hyperblock.run_dp(query, plan.budget)
-                budget = plan.budget
+                if self.omegaconf.enable_dp:  # Add DP noise
+                    result, noise = hyperblock.run_dp(query, plan.budget)
+                    budget = plan.budget
+                else:
+                    result = hyperblock.run(query, plan.budget)
+                    noise = 0
+                    budget = None
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-            return (result, hyperblock.size)
+            return (result, noise, hyperblock.size)
 
         elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
@@ -258,11 +266,16 @@ class Scheduler:
 
             result = 0
             total_size = 0
+            total_noise = 0
 
-            for (res, size) in agglist:
-                result += size * res
+            for (res, noise, size) in agglist:
+                # result += size * res
+                result += res
                 total_size += size
-            return result / total_size
+                total_noise += noise
+            # print("Agg noise", total_noise/len(agglist))
+            # print("Agg noise", total_noise)
+            return result  # / total_size
 
         else:
             logger.error("Execution: no such operator")
@@ -278,9 +291,9 @@ class Scheduler:
                 f"Blocks: {list(task.budget_per_block.keys())}"
             )
         except NotEnoughBlocks as e:
-            # logger.warning(
-            #     f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
-            # )
+            logger.warning(
+                f"{e}\n Skipping this task as it can't be allocated. Will not count in the total number of tasks?"
+            )
             self.tasks_info.tasks_status[task.id] = FAILED
             return
 
@@ -302,12 +315,12 @@ class Scheduler:
         if block.id in self.blocks:
             raise Exception("This block id is already present in the scheduler.")
 
-        # block.load_raw_data()
         block.data_path = f"{self.blocks_path}/block_{block.id}.csv"
         block.load_histogram(self.blocks_metadata["attributes_domain_sizes"])
         # block.date = self.blocks_metadata["blocks"][str(block.id)]["date"]
         block.size = self.blocks_metadata["blocks"][str(block.id)]["size"]
         block.domain_size = self.blocks_metadata["domain_size"]
+        # block.load_raw_data()
         self.blocks.update({block.id: block})
 
     def get_num_blocks(self) -> int:
