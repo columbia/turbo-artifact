@@ -73,8 +73,6 @@ class Block:
         self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:
-        # TODO: when blocks become too big, take a look at Arrow/Feather as a CSV replacement:
-        # https://arrow.apache.org/docs/python/feather.html
         raw_data = self.raw_data
         if raw_data is None:
             raw_data = pd.read_csv(self.data_path)
