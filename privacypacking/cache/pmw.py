@@ -23,6 +23,7 @@ class PMW:
         alpha=0.2,  # Max error guarantee (or order of magnitude)
         k=10,  # Max number of queries for each OneShot SVT instance
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
+        sensitivity=1,
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
@@ -45,7 +46,7 @@ class PMW:
         self.local_svt_queries_ran = 0
         self.local_svt_max_queries = k
         self.ro = ro if ro else nu
-        self.Delta = 1 / self.n  # Query sensitivity
+        self.Delta = sensitivity if sensitivity else 1 / self.n
         self.standard_svt = standard_svt
 
         # The initial threshold should be noisy too if we want to use Sparse Vector
