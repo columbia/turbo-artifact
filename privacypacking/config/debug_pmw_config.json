@@ -34,12 +34,12 @@
         },
         "tasks": {
             "sampling": "poisson",
-            "path": "covid19/covid19_workload/privacy_tasks.csv",
+            "path": "covid19/covid19_workload/privacy_tasks_monoblock.csv",
             "queries_path": "covid19/covid19_queries/queries.json",
             "block_selection_policy": "LatestBlocksFirst",
             "avg_num_tasks_per_block": 50,
-            "max_num": 50,
-            "initial_num": 50
+            "max_num": 100,
+            "initial_num": 100
         }
     }
 }
