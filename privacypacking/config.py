@@ -140,6 +140,7 @@ class Config:
 
         else:
             _, task_arrival_interval = next(self.task_arrival_interval_generator)
+
         return task_arrival_interval
 
     def set_block_arrival_time(self):
