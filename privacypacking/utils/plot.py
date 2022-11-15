@@ -53,3 +53,21 @@ def plot_budgets(
         )
 
     return fig
+
+
+def plot_budget_utilization_per_block(block_log: List) -> FigureWidget:
+    best_alpha = 4
+    d = defaultdict(list)
+    for b in block_log:
+        d["id"].append(b["id"])
+        d["eps"].append(
+            b["budget"]["orders"][best_alpha]
+            / b["initial_budget"]["orders"][best_alpha]
+        )
+    fig = px.bar(
+        pd.DataFrame(d),
+        x="id",
+        y="eps",
+        title=f"Normalized remaining budget for alpha={best_alpha}",
+    )
+    return fig

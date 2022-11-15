@@ -1,14 +1,15 @@
 import json
 import uuid
-import mlflow
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
+import mlflow
 import pandas as pd
 from omegaconf import OmegaConf
 
 from privacypacking.schedulers.utils import ALLOCATED
+from privacypacking.utils.plot import plot_budget_utilization_per_block
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -167,6 +168,20 @@ def get_logs(
     for key, value in kwargs.items():
         datapoint[key] = value
     return datapoint
+
+
+def save_mlflow_artifacts(log_dict):
+    """
+    Write down some figures directly in Mlflow instead of having to fire Plotly by hand in a notebook
+    See also: `analysis.py`
+    """
+    # TODO: save in a custom dir when we run with Ray?
+    artifacts_dir = LOGS_PATH.joinpath("mlflow_artifacts")
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
+        artifacts_dir.joinpath("budget_utilization.html")
+    )
+    mlflow.log_artifacts(artifacts_dir)
 
 
 def save_logs(config, log_dict, compact=False, compressed=False):

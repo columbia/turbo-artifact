@@ -9,7 +9,12 @@ from omegaconf import OmegaConf
 
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, save_logs
+from privacypacking.utils.utils import (
+    DEFAULT_CONFIG_FILE,
+    LOGS_PATH,
+    save_logs,
+    save_mlflow_artifacts,
+)
 
 app = typer.Typer()
 
@@ -23,6 +28,7 @@ def main(config):
             # You can also log nexted dicts individually if you prefer
             mlflow.log_params(OmegaConf.to_container(conf.omegaconf))
             logs = Simulator(conf).run()
+            save_mlflow_artifacts(logs)
             save_logs(conf, logs)
     else:
         logs = Simulator(conf).run()
