@@ -5,6 +5,7 @@ import sys
 import mlflow
 import typer
 from loguru import logger
+from omegaconf import OmegaConf
 
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
@@ -19,7 +20,8 @@ def main(config):
     if conf.omegaconf.logs.mlflow:
         os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
         with mlflow.start_run():
-            mlflow.log_param("config", conf)
+            # You can also log nexted dicts individually if you prefer
+            mlflow.log_params(OmegaConf.to_container(conf.omegaconf))
             logs = Simulator(conf).run()
             save_logs(conf, logs)
     else:

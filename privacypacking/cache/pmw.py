@@ -20,15 +20,16 @@ class PMW:
         hyperblock: HyperBlock,
         nu=485,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty.
-        alpha=0.2,  # Max error guarantee (or order of magnitude)
-        k=10,  # Max number of queries for each OneShot SVT instance
+        alpha=0.2,  # Max error guarantee, expressed as fraction
+        k=10,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
-        sensitivity=1,
+        output_counts=True,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
         # - for unlimited kmax, nonnegative queries -> RDP SVT gives a (maybe) tighter theorem. But let's stay "simple" for now.
         # - cheap version of the previous point: dynamic k, increase over time
+        # - MWEM makes bigger steps when the error is higher, we could try
 
         # Generic PMW arguments
         self.hyperblock = hyperblock
@@ -40,20 +41,23 @@ class PMW:
         self.histogram = DenseHistogram(self.M)
         self.nu = nu
         self.id = str(hyperblock.id)[1:-1].replace(", ", "-")
+        self.output_counts = output_counts
 
         # Sparse Vector parameters
         self.alpha = alpha
         self.local_svt_queries_ran = 0
         self.local_svt_max_queries = k
         self.ro = ro if ro else nu
-        self.Delta = sensitivity if sensitivity else 1 / self.n
+        self.Delta = (
+            1 / self.n
+        )  # Always 1/n, if we want counts we'll scale as post-processing
         self.standard_svt = standard_svt
 
         # The initial threshold should be noisy too if we want to use Sparse Vector
         if self.standard_svt:
             # ro=1/eps1 and nu=1/eps2
             self.noisy_threshold = self.alpha / 2 + np.random.laplace(
-                self.Delta * self.ro
+                0, self.Delta * self.ro
             )
         else:
             self.noisy_threshold = self.alpha / 2 + np.random.normal(
@@ -91,7 +95,7 @@ class PMW:
 
             if self.standard_svt:
                 self.noisy_threshold = self.alpha / 2 + np.random.laplace(
-                    self.Delta * self.ro
+                    0, self.Delta * self.ro
                 )
                 run_budget = PureDPtoRDP(epsilon=1 / self.ro + 1 / self.nu)
             else:
@@ -104,18 +108,22 @@ class PMW:
         else:
             run_budget = ZeroCurve()
 
-        # Comes for free (public histogram)
+        # Comes for free (public histogram). Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
 
         # Never released except in debugging logs
         true_output = self.hyperblock.run(query)
+        if self.output_counts:
+            # The hyperblock doesn't run normalized queries
+            true_output /= self.n
+
         self.queries_ran += 1
         self.local_svt_queries_ran += 1
 
         # `noisy_error` is a DP query with sensitivity self.Delta, Sparse Vector needs twice that
         true_error = abs(true_output - predicted_output)
         error_noise = (
-            np.random.laplace(2 * self.Delta * self.nu)
+            np.random.laplace(0, 2 * self.Delta * self.nu)
             if self.standard_svt
             else np.random.normal(0, 2 * self.Delta * self.nu)
         )
@@ -123,7 +131,9 @@ class PMW:
 
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
-            logger.info("easy query")
+            logger.info(
+                f"Easy query - true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
+            )
             output = predicted_output
         else:
             # Hard query, i.e. "Output top" in SVT
@@ -164,8 +174,17 @@ class PMW:
             f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran
         )
         mlflow_log(
-            f"{self.id}/true_abs_error",
+            f"{self.id}/true_error_fraction",
             abs(predicted_output - true_output),
             self.queries_ran,
         )
+        mlflow_log(
+            f"{self.id}/true_error_count",
+            self.n * abs(predicted_output - true_output),
+            self.queries_ran,
+        )
+
+        if self.output_counts:
+            output *= self.n
+
         return output, run_budget
