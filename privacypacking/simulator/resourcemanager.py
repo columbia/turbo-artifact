@@ -27,10 +27,11 @@ class ResourceManager:
         self.blocks_initialized = self.env.event()
 
         # Stopping conditions
-        self.block_production_terminated = False
+        self.block_production_terminated = self.env.event()
         self.task_production_terminated = False
 
     def terminate_simulation(self):
+        # TODO: Maybe a bit brutal, if it causes problems we should use events (like above)
         self.scheduling.interrupt()
         self.daemon_clock.interrupt()
 
@@ -62,9 +63,12 @@ class ResourceManager:
 
     def termination_clock(self):
 
-        # TODO: replace by an event?
-        while not self.block_production_terminated:
-            yield self.env.timeout(self.block_arrival_interval)
+        # # TODO: replace by an event?
+        # while not self.block_production_terminated:
+        #     yield self.env.timeout(self.block_arrival_interval)
+
+        # Wait for all the blocks to be produced before moving on
+        yield self.block_production_terminated
 
         logger.info(
             f"Block production terminated at {self.env.now}.\n Producing tasks for the last block..."
@@ -81,7 +85,7 @@ class ResourceManager:
         yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
-        # self.terminate_simulation()
+        self.terminate_simulation()
 
     def daemon_clock(self):
         while True:
@@ -92,6 +96,7 @@ class ResourceManager:
                 return
 
     def block_consumer(self):
+        # Needlessly convoluted?
         def consume():
             item = yield self.new_blocks_queue.get()
             if isinstance(item, LastItem):
@@ -107,7 +112,7 @@ class ResourceManager:
             yield self.env.process(consume())
         self.blocks_initialized.succeed()
 
-        while not self.block_production_terminated:
+        while not self.block_production_terminated.triggered:
             yield self.env.process(consume())
 
     def task_consumer(self):
@@ -124,5 +129,6 @@ class ResourceManager:
 
         while not self.task_production_terminated:
             yield self.env.process(consume())
+
         # Ask the scheduler to stop adding new scheduling steps
         self.terminate_simulation()
