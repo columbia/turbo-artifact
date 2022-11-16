@@ -38,8 +38,8 @@
             "queries_path": "covid19/covid19_queries/queries.json",
             "block_selection_policy": "LatestBlocksFirst",
             "avg_num_tasks_per_block": 500,
-            "max_num": 1000,
-            "initial_num": 1000
+            "max_num": 100,
+            "initial_num": 100
         }
     }
 }

@@ -7,6 +7,7 @@ from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import (
     BoundedOneShotSVT,
     GaussianCurve,
+    LaplaceCurve,
     PureDPtoRDP,
     ZeroCurve,
 )
@@ -18,7 +19,7 @@ class PMW:
     def __init__(
         self,
         hyperblock: HyperBlock,
-        nu=485,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
+        nu=10,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty.
         alpha=0.2,  # Max error guarantee, expressed as fraction
         k=10,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
@@ -29,7 +30,8 @@ class PMW:
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
         # - for unlimited kmax, nonnegative queries -> RDP SVT gives a (maybe) tighter theorem. But let's stay "simple" for now.
         # - cheap version of the previous point: dynamic k, increase over time
-        # - MWEM makes bigger steps when the error is higher, we could try
+        # - MWEM makes bigger steps when the error is higher, we could try that too
+        # - Is it better to use Laplace after hard queries, for composition? By how much?
 
         # Generic PMW arguments
         self.hyperblock = hyperblock
@@ -132,7 +134,7 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             logger.info(
-                f"Easy query - true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
+                f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
             output = predicted_output
         else:
@@ -142,7 +144,7 @@ class PMW:
             self.hard_queries_ran += 1
 
             logger.info(
-                f"Predicted: {predicted_output}, true: {true_output}, hard query"
+                f"Hard query - Predicted: {predicted_output}, true: {true_output}"
             )
 
             # NOTE: cut-off = 1 and pay as you go -> no limit on the number of hard queries
@@ -154,8 +156,12 @@ class PMW:
 
             # NOTE: Salil's PMW samples fresh noise here, it makes more sense I think.
             #       We could also use yet another noise scaling parameter
-            noisy_output = true_output + np.random.normal(0, self.Delta * self.nu)
-            run_budget += GaussianCurve(sigma=self.nu)
+            if self.standard_svt:
+                noisy_output = true_output + np.random.laplace(0, self.Delta * self.nu)
+                run_budget += LaplaceCurve(laplace_noise=self.nu)
+            else:
+                noisy_output = true_output + np.random.normal(0, self.Delta * self.nu)
+                run_budget += GaussianCurve(sigma=self.nu)
 
             # Multiplicative weights update for the relevant bins
             values = query.values()
