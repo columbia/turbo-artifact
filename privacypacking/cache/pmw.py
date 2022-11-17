@@ -20,7 +20,7 @@ class PMW:
         self,
         hyperblock: HyperBlock,
         nu=10,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
-        ro=None,  # Scale of noise added on the threshold. Will be nu if left empty.
+        ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.2,  # Max error guarantee, expressed as fraction
         k=10,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
@@ -50,16 +50,16 @@ class PMW:
         self.local_svt_queries_ran = 0
         self.local_svt_max_queries = k
         self.ro = ro if ro else nu
-        self.Delta = (
-            1 / self.n
-        )  # Always 1/n, if we want counts we'll scale as post-processing
         self.standard_svt = standard_svt
+
+        # Always sensitivity 1/n, if we want counts we'll scale as post-processing
+        self.Delta = 1 / self.n
 
         # The initial threshold should be noisy too if we want to use Sparse Vector
         if self.standard_svt:
             # ro=1/eps1 and nu=1/eps2
             self.noisy_threshold = self.alpha / 2 + np.random.laplace(
-                0, self.Delta * self.ro
+                0, self.Delta * self.nu
             )
         else:
             self.noisy_threshold = self.alpha / 2 + np.random.normal(
@@ -75,7 +75,8 @@ class PMW:
         ro = ro if ro else nu
         query_cost = GaussianCurve(sigma=nu)
         if standard_svt:
-            svt_cost = PureDPtoRDP(epsilon=1 / ro + 1 / nu)
+            # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
+            svt_cost = PureDPtoRDP(epsilon=1 / nu + 2 / nu)
         else:
             svt_cost = BoundedOneShotSVT(ro=ro, nu=nu, kmax=local_svt_max_queries)
         return svt_cost + query_cost
@@ -97,9 +98,9 @@ class PMW:
 
             if self.standard_svt:
                 self.noisy_threshold = self.alpha / 2 + np.random.laplace(
-                    0, self.Delta * self.ro
+                    0, self.Delta * self.nu
                 )
-                run_budget = PureDPtoRDP(epsilon=1 / self.ro + 1 / self.nu)
+                svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
             else:
                 self.noisy_threshold = self.alpha / 2 + np.random.normal(
                     0, self.Delta * self.ro
@@ -125,7 +126,9 @@ class PMW:
         # `noisy_error` is a DP query with sensitivity self.Delta, Sparse Vector needs twice that
         true_error = abs(true_output - predicted_output)
         error_noise = (
-            np.random.laplace(0, 2 * self.Delta * self.nu)
+            np.random.laplace(
+                0, self.Delta * self.nu
+            )  # NOTE: Factor goes to the budget instead
             if self.standard_svt
             else np.random.normal(0, 2 * self.Delta * self.nu)
         )
