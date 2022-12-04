@@ -1,10 +1,15 @@
 import json
-from itertools import chain, combinations, product
-from privacypacking.budget.histogram import build_sparse_tensor
-from typing import Optional
-from loguru import logger
-import typer
 import math
+from itertools import chain, combinations, product
+from typing import Optional
+
+import typer
+from loguru import logger
+
+from privacypacking.budget.histogram import (
+    build_sparse_tensor,
+    k_way_marginal_query_list,
+)
 from privacypacking.utils.utils import REPO_ROOT
 
 app = typer.Typer()
@@ -43,18 +48,30 @@ def create_all_queries(queries_path, attributes_domain_sizes):
         outfile.write(json_object)
 
 
-def create_specific_queries(queries_path):
+def create_specific_queries(queries_path, type="positive_cases"):
     queries = []
 
-    # Postiive cases
-    queries = [[[1], [0, 1], [0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6, 7]]]
-
-    print(queries)
-    query_tensors = []
-    for query in queries:
-        query = [list(tup) for tup in query]
-        query = [list(tup) for tup in product(*query)]
-        query_tensors.append(query)
+    if type == "positive_cases":
+        queries = [[[1], [0, 1], [0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6, 7]]]
+        print(queries)
+        query_tensors = []
+        for query in queries:
+            query = [list(tup) for tup in query]
+            query = [list(tup) for tup in product(*query)]
+            query_tensors.append(query)
+    elif type == "2way_marginal_mix":
+        query_tensors = []
+        attribute_sizes = [2, 2, 4, 8]
+        dicts = [
+            {0: 1, 1: 0},
+            {0: 1, 1: 1},
+            {0: 1, 2: 0},
+            {0: 1, 2: 1},
+            {1: 0, 2: 0},
+            {1: 1, 2: 1},
+        ]
+        for d in dicts:
+            query_tensors.append(k_way_marginal_query_list(d, attribute_sizes))
 
     # Write queries to a json file
     queries = {}
@@ -62,6 +79,9 @@ def create_specific_queries(queries_path):
         queries[i] = query
 
     json_object = json.dumps(queries, indent=4)
+
+    # NOTE: this representation only handles counting queries (bin value in {0,1})
+    # we might need to handle arbitrary linear queries later (dump sparse tensors directly)
 
     # Writing to queries.json
     with open(queries_path, "w") as outfile:
@@ -122,9 +142,8 @@ def main(
     #     blocks_metadata["attributes_domain_sizes"]
     # )  # Query space size for covid dataset: 34425
 
-    create_specific_queries(
-        queries_path,
-    )
+    # create_specific_queries(queries_path)
+    create_specific_queries(queries_path, type="2way_marginal_mix")
 
 
 if __name__ == "__main__":

@@ -30,23 +30,34 @@ class Tasks:
 
         logger.debug("Done producing all the initial tasks.")
 
-        if self.config.omegaconf.scheduler.method != "offline":
-            logger.debug(
-                f"Generating online tasks now. Current count is: {self.task_count}"
-            )
-            while not self.resource_manager.task_production_terminated:
-                task_id = next(self.task_count)
-                if self.config.max_tasks and task_id > self.config.max_tasks - 1:
-                    # Send a special message to close the channel
-                    self.resource_manager.task_production_terminated = True
-                    self.resource_manager.new_tasks_queue.put(LastItem())
-                    return
-                else:
-                    task_arrival_interval = self.config.set_task_arrival_time()
-                    self.env.process(self.task(task_id))
-                    yield self.env.timeout(task_arrival_interval)
+        if self.config.omegaconf.scheduler.method == "offline":
+            return
 
-        logger.info(f"Done generating tasks. Current count is: {self.task_count}")
+        logger.debug(
+            f"Generating online tasks now. Current count is: {self.task_count}"
+        )
+        while not self.resource_manager.task_production_terminated.triggered:
+            task_id = next(self.task_count)
+            if self.config.max_tasks and task_id > self.config.max_tasks - 1:
+                # Send a special message to close the channel
+                self.resource_manager.task_production_terminated.succeed()
+                self.resource_manager.new_tasks_queue.put(LastItem())
+                return
+            else:
+                task_arrival_interval = self.config.set_task_arrival_time()
+
+                # No task can arrive after the end of the simulation
+                # so we force them to appear right before the end of the last block
+                task_arrival_interval = min(
+                    task_arrival_interval,
+                    self.config.omegaconf.blocks.max_num - self.env.now - 0.01,
+                )
+                self.env.process(self.task(task_id))
+                yield self.env.timeout(task_arrival_interval)
+
+        logger.info(
+            f"Done generating tasks at time {self.env.now}. Current count is: {self.task_count}"
+        )
 
     def task(self, task_id: int) -> None:
         """

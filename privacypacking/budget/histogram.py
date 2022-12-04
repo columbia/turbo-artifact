@@ -1,5 +1,6 @@
 import math
-from typing import List, Optional
+from itertools import product
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -125,6 +126,30 @@ def build_sparse_tensor_multidim(
         size=attribute_sizes,
         dtype=torch.float64,
     ).coalesce()
+
+
+def k_way_marginal_query_list(
+    attribute_to_value: Dict[int, int],
+    attribute_sizes: List[int],
+):
+    """
+    Examples for `attribute_to_value`:
+    {0:1} to count all positive cases
+    {0:0, 1:0} to count all negative males
+    {0:0, 1:0, 3:2} to count all negative asian males
+    """
+    # List of domains. E.g. positive = [1], gender = [0,1], ethnicity = [1,2,3]
+    domain_per_attribute = []
+    for attribute, size in enumerate(attribute_sizes):
+        if attribute in attribute_to_value:
+            # This attribute is a marginal, we force one value
+            domain_per_attribute.append([attribute_to_value[attribute]])
+        else:
+            # This attribute can take any value
+            domain_per_attribute.append(list(range(size)))
+
+    # Now we take the cartesian product of the attributes domains
+    return list(product(*domain_per_attribute))
 
 
 # ------------- / Help functions ------------- #

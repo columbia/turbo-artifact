@@ -1,24 +1,26 @@
 import json
+import time
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
+
 from loguru import logger
 from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
-from privacypacking.utils.utils import mlflow_log
+
 from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget import Block, HyperBlock, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.probabilistic_cache import ProbabilicticCache
+from privacypacking.cache.probabilistic_cache import ProbabilisticCache
 from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
-from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.planner.no_planner import NoPlanner
+from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
-from privacypacking.utils.utils import REPO_ROOT
-import time
+from privacypacking.utils.utils import REPO_ROOT, mlflow_log
+
 
 # TODO: efficient data structure here? (We have indices)
 class TaskQueue:
@@ -36,7 +38,7 @@ class TasksInfo:
         self.scheduling_delay = {}
         self.allocation_index = {}
         self.tasks_lifetime = {}
-        self.planning_time = {}
+        self.planning_time = defaultdict(lambda: None)
         self.tasks_submit_time = {}
         self.result = {}
         self.error = {}
@@ -174,7 +176,7 @@ class Scheduler:
                 ):  # Find a plan to run the query using caching
                     plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
-                    )                    
+                    )
                 elif (
                     self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
                 ):
@@ -229,7 +231,9 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):  # TODO: Consider making an executor class
+    def execute_plan(self, plan):
+        # TODO: Consider making an executor class
+        # TODO: simplify? Just R then A, no need for recursion. plan = list of cuts?
         if isinstance(plan, R):  # Run Query
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})

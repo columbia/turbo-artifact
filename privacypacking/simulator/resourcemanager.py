@@ -27,10 +27,12 @@ class ResourceManager:
         self.blocks_initialized = self.env.event()
 
         # Stopping conditions
-        self.block_production_terminated = False
-        self.task_production_terminated = False
+        self.block_production_terminated = self.env.event()
+        self.task_production_terminated = self.env.event()
+        self.simulation_terminated = self.env.event()
 
     def terminate_simulation(self):
+        # TODO: Maybe a bit brutal, if it causes problems we should use events (like above)
         self.scheduling.interrupt()
         self.daemon_clock.interrupt()
 
@@ -46,13 +48,14 @@ class ResourceManager:
             self.env.process(self.termination_clock())
             self.scheduling = self.env.process(
                 self.scheduler.run_batch_scheduling(
-                    period=self.config.omegaconf.scheduler.scheduling_wait_time
+                    simulation_termination_event=self.simulation_terminated,
+                    period=self.config.omegaconf.scheduler.scheduling_wait_time,
                 )
             )
 
         elif self.config.omegaconf.scheduler.method == "offline":
-            self.block_production_terminated = True
-            self.task_production_terminated = True
+            self.block_production_terminated.succeed()
+            self.task_production_terminated.succeed()
 
             yield task_consumed_event
             logger.info(
@@ -61,30 +64,31 @@ class ResourceManager:
             self.scheduler.schedule_queue()
 
     def termination_clock(self):
-
-        # TODO: replace by an event?
-        while not self.block_production_terminated:
-            yield self.env.timeout(self.block_arrival_interval)
-
+        # Wait for all the blocks to be produced before moving on
+        yield self.block_production_terminated
         logger.info(
             f"Block production terminated at {self.env.now}.\n Producing tasks for the last block..."
         )
+
         yield self.env.timeout(self.block_arrival_interval)
 
-        logger.info(
-            f"Task production terminated at {self.env.now}.\n Unlocking the remaining budget and allocating available tasks..."
-        )
-        self.task_production_terminated = True
+        # All the blocks are here, time to stop creating online tasks
+        if not self.task_production_terminated.triggered:
+            self.task_production_terminated.succeed()
+            logger.info(
+                f"Task production terminated at {self.env.now}.\n Unlocking the remaining budget and allocating available tasks..."
+            )
 
         # We even wait a bit longer to ensure that all tasks are allocated (in case we need multiple scheduling steps)
         # TODO: add grace period that depends on T?
         yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
-        self.terminate_simulation()
+        # self.terminate_simulation()
+        # self.simulation_terminated.succeed()
 
     def daemon_clock(self):
-        while True:
+        while not self.simulation_terminated.triggered:
             try:
                 yield self.env.timeout(1)
                 logger.info(f"Simulation Time is: {self.env.now}")
@@ -92,23 +96,28 @@ class ResourceManager:
                 return
 
     def block_consumer(self):
+        # Needlessly convoluted?
         def consume():
+            # if self.block_production_terminated.triggered:
+            #     # Don't wait forever, no more block will arrive
+            #     return
+
             item = yield self.new_blocks_queue.get()
-            if isinstance(item, LastItem):
-                return
-            else:
-                block, generated_block_event = item
-                self.scheduler.add_block(block)
-                generated_block_event.succeed()
+            block, generated_block_event = item
+            self.scheduler.add_block(block)
+            generated_block_event.succeed()
 
         # Consume all initial blocks
         initial_blocks_num = self.config.get_initial_blocks_num()
         for _ in range(initial_blocks_num):
             yield self.env.process(consume())
         self.blocks_initialized.succeed()
+        logger.info(f"Initial blocks: {len(self.scheduler.blocks)}")
 
-        while not self.block_production_terminated:
+        while not self.block_production_terminated.triggered:
             yield self.env.process(consume())
+
+        logger.info("Done producing blocks.")
 
     def task_consumer(self):
         def consume():
@@ -122,7 +131,15 @@ class ResourceManager:
         for _ in range(initial_tasks_num):
             yield self.env.process(consume())
 
-        while not self.task_production_terminated:
+        logger.info("Done consuming initial tasks")
+
+        while not self.task_production_terminated.triggered:
             yield self.env.process(consume())
+
+        logger.info("Done consuming tasks")
+
         # Ask the scheduler to stop adding new scheduling steps
-        self.terminate_simulation()
+        # self.terminate_simulation()
+
+        # TODO: just replace by `task_consumed_event`?
+        self.simulation_terminated.succeed()
