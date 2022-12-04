@@ -24,26 +24,22 @@ class ILP(Planner):
 
         self.block_budgets = self.get_block_budgets(block_request)
 
-        start = time.time()
         block_request = (block_request[0], block_request[-1])
-        self.C = self.get_costs(query_id, n)
-        print(colored(f"Collecting stuff time: {time.time() - start}", "green"))
-
-        def f(k, delta, u):
-            return (math.sqrt(8 * k) * math.log(2 / delta)) / u
+        indices = self.get_indices(n)
+        self.C = self.get_costs(query_id, indices)
 
         best_solution = None
         best_objvalue = math.inf
         best_budget = None
 
         for k in range(1, n + 1):
-            e = f(k, self.delta, self.utility)
+            e = self.f(k, self.delta, self.utility)
             # print("e", e, "k", k)
             if e > self.emax:
-                return plan
+                break
 
             budget = BasicBudget(e)
-            solution, objvalue = self.solve_gurobi(budget.epsilon, k, n)
+            solution, objvalue = self.solve_gurobi(budget.epsilon, k, n, indices)
 
             if solution:
                 if objvalue <= best_objvalue:
@@ -64,14 +60,12 @@ class ILP(Planner):
                     "yellow",
                 )
             )
-
-        # print(colored(f"optimization took:  {time.time() - start}", "blue"))
         if plan:
             return plan
         else:
             return None
 
-    def solve_gurobi(self, budget_demand, K, N):
+    def solve_gurobi(self, budget_demand, K, N, indices):
         t = time.time()
 
         with gp.Env(empty=True) as env:
@@ -81,7 +75,7 @@ class ILP(Planner):
 
             m.Params.OutputFlag = 0
             # m.Params.TimeLimit = self.simulator_config.metric.gurobi_timeout
-            m.Params.Threads = 32  # self.simulator_config.metric.gurobi_threads
+            # self.simulator_config.metric.gurobi_threads
             # m.Params.LogToConsole = 0
 
             # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
@@ -90,37 +84,26 @@ class ILP(Planner):
             # Set coefficients
             coeffs = {}
             cost_per_block_per_chunk = {}
-            for i in range(N):
-                for j in range(i, N):
-                    if self.satisfies_constraint((i, j)):
-                        num_blocks = j - i + 1
-                        cost_per_block = max(budget_demand - self.C[(i, j)], 0)
-                        if (
-                            cost_per_block > 0
-                        ):  # If the result was not stored with enough budget
-                            cost_per_block = (
-                                budget_demand  # Turning off optimization for now
-                            )
-                        cost_per_block_per_chunk[(i, j)] = cost_per_block
-                        coeffs[(i, j)] = cost_per_block * num_blocks
+            for (i, j) in indices:
+                num_blocks = j - i + 1
+                cost_per_block = max(budget_demand - self.C[(i, j)], 0)
+                if (
+                    cost_per_block > 0
+                ):  # If the result was not stored with enough budget
+                    cost_per_block = budget_demand  # Turning off optimization for now
+                cost_per_block_per_chunk[(i, j)] = cost_per_block
+                coeffs[(i, j)] = cost_per_block * num_blocks
 
-            # Variables
             # A variable per chunk
             x = m.addVars(
-                [
-                    (i, j)
-                    for i in range(N)
-                    for j in range(i, N)
-                    if self.satisfies_constraint((i, j))
-                ],
+                [(i, j) for (i, j) in indices],
                 vtype=GRB.INTEGER,
                 lb=0,
                 ub=1,
                 name="x",
             )
 
-            # Constraints
-            # No overlapping chunks
+            # No overlapping chunks constraint
             for k in range(N):  # For every block
                 m.addConstr(
                     (
@@ -128,34 +111,24 @@ class ILP(Planner):
                             x[i, j]
                             for i in range(k + 1)
                             for j in range(k, N)
-                            if self.satisfies_constraint((i, j))
+                            if (i, j) in indices
                         )
                     )
                     == 1
                 )
 
-            # Enough budget in blocks
+            # Enough budget in blocks constraint
             for k in range(N):  # For every block
                 for i in range(k + 1):
                     for j in range(k, N):
-                        if self.satisfies_constraint((i, j)):
+                        if (i, j) in indices:
                             m.addConstr(
                                 x[i, j] * cost_per_block_per_chunk[(i, j)]
                                 <= self.block_budgets[k]
                             )
 
-            # Aggregations must be at most K-1
-            m.addConstr(
-                (
-                    gp.quicksum(
-                        x[i, j]
-                        for i in range(N)
-                        for j in range(i, N)
-                        if self.satisfies_constraint((i, j))
-                    )
-                )
-                <= K
-            )
+            # Aggregations must be at most K-1 constraint
+            m.addConstr((gp.quicksum(x[i, j] for (i, j) in indices)) <= K)
 
             # Objective function
             m.setObjective(x.prod(coeffs), GRB.MINIMIZE)
@@ -167,17 +140,13 @@ class ILP(Planner):
 
             if m.Status == GRB.TIME_LIMIT:
                 raise Exception(
-                    f"Solver timeout after {self.simulator_config.metric.gurobi_timeout}s"
+                    # f"Solver timeout after {self.simulator_config.metric.gurobi_timeout}s"
                 )
-
-            # print("\n\nOBJ", m.objval)
             if m.status == GRB.OPTIMAL:
                 return [
                     (i, j)
-                    for i in range(N)
-                    for j in range(i, N)
-                    if self.satisfies_constraint((i, j))
-                    and int((abs(x[i, j].x - 1) < 1e-4)) == 1
+                    for (i, j) in indices
+                    if int((abs(x[i, j].x - 1) < 1e-4)) == 1
                 ], m.objval
             return [], math.inf
 
@@ -187,14 +156,20 @@ class ILP(Planner):
             self.blocks[block_id].budget.epsilon for block_id in block_request
         ]  # available budget of blocks
 
-    def get_costs(self, query_id, N):
+    def get_costs(self, query_id, indices):
         C = {}
-        for i in range(N):
-            for j in range(i, N):
-                if self.satisfies_constraint((i, j)):
-                    C[(i, j)] = self.cache.get_entry_budget(query_id, (i, j))
-                # C[(i,j)] = random.uniform(0, 5)
+        for (i, j) in indices:
+            C[(i, j)] = self.cache.get_entry_budget(query_id, (i, j))
+            # C[(i,j)] = random.uniform(0, 5)
         return C
+
+    def get_indices(self, n):
+        indices = set()
+        for i in range(n):
+            for j in range(i, n):
+                if self.satisfies_constraint((i, j)):
+                    indices.add(((i, j)))
+        return indices
 
     def satisfies_constraint(self, blocks, branching_factor=2):
         size = blocks[1] - blocks[0] + 1
@@ -203,6 +178,9 @@ class ILP(Planner):
         if (blocks[0] % size) != 0:
             return False
         return True
+
+    def f(self, k, delta, u):
+        return (math.sqrt(8 * k) * math.log(2 / delta)) / u
 
 
 def test():
