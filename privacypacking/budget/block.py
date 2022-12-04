@@ -128,7 +128,7 @@ class HyperBlock:
             raise NotImplementedError("Try to find the best sigma?")
 
         result += noise_sample
-        return result, noise_sample
+        return result
 
     def can_run(self, demand) -> bool:
         """

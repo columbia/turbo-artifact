@@ -11,8 +11,9 @@ class R:
 
 
 class A:
-    def __init__(self, l) -> None:
+    def __init__(self, l, budget=None) -> None:
         self.l = l
+        self.budget = budget
 
     def __str__(
         self,

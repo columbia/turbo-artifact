@@ -14,6 +14,8 @@ from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilicticCache
 from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
+from privacypacking.planner.dynamic_programming_planner_utility import DynamicProgrammingPlannerUtility
+from privacypacking.planner.ilp import ILP
 from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.planner.no_planner import NoPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
@@ -40,7 +42,6 @@ class TasksInfo:
         self.tasks_submit_time = {}
         self.result = {}
         self.error = {}
-        # self.realized_budget = 0
 
     def dump(self):
         tasks_info = {
@@ -101,7 +102,14 @@ class Scheduler:
         self.n_allocated_tasks = 0
 
         self.cache = globals()[self.omegaconf["cache"]]()
-        self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
+        self.utility = self.simulator_config.utility
+        x = self.omegaconf["planner"].split(":")
+        planner_type = x[0]
+        if len(x) > 1:
+            planner_branching_factor = int(x[1])
+            self.planner = globals()[planner_type](self.cache, self.blocks, planner_branching_factor, self.utility)
+        else:
+            self.planner = globals()[planner_type](self.cache, self.blocks, self.utility)
 
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
@@ -155,10 +163,10 @@ class Scheduler:
 
             for task in sorted_tasks:
                 # Do not schedule tasks whose lifetime has been exceeded
+                # print("task", task.id, self.get_num_blocks(), self.initial_blocks_num, self.tasks_info.tasks_submit_time[task.id])
                 if (
                     self.tasks_info.tasks_lifetime[task.id]
-                    < (self.get_num_blocks() - self.initial_blocks_num)
-                    - self.tasks_info.tasks_submit_time[task.id]
+                    <= (self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id])
                 ):
                     continue
 
@@ -166,15 +174,16 @@ class Scheduler:
                 bs_tuple = (bs_list[0], bs_list[-1])
 
                 start = time.process_time()
-                end = None
 
                 plan = None
                 if (
                     self.omegaconf.enable_caching
                 ):  # Find a plan to run the query using caching
+                    # print(f"Getting plan for task {task.id}")
                     plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
                         task.query_id, bs_list, task.budget
-                    )                    
+                    )
+                    # time.sleep(10)
                 elif (
                     self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
                 ):
@@ -192,6 +201,7 @@ class Scheduler:
                 # Execute Plan
                 if plan is not None:
                     result = self.execute_plan(plan)
+                    task.budget = plan.budget
                     self.update_allocated_task(task)
 
                     # ----------- Logging ----------- #
@@ -236,7 +246,7 @@ class Scheduler:
             query = self.query_pool.get_query(plan.query_id)
 
             if self.omegaconf.enable_caching:  # Using cache
-                result, budget, noise = self.cache.run(
+                result, budget = self.cache.run(
                     query_id=plan.query_id,
                     query=query,
                     run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
@@ -244,16 +254,15 @@ class Scheduler:
                 )
             else:  # Not using cache
                 if self.omegaconf.enable_dp:  # Add DP noise
-                    result, noise = hyperblock.run_dp(query, plan.budget)
+                    result = hyperblock.run_dp(query, plan.budget)
                     budget = plan.budget
                 else:
                     result = hyperblock.run(query, plan.budget)
-                    noise = 0
                     budget = None
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-            return (result, noise, hyperblock.size)
+            return (result, hyperblock.size)
 
         elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
@@ -262,16 +271,12 @@ class Scheduler:
 
             result = 0
             total_size = 0
-            total_noise = 0
 
-            for (res, noise, size) in agglist:
+            for (res, size) in agglist:
                 # result += size * res
                 result += res
                 total_size += size
-                total_noise += noise
-            # print("Agg noise", total_noise/len(agglist))
-            # print("Agg noise", total_noise)
-            return result  # / total_size
+            return result
 
         else:
             logger.error("Execution: no such operator")

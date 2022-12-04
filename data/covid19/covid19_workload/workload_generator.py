@@ -2,6 +2,9 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from loguru import logger
+import typer
+
+app = typer.Typer()
 
 
 class Task:
@@ -19,38 +22,46 @@ class PrivacyWorkload:
 
     def __init__(
         self,
+        one_task,
+        all_blocks,
+        blocks_num,
+        initial_blocks_num,
+        query_types,
+        requested_blocks_num
     ):
-        self.tasks = None
 
-        #   ------------  Configure  ------------ #
-        self.blocks_num = 600  # days
-        self.initial_blocks_num = 1
-        self.query_types = [0]  # [33479, 34408]
-        # self.std_num_tasks = 5
-        # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800]
-        #   ------------  /Configure  ------------ #
-
+        self.blocks_num = blocks_num
+        self.initial_blocks_num = initial_blocks_num
+        self.query_types = query_types
+        self.requested_blocks_num = requested_blocks_num
+        self.one_task = one_task
+        self.all_blocks = all_blocks
         self.tasks = []
+
         for i in range(self.blocks_num):
             self.tasks += self.generate_one_day_tasks(i, self.query_types)
 
     def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
-        # num_tasks = (
-        #     np.abs(np.random.normal(1, self.std_num_tasks, 1)).astype(int) + 1
-        # )
-        num_tasks = [1]
+        num_existing_blocks = start_time + self.initial_blocks_num
+
+        if self.one_task:
+            std_num_tasks = 0
+        else:
+            std_num_tasks = 5
+        if self.all_blocks:
+            nblocks = num_existing_blocks
+        else:
+            nblocks_options = [
+                n for n in self.requested_blocks_num if n <= num_existing_blocks
+            ]
+            nblocks = np.random.choice(nblocks_options, 1)[0]
+
+        num_tasks = np.abs(np.random.normal(1, std_num_tasks, 1)).astype(int)
+
         for _ in range(num_tasks[0]):
             query_id = np.random.choice(query_types)
             query_type = "count"
-            # start time is in block units, so it indicates how many blocks currently exist
-            # we use this info so that a task does not request more blocks than those existing
-            num_existing_blocks = start_time + self.initial_blocks_num
-            # nblocks_options = [
-            #     n for n in self.requested_blocks_num if n <= num_existing_blocks
-            # ]
-            # nblocks = np.random.choice(nblocks_options, 1)[0]
-            nblocks = num_existing_blocks
             tasks.append(Task(start_time, nblocks, query_id, query_type))
         return tasks
 
@@ -97,16 +108,32 @@ class PrivacyWorkload:
     def compute_budget(
         self,
     ):
-        delta = 0.00001
-        epsilon = [1]
+        delta = 100 #      # those user defined values don't matter now so I won't them 
+        epsilon = [1000] #[0.5]     # to cause trouble if code takes them into account
         return epsilon, delta
 
     def compute_block_selection_policy(self):
         return "LatestBlocksFirst"
 
 
-def main() -> None:
-    privacy_workload = PrivacyWorkload()
+@app.command()
+def main():
+    blocks_num = 400
+    initial_blocks_num = 1
+    query_types = [0]
+    requested_blocks_num = list(range(1, blocks_num))
+
+    all_blocks = True
+    one_task = True
+
+    privacy_workload = PrivacyWorkload(
+        one_task,
+        all_blocks,
+        blocks_num,
+        initial_blocks_num,
+        query_types,
+        requested_blocks_num,
+    )
     privacy_workload.generate()
     privacy_workload.dump()
 

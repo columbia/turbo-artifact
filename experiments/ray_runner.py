@@ -47,6 +47,7 @@ def grid_online(
     avg_num_tasks_per_block: List[int] = [100],
     repetitions: int = 1,
     enable_random_seed: bool = False,
+    utility: List[int] = [100],
 ):
     # Progressive unlocking
     # n = [1_000]
@@ -60,6 +61,7 @@ def grid_online(
             "epsilon": 10,
             "delta": 0.00001,
             "enable_random_seed": enable_random_seed,
+            "utility": tune.grid_search(utility),
             "scheduler": {
                 "metric_recomputation_period": tune.grid_search(
                     metric_recomputation_period

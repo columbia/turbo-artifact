@@ -76,7 +76,7 @@ class Config:
     def dump(self) -> dict:
         return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
 
-    def create_task(self, task_id: int, convert_to_rdp=True, gaussian=True) -> Task:
+    def create_task(self, task_id: int, convert_to_rdp=False, gaussian=True) -> Task:
         # TODO: New omegaconf option for this? Or just use RDP really everywhere?
         _, task_row = next(self.tasks_generator)
 
@@ -117,16 +117,16 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        # block = Block(
-        #     block_id,
-        #     BasicBudget(self.omegaconf.epsilon),
-        # )
-        block = Block.from_epsilon_delta(
+        block = Block(
             block_id,
-            self.omegaconf.epsilon,
-            self.omegaconf.delta,
-            alpha_list=self.omegaconf.alphas,
+            BasicBudget(self.omegaconf.epsilon),
         )
+        # block = Block.from_epsilon_delta(
+        #     block_id,
+        #     self.omegaconf.epsilon,
+        #     self.omegaconf.delta,
+        #     alpha_list=self.omegaconf.alphas,
+        # )
         return block
 
     def set_task_arrival_time(self):

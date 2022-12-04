@@ -4,7 +4,7 @@ import mlflow
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
-
+import numpy as np
 import pandas as pd
 from omegaconf import OmegaConf
 
@@ -19,9 +19,6 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
-
-import numpy as np
-
 
 def mlflow_log(key, value, step):
     mlflow_run = mlflow.active_run()
@@ -138,7 +135,7 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
-        # "budget_utilization": bu,
+        "utility": omegaconf.utility,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,

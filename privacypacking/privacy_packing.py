@@ -3,7 +3,7 @@ import os
 
 import mlflow
 import typer
-
+import datetime
 from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, save_logs
@@ -16,6 +16,7 @@ def main(config):
 
     if conf.omegaconf.logs.mlflow:
         os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
+        mlflow.set_experiment(experiment_id="0")
         with mlflow.start_run():
             mlflow.log_param("config", conf)
             logs = Simulator(conf).run()

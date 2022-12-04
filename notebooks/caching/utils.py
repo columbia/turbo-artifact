@@ -82,13 +82,18 @@ def get_blocks_information(df):
     dfs = []
     for (blocks, key) in df[['blocks', 'key']].values:
         for block in blocks:
-            orders = block['budget']['orders']
-            order = max(orders, key=orders.get)
-            max_available_budget = orders[order]
-            initial_budget = block['initial_budget']['orders'][order]
+            # orders = block['budget']['orders']
+            # order = max(orders, key=orders.get)
+            # max_available_budget = orders[order]
+            # initial_budget = block['initial_budget']['orders'][order]
+            # dfs.append(pd.DataFrame([{"id": block['id'], 
+            #                           "initial_budget": initial_budget, 
+            #                           "budget": max_available_budget,
+            #                           "key": key,
+            #                         }]))
             dfs.append(pd.DataFrame([{"id": block['id'], 
-                                      "initial_budget": initial_budget, 
-                                      "budget": max_available_budget,
+                                      "initial_budget": block['initial_budget']['epsilon'], 
+                                      "budget": block['budget']['epsilon'],
                                       "key": key,
                                     }]))
     if dfs:
@@ -102,7 +107,7 @@ def analyze_experiment(tasks_path, experiment_path):
     tasks.reset_index()
     tasks['id'] = tasks.index
 
-    fig = px.line(
+    fig = px.scatter(
         tasks,
         x="id",
         y="submit_time",
@@ -110,7 +115,7 @@ def analyze_experiment(tasks_path, experiment_path):
     )
     iplot(fig)
     
-    fig = px.line(
+    fig = px.scatter(
         tasks,
         x="id",
         y="n_blocks",
@@ -119,7 +124,9 @@ def analyze_experiment(tasks_path, experiment_path):
     iplot(fig)
     
     df = get_df(experiment_path)
-    df['key'] = df['planner'] #+ " " + df['cache']
+    df['utility'] = df['utility'].astype(str)
+
+    df['key'] = df['planner'] + " " + df['utility']
     df.drop(columns=['planner', 'cache'], inplace=True)
 
     metrics = df[['key', 'n_allocated_tasks', 'total_tasks']]

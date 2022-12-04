@@ -1,34 +1,50 @@
 from privacypacking.planner.planner import Planner
 from privacypacking.cache.cache import A, R
+from privacypacking.budget import BasicBudget
 import numpy as np
 import math
 
 
-class DynamicProgrammingPlanner(Planner):
-    def __init__(self, cache, blocks, branching_factor):
+class DynamicProgrammingPlannerUtility(Planner):
+    def __init__(self, cache, blocks, branching_factor, utility):
         super().__init__(cache)
         self.blocks = blocks
+        self.cost_table = None
+        self.path_table = None
         self.branching_factor = branching_factor
+        self.delta = 0.00001
+        self.utility = utility
+        self.emax = 0.5
 
-    def get_execution_plan(self, query_id, blocks, budget):
+    def get_execution_plan(self, query_id, blocks, _):
+        plan = None
+        n = len(blocks)
         blocks = (blocks[0], blocks[-1])
-        self.create_table(query_id, blocks, budget)
-        idx = mapping_blocks_to_cell(blocks)
-        plan = self.get_plan_from_path(idx)
-        if plan is not None:
-            plan = A(plan, budget)
-            print(f"Got plan for blocks {blocks}: {plan}, {plan.budget}")
-        
-        # n = len(self.blocks)
-        # for i in range(n):
-        #     for j in range(n - i):
-        #         print(self.cost_table[i][j], end=" ")
 
-        #     print("\n")
-        # for i in range(n):
-        #     for j in range(n - i):
-        #         print(self.path_table[i][j], end=" ")
-        #     print("\n")
+        def min_epsilon(k, delta, u):
+            return (math.sqrt(8*k)*math.log(2/delta)) / u
+
+        ek_pairs = {}
+        for k in range(1, n+1):
+            ek_pairs[k] = min_epsilon(k, self.delta, self.utility)
+        # print("EK pairs", ek_pairs)
+
+        for k,e in ek_pairs.items():
+            # print("e", e, "k", k)
+            if e > self.emax:
+                return plan
+
+            budget = BasicBudget(e)
+            self.create_table(query_id, blocks, budget)
+            idx = mapping_blocks_to_cell(blocks)
+            bestCost = self.get_cost_from_costs(idx)
+            # print("bestCost:", bestCost, "K:", k)
+            if bestCost <= k:
+                plan = self.get_plan_from_path(idx)
+                if plan is not None:
+                    plan = A(plan, budget)
+                    print(f"Got plan for blocks {blocks}: {plan}, {plan.budget}")
+                    return plan
         return plan
 
     def create_table(self, query_id, block_request, budget):
@@ -60,6 +76,12 @@ class DynamicProgrammingPlanner(Planner):
                     self.cost_table[i][j] = costs[idx]
                     self.path_table[i][j] = paths[idx]
 
+
+    def get_cost_from_costs(self, request):
+        i = request[0]
+        j = request[1]
+        return self.cost_table[i][j]
+
     def get_plan_from_path(self, request):
         i = request[0]
         j = request[1]
@@ -88,7 +110,7 @@ def get_cost(plan, requested_blocks, blocks, budget):
 def test():
     def run(request):
         blocks = [0, 1, 2, 3, 4, 5]
-        dplanner = DynamicProgrammingPlanner(None, blocks)       
+        dplanner = DynamicProgrammingPlannerUtility(None, blocks)       
         dplanner.create_table(0, request, 0)
         n = len(blocks)
         for i in range(n):
