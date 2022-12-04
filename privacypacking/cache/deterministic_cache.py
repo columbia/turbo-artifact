@@ -22,14 +22,14 @@ class DeterministicCache(Cache):
                 (result, old_budget) = self.key_values[query_id][hyperblock_id]
                 if old_budget >= budget:
                     return result, old_budget
-        return None, None 
+        return None, None
 
     def get_entry(self, query_id, hyperblock_id):
         if query_id in self.key_values:
             if hyperblock_id in self.key_values[query_id]:
                 (result, budget) = self.key_values[query_id][hyperblock_id]
                 return result, budget
-        return None, None 
+        return None, None
 
     def run(
         self, query_id, query, run_budget, hyperblock: HyperBlock
@@ -57,14 +57,18 @@ class DeterministicCache(Cache):
         elif isinstance(plan, R):  # Get cost of Run operator
             # print(f"getting cost for {plan}")
 
-            if structure_constraint and not self.satisfies_constraint(plan.blocks, branching_factor):
+            if structure_constraint and not self.satisfies_constraint(
+                plan.blocks, branching_factor
+            ):
                 # print("Cost: Not binary!")
                 return math.inf
 
             block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
             hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
 
-            result, _ = self.get_entry_with_budget(plan.query_id, hyperblock.id, plan.budget)
+            result, _ = self.get_entry_with_budget(
+                plan.query_id, hyperblock.id, plan.budget
+            )
             if result:
                 return 1  # Already cached
             else:
@@ -82,7 +86,6 @@ class DeterministicCache(Cache):
         if result:
             return budget.epsilon
         return 0.0
-                
 
     def satisfies_constraint(self, blocks, branching_factor):
         size = blocks[1] - blocks[0] + 1

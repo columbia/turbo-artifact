@@ -27,7 +27,7 @@ class PrivacyWorkload:
         blocks_num,
         initial_blocks_num,
         query_types,
-        requested_blocks_num
+        requested_blocks_num,
     ):
 
         self.blocks_num = blocks_num
@@ -108,8 +108,8 @@ class PrivacyWorkload:
     def compute_budget(
         self,
     ):
-        delta = 100 #      # those user defined values don't matter now so I won't them 
-        epsilon = [1000] #[0.5]     # to cause trouble if code takes them into account
+        delta = 100  #      # those user defined values don't matter now so I won't them
+        epsilon = [1000]  # [0.5]     # to cause trouble if code takes them into account
         return epsilon, delta
 
     def compute_block_selection_policy(self):

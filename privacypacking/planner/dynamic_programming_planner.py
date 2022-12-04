@@ -18,7 +18,7 @@ class DynamicProgrammingPlanner(Planner):
         if plan is not None:
             plan = A(plan, budget)
             print(f"Got plan for blocks {blocks}: {plan}, {plan.budget}")
-        
+
         # n = len(self.blocks)
         # for i in range(n):
         #     for j in range(n - i):
@@ -41,12 +41,14 @@ class DynamicProgrammingPlanner(Planner):
         # for i in range(n):
         #     for j in range(n - i):
         start = block_request[0]
-        end = block_request[1]+1
-        for i in range(end-start):
+        end = block_request[1] + 1
+        for i in range(end - start):
             for j in range(start, end - i):
                 blocks = (j, j + i)
                 Cij_plan = R(query_id, blocks, budget)  # Cost of [j,j+i] with no cuts
-                Cij = self.cache.get_cost(Cij_plan, self.blocks, True, self.branching_factor)
+                Cij = self.cache.get_cost(
+                    Cij_plan, self.blocks, True, self.branching_factor
+                )
                 costs = [Cij]
                 paths = [Cij_plan]
                 for k in range(i):
@@ -88,7 +90,7 @@ def get_cost(plan, requested_blocks, blocks, budget):
 def test():
     def run(request):
         blocks = [0, 1, 2, 3, 4, 5]
-        dplanner = DynamicProgrammingPlanner(None, blocks)       
+        dplanner = DynamicProgrammingPlanner(None, blocks)
         dplanner.create_table(0, request, 0)
         n = len(blocks)
         for i in range(n):
@@ -109,7 +111,8 @@ def test():
     request = (0, 4)
     run(request)
     request = (2, 4)
-    run(request)    
+    run(request)
+
 
 if __name__ == "__main__":
     test()

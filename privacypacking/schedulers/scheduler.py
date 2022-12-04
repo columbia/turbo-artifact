@@ -16,7 +16,9 @@ from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilisticCache
 from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
-from privacypacking.planner.dynamic_programming_planner_utility import DynamicProgrammingPlannerUtility
+from privacypacking.planner.dynamic_programming_planner_utility import (
+    DynamicProgrammingPlannerUtility,
+)
 from privacypacking.planner.ilp import ILP
 from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.planner.no_planner import NoPlanner
@@ -110,9 +112,13 @@ class Scheduler:
         planner_type = x[0]
         if len(x) > 1:
             planner_branching_factor = int(x[1])
-            self.planner = globals()[planner_type](self.cache, self.blocks, planner_branching_factor, self.utility)
+            self.planner = globals()[planner_type](
+                self.cache, self.blocks, planner_branching_factor, self.utility
+            )
         else:
-            self.planner = globals()[planner_type](self.cache, self.blocks, self.utility)
+            self.planner = globals()[planner_type](
+                self.cache, self.blocks, self.utility
+            )
 
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
@@ -167,9 +173,8 @@ class Scheduler:
             for task in sorted_tasks:
                 # Do not schedule tasks whose lifetime has been exceeded
                 # print("task", task.id, self.get_num_blocks(), self.initial_blocks_num, self.tasks_info.tasks_submit_time[task.id])
-                if (
-                    self.tasks_info.tasks_lifetime[task.id]
-                    <= (self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id])
+                if self.tasks_info.tasks_lifetime[task.id] <= (
+                    self.get_num_blocks() - self.tasks_info.tasks_submit_time[task.id]
                 ):
                     continue
 

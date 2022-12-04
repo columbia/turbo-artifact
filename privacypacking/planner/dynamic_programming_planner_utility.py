@@ -22,14 +22,14 @@ class DynamicProgrammingPlannerUtility(Planner):
         blocks = (blocks[0], blocks[-1])
 
         def min_epsilon(k, delta, u):
-            return (math.sqrt(8*k)*math.log(2/delta)) / u
+            return (math.sqrt(8 * k) * math.log(2 / delta)) / u
 
         ek_pairs = {}
-        for k in range(1, n+1):
+        for k in range(1, n + 1):
             ek_pairs[k] = min_epsilon(k, self.delta, self.utility)
         # print("EK pairs", ek_pairs)
 
-        for k,e in ek_pairs.items():
+        for k, e in ek_pairs.items():
             # print("e", e, "k", k)
             if e > self.emax:
                 return plan
@@ -57,12 +57,14 @@ class DynamicProgrammingPlannerUtility(Planner):
         # for i in range(n):
         #     for j in range(n - i):
         start = block_request[0]
-        end = block_request[1]+1
-        for i in range(end-start):
+        end = block_request[1] + 1
+        for i in range(end - start):
             for j in range(start, end - i):
                 blocks = (j, j + i)
                 Cij_plan = R(query_id, blocks, budget)  # Cost of [j,j+i] with no cuts
-                Cij = self.cache.get_cost(Cij_plan, self.blocks, True, self.branching_factor)
+                Cij = self.cache.get_cost(
+                    Cij_plan, self.blocks, True, self.branching_factor
+                )
                 costs = [Cij]
                 paths = [Cij_plan]
                 for k in range(i):
@@ -75,7 +77,6 @@ class DynamicProgrammingPlannerUtility(Planner):
                 if not math.isinf(costs[idx]):
                     self.cost_table[i][j] = costs[idx]
                     self.path_table[i][j] = paths[idx]
-
 
     def get_cost_from_costs(self, request):
         i = request[0]
@@ -110,7 +111,7 @@ def get_cost(plan, requested_blocks, blocks, budget):
 def test():
     def run(request):
         blocks = [0, 1, 2, 3, 4, 5]
-        dplanner = DynamicProgrammingPlannerUtility(None, blocks)       
+        dplanner = DynamicProgrammingPlannerUtility(None, blocks)
         dplanner.create_table(0, request, 0)
         n = len(blocks)
         for i in range(n):
@@ -131,7 +132,8 @@ def test():
     request = (0, 4)
     run(request)
     request = (2, 4)
-    run(request)    
+    run(request)
+
 
 if __name__ == "__main__":
     test()

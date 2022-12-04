@@ -21,6 +21,7 @@ TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
 
+
 def mlflow_log(key, value, step):
     mlflow_run = mlflow.active_run()
     if mlflow_run:
