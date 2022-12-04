@@ -26,22 +26,30 @@ class Blocks:
         for _ in range(initial_blocks_num):
             self.env.process(self.block(next(self.blocks_count)))
 
-        if initial_blocks_num != self.config.omegaconf.blocks.max_num:
-            while not self.resource_manager.block_production_terminated:
-                block_arrival_interval = self.config.set_block_arrival_time()
-                block_id = next(self.blocks_count)
-                self.env.process(self.block(block_id))
+        for _ in range(self.config.omegaconf.blocks.max_num - initial_blocks_num):
+            block_arrival_interval = self.config.set_block_arrival_time()
+            block_id = next(self.blocks_count)
+            self.env.process(self.block(block_id))
+            yield self.env.timeout(block_arrival_interval)
 
-                yield self.env.timeout(block_arrival_interval)
+        self.resource_manager.block_production_terminated.succeed()
 
-                if (
-                    self.config.max_blocks is not None
-                    and block_id == self.config.max_blocks - 1
-                ):
-                    self.resource_manager.block_production_terminated = True
+        # if initial_blocks_num != self.config.omegaconf.blocks.max_num:
+        #     while not self.resource_manager.block_production_terminated:
+        #         block_arrival_interval = self.config.set_block_arrival_time()
+        #         block_id = next(self.blocks_count)
+        #         self.env.process(self.block(block_id))
 
-            # Send a special message to close the channel
-            self.resource_manager.new_blocks_queue.put(LastItem())
+        #         yield self.env.timeout(block_arrival_interval)
+
+        #         if (
+        #             self.config.max_blocks is not None
+        #             and block_id == self.config.max_blocks - 1
+        #         ):
+        #             self.resource_manager.block_production_terminated = True
+
+        # # Send a special message to close the channel
+        # self.resource_manager.new_blocks_queue.put(LastItem())
 
     def block(self, block_id):
         """

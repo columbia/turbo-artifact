@@ -124,13 +124,12 @@ class TBudgetUnlocking(Scheduler):
         super().add_block(unlocking_block)
         self.env.process(unlocking_block.wait_and_unlock())
 
-    def run_batch_scheduling(self, period: float) -> List[int]:
-        while True:
-            try:
-                yield self.env.timeout(period)
-                super().schedule_queue()
-            except Interrupt as i:
-                return
+    def run_batch_scheduling(
+        self, simulation_termination_event, period: float
+    ) -> List[int]:
+        while not simulation_termination_event.triggered:
+            yield self.env.timeout(period)
+            super().schedule_queue()
 
     def can_run(self, demand):
         for block_id, demand_budget in demand.items():
