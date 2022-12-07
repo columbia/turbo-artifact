@@ -100,7 +100,7 @@ class PMW:
                 self.noisy_threshold = self.alpha / 2 + np.random.laplace(
                     0, self.Delta * self.nu
                 )
-                svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
+                run_budget = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
             else:
                 self.noisy_threshold = self.alpha / 2 + np.random.normal(
                     0, self.Delta * self.ro

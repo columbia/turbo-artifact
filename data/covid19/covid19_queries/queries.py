@@ -72,6 +72,23 @@ def create_specific_queries(queries_path, type="positive_cases"):
         ]
         for d in dicts:
             query_tensors.append(k_way_marginal_query_list(d, attribute_sizes))
+    elif type == "all_2way_marginals":
+        query_tensors = []
+        attribute_sizes = [2, 2, 4, 8]
+        dicts = []
+
+        # Conjunctions of 0 with something else, then 1 with something else than 0, etc.
+        for i in range(4):
+            for a in range(attribute_sizes[i]):
+                for j in range(i, 4):
+                    for b in range(attribute_sizes[i]):
+                        dicts.append({i: a, j: b})
+
+        # Only 124 2-way marginals! Pretty small, let's see if that's enough for PMW to shine
+        print(f"We have {len(dicts)} 2-way marginals. Computing the tensors...")
+
+        for d in dicts:
+            query_tensors.append(k_way_marginal_query_list(d, attribute_sizes))
 
     # Write queries to a json file
     queries = {}
@@ -124,10 +141,11 @@ class QueryPool:
 
 @app.command()
 def main(
-    queries_path: str = REPO_ROOT.joinpath("data/covid19/covid19_queries/queries.json"),
+    queries_dir: str = REPO_ROOT.joinpath("data/covid19/covid19_queries"),
     blocks_metadata_path: str = REPO_ROOT.joinpath(
         "data/covid19/covid19_data/metadata.json"
     ),
+    workload="all_2way_marginals",
 ):
 
     try:
@@ -143,7 +161,9 @@ def main(
     # )  # Query space size for covid dataset: 34425
 
     # create_specific_queries(queries_path)
-    create_specific_queries(queries_path, type="2way_marginal_mix")
+    # create_specific_queries(queries_path, type="2way_marginal_mix")
+    queries_path = queries_dir.joinpath(f"{workload}.queries.json")
+    create_specific_queries(queries_path, type=workload)
 
 
 if __name__ == "__main__":

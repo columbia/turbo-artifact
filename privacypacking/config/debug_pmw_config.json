@@ -35,7 +35,7 @@
         "tasks": {
             "sampling": "poisson",
             "path": "covid19/covid19_workload/privacy_tasks_monoblock.csv",
-            "queries_path": "covid19/covid19_queries/queries.json",
+            "queries_path": "covid19/covid19_queries/all_2way_marginals.queries.json",
             "block_selection_policy": "LatestBlocksFirst",
             "avg_num_tasks_per_block": 500,
             "max_num": 100,
