@@ -2,7 +2,7 @@ import json
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from loguru import logger
 from omegaconf import DictConfig
@@ -42,6 +42,7 @@ class TasksInfo:
         self.tasks_submit_time = {}
         self.result = {}
         self.error = {}
+        self.run_metadata = {}
         # self.realized_budget = 0
 
     def dump(self):
@@ -118,11 +119,11 @@ class Scheduler:
     def now(self) -> Optional[float]:
         return self.env.now if hasattr(self, "env") else 0
 
-    def update_allocated_task(self, task: Task) -> None:
+    def update_allocated_task(self, task: Task, run_metadata: Dict = {}) -> None:
         """
         Cleans up scheduler's state
         """
-        # Clean/update scheduler's state
+        # Update task logs
         self.tasks_info.tasks_status[task.id] = ALLOCATED
         self.tasks_info.allocated_resources_events[task.id].succeed()
         del self.tasks_info.allocated_resources_events[task.id]
@@ -134,6 +135,9 @@ class Scheduler:
         self.tasks_info.allocated_tasks[task.id] = task
         self.allocated_task_ids.append(task.id)
         self.tasks_info.allocation_index[task.id] = self.allocation_counter
+        self.tasks_info.run_metadata[task.id] = run_metadata
+
+        # Update scheduler global state
         self.allocation_counter += 1
         self.n_allocated_tasks += 1
         self.task_queue.tasks.remove(task)
@@ -145,6 +149,8 @@ class Scheduler:
         Returns:
             List[int]: the ids of the tasks that were scheduled
         """
+        # TODO: decompose into smaller functions? weird to have cache/planer leaking into the scheduler
+
         # Run until scheduling cycle ends
         converged = False
         cycles = 0
@@ -193,10 +199,14 @@ class Scheduler:
 
                 # Execute Plan
                 if plan is not None:
-                    result = self.execute_plan(plan)
-                    self.update_allocated_task(task)
+                    result, run_metadata = self.execute_plan(plan)
+                    print(f"Plan return met: {run_metadata}")
+                    self.update_allocated_task(task, run_metadata)
 
                     # ----------- Logging ----------- #
+                    # TODO:compute this in the query run and store in the metadata instead
+                    #       then, just log some parts of the metadata to mlflow
+
                     self.tasks_info.result[task.id] = result
                     mlflow_log(
                         f"{self.experiment_prefix}accuracy/result", result, task.id
@@ -231,7 +241,7 @@ class Scheduler:
 
         return self.allocated_task_ids
 
-    def execute_plan(self, plan):
+    def execute_plan(self, plan) -> Tuple[float, Dict]:
         # TODO: Consider making an executor class
         # TODO: simplify? Just R then A, no need for recursion. plan = list of cuts?
         if isinstance(plan, R):  # Run Query
@@ -240,7 +250,7 @@ class Scheduler:
             query = self.query_pool.get_query(plan.query_id)
 
             if self.omegaconf.enable_caching:  # Using cache
-                result, budget, noise = self.cache.run(
+                result, budget, run_metadata = self.cache.run(
                     query_id=plan.query_id,
                     query=query,
                     run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
@@ -248,34 +258,45 @@ class Scheduler:
                 )
             else:  # Not using cache
                 if self.omegaconf.enable_dp:  # Add DP noise
-                    result, noise = hyperblock.run_dp(query, plan.budget)
+                    # TODO: store noise in metadata, if we do something with it later
+                    result, run_metadata = hyperblock.run_dp(query, plan.budget)
                     budget = plan.budget
                 else:
                     result = hyperblock.run(query, plan.budget)
-                    noise = 0
+                    run_metadata = 0
                     budget = None
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-            return (result, noise, hyperblock.size)
+            run_metadata["hyperblock_size"] = hyperblock.size
+            return result, run_metadata
 
         elif isinstance(plan, A):  # Aggregate Partial Results
             agglist = [self.execute_plan(x) for x in plan.l]
             if not agglist:
-                return None
+                return None, None
 
-            result = 0
-            total_size = 0
-            total_noise = 0
+            # Sum results (counts). For linear queries, look at the size in the metadata
+            agg_result = 0
+            for run_result, run_metadata in agglist:
+                agg_result += run_result
 
-            for (res, noise, size) in agglist:
-                # result += size * res
-                result += res
-                total_size += size
-                total_noise += noise
+            # TODO: when we refactor for multiblock, aggregate metadata instead of keeping only the 1st
+            return agg_result, agglist[0][1]
+
+            # result = 0
+            # total_size = 0
+            # total_noise = 0
+            # for (res, noise, size) in agglist:
+            #     # result += size * res
+            #     result += res
+            #     total_size += size
+            #     total_noise += noise
             # print("Agg noise", total_noise/len(agglist))
             # print("Agg noise", total_noise)
-            return result  # / total_size
+
+            # TODO: inconsistent return type
+            # return result  # / total_size
 
         else:
             logger.error("Execution: no such operator")

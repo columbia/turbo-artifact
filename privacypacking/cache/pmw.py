@@ -84,6 +84,8 @@ class PMW:
     def run(self, query):
         assert isinstance(query, torch.Tensor)
 
+        run_metadata = {}
+
         if (not self.standard_svt) and (
             self.local_svt_queries_ran >= self.local_svt_max_queries
         ):
@@ -136,6 +138,7 @@ class PMW:
 
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
+            run_metadata["hard_query"] = False
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -143,6 +146,7 @@ class PMW:
         else:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
+            run_metadata["hard_query"] = True
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -192,8 +196,9 @@ class PMW:
             self.n * abs(predicted_output - true_output),
             self.queries_ran,
         )
+        run_metadata["true_error_fraction"] = abs(predicted_output - true_output)
 
         if self.output_counts:
             output *= self.n
 
-        return output, run_budget, task_metadata
+        return output, run_budget, run_metadata
