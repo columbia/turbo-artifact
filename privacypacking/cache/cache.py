@@ -1,3 +1,8 @@
+from typing import Dict, Tuple
+
+from privacypacking.budget import Budget
+
+
 class R:
     def __init__(self, query_id, blocks, budget) -> None:
         self.query_id = query_id
@@ -33,7 +38,7 @@ class Cache:
 
     def run(
         self,
-    ):
+    ) -> Tuple[float, Budget, Dict]:
         pass
 
     def get_execution_plan(

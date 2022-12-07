@@ -24,8 +24,8 @@ class ProbabilisticCache(Cache):
         pmw = self.get_entry(query_id, hyperblock.id)
         if not pmw:  # If there is no PMW for the hyperblock then create it
             pmw = self.add_entry(hyperblock)
-        result, run_budget = pmw.run(query)
-        return result, run_budget, 0  # Not logging noise
+        result, run_budget, run_metadata = pmw.run(query)
+        return result, run_budget, run_metadata
 
     # Cost model    # TODO: remove this functionality from the Cache
     # This is tailored for the per block planning

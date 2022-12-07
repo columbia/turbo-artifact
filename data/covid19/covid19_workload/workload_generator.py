@@ -1,6 +1,9 @@
+import json
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import typer
 from loguru import logger
 
 
@@ -29,10 +32,6 @@ class PrivacyWorkload:
         # self.std_num_tasks = 5
         # self.requested_blocks_num = [1, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800]
         #   ------------  /Configure  ------------ #
-
-        self.tasks = []
-        for i in range(self.blocks_num):
-            self.tasks += self.generate_one_day_tasks(i, self.query_types)
 
     def generate_one_day_tasks(self, start_time, query_types):
         tasks = []
@@ -74,8 +73,30 @@ class PrivacyWorkload:
         return task
 
     def generate(self):
+
+        self.tasks = []
+        for i in range(self.blocks_num):
+            self.tasks += self.generate_one_day_tasks(i, self.query_types)
+
         dp_tasks = [self.create_dp_task(t) for t in self.tasks]
         logger.info(f"Collecting results in a dataframe...")
+        self.tasks = pd.DataFrame(dp_tasks).sort_values("submit_time")
+        self.tasks["relative_submit_time"] = (
+            self.tasks["submit_time"] - self.tasks["submit_time"].shift(periods=1)
+        ).fillna(1)
+
+        logger.info(self.tasks.head())
+
+    def generate_monoblock(self, n_queries):
+        self.tasks = [
+            Task(start_time=0, n_blocks=1, query_id=query_id, query_type="linear")
+            for query_id in range(n_queries)
+        ]
+
+        dp_tasks = [self.create_dp_task(t) for t in self.tasks]
+        logger.info(f"Collecting results in a dataframe...")
+
+        # TODO: weird to overwrite with a different type
         self.tasks = pd.DataFrame(dp_tasks).sort_values("submit_time")
         self.tasks["relative_submit_time"] = (
             self.tasks["submit_time"] - self.tasks["submit_time"].shift(periods=1)
@@ -105,11 +126,30 @@ class PrivacyWorkload:
         return "LatestBlocksFirst"
 
 
-def main() -> None:
+def main(
+    requests_type: str = "monoblock",
+    queries: str = "covid19_queries/all_2way_marginals.queries.json",
+    workload_dir: str = str(Path(__file__).resolve().parent.parent),
+) -> None:
     privacy_workload = PrivacyWorkload()
-    privacy_workload.generate()
-    privacy_workload.dump()
+
+    # TODO: refactor more at some point, especially if we add more workloads.
+    # workload -> arrival and requests pattern, covid19 -> covid19-workload, separate generation scripts from the workload data
+
+    workload_dir = Path(workload_dir)
+    queries = workload_dir.joinpath(queries)
+
+    if requests_type == "" and queries == "":
+        privacy_workload.generate()
+        path = workload_dir.joinpath(f"covid19_workload/privacy_tasks.csv")
+    elif requests_type == "monoblock":
+        n_different_queries = len(json.load(open(queries, "r")))
+        privacy_workload.generate_monoblock(n_different_queries)
+        path = workload_dir.joinpath(
+            f"covid19_workload/{requests_type}.privacy_tasks.csv"
+        )
+    privacy_workload.dump(path=path)
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)

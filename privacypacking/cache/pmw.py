@@ -196,4 +196,4 @@ class PMW:
         if self.output_counts:
             output *= self.n
 
-        return output, run_budget
+        return output, run_budget, task_metadata
