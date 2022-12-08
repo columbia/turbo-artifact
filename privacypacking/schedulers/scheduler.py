@@ -268,6 +268,7 @@ class Scheduler:
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
+                print(f"consumed {budget}")
             run_metadata["hyperblock_size"] = hyperblock.size
             return result, run_metadata
 

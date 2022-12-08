@@ -19,10 +19,11 @@ class PMW:
     def __init__(
         self,
         hyperblock: HyperBlock,
-        nu=10,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
+        nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
-        alpha=0.2,  # Max error guarantee, expressed as fraction
-        k=10,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
+        alpha=0.005,  # Max error guarantee, expressed as fraction.
+        beta=0.01,  # Failure probability for the alpha error bound
+        k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=True,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
     ):
@@ -41,9 +42,11 @@ class PMW:
         self.queries_ran = 0
         self.hard_queries_ran = 0
         self.histogram = DenseHistogram(self.M)
-        self.nu = nu
         self.id = str(hyperblock.id)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
+
+        # From my maths. It's cheap to be accurate when n is large.
+        self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
 
         # Sparse Vector parameters
         self.alpha = alpha
@@ -188,15 +191,15 @@ class PMW:
         )
         mlflow_log(
             f"{self.id}/true_error_fraction",
-            abs(predicted_output - true_output),
+            abs(output - true_output),
             self.queries_ran,
         )
         mlflow_log(
             f"{self.id}/true_error_count",
-            self.n * abs(predicted_output - true_output),
+            self.n * abs(output - true_output),
             self.queries_ran,
         )
-        run_metadata["true_error_fraction"] = abs(predicted_output - true_output)
+        run_metadata["true_error_fraction"] = abs(output - true_output)
 
         if self.output_counts:
             output *= self.n
