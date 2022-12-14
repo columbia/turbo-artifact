@@ -142,6 +142,8 @@ def get_logs(
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "planner": omegaconf.scheduler.planner,
+        "optimization_objective": omegaconf.scheduler.optimization_objective,
+        "variance_reduction": omegaconf.scheduler.variance_reduction,
         "cache": omegaconf.scheduler.cache,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,

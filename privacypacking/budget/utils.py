@@ -1,4 +1,6 @@
-from opacus.accountants.analysis.rdp import compute_rdp, get_privacy_spent
+# from opacus.accountants.analysis.rdp import compute_rdp, get_privacy_spent
+
+from opacus.privacy_analysis import compute_rdp, get_privacy_spent
 
 from privacypacking.budget import ALPHAS
 

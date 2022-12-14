@@ -106,20 +106,16 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        self.cache = globals()[self.omegaconf["cache"]]()
         self.utility = self.simulator_config.utility
-        x = self.omegaconf["planner"].split(":")
-        planner_type = x[0]
-        if len(x) > 1:
-            planner_branching_factor = int(x[1])
-            self.planner = globals()[planner_type](
-                self.cache, self.blocks, planner_branching_factor, self.utility
-            )
-        else:
-            self.planner = globals()[planner_type](
-                self.cache, self.blocks, self.utility
-            )
+        self.optimization_objective = self.omegaconf.optimization_objective
+        self.variance_reduction = self.omegaconf.variance_reduction
 
+        self.cache = globals()[self.omegaconf.cache](self.variance_reduction)
+
+        self.planner = globals()[self.omegaconf.planner](
+            self.cache, self.blocks, self.utility, self.optimization_objective, self.variance_reduction
+        )
+        
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
     def consume_budgets(self, blocks, budget):
@@ -181,7 +177,8 @@ class Scheduler:
                 bs_list = sorted(list(task.budget_per_block.keys()))
                 bs_tuple = (bs_list[0], bs_list[-1])
 
-                start = time.process_time()
+                # start = time.process_time()
+                start = time.time()
 
                 plan = None
                 if (
@@ -197,7 +194,8 @@ class Scheduler:
                     plan = A(
                         [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
                     )
-                self.tasks_info.planning_time[task.id] = time.process_time() - start
+                # self.tasks_info.planning_time[task.id] = time.process_time() - start
+                self.tasks_info.planning_time[task.id] = time.time() - start
                 print(f"Planning time", self.tasks_info.planning_time[task.id])
                 mlflow_log(
                     f"{self.experiment_prefix}performance/planning_time",
@@ -258,7 +256,7 @@ class Scheduler:
                 result, budget = self.cache.run(
                     query_id=plan.query_id,
                     query=query,
-                    run_budget=plan.budget,  # TODO: temporary so that it works with deterministic cache - budget is no longer user defined
+                    demand_budget=plan.budget,
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
@@ -270,6 +268,7 @@ class Scheduler:
                     budget = None
 
             if budget is not None:
+                # print("consume budget", budget)
                 self.consume_budgets(block_ids, budget)
             return (result, hyperblock.size)
 
@@ -279,12 +278,11 @@ class Scheduler:
                 return None
 
             result = 0
-            total_size = 0
-
+            # total_size = 0
             for (res, size) in agglist:
                 # result += size * res
                 result += res
-                total_size += size
+                # total_size += size
             return result
 
         else:

@@ -12,22 +12,24 @@ from termcolor import colored
 
 
 class ILP(Planner):
-    def __init__(self, cache, blocks, utility):
+    def __init__(self, cache, blocks, utility, objective, variance_reduction):
         super().__init__(cache)
         self.blocks = blocks
         self.delta = 0.00001
         self.utility = utility
-        self.emax = 0.5
+        self.emax = 0.7
         self.sequencial = False
+        self.objective = objective
+        self.variance_reduction = variance_reduction
 
     def get_execution_plan(self, query_id, block_request, _):
         n = len(block_request)
-        block_start = block_request[0]
+        offset = block_request[0]
 
         block_budgets = self.get_block_budgets(block_request)
         block_request = (block_request[0], block_request[-1])
-        indices = self.get_indices(n)
-        C = self.get_costs(query_id, indices)
+        indices = self.get_indices(n, offset)
+        C = self.get_costs(query_id, indices, offset)
 
         # Collect all valid aggregations
         f = {}
@@ -38,57 +40,65 @@ class ILP(Planner):
             f[k] = e
         max_k = len(f)
 
-        if not self.sequencial:     # Running in Parallel - (hand tuned)
+        if max_k == 0:
+            return None
+
+        if not self.sequencial:  # Running in Parallel
             processes = []
             manager = Manager()
             return_dict = manager.dict()
             num_processes = min(os.cpu_count(), max_k)
 
             k = max_k // num_processes
-            i=-1
-            for i in range(num_processes - 1):
+            for i in range(num_processes):
+                k_start = i * k + 1
+                k_end = i * k + k if i * k + k < max_k else max_k
                 processes.append(
                     Process(
                         target=solve,
-                        args=(i*k+1,  i*k+k, return_dict, C, block_budgets, f,  n, indices),
+                        args=(
+                            k_start,
+                            k_end,
+                            return_dict,
+                            C,
+                            block_budgets,
+                            f,
+                            n,
+                            indices,
+                            self.objective,
+                            self.variance_reduction,
+                        ),
                     )
                 )
                 processes[i].start()
-            i += 1
-            processes.append(
-                Process(
-                    target=solve, args=(i*k+1, max_k, return_dict, C, block_budgets, f,  n, indices)
-                )
-            )
-            processes[i].start()
 
             for i in range(num_processes):
                 processes[i].join()
-        else:           # Running sequentially
+        else:  # Running sequentially
             return_dict = dict()
-            solve(1, max_k, return_dict, C, block_budgets, f,  n, indices)
+            solve(
+                1, max_k, return_dict, C, block_budgets, f, n, indices, self.objective, self.variance_reduction,
+            )
 
         # Find the best solution
         best_solution = best_budget = None
-        best_objvalue = math.inf
-        
-        for k, (solution, objvalue, budget) in return_dict.items():
-            if objvalue <= best_objvalue:
-                best_solution = solution
-                best_objvalue = objvalue
-                best_budget = budget
+        best_objvalue1 = math.inf
+        best_objvalue2 = math.inf
+    
+        for k, (solution, objvalue1, objvalue2, budget) in return_dict.items():
+            if objvalue1 < best_objvalue1 or ((objvalue1 == best_objvalue1) and objvalue2 < best_objvalue2):
+                best_solution, best_objvalue1, best_objvalue2, best_budget = solution, objvalue1, objvalue2, budget
+            # if objvalue == 0:
+                # break
 
-            if objvalue == 0:
-                break
-
-        if not math.isinf(best_objvalue):
+        if not math.isinf(best_objvalue1):
             plan = []
             for (i, j) in best_solution:
-                plan += [R(query_id, (i + block_start, j + block_start), best_budget)]
+                plan += [R(query_id, (i + offset, j + offset), best_budget)]
             plan = A(plan, budget=best_budget)
             print(
                 colored(
-                    f"Got plan (cost={best_objvalue}) for blocks {block_request}: {plan}, {plan.budget}",
+                    f"Got plan (cost={best_objvalue1}, {best_objvalue2}) for blocks {block_request}: {plan}, {plan.budget}",
                     "yellow",
                 )
             )
@@ -101,18 +111,19 @@ class ILP(Planner):
             self.blocks[block_id].budget.epsilon for block_id in block_request
         ]  # available budget of blocks
 
-    def get_costs(self, query_id, indices):
+    def get_costs(self, query_id, indices, offset):
         C = {}
         for (i, j) in indices:
-            C[(i, j)] = self.cache.get_entry_budget(query_id, (i, j))
+            C[(i, j)] = self.cache.get_entry_budget(query_id, (i+offset, j+offset))
+            # print((i+offset, j+offset), C[(i, j)])
             # C[(i,j)] = random.uniform(0, 5)
         return C
 
-    def get_indices(self, n):
+    def get_indices(self, n, offset):
         indices = set()
         for i in range(n):
             for j in range(i, n):
-                if self.satisfies_constraint((i, j)):
+                if self.satisfies_constraint((i+offset, j+offset)):
                     indices.add(((i, j)))
         return indices
 
@@ -126,18 +137,24 @@ class ILP(Planner):
 
     def f(self, k, delta, u):
         return (math.sqrt(8 * k) * math.log(2 / delta)) / u
-        
 
-def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices):
-    for k in range(kmin, kmax+1):
-        budget = BasicBudget(f[k])
-        solution, objval = solve_gurobi(budget.epsilon, k, n, indices, C, block_budgets)
-        if solution:
-            return_dict[k] = (solution, objval, budget)
 
-def solve_gurobi(budget_demand, K, N, indices, C, block_budgets):
+def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, objective, variance_reduction):
     t = time.time()
+    for k in range(kmin, kmax + 1):
+        budget = BasicBudget(f[k])
+        solution, objval1, objval2 = solve_gurobi(
+            budget.epsilon, k, n, indices, C, block_budgets, variance_reduction, objective
+        )
+        if solution:
+            return_dict[k] = (solution, objval1, objval2, budget)
 
+    t = (time.time() - t) / (kmax + 1 - kmin)
+    # logger.warning(f"Optimization took: {time.time() - t}")
+    # print(f"    Took:  {t}")
+
+
+def solve_gurobi(budget_demand, K, N, indices, C, block_budgets, variance_reduction, objective):
     with gp.Env(empty=True) as env:
         env.setParam("OutputFlag", 0)
         env.start()
@@ -151,18 +168,18 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets):
         # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
         # m = gp.Model("pack")
 
-        # Set coefficients
-        coeffs = {}
         cost_per_block_per_chunk = {}
         for (i, j) in indices:
-            num_blocks = j - i + 1
             cost_per_block = max(budget_demand - C[(i, j)], 0)
-            if (
-                cost_per_block > 0
-            ):  # If the result was not stored with enough budget
-                cost_per_block = budget_demand  # Turning off optimization for now
+            if (not variance_reduction and cost_per_block > 0):  # If the result was not stored with enough budget
+                cost_per_block = budget_demand  # Turning off optimization
             cost_per_block_per_chunk[(i, j)] = cost_per_block
-            coeffs[(i, j)] = cost_per_block * num_blocks
+
+        # if objective == "minimize_budget":
+        coeffs = {}
+        for (i, j) in indices:
+            num_blocks = j - i + 1
+            coeffs[(i, j)] = cost_per_block_per_chunk[(i, j)] * num_blocks
 
         # A variable per chunk
         x = m.addVars(
@@ -201,11 +218,17 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets):
         m.addConstr((gp.quicksum(x[i, j] for (i, j) in indices)) <= K)
 
         # Objective function
-        m.setObjective(x.prod(coeffs), GRB.MINIMIZE)
-        m.optimize()
+        if objective == "minimize_budget":
+            m.setObjectiveN(x.prod(coeffs), 0, 1)
+            m.setObjectiveN(x.sum(), 1, 0)
+            # m.setObjective(x.prod(coeffs), GRB.MINIMIZE)
+        elif objective ==  "minimize_aggregations":
+            m.setObjectiveN(x.sum(), 0, 1)
+            m.setObjectiveN(x.prod(coeffs), 1, 0)
+            # m.setObjective(x.sum(), GRB.MINIMIZE)
 
-        print(f"    K {K}, e {budget_demand} took:  {time.time() - t}")
-        # logger.warning(f"Optimization took: {time.time() - t}")
+        m.ModelSense = GRB.MINIMIZE
+        m.optimize()
         # logger.warning(f"status: {m.Status} timeout? {m.Status == GRB.TIME_LIMIT}")
 
         if m.Status == GRB.TIME_LIMIT:
@@ -213,13 +236,14 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets):
                 # f"Solver timeout after {self.simulator_config.metric.gurobi_timeout}s"
             )
         if m.status == GRB.OPTIMAL:
+            m.params.ObjNumber = 0
+            objval1 = m.ObjNVal
+            m.params.ObjNumber = 1
+            objval2 = m.ObjNVal
             return [
-                (i, j)
-                for (i, j) in indices
-                if int((abs(x[i, j].x - 1) < 1e-4)) == 1
-            ], m.objval
-        return [], math.inf
-
+                (i, j) for (i, j) in indices if int((abs(x[i, j].x - 1) < 1e-4)) == 1
+            ], objval1, objval2
+        return [], math.inf, math.inf
 
 def test():
     def run(request):

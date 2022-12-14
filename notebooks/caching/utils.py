@@ -65,6 +65,21 @@ def plot_budget_utilization(df):
         range_y=[0, 1],
     )
 
+def plot_budget_utilization_total(df):
+    # df["budget_utilization_total"] = (df["initial_budget"] - df["budget"]).sum() / df[
+        # "initial_budget"
+    # ].sum()
+    groups = df.groupby("key")['initial_budget', 'budget'].sum()
+    groups['budget_utilization_total'] = (groups['initial_budget']-groups['budget'])/groups['initial_budget']
+    return px.bar(
+        groups.reset_index(),
+        x="key",
+        y="budget_utilization_total",
+        color="key",
+        title="Total Budget Utilization",
+        range_y=[0, 1],
+    )
+
 
 def get_tasks_information(df):
     dfs = []
@@ -147,8 +162,9 @@ def analyze_experiment(tasks_path, experiment_path):
 
     df = get_df(experiment_path)
     df["utility"] = df["utility"].astype(str)
-
-    df["key"] = df["planner"] + " " + df["utility"]
+    # df["variance_reduction"]=df["variance_reduction"].astype(str)
+    df = df.astype({'variance_reduction': 'str'})
+    df["key"] = df["planner"] + " " + df["utility"] + " " + df["optimization_objective"] + " VR=" + df["variance_reduction"]
     df.drop(columns=["planner", "cache"], inplace=True)
 
     metrics = df[["key", "n_allocated_tasks", "total_tasks"]]
@@ -167,3 +183,5 @@ def analyze_experiment(tasks_path, experiment_path):
     iplot(plot_results(tasks))
     iplot(plot_planning_time(tasks))
     iplot(plot_budget_utilization(blocks))
+    iplot(plot_budget_utilization_total(blocks))
+

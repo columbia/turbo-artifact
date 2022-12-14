@@ -118,7 +118,7 @@ class PrivacyWorkload:
 
 @app.command()
 def main():
-    blocks_num = 400
+    blocks_num = 500
     initial_blocks_num = 1
     query_types = [0]
     requested_blocks_num = list(range(1, blocks_num))

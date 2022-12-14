@@ -10,7 +10,7 @@ import scipy
 from loguru import logger
 from omegaconf import OmegaConf
 
-from privacypacking.budget import Budget
+from privacypacking.budget import RenyiBudget
 from privacypacking.budget.budget import ALPHAS
 from privacypacking.budget.curves import (
     GaussianCurve,
@@ -68,7 +68,7 @@ def load_zoo(tasks_path):
                 alpha: epsilon
                 for alpha, epsilon in zip(task_dict.alphas, task_dict.rdp_epsilons)
             }
-            curve_zoo.append(Budget(orders=orders))
+            curve_zoo.append(RenyiBudget(orders=orders))
             task_names.append(name)
         blocks_dict["task_name"].append(name)
         blocks_dict["n_blocks"].append(task_dict.n_blocks)
@@ -278,7 +278,7 @@ def normalize_zoo(
     # Extract the tasks back into their expected form. Fill in missing alphas with 1s.
     # zoo_df will do some clipping/dropping for invalid tasks, that's not our business here
     new_names_and_curves = []
-    block = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
+    block = RenyiBudget.from_epsilon_delta(epsilon=epsilon, delta=delta)
     for task_name in rescaled_with_range.task_name.unique():
         orders = {}
         for _, row in rescaled_with_range.query(
@@ -291,7 +291,7 @@ def normalize_zoo(
         for alpha in ALPHAS:
             if alpha not in orders:
                 orders[alpha] = 100  # Will be dropped by the schdulers anyway
-        new_names_and_curves.append((task_name, Budget(orders=orders)))
+        new_names_and_curves.append((task_name, RenyiBudget(orders=orders)))
 
     return new_names_and_curves
 
@@ -305,7 +305,7 @@ def zoo_df(
     delta=1e-7,
     best_alphas=ALPHAS,
 ) -> pd.DataFrame:
-    block = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
+    block = RenyiBudget.from_epsilon_delta(epsilon=epsilon, delta=delta)
 
     dict_list = defaultdict(list)
     for index, name_and_curve in enumerate(zoo):

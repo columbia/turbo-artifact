@@ -8,7 +8,8 @@ from privacypacking.budget.block_selection import BlockSelectionPolicy
 from privacypacking.budget.budget import Budget
 from privacypacking.budget.curves import ZeroCurve
 from privacypacking.budget.renyi_budget import ALPHAS
-from privacypacking.utils.utils import sample_one_from_string
+
+# from privacypacking.utils.utils import sample_one_from_string
 
 
 class Task:

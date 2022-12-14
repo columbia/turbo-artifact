@@ -21,7 +21,6 @@ def run_and_report(config: dict, replace=False) -> None:
             metrics = Simulator(Config(config)).run()
     else:
         metrics = Simulator(Config(config)).run()
-
     tune.report(**metrics)
 
 
@@ -33,6 +32,7 @@ def grid_online(
     initial_blocks: List[int],
     initial_tasks: List[int],
     max_blocks: List[int],
+    logs_dir: str,
     tasks_path: List[str],
     queries_path: List[str],
     blocks_path: str,
@@ -41,6 +41,8 @@ def grid_online(
     data_lifetime: List[float],
     task_lifetime: List[int],
     planner: List[str],  # Options = {DynamicProgrammingPlanner, PerBlockPlanner}
+    optimization_objective: List[str],
+    variance_reduction: List[str],
     cache: List[str],  # Options = {DeterministicCache, ProbabilisticCache}
     enable_caching: List[bool],
     enable_dp: List[bool],
@@ -52,9 +54,7 @@ def grid_online(
     # Progressive unlocking
     # n = [1_000]
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
-    print(exp_name)
-
-    enable_mlflow = True
+    enable_mlflow = False
     block_selection_policy = ["LatestBlocksFirst"]
     config = {
         "omegaconf": {
@@ -71,6 +71,8 @@ def grid_online(
                 "data_lifetime": tune.grid_search(data_lifetime),
                 "task_lifetime": tune.grid_search(task_lifetime),
                 "planner": tune.grid_search(planner),
+                "optimization_objective": tune.grid_search(optimization_objective),
+                "variance_reduction": tune.grid_search(variance_reduction),
                 "cache": tune.grid_search(cache),
                 "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
                 "method": "batch",
@@ -117,9 +119,9 @@ def grid_online(
     experiment_analysis = tune.run(
         run_and_report,
         config=config,
-        resources_per_trial={"cpu": 1},
-        # resources_per_trial={"cpu": 32},
-        local_dir=RAY_LOGS,
+        # resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 32},
+        local_dir=RAY_LOGS.joinpath(logs_dir),
         resume=False,
         verbose=1,
         callbacks=[
@@ -141,6 +143,9 @@ def grid_online(
                 "omegaconf/scheduler/scheduling_wait_time": "T",
                 "omegaconf/scheduler/enable_caching": "enable_caching",
                 "omegaconf/scheduler/planner": "planner",
+                "omegaconf/utility": "utility",
+                "omegaconf/scheduler/optimization_objective": "optimization_objective",
+                "omegaconf/scheduler/variance_reduction": "variance_reduction",
                 "omegaconf/scheduler/cache": "cache",
                 "omegaconf/scheduler/data_lifetime": "lifetime",
                 "omegaconf/scheduler/metric": "metric",
