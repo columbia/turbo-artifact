@@ -113,9 +113,13 @@ class Scheduler:
         self.cache = globals()[self.omegaconf.cache](self.variance_reduction)
 
         self.planner = globals()[self.omegaconf.planner](
-            self.cache, self.blocks, self.utility, self.optimization_objective, self.variance_reduction
+            self.cache,
+            self.blocks,
+            self.utility,
+            self.optimization_objective,
+            self.variance_reduction,
         )
-        
+
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
     def consume_budgets(self, blocks, budget):

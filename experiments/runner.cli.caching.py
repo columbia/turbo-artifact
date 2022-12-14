@@ -29,7 +29,7 @@ def caching():
         task_lifetime=[1],
         # planner=["DynamicProgrammingPlanner:2", "PerBlockPlanner", "NoPlanner"],
         planner=["ILP"],
-        optimization_objective=[ "minimize_error", "minimize_budget"],
+        optimization_objective=["minimize_error", "minimize_budget"],
         variance_reduction=[True, False],
         cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
