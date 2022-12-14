@@ -9,7 +9,7 @@ from loguru import logger
 from omegaconf import OmegaConf
 from tqdm import tqdm
 
-from privacypacking.budget import ALPHAS, Budget
+from privacypacking.budget import ALPHAS, Budget, RenyiBudget
 from privacypacking.budget.curves import (
     GaussianCurve,
     LaplaceCurve,
@@ -119,7 +119,7 @@ def heterogeneous(
     ),
     output_path: str = typer.Option(str(DEFAULT_OUTPUT_PATH.joinpath("heterogeneous"))),
     synthetic: bool = typer.Option(False),
-    config: str = typer.Option("default"),
+    config: str = typer.Option("blocks"),
     control_flatness: bool = typer.Option(True),
     control_size: bool = typer.Option(True),
     min_epsilon: float = typer.Option(1e-2),
@@ -287,7 +287,7 @@ def demo(
         frequencies_path.mkdir(exist_ok=True, parents=True)
 
     task_names = []
-    block_budget = Budget.from_epsilon_delta(epsilon=epsilon, delta=delta)
+    block_budget = RenyiBudget.from_epsilon_delta(epsilon=epsilon, delta=delta)
 
     def make_bumpy_budget(start, step=1, n_flat_alphas=6):
         orders = {}

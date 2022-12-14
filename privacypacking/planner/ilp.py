@@ -6,10 +6,14 @@ from gurobipy import GRB
 import time
 import math
 import os
+from collections import namedtuple
+from sortedcollections import OrderedSet
 import random
 from multiprocessing import Manager, Process
+from privacypacking.utils.compute_utility_curve import compute_utility_curve
 from termcolor import colored
 
+Chunk = namedtuple("Chunk", ["index", "used_budget"])
 
 class ILP(Planner):
     def __init__(self, cache, blocks, utility, objective, variance_reduction):
@@ -17,10 +21,12 @@ class ILP(Planner):
         self.blocks = blocks
         self.delta = 0.00001
         self.utility = utility
-        self.emax = 0.7
+        self.epsilon_threshold = 0.5
         self.sequencial = False
         self.objective = objective
         self.variance_reduction = variance_reduction
+        self.C = {}
+        self.B = {}
 
     def get_execution_plan(self, query_id, block_request, _):
         n = len(block_request)
@@ -28,16 +34,10 @@ class ILP(Planner):
 
         block_budgets = self.get_block_budgets(block_request)
         block_request = (block_request[0], block_request[-1])
-        indices = self.get_indices(n, offset)
-        C = self.get_costs(query_id, indices, offset)
-
-        # Collect all valid aggregations
-        f = {}
-        for k in range(1, n + 1):
-            e = self.f(k, self.delta, self.utility)
-            if e > self.emax:
-                break
-            f[k] = e
+        indices = self.get_chunk_indices(n, offset)
+        self.get_chunk_budget_cost(query_id, indices, offset, self.C)
+        self.get_chunk_available_budget(indices, block_budgets, self.B)     # minimum available budget across the blocks
+        f = compute_utility_curve(self.utility, self.delta, n, self.epsilon_threshold)
         max_k = len(f)
 
         if max_k == 0:
@@ -60,13 +60,15 @@ class ILP(Planner):
                             k_start,
                             k_end,
                             return_dict,
-                            C,
+                            self.C,
+                            self.B,
                             block_budgets,
                             f,
                             n,
                             indices,
                             self.objective,
                             self.variance_reduction,
+                            self.epsilon_threshold
                         ),
                     )
                 )
@@ -74,53 +76,42 @@ class ILP(Planner):
 
             for i in range(num_processes):
                 processes[i].join()
-        else:  # Running sequentially
-            return_dict = dict()
-            solve(
-                1, max_k, return_dict, C, block_budgets, f, n, indices, self.objective, self.variance_reduction,
-            )
+
 
         # Find the best solution
-        best_solution = best_budget = None
-        best_objvalue1 = math.inf
-        best_objvalue2 = math.inf
+        plan = None
+        best_objvalue1 = best_objvalue2 = math.inf
     
-        for k, (solution, objvalue1, objvalue2, budget) in return_dict.items():
+        for k, (chunks, objvalue1, objvalue2) in return_dict.items():
             if objvalue1 < best_objvalue1 or ((objvalue1 == best_objvalue1) and objvalue2 < best_objvalue2):
-                best_solution, best_objvalue1, best_objvalue2, best_budget = solution, objvalue1, objvalue2, budget
-            # if objvalue == 0:
-                # break
+                plan = A([R(query_id, (i + offset, j + offset), BasicBudget(budget)) for ((i,j), budget) in chunks])
+                best_objvalue1 = objvalue1
+                best_objvalue2 = objvalue2
 
-        if not math.isinf(best_objvalue1):
-            plan = []
-            for (i, j) in best_solution:
-                plan += [R(query_id, (i + offset, j + offset), best_budget)]
-            plan = A(plan, budget=best_budget)
+        if plan is not None:
             print(
                 colored(
-                    f"Got plan (cost={best_objvalue1}, {best_objvalue2}) for blocks {block_request}: {plan}, {plan.budget}",
+                    f"Got plan (cost={best_objvalue1}, {best_objvalue2}) for blocks {block_request}: {plan}",
                     "yellow",
                 )
             )
-            return plan
-        return None
+        return plan
 
     def get_block_budgets(self, block_request):
-        # return [5 for _ in block_request]
         return [
             self.blocks[block_id].budget.epsilon for block_id in block_request
-        ]  # available budget of blocks
+        ]
 
-    def get_costs(self, query_id, indices, offset):
-        C = {}
+    def get_chunk_budget_cost(self, query_id, indices, offset, C):
         for (i, j) in indices:
             C[(i, j)] = self.cache.get_entry_budget(query_id, (i+offset, j+offset))
-            # print((i+offset, j+offset), C[(i, j)])
-            # C[(i,j)] = random.uniform(0, 5)
-        return C
 
-    def get_indices(self, n, offset):
-        indices = set()
+    def get_chunk_available_budget(self, indices, block_budgets, B):
+        for (i, j) in indices:
+            B[(i, j)] = min(block_budgets[i:j+1])
+
+    def get_chunk_indices(self, n, offset):
+        indices = OrderedSet()
         for i in range(n):
             for j in range(i, n):
                 if self.satisfies_constraint((i+offset, j+offset)):
@@ -135,26 +126,22 @@ class ILP(Planner):
             return False
         return True
 
-    def f(self, k, delta, u):
-        return (math.sqrt(8 * k) * math.log(2 / delta)) / u
 
-
-def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, objective, variance_reduction):
+def solve(kmin, kmax, return_dict, C, B, block_budgets, f, n, indices, objective_function, variance_reduction, epsilon_threshold):
     t = time.time()
     for k in range(kmin, kmax + 1):
-        budget = BasicBudget(f[k])
-        solution, objval1, objval2 = solve_gurobi(
-            budget.epsilon, k, n, indices, C, block_budgets, variance_reduction, objective
+        minimum_budget_demand = BasicBudget(f[k])
+        chunks, objval1, objval2 = solve_gurobi(
+            minimum_budget_demand.epsilon, epsilon_threshold, k, n, indices, C, B, block_budgets, variance_reduction, objective_function
         )
-        if solution:
-            return_dict[k] = (solution, objval1, objval2, budget)
+        if chunks:
+            return_dict[k] = (chunks, objval1, objval2)
 
     t = (time.time() - t) / (kmax + 1 - kmin)
-    # logger.warning(f"Optimization took: {time.time() - t}")
     # print(f"    Took:  {t}")
 
 
-def solve_gurobi(budget_demand, K, N, indices, C, block_budgets, variance_reduction, objective):
+def solve_gurobi(minimum_budget_demand, epsilon_threshold, K, N, indices, C, B, block_budgets, variance_reduction, objective_function):
     with gp.Env(empty=True) as env:
         env.setParam("OutputFlag", 0)
         env.start()
@@ -162,24 +149,11 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets, variance_reduct
 
         m.Params.OutputFlag = 0
         # m.Params.TimeLimit = self.simulator_config.metric.gurobi_timeout
-        # self.simulator_config.metric.gurobi_threads
         # m.Params.LogToConsole = 0
-
         # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
-        # m = gp.Model("pack")
 
-        cost_per_block_per_chunk = {}
-        for (i, j) in indices:
-            cost_per_block = max(budget_demand - C[(i, j)], 0)
-            if (not variance_reduction and cost_per_block > 0):  # If the result was not stored with enough budget
-                cost_per_block = budget_demand  # Turning off optimization
-            cost_per_block_per_chunk[(i, j)] = cost_per_block
-
-        # if objective == "minimize_budget":
-        coeffs = {}
-        for (i, j) in indices:
-            num_blocks = j - i + 1
-            coeffs[(i, j)] = cost_per_block_per_chunk[(i, j)] * num_blocks
+        lost_budget_per_chunk = {}
+        used_budget_per_chunk = {}
 
         # A variable per chunk
         x = m.addVars(
@@ -189,6 +163,50 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets, variance_reduct
             ub=1,
             name="x",
         )
+
+        # "used_budget": max budget that can be given to each chunk either because
+        # it is avaialble in the blocks (not exceeding threshold) or because we have it in cache
+        # "lost_budget": min budget that must be spent in order to reach "used_budget"
+
+        if objective_function == "minimize_budget":
+            
+            for (i, j) in indices:
+
+                lost_budget = max(minimum_budget_demand - C[(i, j)], 0)
+                if not variance_reduction and lost_budget > 0:  # If the result was not stored with enough budget
+                    lost_budget = minimum_budget_demand  # Turning off variance reduction
+                
+                used_budget = max(minimum_budget_demand, C[(i, j)])
+
+                # Enough budget in blocks constraint
+                # If at least one block in chunk i,j cannot give minimum budget 'lost_budget' then Xij=0
+                for k in range(N):                      # For every block
+                    if lost_budget > block_budgets[k]:
+                        m.addConstr(x[i, j] == 0)
+                        break
+
+                lost_budget_per_chunk[(i, j)] = lost_budget * (j - i + 1)
+                used_budget_per_chunk[(i, j)] = -used_budget        # multiplying by -1: we want to maximize the total used_budget so we want to minimize the total -1*used_budget
+
+        elif objective_function ==  "minimize_error":
+
+                for (i, j) in indices:
+                    
+                    used_budget = max(min(B[(i,j)], epsilon_threshold), C[(i, j)])      # B[(i,j)]: maximum budget blocks in chunk (i,j) can give
+
+                    if used_budget < minimum_budget_demand:         # If the budget that can be provided to the chunk is less than the budget demanded to maintain accuracy we invalidate the chunk
+                        m.addConstr(x[i, j] == 0)
+                    
+                    lost_budget = used_budget-C[(i, j)]     # lost_budget between 0 and epsilon_threshold
+                    if not variance_reduction and lost_budget > 0:
+                        lost_budget = used_budget
+
+                    lost_budget_per_chunk[(i, j)] = lost_budget * (j - i + 1)    
+                    used_budget_per_chunk[(i, j)] = -used_budget        # multiplying by -1: we want to maximize the total used_budget so we want to minimize the total -1*used_budget
+                
+                    # print("lost_budget", (i,j), used_budget_per_chunk[(i, j)])
+                    # print("used_budget", (i,j), used_budget_per_chunk[(i, j)])
+
 
         # No overlapping chunks constraint
         for k in range(N):  # For every block
@@ -204,45 +222,39 @@ def solve_gurobi(budget_demand, K, N, indices, C, block_budgets, variance_reduct
                 == 1
             )
 
-        # Enough budget in blocks constraint
-        for k in range(N):  # For every block
-            for i in range(k + 1):
-                for j in range(k, N):
-                    if (i, j) in indices:
-                        m.addConstr(
-                            x[i, j] * cost_per_block_per_chunk[(i, j)]
-                            <= block_budgets[k]
-                        )
-
         # Aggregations must be at most K-1 constraint
         m.addConstr((gp.quicksum(x[i, j] for (i, j) in indices)) <= K)
 
         # Objective function
-        if objective == "minimize_budget":
-            m.setObjectiveN(x.prod(coeffs), 0, 1)
-            m.setObjectiveN(x.sum(), 1, 0)
-            # m.setObjective(x.prod(coeffs), GRB.MINIMIZE)
-        elif objective ==  "minimize_aggregations":
-            m.setObjectiveN(x.sum(), 0, 1)
-            m.setObjectiveN(x.prod(coeffs), 1, 0)
-            # m.setObjective(x.sum(), GRB.MINIMIZE)
+        if objective_function == "minimize_budget":
+            m.setObjectiveN(x.prod(lost_budget_per_chunk), 0, 1)            # Primary objective
+            m.setObjectiveN(x.prod(used_budget_per_chunk), 1, 0)            # Secondary objective
+        elif objective_function ==  "minimize_error":                                 
+            m.setObjectiveN(x.prod(used_budget_per_chunk), 0, 1)
+            m.setObjectiveN(x.prod(lost_budget_per_chunk), 1, 0)
+        # elif objective ==  "minimize_aggregations":
+            # m.setObjectiveN(x.sum(), 0, 1)
+            # m.setObjectiveN(x.prod(budget_cost), 1, 0)
 
         m.ModelSense = GRB.MINIMIZE
         m.optimize()
-        # logger.warning(f"status: {m.Status} timeout? {m.Status == GRB.TIME_LIMIT}")
 
-        if m.Status == GRB.TIME_LIMIT:
-            raise Exception(
-                # f"Solver timeout after {self.simulator_config.metric.gurobi_timeout}s"
-            )
         if m.status == GRB.OPTIMAL:
             m.params.ObjNumber = 0
             objval1 = m.ObjNVal
             m.params.ObjNumber = 1
             objval2 = m.ObjNVal
-            return [
-                (i, j) for (i, j) in indices if int((abs(x[i, j].x - 1) < 1e-4)) == 1
-            ], objval1, objval2
+
+            if objective_function == "minimize_budget":
+                objval2 = - math.pow(K, 1.5) / objval2
+            if objective_function ==  "minimize_error":
+                objval1 = - math.pow(K, 1.5) / objval1
+            
+            chunks = []
+            for (i,j) in indices:
+                if int((abs(x[i, j].x - 1) < 1e-4)) == 1:
+                    chunks.append(Chunk((i,j), -used_budget_per_chunk[(i,j)]))
+            return chunks, objval1, objval2
         return [], math.inf, math.inf
 
 def test():

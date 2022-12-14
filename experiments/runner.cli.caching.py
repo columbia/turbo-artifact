@@ -16,10 +16,10 @@ def caching():
         metric_recomputation_period=[50],
         scheduler_metrics=[FCFS],
         n=[1],  # Instant unlocking
-        max_blocks=[500],
+        max_blocks=[400],
         initial_blocks=[0],
         initial_tasks=[0],
-        logs_dir="2objexp1",
+        logs_dir="finalexp",
         tasks_path=["covid19/covid19_workload/privacy_tasks.csv"],
         queries_path=["covid19/covid19_queries/queries.json"],
         blocks_path="covid19/covid19_data/blocks",
@@ -28,16 +28,15 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         # planner=["DynamicProgrammingPlanner:2", "PerBlockPlanner", "NoPlanner"],
-        # planner=["DynamicProgrammingPlannerUtility:2"],
         planner=["ILP"],
-        optimization_objective=["minimize_budget", "minimize_aggregations"],  # ["minimize_budget"]
-        variance_reduction=[False, True],
+        optimization_objective=[ "minimize_error", "minimize_budget"],
+        variance_reduction=[True, False],
         cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
         enable_dp=[True],
         repetitions=1,
         enable_random_seed=True,
-        utility=[50, 100, 200, 500, 1000],
+        utility=[100, 200, 500, 1000],
     )
 
 

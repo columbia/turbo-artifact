@@ -69,7 +69,7 @@ def plot_budget_utilization_total(df):
     # df["budget_utilization_total"] = (df["initial_budget"] - df["budget"]).sum() / df[
         # "initial_budget"
     # ].sum()
-    groups = df.groupby("key")['initial_budget', 'budget'].sum()
+    groups = df.groupby("key")[['initial_budget', 'budget']].sum()
     groups['budget_utilization_total'] = (groups['initial_budget']-groups['budget'])/groups['initial_budget']
     return px.bar(
         groups.reset_index(),

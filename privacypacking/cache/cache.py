@@ -7,7 +7,7 @@ class R:
     def __str__(
         self,
     ):
-        return f"Run({self.blocks})"
+        return f"Run({self.blocks}, {self.budget})"
 
 
 class A:
