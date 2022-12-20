@@ -10,6 +10,10 @@
             "task_lifetime": 1,
             "planner": "PerBlockPlanner",
             "cache": "ProbabilisticCache",
+            "cache_cfg": {
+                "alpha": 0.01,
+                "beta": 0.001
+            },
             "scheduling_wait_time": 1,
             "method": "batch",
             "metric": "Fcfs",
@@ -34,12 +38,12 @@
         },
         "tasks": {
             "sampling": "poisson",
-            "path": "covid19/covid19_workload/monoblock8.privacy_tasks.csv",
-            "queries_path": "covid19/covid19_queries/all_2way_marginals.queries.json",
+            "path": "covid19/covid19_workload/monoblock.privacy_tasks.csv",
+            "queries_path": "covid19/covid19_queries/1000.queries.json",
             "block_selection_policy": "LatestBlocksFirst",
             "avg_num_tasks_per_block": 500,
-            "max_num": 150,
-            "initial_num": 150
+            "max_num": 2000,
+            "initial_num": 2000
         }
     }
 }

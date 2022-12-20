@@ -71,12 +71,24 @@ class PMW:
 
     @classmethod
     def worst_case_cost(
-        cls, nu=485, ro=None, standard_svt=True, local_svt_max_queries=None
+        cls,
+        n=1000,
+        nu=None,
+        ro=None,
+        alpha=0.05,
+        beta=0.001,
+        k=None,
+        standard_svt=True,
+        local_svt_max_queries=None,
     ) -> Budget:
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
         # and we still do a cache miss, so we pay for a true query on top of that
+        nu = nu if nu else n * alpha / np.log(2 / beta)
         ro = ro if ro else nu
-        query_cost = GaussianCurve(sigma=nu)
+
+        # query_cost = GaussianCurve(sigma=nu)
+        query_cost = LaplaceCurve(laplace_noise=nu)
+
         if standard_svt:
             # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
             svt_cost = PureDPtoRDP(epsilon=1 / nu + 2 / nu)

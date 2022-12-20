@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 
 from loguru import logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from simpy import Event
 from termcolor import colored
 
@@ -103,7 +103,10 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        self.cache = globals()[self.omegaconf["cache"]]()
+        self.cache = globals()[self.omegaconf["cache"]](
+            # cache_cfg=OmegaConf.to_container(self.omegaconf.cache_cfg)
+            cache_cfg=self.omegaconf.cache_cfg
+        )
         self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
 
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
