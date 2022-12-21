@@ -5,7 +5,7 @@ from privacypacking.budget.curves import LaplaceCurve
 
 from privacypacking.budget import ALPHAS
 
-def from_pure_epsilon_to_budget(pure_epsilon, delta=0.0):
+def from_pure_epsilon_to_budget(pure_epsilon):
     
     # return BasicBudget(epsilon=pure_epsilon)
 

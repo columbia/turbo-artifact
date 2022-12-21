@@ -98,7 +98,7 @@ class Config:
             epsilon, delta = float(task_row["epsilon"]), float(task_row["delta"])
             if gaussian:
                 sigma = np.sqrt(2 * np.log(1.25 / delta)) / epsilon
-                budget = GaussianCurve(sigma=sigma, epsilon=epsilon, delta=delta)
+                budget = GaussianCurve(sigma=sigma, epsilon=epsilon)
             else:
                 # It doesn't really make sense (not a real mechanism) but this is just for debugging
                 budget = RenyiBudget.from_epsilon_delta(epsilon, delta)
