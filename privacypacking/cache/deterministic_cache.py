@@ -42,7 +42,7 @@ class DeterministicCache(Cache):
                     noise = (
                         cached_budget.pure_epsilon * cached_noise
                         + run_budget.pure_epsilon * run_noise
-                    ) / (cached_budget + run_budget).pure_epsilon
+                    ) / (cached_budget.pure_epsilon + run_budget.pure_epsilon)
                 else:  # If optimization is not enabled
                     run_budget = demand_budget
                     noise = run_budget.compute_noise()
