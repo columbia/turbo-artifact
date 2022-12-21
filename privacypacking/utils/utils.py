@@ -110,8 +110,8 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-                result = tasks_info.result[task.id]
-                error = tasks_info.error[task.id]
+                # result = tasks_info.result[task.id]
+                # error = tasks_info.error[task.id]
 
             # Dictionnary with any key, instead of defining a new custom metric every time
             metadata = tasks_info.run_metadata.get(task.id, {})
@@ -121,9 +121,9 @@ def get_logs(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result": result,
-                    "error": error,
-                    "planning_time": tasks_info.planning_time[task.id],
+                    # "result": result,
+                    # "error": error,
+                    # "planning_time": tasks_info.planning_time[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),

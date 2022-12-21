@@ -145,7 +145,87 @@ class Scheduler:
         self.n_allocated_tasks += 1
         self.task_queue.tasks.remove(task)
 
+    def restart_scheduling_cycle(self):
+        """For dynamic relevance metrics"""
+        return (
+            self.metric.is_dynamic()
+            and (self.n_allocated_tasks % self.omegaconf.metric_recomputation_period)
+            == 0
+        )
+
+    def try_run_task(self, task: Task) -> Optional[Dict]:
+        """
+        Try to run the task.
+        If `just_check_budget` is true, we don't run the actual task, simply check the budget
+        If it can run, returns a metadata dict. Otherwise, returns None.
+        """
+
+        # We are in the special case where tasks request intervals
+        requested_blocks = sorted(list(task.budget_per_block.keys()))
+        block_tuple = (requested_blocks[0], requested_blocks[-1])
+        assert len(requested_blocks) == block_tuple[1] - block_tuple[0] + 1
+
+        # Check if the query can run and compute a plan
+        start_planning = time.process_time()
+        if not self.omegaconf.enable_caching:
+            # Just try to run the query as a single chunk, if enough budget
+            if self.omegaconf.enable_dp and not self.can_run(task.budget_per_block):
+                return None
+            plan = A(
+                [R(query_id=task.query_id, blocks=block_tuple, budget=task.budget)]
+            )
+        else:
+            # The plan returned here if not None is eligible for execution - cost not infinite
+            plan = self.planner.get_execution_plan(
+                task.query_id, requested_blocks, task.budget
+            )
+            if not plan:
+                return None
+        planning_time = time.process_time() - start_planning
+
+        # Run the actual query and consume budget if necessary
+        result, run_metadata = self.execute_plan(plan)
+        run_metadata["planning_time"] = planning_time
+
+        return run_metadata
+
     def schedule_queue(self) -> List[int]:
+        """Takes some tasks from `self.tasks` and allocates them
+        to some blocks from `self.blocks`.
+        Modifies the budgets of the blocks inplace.
+        Returns:
+            List[int]: the ids of the tasks that were scheduled
+        """
+        # Sort the remaining tasks and try to allocate them
+        sorted_tasks = self.order(self.task_queue.tasks)
+
+        for task in sorted_tasks:
+            # Do not schedule tasks whose lifetime has been exceeded
+            if (
+                self.tasks_info.tasks_lifetime[task.id]
+                < (self.get_num_blocks() - self.initial_blocks_num)
+                - self.tasks_info.tasks_submit_time[task.id]
+            ):
+                # TODO: we should pop them of the queue then, no? Instead of sorting each time
+                continue
+
+            # Call the planner, cache, executes linear query. Returns None if the query can't run.
+            run_metadata = self.try_run_task(task)
+
+            if run_metadata:
+                # Store logs and update the runqueue if the task ran
+                self.update_allocated_task(task, run_metadata)
+                for key, value in run_metadata.items():
+                    mlflow_log(f"{self.experiment_prefix}{key}", value, task.id)
+            else:
+                # Otherwise the task stays in the queue, maybe more budget will be unlocked next time!
+                logger.debug(f"Task {task.id} cannot run.")
+
+            # Some schedulers need to repeat multiple scheduling cycles and re-sort the tasks each time
+            if self.restart_scheduling_cycle():
+                self.schedule_queue()
+
+    def old_schedule_queue(self) -> List[int]:
         """Takes some tasks from `self.tasks` and allocates them
         to some blocks from `self.blocks`.
         Modifies the budgets of the blocks inplace.
@@ -193,7 +273,6 @@ class Scheduler:
                         [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
                     )
                 self.tasks_info.planning_time[task.id] = time.process_time() - start
-                print(f"Planning time", self.tasks_info.planning_time[task.id])
                 mlflow_log(
                     f"{self.experiment_prefix}performance/planning_time",
                     self.tasks_info.planning_time[task.id],
@@ -203,7 +282,6 @@ class Scheduler:
                 # Execute Plan
                 if plan is not None:
                     result, run_metadata = self.execute_plan(plan)
-                    print(f"Plan return met: {run_metadata}")
                     self.update_allocated_task(task, run_metadata)
 
                     # ----------- Logging ----------- #
@@ -271,7 +349,7 @@ class Scheduler:
 
             if budget is not None:
                 self.consume_budgets(block_ids, budget)
-                print(f"consumed {budget}")
+
             run_metadata["hyperblock_size"] = hyperblock.size
             return result, run_metadata
 
@@ -303,8 +381,7 @@ class Scheduler:
             # return result  # / total_size
 
         else:
-            logger.error("Execution: no such operator")
-            exit(1)
+            raise Exception("Execution: no such operator")
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
