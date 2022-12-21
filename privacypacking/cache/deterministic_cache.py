@@ -1,17 +1,7 @@
-from privacypacking.cache.cache import Cache, R, A
+from privacypacking.cache.cache import Cache
 from privacypacking.budget.block import HyperBlock
+from privacypacking.budget.utils import from_pure_epsilon_to_budget
 import yaml
-import math
-import numpy as np
-from privacypacking.budget import (
-    ALPHAS,
-    BasicBudget,
-    Budget,
-    RenyiBudget,
-    SparseHistogram,
-)
-from privacypacking.budget.curves import GaussianCurve
-
 
 class DeterministicCache(Cache):
     def __init__(self, variance_reduction):
@@ -39,23 +29,23 @@ class DeterministicCache(Cache):
         if true_result is None:  # Not cached ever
             true_result = hyperblock.run(query)  # Run without noise
             run_budget = demand_budget
-            noise = self.compute_noise(run_budget)
+            noise = run_budget.compute_noise()
         else:  # Cached already with some budget and noise
             if (
-                demand_budget.epsilon <= cached_budget.epsilon
+                demand_budget.pure_epsilon <= cached_budget.pure_epsilon
             ):  # If cached budget is enough
                 noise = cached_noise
             else:  # If cached budget is not enough
                 if self.variance_reduction:  # If optimization is enabled
-                    run_budget = demand_budget - cached_budget
-                    run_noise = self.compute_noise(run_budget)
+                    run_budget = from_pure_epsilon_to_budget(demand_budget.pure_epsilon-cached_budget.pure_epsilon)
+                    run_noise = run_budget.compute_noise()
                     noise = (
-                        cached_budget.epsilon * cached_noise
-                        + run_budget.epsilon * run_noise
-                    ) / (cached_budget + run_budget).epsilon
+                        cached_budget.pure_epsilon * cached_noise
+                        + run_budget.pure_epsilon * run_noise
+                    ) / (cached_budget + run_budget).pure_epsilon
                 else:  # If optimization is not enabled
                     run_budget = demand_budget
-                    noise = self.compute_noise(run_budget)
+                    noise = run_budget.compute_noise()
 
         result = true_result + noise
 
@@ -63,22 +53,6 @@ class DeterministicCache(Cache):
             self.add_entry(query_id, hyperblock.id, true_result, demand_budget, noise)
         return result, run_budget
 
-    def compute_noise(self, budget):  # TODO: move this elsewhere
-        sensitivity = 1
-        if isinstance(budget, BasicBudget):
-            noise = np.random.laplace(scale=sensitivity / budget.epsilon)
-        # elif isinstance(budget, GaussianCurve):
-        # noise = np.random.normal(scale=sensitivity * budget.sigma)
-        # elif isinstance(budget, RenyiBudget):
-        # raise NotImplementedError("Try to find the best sigma?")
-        return noise
-
-    # Cost model for minimizing budget
-    def get_entry_budget(self, query_id, blocks):
-        result, budget, _ = self.get_entry(query_id, blocks)
-        if result is not None:
-            return budget.epsilon
-        return 0.0
 
     def dump(self):
         res = yaml.dump(self.key_values)

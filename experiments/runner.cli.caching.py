@@ -28,15 +28,16 @@ def caching():
         data_lifetime=[0.1],
         task_lifetime=[1],
         # planner=["DynamicProgrammingPlanner:2", "PerBlockPlanner", "NoPlanner"],
-        planner=["ILP"],
-        optimization_objective=["minimize_error", "minimize_budget"],
-        variance_reduction=[True, False],
+        # planner=["ILP"],
+        planner=["PerBlockPlanner"],
+        optimization_objective=["minimize_budget"],
+        variance_reduction=[False],#[True, False],
         cache=["DeterministicCache"],  # ProbabilisticCache
         enable_caching=[True],
         enable_dp=[True],
         repetitions=1,
         enable_random_seed=True,
-        utility=[100, 200, 500, 1000],
+        utility=[100], #[100, 200, 500, 1000],
     )
 
 

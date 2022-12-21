@@ -78,6 +78,8 @@ class Config:
         return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
 
     def create_task(self, task_id: int, convert_to_rdp=False, gaussian=True) -> Task:
+        # TODO: this has no effect when users do not define the epislon; add accuracy tolerance here?
+
         # TODO: New omegaconf option for this? Or just use RDP really everywhere?
         _, task_row = next(self.tasks_generator)
 
@@ -96,12 +98,12 @@ class Config:
             epsilon, delta = float(task_row["epsilon"]), float(task_row["delta"])
             if gaussian:
                 sigma = np.sqrt(2 * np.log(1.25 / delta)) / epsilon
-                budget = GaussianCurve(sigma=sigma)
+                budget = GaussianCurve(sigma=sigma, epsilon=epsilon, delta=delta)
             else:
                 # It doesn't really make sense (not a real mechanism) but this is just for debugging
                 budget = RenyiBudget.from_epsilon_delta(epsilon, delta)
         else:
-            budget = BasicBudget(float(task_row["epsilon"]))
+            budget = BasicBudget(epsilon=float(task_row["epsilon"]))
 
         task = UniformTask(
             id=task_id,
@@ -118,16 +120,17 @@ class Config:
         return task
 
     def create_block(self, block_id: int) -> Block:
-        block = Block(
-            block_id,
-            BasicBudget(self.omegaconf.epsilon),
-        )
-        # block = Block.from_epsilon_delta(
+        # TODO: add a flag to switch between pure/renyi dp
+        # block = Block(
         #     block_id,
-        #     self.omegaconf.epsilon,
-        #     self.omegaconf.delta,
-        #     alpha_list=self.omegaconf.alphas,
+        #     BasicBudget(self.omegaconf.epsilon),
         # )
+        block = Block.from_epsilon_delta(
+            block_id,
+            self.omegaconf.epsilon,
+            self.omegaconf.delta,
+            alpha_list=self.omegaconf.alphas,
+        )
         return block
 
     def set_task_arrival_time(self):

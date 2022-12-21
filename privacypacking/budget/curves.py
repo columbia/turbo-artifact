@@ -80,7 +80,7 @@ class LaplaceCurve(RenyiBudget):
     RDP curve for a Laplace mechanism with sensitivity 1.
     """
 
-    def __init__(self, laplace_noise: float, alpha_list: List[float] = ALPHAS) -> None:
+    def __init__(self, epsilon, laplace_noise: float, alpha_list: List[float] = ALPHAS) -> None:
         """Computes the Laplace RDP curve.
             See Table II of the RDP paper (https://arxiv.org/pdf/1702.07476.pdf)
 
@@ -88,6 +88,8 @@ class LaplaceCurve(RenyiBudget):
             laplace_noise (float): lambda
             alpha_list (List[float], optional): RDP orders. Defaults to ALPHAS.
         """
+        self.sensitivity = 1
+        self.pure_epsilon = epsilon
         orders = {}
         λ = laplace_noise
         for α in alpha_list:
@@ -105,12 +107,20 @@ class LaplaceCurve(RenyiBudget):
                 orders[α] = float(ε)
         super().__init__(orders)
 
+    def compute_noise(self,):
+        return np.random.laplace(scale=self.sensitivity / self.pure_epsilon)
+
 
 class GaussianCurve(RenyiBudget):
-    def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
+    def __init__(self, epsilon, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
         self.sigma = sigma
+        self.sensitivity = 1
+        self.pure_epsilon = epsilon
         super().__init__(orders)
+
+    def compute_noise(self,):
+        return np.random.normal(scale=self.sensitivity * self.sigma)
 
 
 class BoundedOneShotSVT(RenyiBudget):

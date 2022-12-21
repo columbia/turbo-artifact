@@ -1,6 +1,5 @@
 from privacypacking.planner.planner import Planner
 from privacypacking.cache.cache import A, R
-from privacypacking.budget import BasicBudget
 import gurobipy as gp
 from gurobipy import GRB
 import time
@@ -11,18 +10,20 @@ from sortedcollections import OrderedSet
 import random
 from multiprocessing import Manager, Process
 from privacypacking.utils.compute_utility_curve import compute_utility_curve
+from privacypacking.budget.utils import from_pure_epsilon_to_budget
+
 from termcolor import colored
 
-Chunk = namedtuple("Chunk", ["index", "used_budget"])
+Chunk = namedtuple("Chunk", ["index", "total_pure_epsilon"])
 
 
 class ILP(Planner):
     def __init__(self, cache, blocks, utility, objective, variance_reduction):
         super().__init__(cache)
         self.blocks = blocks
-        self.delta = 0.00001
         self.utility = utility
-        self.epsilon_threshold = 0.5
+        self.p = 0.00001            # Probability that accuracy won't be respected
+        self.max_pure_epsilon = 0.5
         self.sequencial = False
         self.objective = objective
         self.variance_reduction = variance_reduction
@@ -36,11 +37,11 @@ class ILP(Planner):
         block_budgets = self.get_block_budgets(block_request)
         block_request = (block_request[0], block_request[-1])
         indices = self.get_chunk_indices(n, offset)
-        self.get_chunk_budget_cost(query_id, indices, offset, self.C)
+        self.get_chunk_pure_epsilon_cost(query_id, indices, offset, self.C)
         self.get_chunk_available_budget(
             indices, block_budgets, self.B
-        )  # minimum available budget across the blocks
-        f = compute_utility_curve(self.utility, self.delta, n, self.epsilon_threshold)
+        )  # minimum available pure_epsilon across the blocks
+        f = compute_utility_curve(self.utility, self.p, n, self.max_pure_epsilon)
         max_k = len(f)
 
         if max_k == 0:
@@ -71,7 +72,7 @@ class ILP(Planner):
                             indices,
                             self.objective,
                             self.variance_reduction,
-                            self.epsilon_threshold,
+                            self.max_pure_epsilon,
                         ),
                     )
                 )
@@ -90,8 +91,8 @@ class ILP(Planner):
             ):
                 plan = A(
                     [
-                        R(query_id, (i + offset, j + offset), BasicBudget(budget))
-                        for ((i, j), budget) in chunks
+                        R(query_id, (i + offset, j + offset), from_pure_epsilon_to_budget(pure_epsilon))
+                        for ((i, j), pure_epsilon) in chunks
                     ]
                 )
                 best_objvalue1 = objvalue1
@@ -109,9 +110,16 @@ class ILP(Planner):
     def get_block_budgets(self, block_request):
         return [self.blocks[block_id].budget.epsilon for block_id in block_request]
 
-    def get_chunk_budget_cost(self, query_id, indices, offset, C):
+    def get_chunk_pure_epsilon_cost(self, query_id, indices, offset, C):
+        
+        def get_cache_entry_budget(query_id, blocks):
+            result, budget, _ = self.cache.get_entry(query_id, blocks)
+            if result is not None:
+                return budget.pure_epsilon
+            return 0.0
+
         for (i, j) in indices:
-            C[(i, j)] = self.cache.get_entry_budget(query_id, (i + offset, j + offset))
+            C[(i, j)] = get_cache_entry_budget(query_id, (i + offset, j + offset))
 
     def get_chunk_available_budget(self, indices, block_budgets, B):
         for (i, j) in indices:
@@ -133,7 +141,6 @@ class ILP(Planner):
             return False
         return True
 
-
 def solve(
     kmin,
     kmax,
@@ -146,14 +153,13 @@ def solve(
     indices,
     objective_function,
     variance_reduction,
-    epsilon_threshold,
+    max_pure_epsilon,
 ):
     t = time.time()
     for k in range(kmin, kmax + 1):
-        minimum_budget_demand = BasicBudget(f[k])
         chunks, objval1, objval2 = solve_gurobi(
-            minimum_budget_demand.epsilon,
-            epsilon_threshold,
+            f[k],
+            max_pure_epsilon,
             k,
             n,
             indices,
@@ -171,8 +177,8 @@ def solve(
 
 
 def solve_gurobi(
-    minimum_budget_demand,
-    epsilon_threshold,
+    min_pure_epsilon,
+    max_pure_epsilon,
     K,
     N,
     indices,
@@ -186,14 +192,10 @@ def solve_gurobi(
         env.setParam("OutputFlag", 0)
         env.start()
         m = gp.Model(env=env)
-
         m.Params.OutputFlag = 0
-        # m.Params.TimeLimit = self.simulator_config.metric.gurobi_timeout
-        # m.Params.LogToConsole = 0
-        # m.Params.MIPGap = 0.01  # Optimize within 1% of optimal
 
-        lost_budget_per_chunk = {}
-        used_budget_per_chunk = {}
+        new_pure_epsilon_per_chunk = {}
+        total_pure_epsilon_per_chunk = {}
 
         # A variable per chunk
         x = m.addVars(
@@ -204,66 +206,66 @@ def solve_gurobi(
             name="x",
         )
 
-        # "used_budget": max budget that can be given to each chunk either because
-        # it is avaialble in the blocks (not exceeding threshold) or because we have it in cache
-        # "lost_budget": min budget that must be spent in order to reach "used_budget"
+        # "total_pure_epsilon": total pure_epsilon that can be given to each chunk either because
+        # it can be consumed from the blocks (not exceeding threshold) or because we have it in cache
+        # "new_pure_epsilon": the new pure_epsilon that must be spent in order to reach "total_pure_epsilon"
 
         if objective_function == "minimize_budget":
 
             for (i, j) in indices:
 
-                lost_budget = max(minimum_budget_demand - C[(i, j)], 0)
+                new_pure_epsilon = max(min_pure_epsilon - C[(i, j)], 0)
                 if (
-                    not variance_reduction and lost_budget > 0
+                    not variance_reduction and new_pure_epsilon > 0
                 ):  # If the result was not stored with enough budget
-                    lost_budget = (
-                        minimum_budget_demand  # Turning off variance reduction
+                    new_pure_epsilon = (
+                        min_pure_epsilon  # Turning off variance reduction
                     )
 
-                used_budget = max(minimum_budget_demand, C[(i, j)])
+                total_pure_epsilon = max(min_pure_epsilon, C[(i, j)])
 
-                # Enough budget in blocks constraint
-                # If at least one block in chunk i,j cannot give minimum budget 'lost_budget' then Xij=0
+                # Enough budget in blocks constraint to accommodate "new_pure_epsilon"
+                # If at least one block in chunk i,j cannot give minimum budget 'new_pure_epsilon' then Xij=0
                 for k in range(N):  # For every block
-                    if lost_budget > block_budgets[k]:
+                    if from_pure_epsilon_to_budget(new_pure_epsilon) > block_budgets[k]:
                         m.addConstr(x[i, j] == 0)
                         break
 
-                lost_budget_per_chunk[(i, j)] = lost_budget * (j - i + 1)
-                used_budget_per_chunk[
+                new_pure_epsilon_per_chunk[(i, j)] = new_pure_epsilon * (j - i + 1)
+                total_pure_epsilon_per_chunk[
                     (i, j)
                 ] = (
-                    -used_budget
-                )  # multiplying by -1: we want to maximize the total used_budget so we want to minimize the total -1*used_budget
+                    -total_pure_epsilon
+                )  # multiplying by -1: we want to maximize the total total_pure_epsilon so we want to minimize the total -1*total_pure_epsilon
 
         elif objective_function == "minimize_error":
 
             for (i, j) in indices:
 
-                used_budget = max(
-                    min(B[(i, j)], epsilon_threshold), C[(i, j)]
+                total_pure_epsilon = max(
+                    min(B[(i, j)], max_pure_epsilon), C[(i, j)]
                 )  # B[(i,j)]: maximum budget blocks in chunk (i,j) can give
 
                 if (
-                    used_budget < minimum_budget_demand
+                    total_pure_epsilon < min_pure_epsilon
                 ):  # If the budget that can be provided to the chunk is less than the budget demanded to maintain accuracy we invalidate the chunk
                     m.addConstr(x[i, j] == 0)
 
-                lost_budget = (
-                    used_budget - C[(i, j)]
-                )  # lost_budget between 0 and epsilon_threshold
-                if not variance_reduction and lost_budget > 0:
-                    lost_budget = used_budget
+                new_pure_epsilon = (
+                    total_pure_epsilon - C[(i, j)]
+                )  # new_pure_epsilon between 0 and max_pure_epsilon
+                if not variance_reduction and new_pure_epsilon > 0:
+                    new_pure_epsilon = total_pure_epsilon
 
-                lost_budget_per_chunk[(i, j)] = lost_budget * (j - i + 1)
-                used_budget_per_chunk[
+                new_pure_epsilon_per_chunk[(i, j)] = new_pure_epsilon * (j - i + 1)
+                total_pure_epsilon_per_chunk[
                     (i, j)
                 ] = (
-                    -used_budget
-                )  # multiplying by -1: we want to maximize the total used_budget so we want to minimize the total -1*used_budget
+                    -total_pure_epsilon
+                )  # multiplying by -1: we want to maximize the total total_pure_epsilon so we want to minimize the total -1*total_pure_epsilon
 
-                # print("lost_budget", (i,j), used_budget_per_chunk[(i, j)])
-                # print("used_budget", (i,j), used_budget_per_chunk[(i, j)])
+                # print("new_pure_epsilon", (i,j), total_pure_epsilon_per_chunk[(i, j)])
+                # print("total_pure_epsilon", (i,j), total_pure_epsilon_per_chunk[(i, j)])
 
         # No overlapping chunks constraint
         for k in range(N):  # For every block
@@ -284,11 +286,11 @@ def solve_gurobi(
 
         # Objective function
         if objective_function == "minimize_budget":
-            m.setObjectiveN(x.prod(lost_budget_per_chunk), 0, 1)  # Primary objective
-            m.setObjectiveN(x.prod(used_budget_per_chunk), 1, 0)  # Secondary objective
+            m.setObjectiveN(x.prod(new_pure_epsilon_per_chunk), 0, 1)  # Primary objective
+            m.setObjectiveN(x.prod(total_pure_epsilon_per_chunk), 1, 0)  # Secondary objective
         elif objective_function == "minimize_error":
-            m.setObjectiveN(x.prod(used_budget_per_chunk), 0, 1)
-            m.setObjectiveN(x.prod(lost_budget_per_chunk), 1, 0)
+            m.setObjectiveN(x.prod(total_pure_epsilon_per_chunk), 0, 1)
+            m.setObjectiveN(x.prod(new_pure_epsilon_per_chunk), 1, 0)
         # elif objective ==  "minimize_aggregations":
         # m.setObjectiveN(x.sum(), 0, 1)
         # m.setObjectiveN(x.prod(budget_cost), 1, 0)
@@ -310,7 +312,7 @@ def solve_gurobi(
             chunks = []
             for (i, j) in indices:
                 if int((abs(x[i, j].x - 1) < 1e-4)) == 1:
-                    chunks.append(Chunk((i, j), -used_budget_per_chunk[(i, j)]))
+                    chunks.append(Chunk((i, j), -total_pure_epsilon_per_chunk[(i, j)]))
             return chunks, objval1, objval2
         return [], math.inf, math.inf
 

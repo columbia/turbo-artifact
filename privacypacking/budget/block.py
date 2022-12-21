@@ -118,14 +118,15 @@ class HyperBlock:
     def run_dp(self, query, budget):
         result = self.run(query)
         # sensitivity = 1 / self.size
-        sensitivity = 1
-        noise_sample = 0
-        if isinstance(budget, BasicBudget):
-            noise_sample = np.random.laplace(scale=sensitivity / budget.epsilon)
-        elif isinstance(budget, GaussianCurve):
-            noise_sample = np.random.normal(scale=sensitivity * budget.sigma)
-        elif isinstance(budget, RenyiBudget):
-            raise NotImplementedError("Try to find the best sigma?")
+        # sensitivity = 1
+        # noise_sample = 0
+        noise_sample = budget.compute_noise()
+        # if isinstance(budget, BasicBudget):
+        #     noise_sample = np.random.laplace(scale=sensitivity / budget.epsilon)
+        # elif isinstance(budget, GaussianCurve):
+        #     noise_sample = np.random.normal(scale=sensitivity * budget.sigma)
+        # elif isinstance(budget, RenyiBudget):
+        #     raise NotImplementedError("Try to find the best sigma?")
 
         result += noise_sample
         return result
