@@ -87,11 +87,18 @@ class PrivacyWorkload:
 
         logger.info(self.tasks.head())
 
-    def generate_monoblock(self, n_queries):
-        self.tasks = [
-            Task(start_time=0, n_blocks=1, query_id=query_id, query_type="linear")
-            for query_id in range(n_queries)
-        ]
+    def generate_nblocks(self, n_queries, n_blocks=1):
+        # Simply lists all the queries, the sampling will happen in the simulator
+
+        self.tasks = []
+
+        for b in range(1, n_blocks + 1):
+            for query_id in range(n_queries):
+                self.tasks.append(
+                    Task(
+                        start_time=0, n_blocks=b, query_id=query_id, query_type="linear"
+                    )
+                )
 
         dp_tasks = [self.create_dp_task(t) for t in self.tasks]
         logger.info(f"Collecting results in a dataframe...")
@@ -144,10 +151,18 @@ def main(
         path = workload_dir.joinpath(f"covid19_workload/privacy_tasks.csv")
     elif requests_type == "monoblock":
         n_different_queries = len(json.load(open(queries, "r")))
-        privacy_workload.generate_monoblock(n_different_queries)
+        privacy_workload.generate_nblocks(n_different_queries, n_blocks=1)
         path = workload_dir.joinpath(
             f"covid19_workload/{requests_type}.privacy_tasks.csv"
         )
+    else:
+        n_blocks = int(requests_type)
+        n_different_queries = len(json.load(open(queries, "r")))
+        privacy_workload.generate_nblocks(n_different_queries, n_blocks=n_blocks)
+        path = workload_dir.joinpath(
+            f"covid19_workload/{n_blocks}blocks_{n_different_queries}queries.privacy_tasks.csv"
+        )
+
     privacy_workload.dump(path=path)
 
 
