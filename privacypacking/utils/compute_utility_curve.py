@@ -2,6 +2,7 @@ import math
 
 
 def compute_utility_curve(utility, p, n, epsilon_threshold=None):
+    # TODO: replace by generic std?
     # This assumes e-dp (delta=0)
     def utility_curve(k, p, u):
         return (math.sqrt(8 * k) * math.log(2 / p)) / u
