@@ -1,13 +1,13 @@
 from typing import List
 
 import numpy as np
+from autodp.mechanism_zoo import LaplaceMechanism
+from autodp.transformer_zoo import AmplificationBySampling
 
 # from opacus.accountants.analysis.rdp import compute_rdp
 from opacus.privacy_analysis import compute_rdp
 from scipy.interpolate import interp1d, splev, splrep
 
-from autodp.mechanism_zoo import LaplaceMechanism
-from autodp.transformer_zoo import AmplificationBySampling
 from privacypacking.budget import ALPHAS, RenyiBudget
 
 
@@ -80,16 +80,16 @@ class LaplaceCurve(RenyiBudget):
     RDP curve for a Laplace mechanism with sensitivity 1.
     """
 
-    def __init__(self, epsilon, laplace_noise: float, alpha_list: List[float] = ALPHAS) -> None:
+    def __init__(self, laplace_noise: float, alpha_list: List[float] = ALPHAS) -> None:
         """Computes the Laplace RDP curve.
             See Table II of the RDP paper (https://arxiv.org/pdf/1702.07476.pdf)
 
         Args:
-            laplace_noise (float): lambda
+            laplace_noise (float): lambda, the std of the mechanism for sensitivity 1 (the noise multiplier otherwise).
             alpha_list (List[float], optional): RDP orders. Defaults to ALPHAS.
         """
-        self.sensitivity = 1
-        self.pure_epsilon = epsilon
+        self.laplace_noise = laplace_noise
+        self.pure_epsilon = 1 / laplace_noise
         orders = {}
         λ = laplace_noise
         for α in alpha_list:
@@ -107,20 +107,26 @@ class LaplaceCurve(RenyiBudget):
                 orders[α] = float(ε)
         super().__init__(orders)
 
-    def compute_noise(self,):
-        return np.random.laplace(scale=self.sensitivity / self.pure_epsilon)
+    # Let's keep the budget accounting separate from the mechanisms!
+    # The actual noise sampling happens elsewhere. The budget doesn't care about sensitivity.
+    # If we merge the two abstractions it gets messy, e.g. we can't swap mechanisms or accounting methods easily
+    # def compute_noise(
+    #     self,
+    # ):
+    #     return np.random.laplace(scale=self.sensitivity / self.pure_epsilon)
 
 
 class GaussianCurve(RenyiBudget):
-    def __init__(self, epsilon, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
+    def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
         self.sigma = sigma
-        self.sensitivity = 1
-        self.pure_epsilon = epsilon
+        # self.pure_epsilon = epsilon # This makes just no sense because Gaussian is not pure DP.
         super().__init__(orders)
 
-    def compute_noise(self,):
-        return np.random.normal(scale=self.sensitivity * self.sigma)
+    # def compute_noise(
+    #     self,
+    # ):
+    #     return np.random.normal(scale=self.sensitivity * self.sigma)
 
 
 class BoundedOneShotSVT(RenyiBudget):

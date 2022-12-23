@@ -1,18 +1,23 @@
-from privacypacking.planner.planner import Planner
-from privacypacking.cache.cache import A, R
-import gurobipy as gp
-from gurobipy import GRB
-import time
 import math
 import os
-from collections import namedtuple
-from sortedcollections import OrderedSet
 import random
+import time
+from collections import namedtuple
 from multiprocessing import Manager, Process
-from privacypacking.utils.compute_utility_curve import compute_utility_curve
-from privacypacking.budget.utils import from_pure_epsilon_to_budget
 
+import gurobipy as gp
+from gurobipy import GRB
+from sortedcollections import OrderedSet
 from termcolor import colored
+
+from privacypacking.cache.cache import A, R
+from privacypacking.planner.planner import Planner
+from privacypacking.utils.compute_utility_curve import compute_utility_curve
+
+# from privacypacking.budget.utils import from_pure_epsilon_to_budget
+
+# TODO: use noise (e.g. standard deviation) instead of "pure_epsilon"
+
 
 Chunk = namedtuple("Chunk", ["index", "total_pure_epsilon"])
 
@@ -22,7 +27,7 @@ class ILP(Planner):
         super().__init__(cache)
         self.blocks = blocks
         self.utility = utility
-        self.p = 0.00001            # Probability that accuracy won't be respected
+        self.p = 0.00001  # Probability that accuracy won't be respected
         self.max_pure_epsilon = 0.5
         self.sequencial = False
         self.objective = objective
@@ -91,7 +96,11 @@ class ILP(Planner):
             ):
                 plan = A(
                     [
-                        R(query_id, (i + offset, j + offset), from_pure_epsilon_to_budget(pure_epsilon))
+                        R(
+                            query_id,
+                            (i + offset, j + offset),
+                            from_pure_epsilon_to_budget(pure_epsilon),
+                        )
                         for ((i, j), pure_epsilon) in chunks
                     ]
                 )
@@ -111,7 +120,6 @@ class ILP(Planner):
         return [self.blocks[block_id].budget.epsilon for block_id in block_request]
 
     def get_chunk_pure_epsilon_cost(self, query_id, indices, offset, C):
-        
         def get_cache_entry_budget(query_id, blocks):
             result, budget, _ = self.cache.get_entry(query_id, blocks)
             if result is not None:
@@ -140,6 +148,7 @@ class ILP(Planner):
         if (blocks[0] % size) != 0:
             return False
         return True
+
 
 def solve(
     kmin,
@@ -286,8 +295,12 @@ def solve_gurobi(
 
         # Objective function
         if objective_function == "minimize_budget":
-            m.setObjectiveN(x.prod(new_pure_epsilon_per_chunk), 0, 1)  # Primary objective
-            m.setObjectiveN(x.prod(total_pure_epsilon_per_chunk), 1, 0)  # Secondary objective
+            m.setObjectiveN(
+                x.prod(new_pure_epsilon_per_chunk), 0, 1
+            )  # Primary objective
+            m.setObjectiveN(
+                x.prod(total_pure_epsilon_per_chunk), 1, 0
+            )  # Secondary objective
         elif objective_function == "minimize_error":
             m.setObjectiveN(x.prod(total_pure_epsilon_per_chunk), 0, 1)
             m.setObjectiveN(x.prod(new_pure_epsilon_per_chunk), 1, 0)
