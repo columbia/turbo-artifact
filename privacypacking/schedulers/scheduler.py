@@ -185,19 +185,14 @@ class Scheduler:
                 start = time.time()
 
                 plan = None
-                if (
-                    self.omegaconf.enable_caching
-                ):  # Find a plan to run the query using caching
+                if (self.omegaconf.enable_caching):  
+                    # Find a plan to run the query using caching
                     # print(f"Getting plan for task {task.id}")
-                    plan = self.planner.get_execution_plan(  # The plan returned here if not None is eligible for execution - cost not infinite
-                        task.query_id, bs_list, task.budget
-                    )
+                    plan = self.planner.get_execution_plan(task.query_id, bs_list)
                 elif (
                     self.can_run(task.budget_per_block) or not self.omegaconf.enable_dp
                 ):
-                    plan = A(
-                        [R(query_id=task.query_id, blocks=bs_tuple, budget=task.budget)]
-                    )
+                    plan = A(query_id=task.query_id, l=[R(blocks=bs_tuple, budget=task.budget)])
                 # self.tasks_info.planning_time[task.id] = time.process_time() - start
                 self.tasks_info.planning_time[task.id] = time.time() - start
                 print(f"Planning time", self.tasks_info.planning_time[task.id])
@@ -249,49 +244,37 @@ class Scheduler:
         return self.allocated_task_ids
 
     def execute_plan(self, plan):
-        # TODO: Consider making an executor class
-        # TODO: simplify? Just R then A, no need for recursion. plan = list of cuts?
-        if isinstance(plan, R):  # Run Query
-            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+        query_id = plan.query_id
+        query = self.query_pool.get_query(plan.query_id)
+
+        results = []
+        for run_op in plan.l:
+            block_ids = list(range(run_op.blocks[0], run_op.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
-            query = self.query_pool.get_query(plan.query_id)
 
             if self.omegaconf.enable_caching:  # Using cache
-                result, budget = self.cache.run(
-                    query_id=plan.query_id,
+                result, run_budget = self.cache.run(
+                    query_id=query_id,
                     query=query,
-                    demand_budget=plan.budget,
+                    noise_std=run_op.noise_std,
                     hyperblock=hyperblock,
                 )
             else:  # Not using cache
                 if self.omegaconf.enable_dp:  # Add DP noise
-                    result = hyperblock.run_dp(query, plan.budget)
-                    budget = plan.budget
+                    result, run_budget = hyperblock.run_dp(query, run_op.noise_std)
                 else:
-                    result = hyperblock.run(query, plan.budget)
-                    budget = None
+                    result = hyperblock.run(query)
+                    run_budget = None
+        
+            if run_budget is not None:
+                # print("consume budget", run_budget)
+                self.consume_budgets(block_ids, run_budget)
 
-            if budget is not None:
-                # print("consume budget", budget)
-                self.consume_budgets(block_ids, budget)
-            return (result, hyperblock.size)
+            results += result
 
-        elif isinstance(plan, A):  # Aggregate Partial Results
-            agglist = [self.execute_plan(x) for x in plan.l]
-            if not agglist:
-                return None
-
-            result = 0
-            # total_size = 0
-            for (res, size) in agglist:
-                # result += size * res
-                result += res
-                # total_size += size
-            return result
-
-        else:
-            logger.error("Execution: no such operator")
-            exit(1)
+        if results:
+            return sum(result)
+        return None
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message

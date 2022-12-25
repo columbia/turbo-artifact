@@ -1,43 +1,30 @@
 class R:
-    def __init__(self, query_id, blocks, budget) -> None:
-        self.query_id = query_id
+    def __init__(self, blocks, noise_std) -> None:
         self.blocks = blocks
-        self.budget = budget
+        self.noise_std = noise_std
 
-    def __str__(
-        self,
-    ):
-        return f"Run({self.blocks}, {self.budget})"
+    def __str__(self,):
+        return f"Run({self.blocks}, {self.noise_std})"
 
 
 class A:
-    def __init__(self, l, budget=None) -> None:
+    def __init__(self, query_id, l) -> None:
         self.l = l
-        self.budget = budget
+        self.query_id = query_id
 
-    def __str__(
-        self,
-    ):
+    def __str__(self,):
         return f"Aggregate({[str(l) for l in self.l]})"
 
 
 class Cache:
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         pass
 
-    def dump(
-        self,
-    ):
+    def dump(self):
         pass
 
-    def run(
-        self,
-    ):
+    def run(self):
         pass
 
-    def get_execution_plan(
-        self,
-    ):
+    def get_execution_plan(self):
         pass

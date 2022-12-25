@@ -3,17 +3,6 @@
 from opacus.privacy_analysis import compute_rdp, get_privacy_spent
 
 from privacypacking.budget import ALPHAS
-from privacypacking.budget.curves import LaplaceCurve
-
-# def from_pure_epsilon_to_budget(pure_epsilon):
-
-#     # return BasicBudget(epsilon=pure_epsilon)
-
-#     # optimizer creates plans with Laplace noise only for now
-#     # That is because the utility curve is computed with e-dp in mind. We can generalize later.
-#     # The optimizer is the one who sets the budget/noise - user has no choice
-#     return LaplaceCurve(epsilon=pure_epsilon, laplace_noise=1/pure_epsilon)
-
 
 def compute_noise_from_target_epsilon(
     target_epsilon,

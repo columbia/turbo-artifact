@@ -107,26 +107,12 @@ class LaplaceCurve(RenyiBudget):
                 orders[α] = float(ε)
         super().__init__(orders)
 
-    # Let's keep the budget accounting separate from the mechanisms!
-    # The actual noise sampling happens elsewhere. The budget doesn't care about sensitivity.
-    # If we merge the two abstractions it gets messy, e.g. we can't swap mechanisms or accounting methods easily
-    # def compute_noise(
-    #     self,
-    # ):
-    #     return np.random.laplace(scale=self.sensitivity / self.pure_epsilon)
-
 
 class GaussianCurve(RenyiBudget):
     def __init__(self, sigma: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha / (2 * (sigma ** 2)) for alpha in alpha_list}
         self.sigma = sigma
-        # self.pure_epsilon = epsilon # This makes just no sense because Gaussian is not pure DP.
         super().__init__(orders)
-
-    # def compute_noise(
-    #     self,
-    # ):
-    #     return np.random.normal(scale=self.sensitivity * self.sigma)
 
 
 class BoundedOneShotSVT(RenyiBudget):

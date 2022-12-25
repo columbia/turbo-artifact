@@ -1,12 +1,11 @@
 import math
 
 from privacypacking.budget.block import HyperBlock
-from privacypacking.budget.utils import from_pure_epsilon_to_budget
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.utils import get_splits
 from privacypacking.planner.planner import Planner
 from privacypacking.utils.compute_utility_curve import compute_utility_curve
-
+from privacypacking.budget.curves import LaplaceCurve
 # TODO: use std instead of pure epsilon
 
 
@@ -22,22 +21,23 @@ class PerBlockPlanner(Planner):
         # self.max_pure_epsilon = 0.5
         self.variance_reduction = variance_reduction
 
-    def get_execution_plan(self, query_id, block_request, _):
+    def get_execution_plan(self, query_id, block_request):
         """
         For "per-block-planning" a plan has this form: A(R(B1), R(B2), ... , R(Bn))
         """
         n = len(block_request)
         f = compute_utility_curve(self.utility, self.p, n)
         min_pure_epsilon = f[n]
+        laplace_scale = 1 / min_pure_epsilon
+        noise_std = math.sqrt(2) * laplace_scale
 
         plan = []
-        num_aggregations = n - 1
-        split = get_splits(block_request, num_aggregations)[0]  # TODO: simplify
+        split = get_splits(block_request, n-1)[0]  # TODO: simplify
         for x in split:
             x = (x[0], x[-1])
-            plan += [R(query_id, x, from_pure_epsilon_to_budget(min_pure_epsilon))]
-        plan = A(plan)
-        print(plan)
+            plan += [R(x, noise_std)]
+        plan = A(query_id, plan)
+        # print(plan)
         cost = self.get_cost(plan)
         # print("Get cost of plan", plan, "cost", cost)
 
@@ -48,25 +48,23 @@ class PerBlockPlanner(Planner):
 
     # Simple Cost model
     def get_cost(self, plan):
-        if isinstance(plan, A):  # Aggregate cost of arguments/operators
-            return sum([self.get_cost(x) for x in plan.l])
-        elif isinstance(plan, R):  # Get cost of Run operator
-            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
+        query_id = plan.query_id
+
+        for run_op in plan.l:
+            block_ids = list(range(run_op.blocks[0], run_op.blocks[-1] + 1))
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
 
-            result, cached_budget, _ = self.cache.get_entry(
-                plan.query_id, hyperblock.id
-            )
-            if result is not None:
-                demand_pure_epsilon = max(
-                    plan.budget.pure_epsilon - cached_budget.pure_epsilon, 0
-                )
-                if not self.variance_reduction:
-                    demand_pure_epsilon = plan.budget.pure_epsilon
-                demand_budget = from_pure_epsilon_to_budget(demand_pure_epsilon)
-                demand = {key: demand_budget for key in block_ids}
-            else:
-                demand = {key: plan.budget for key in block_ids}
+            cache_entry= self.cache.get_entry(query_id, hyperblock.id)
+            if cache_entry is not None:
+                # TODO: re-enable variance reduction
+                if run_op.noise_std > cache_entry.noise_std:    # Enough budget
+                    continue
+
+            laplace_scale = run_op.noise_std / math.sqrt(2)
+            run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+            demand = {key: run_budget for key in block_ids}
+
             if not hyperblock.can_run(demand):
                 return math.inf  # This hyperblock does not have enough budget
-            return 1  # Even if there is at least a little budget left in the hyperblock we assume the cost is 1
+
+        return 0

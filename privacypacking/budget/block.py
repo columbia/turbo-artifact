@@ -11,7 +11,7 @@ from privacypacking.budget import (
     RenyiBudget,
     SparseHistogram,
 )
-from privacypacking.budget.curves import GaussianCurve
+from privacypacking.budget.curves import LaplaceCurve
 
 
 class Block:
@@ -110,26 +110,18 @@ class HyperBlock:
             result = 0
             for block in self.blocks.values():
                 result += len(block) * block.run(query)
-            # result /= self.size
         elif isinstance(query, pd.DataFrame):
             pass
         return result
 
-    def run_dp(self, query, budget):
+    def run_dp(self, query, noise_std):
         result = self.run(query)
-        # sensitivity = 1 / self.size
-        # sensitivity = 1
-        # noise_sample = 0
-        noise_sample = budget.compute_noise()
-        # if isinstance(budget, BasicBudget):
-        #     noise_sample = np.random.laplace(scale=sensitivity / budget.epsilon)
-        # elif isinstance(budget, GaussianCurve):
-        #     noise_sample = np.random.normal(scale=sensitivity * budget.sigma)
-        # elif isinstance(budget, RenyiBudget):
-        #     raise NotImplementedError("Try to find the best sigma?")
-
-        result += noise_sample
-        return result
+        # TODO: generalize for more distributions
+        laplace_scale = noise_std / np.sqrt(2)
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+        noise = np.random.laplace(scale=laplace_scale)
+        result += noise
+        return result, run_budget
 
     def can_run(self, demand) -> bool:
         """
