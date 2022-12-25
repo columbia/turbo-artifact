@@ -133,10 +133,16 @@ def k_way_marginal_query_list(
     attribute_sizes: List[int],
 ):
     """
+
+    Outputs a query, as a list of bins on which the query has value 1.
+
     Examples for `attribute_to_value`:
-    {0:1} to count all positive cases
+    {0:1} to count all positive cases. Will output something like:
+        [[0,0], [0,1], [0,2]] if you just have 2 attributes
     {0:0, 1:0} to count all negative males
     {0:0, 1:0, 3:2} to count all negative asian males
+
+    TODO: if the queries start to be too big, we can implement them with a special class
     """
     # List of domains. E.g. positive = [1], gender = [0,1], ethnicity = [1,2,3]
     domain_per_attribute = []

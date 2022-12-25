@@ -1,4 +1,5 @@
 import math
+from typing import Dict
 
 from privacypacking.budget.block import Block, HyperBlock
 from privacypacking.cache.cache import A, Cache, R
@@ -6,9 +7,9 @@ from privacypacking.cache.pmw import PMW
 
 
 class ProbabilisticCache(Cache):
-    def __init__(self, **pmw_args):
+    def __init__(self, cache_cfg: Dict = {}):
         self.key_values = {}
-        self.pmw_args = pmw_args
+        self.pmw_args = cache_cfg
 
     def add_entry(self, hyperblock: HyperBlock):
         pmw = PMW(hyperblock, **self.pmw_args)
@@ -24,8 +25,8 @@ class ProbabilisticCache(Cache):
         pmw = self.get_entry(query_id, hyperblock.id)
         if not pmw:  # If there is no PMW for the hyperblock then create it
             pmw = self.add_entry(hyperblock)
-        result, run_budget = pmw.run(query)
-        return result, run_budget, 0  # Not logging noise
+        result, run_budget, run_metadata = pmw.run(query)
+        return result, run_budget, run_metadata
 
     # Cost model    # TODO: remove this functionality from the Cache
     # This is tailored for the per block planning
@@ -44,10 +45,15 @@ class ProbabilisticCache(Cache):
             pmw = self.get_entry(plan.query_id, hyperblock.id)
             if pmw is None:
                 # Use the defaults or the same config as `add_entry`
-                budget = PMW.worst_case_cost(**self.pmw_args)
+                # TODO: This is leaking privacy, assume we have a good estimate already.
+                budget = PMW.worst_case_cost(n=hyperblock.size, **self.pmw_args)
             else:
                 budget = PMW.worst_case_cost(
-                    pmw.nu, pmw.ro, pmw.standard_svt, pmw.local_svt_max_queries
+                    n=hyperblock.size,
+                    nu=pmw.nu,
+                    ro=pmw.ro,
+                    standard_svt=pmw.standard_svt,
+                    local_svt_max_queries=pmw.local_svt_max_queries,
                 )
 
             demand = {key: budget for key in block_ids}

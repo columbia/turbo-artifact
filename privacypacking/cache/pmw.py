@@ -19,10 +19,11 @@ class PMW:
     def __init__(
         self,
         hyperblock: HyperBlock,
-        nu=10,  # Scale of noise added on queries. 485 comes from epsilon=0.01, delta=1e-5 (yes it's really noisy)
+        nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
-        alpha=0.2,  # Max error guarantee, expressed as fraction
-        k=10,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
+        alpha=0.005,  # Max error guarantee, expressed as fraction.
+        beta=0.01,  # Failure probability for the alpha error bound
+        k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=True,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
     ):
@@ -41,9 +42,11 @@ class PMW:
         self.queries_ran = 0
         self.hard_queries_ran = 0
         self.histogram = DenseHistogram(self.M)
-        self.nu = nu
         self.id = str(hyperblock.id)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
+
+        # From my maths. It's cheap to be accurate when n is large.
+        self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
 
         # Sparse Vector parameters
         self.alpha = alpha
@@ -68,12 +71,24 @@ class PMW:
 
     @classmethod
     def worst_case_cost(
-        cls, nu=485, ro=None, standard_svt=True, local_svt_max_queries=None
+        cls,
+        n=1000,
+        nu=None,
+        ro=None,
+        alpha=0.05,
+        beta=0.001,
+        k=None,
+        standard_svt=True,
+        local_svt_max_queries=None,
     ) -> Budget:
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
         # and we still do a cache miss, so we pay for a true query on top of that
+        nu = nu if nu else n * alpha / np.log(2 / beta)
         ro = ro if ro else nu
-        query_cost = GaussianCurve(sigma=nu)
+
+        # query_cost = GaussianCurve(sigma=nu)
+        query_cost = LaplaceCurve(laplace_noise=nu)
+
         if standard_svt:
             # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
             svt_cost = PureDPtoRDP(epsilon=1 / nu + 2 / nu)
@@ -83,6 +98,8 @@ class PMW:
 
     def run(self, query):
         assert isinstance(query, torch.Tensor)
+
+        run_metadata = {}
 
         if (not self.standard_svt) and (
             self.local_svt_queries_ran >= self.local_svt_max_queries
@@ -100,7 +117,7 @@ class PMW:
                 self.noisy_threshold = self.alpha / 2 + np.random.laplace(
                     0, self.Delta * self.nu
                 )
-                svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
+                run_budget = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
             else:
                 self.noisy_threshold = self.alpha / 2 + np.random.normal(
                     0, self.Delta * self.ro
@@ -136,6 +153,7 @@ class PMW:
 
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
+            run_metadata["hard_query"] = False
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -143,6 +161,7 @@ class PMW:
         else:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
+            run_metadata["hard_query"] = True
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -184,16 +203,17 @@ class PMW:
         )
         mlflow_log(
             f"{self.id}/true_error_fraction",
-            abs(predicted_output - true_output),
+            abs(output - true_output),
             self.queries_ran,
         )
         mlflow_log(
             f"{self.id}/true_error_count",
-            self.n * abs(predicted_output - true_output),
+            self.n * abs(output - true_output),
             self.queries_ran,
         )
+        run_metadata["true_error_fraction"] = abs(output - true_output)
 
         if self.output_counts:
             output *= self.n
 
-        return output, run_budget
+        return output, run_budget, run_metadata
