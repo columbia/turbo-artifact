@@ -115,12 +115,11 @@ class HyperBlock:
         return result
 
     def run_dp(self, query, noise_std):
-        result = self.run(query)
         # TODO: generalize for more distributions
         laplace_scale = noise_std / np.sqrt(2)
-        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
         noise = np.random.laplace(scale=laplace_scale)
-        result += noise
+        result = self.run(query) + noise
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
         return result, run_budget
 
     def can_run(self, demand) -> bool:

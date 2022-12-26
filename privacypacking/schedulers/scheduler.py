@@ -15,14 +15,9 @@ from privacypacking.budget.block_selection import NotEnoughBlocks
 from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilisticCache
-from privacypacking.planner.dynamic_programming_planner import DynamicProgrammingPlanner
-from privacypacking.planner.dynamic_programming_planner_utility import (
-    DynamicProgrammingPlannerUtility,
-)
 from privacypacking.planner.ilp import ILP
 from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.planner.no_planner import NoPlanner
-from privacypacking.planner.per_block_planner import PerBlockPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT, mlflow_log
 
@@ -107,6 +102,7 @@ class Scheduler:
         self.n_allocated_tasks = 0
 
         self.utility = self.simulator_config.utility
+        self.p = self.simulator_config.p
         self.optimization_objective = self.omegaconf.optimization_objective
         self.variance_reduction = self.omegaconf.variance_reduction
 
@@ -116,6 +112,7 @@ class Scheduler:
             self.cache,
             self.blocks,
             self.utility,
+            self.p,
             self.optimization_objective,
             self.variance_reduction,
         )
@@ -244,8 +241,9 @@ class Scheduler:
         return self.allocated_task_ids
 
     def execute_plan(self, plan):
+        ''' run_budget: the budget that will be consumed from the blocks after running the query '''
         query_id = plan.query_id
-        query = self.query_pool.get_query(plan.query_id)
+        query = self.query_pool.get_query(query_id)
 
         results = []
         for run_op in plan.l:

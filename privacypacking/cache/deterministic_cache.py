@@ -38,7 +38,7 @@ class DeterministicCache(Cache):
 
         cache_entry = self.get_entry(query_id, hyperblock.id)
         if cache_entry is None:  # Not cached
-            true_result = hyperblock.run(query)  # Obtain true result
+            true_result = hyperblock.run(query)  # Obtain true result by running the query
             laplace_scale = noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             noise = np.random.laplace(scale=laplace_scale)
@@ -46,7 +46,7 @@ class DeterministicCache(Cache):
         else:   # Cached
             true_result = cache_entry.result
 
-            if noise_std > cache_entry.noise_std:
+            if noise_std >= cache_entry.noise_std:
                 # We already have a good estimate in the cache
                 run_budget = ZeroCurve()
                 noise = cache_entry.noise

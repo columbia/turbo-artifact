@@ -1,6 +1,5 @@
 import math
 import os
-import random
 import time
 from collections import namedtuple
 from multiprocessing import Manager, Process
@@ -9,108 +8,88 @@ import gurobipy as gp
 from gurobipy import GRB
 from sortedcollections import OrderedSet
 from termcolor import colored
-
+import numpy as np
 from privacypacking.cache.cache import A, R
 from privacypacking.planner.planner import Planner
 from privacypacking.utils.compute_utility_curve import compute_utility_curve
-
-# from privacypacking.budget.utils import from_pure_epsilon_to_budget
+from privacypacking.budget.curves import LaplaceCurve
 
 # TODO: use noise (e.g. standard deviation) instead of "pure_epsilon"
 
 
-Chunk = namedtuple("Chunk", ["index", "total_pure_epsilon"])
+Chunk = namedtuple("Chunk", ["index", "noise_std"])
 
 
 class ILP(Planner):
-    def __init__(self, cache, blocks, utility, objective, variance_reduction):
+    def __init__(self, cache, blocks, utility, p, variance_reduction):
         super().__init__(cache)
         self.blocks = blocks
         self.utility = utility
-        self.p = 0.00001  # Probability that accuracy won't be respected
+        self.p = p
         self.max_pure_epsilon = 0.5
         self.sequencial = False
-        self.objective = objective
         self.variance_reduction = variance_reduction
         self.C = {}
-        self.B = {}
 
-    def get_execution_plan(self, query_id, block_request, _):
+    def get_execution_plan(self, query_id, block_request):
         n = len(block_request)
         offset = block_request[0]
 
         block_budgets = self.get_block_budgets(block_request)
         block_request = (block_request[0], block_request[-1])
         indices = self.get_chunk_indices(n, offset)
-        self.get_chunk_pure_epsilon_cost(query_id, indices, offset, self.C)
-        self.get_chunk_available_budget(
-            indices, block_budgets, self.B
-        )  # minimum available pure_epsilon across the blocks
+        self.get_chunk_cached_noise_std(query_id, indices, offset, self.C)
+
         f = compute_utility_curve(self.utility, self.p, n, self.max_pure_epsilon)
         max_k = len(f)
 
-        if max_k == 0:
+        if max_k == 0:  # User-accuracy too high - max pure-epsilon exceeded
             return None
 
-        if not self.sequencial:  # Running in Parallel
-            processes = []
-            manager = Manager()
-            return_dict = manager.dict()
-            num_processes = min(os.cpu_count(), max_k)
+        # Running in Parallel
+        processes = []
+        manager = Manager()
+        return_dict = manager.dict()
+        num_processes = min(os.cpu_count(), max_k)
 
-            k = max_k // num_processes
-            for i in range(num_processes):
-                k_start = i * k + 1
-                k_end = i * k + k if i * k + k < max_k else max_k
-                processes.append(
-                    Process(
-                        target=solve,
-                        args=(
-                            k_start,
-                            k_end,
-                            return_dict,
-                            self.C,
-                            self.B,
-                            block_budgets,
-                            f,
-                            n,
-                            indices,
-                            self.objective,
-                            self.variance_reduction,
-                            self.max_pure_epsilon,
-                        ),
-                    )
+        k = max_k // num_processes
+        for i in range(num_processes):
+            k_start = i * k + 1
+            k_end = i * k + k if i * k + k < max_k else max_k
+            processes.append(
+                Process(
+                    target=solve,
+                    args=(
+                        k_start,
+                        k_end,
+                        return_dict,
+                        self.C,
+                        block_budgets,
+                        f,
+                        n,
+                        indices,
+                        self.variance_reduction,
+                    ),
                 )
-                processes[i].start()
+            )
+            processes[i].start()
 
-            for i in range(num_processes):
-                processes[i].join()
+        for i in range(num_processes):
+            processes[i].join()
 
         # Find the best solution
         plan = None
-        best_objvalue1 = best_objvalue2 = math.inf
+        best_objvalue = math.inf
 
-        for k, (chunks, objvalue1, objvalue2) in return_dict.items():
-            if objvalue1 < best_objvalue1 or (
-                (objvalue1 == best_objvalue1) and objvalue2 < best_objvalue2
-            ):
-                plan = A(
-                    [
-                        R(
-                            query_id,
-                            (i + offset, j + offset),
-                            from_pure_epsilon_to_budget(pure_epsilon),
-                        )
-                        for ((i, j), pure_epsilon) in chunks
-                    ]
-                )
-                best_objvalue1 = objvalue1
-                best_objvalue2 = objvalue2
+        for k, (chunks, objvalue) in return_dict.items():
+            if objvalue < best_objvalue:
+                plan = A(query_id, [R((i + offset, j + offset), noise_std) for ((i, j), noise_std) in chunks])
+                best_objvalue = objvalue
 
         if plan is not None:
             print(
                 colored(
-                    f"Got plan (cost={best_objvalue1}, {best_objvalue2}) for blocks {block_request}: {plan}",
+                    f"Got plan (cost={best_objvalue}) for blocks {block_request}: {plan}",
                     "yellow",
                 )
             )
@@ -119,20 +98,12 @@ class ILP(Planner):
     def get_block_budgets(self, block_request):
         return [self.blocks[block_id].budget.epsilon for block_id in block_request]
 
-    def get_chunk_pure_epsilon_cost(self, query_id, indices, offset, C):
-        def get_cache_entry_budget(query_id, blocks):
-            result, budget, _ = self.cache.get_entry(query_id, blocks)
-            if result is not None:
-                return budget.pure_epsilon
-            return 0.0
-
-        for (i, j) in indices:
-            C[(i, j)] = get_cache_entry_budget(query_id, (i + offset, j + offset))
-
-    def get_chunk_available_budget(self, indices, block_budgets, B):
-        for (i, j) in indices:
-            B[(i, j)] = min(block_budgets[i : j + 1])
-
+    def get_chunk_cached_noise_std(self, query_id, indices, offset, C):
+        for (i,j) in indices:
+            cache_entry = self.cache.get_entry(query_id, (i + offset, j + offset))
+            if cache_entry is not None:
+                C[(i,j)] = cache_entry.noise_std
+ 
     def get_chunk_indices(self, n, offset):
         indices = OrderedSet()
         for i in range(n):
@@ -150,61 +121,28 @@ class ILP(Planner):
         return True
 
 
-def solve(
-    kmin,
-    kmax,
-    return_dict,
-    C,
-    B,
-    block_budgets,
-    f,
-    n,
-    indices,
-    objective_function,
-    variance_reduction,
-    max_pure_epsilon,
-):
+def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, variance_reduction):
     t = time.time()
     for k in range(kmin, kmax + 1):
-        chunks, objval1, objval2 = solve_gurobi(
-            f[k],
-            max_pure_epsilon,
-            k,
-            n,
-            indices,
-            C,
-            B,
-            block_budgets,
-            variance_reduction,
-            objective_function,
-        )
+        laplace_scale = 1 / f[k]    # f(k): Minimum pure epsilon for reaching accuracy target given k
+        target_noise_std = math.sqrt(2) * laplace_scale
+        chunks, objval = solve_gurobi(target_noise_std, k, n, indices, C, block_budgets, variance_reduction)
         if chunks:
-            return_dict[k] = (chunks, objval1, objval2)
-
+            return_dict[k] = (chunks, objval)
     t = (time.time() - t) / (kmax + 1 - kmin)
     # print(f"    Took:  {t}")
 
 
-def solve_gurobi(
-    min_pure_epsilon,
-    max_pure_epsilon,
-    K,
-    N,
-    indices,
-    C,
-    B,
-    block_budgets,
-    variance_reduction,
-    objective_function,
-):
+def solve_gurobi(target_noise_std, K, N, indices, C, block_budgets, vr):
     with gp.Env(empty=True) as env:
         env.setParam("OutputFlag", 0)
         env.start()
         m = gp.Model(env=env)
         m.Params.OutputFlag = 0
 
-        new_pure_epsilon_per_chunk = {}
-        total_pure_epsilon_per_chunk = {}
+        # An indicator of how much budget we'll spend
+        # We want to minimize this
+        fresh_pure_epsilon_per_chunk = {}
 
         # A variable per chunk
         x = m.addVars(
@@ -215,66 +153,23 @@ def solve_gurobi(
             name="x",
         )
 
-        # "total_pure_epsilon": total pure_epsilon that can be given to each chunk either because
-        # it can be consumed from the blocks (not exceeding threshold) or because we have it in cache
-        # "new_pure_epsilon": the new pure_epsilon that must be spent in order to reach "total_pure_epsilon"
-
-        if objective_function == "minimize_budget":
-
-            for (i, j) in indices:
-
-                new_pure_epsilon = max(min_pure_epsilon - C[(i, j)], 0)
-                if (
-                    not variance_reduction and new_pure_epsilon > 0
-                ):  # If the result was not stored with enough budget
-                    new_pure_epsilon = (
-                        min_pure_epsilon  # Turning off variance reduction
-                    )
-
-                total_pure_epsilon = max(min_pure_epsilon, C[(i, j)])
+        for (i, j) in indices:            
+            if (i,j) in C and target_noise_std >= C[(i,j)].noise_std:    # Good enough estimate in the cache
+                fresh_pure_epsilon = 0
+            else:   # Need to improve on the cache
+                # TODO: re-enable variance reduction
+                laplace_scale = target_noise_std / np.sqrt(2)
+                fresh_pure_epsilon = 1 / laplace_scale
 
                 # Enough budget in blocks constraint to accommodate "new_pure_epsilon"
-                # If at least one block in chunk i,j cannot give minimum budget 'new_pure_epsilon' then Xij=0
+                # If at least one block in chunk i,j does not have enough budget then Xij=0
+                run_budget = LaplaceCurve(laplace_noise=laplace_scale)
                 for k in range(N):  # For every block
-                    if from_pure_epsilon_to_budget(new_pure_epsilon) > block_budgets[k]:
+                    if run_budget > block_budgets[k]:
                         m.addConstr(x[i, j] == 0)
                         break
 
-                new_pure_epsilon_per_chunk[(i, j)] = new_pure_epsilon * (j - i + 1)
-                total_pure_epsilon_per_chunk[
-                    (i, j)
-                ] = (
-                    -total_pure_epsilon
-                )  # multiplying by -1: we want to maximize the total total_pure_epsilon so we want to minimize the total -1*total_pure_epsilon
-
-        elif objective_function == "minimize_error":
-
-            for (i, j) in indices:
-
-                total_pure_epsilon = max(
-                    min(B[(i, j)], max_pure_epsilon), C[(i, j)]
-                )  # B[(i,j)]: maximum budget blocks in chunk (i,j) can give
-
-                if (
-                    total_pure_epsilon < min_pure_epsilon
-                ):  # If the budget that can be provided to the chunk is less than the budget demanded to maintain accuracy we invalidate the chunk
-                    m.addConstr(x[i, j] == 0)
-
-                new_pure_epsilon = (
-                    total_pure_epsilon - C[(i, j)]
-                )  # new_pure_epsilon between 0 and max_pure_epsilon
-                if not variance_reduction and new_pure_epsilon > 0:
-                    new_pure_epsilon = total_pure_epsilon
-
-                new_pure_epsilon_per_chunk[(i, j)] = new_pure_epsilon * (j - i + 1)
-                total_pure_epsilon_per_chunk[
-                    (i, j)
-                ] = (
-                    -total_pure_epsilon
-                )  # multiplying by -1: we want to maximize the total total_pure_epsilon so we want to minimize the total -1*total_pure_epsilon
-
-                # print("new_pure_epsilon", (i,j), total_pure_epsilon_per_chunk[(i, j)])
-                # print("total_pure_epsilon", (i,j), total_pure_epsilon_per_chunk[(i, j)])
+            fresh_pure_epsilon_per_chunk[(i, j)] = fresh_pure_epsilon * (j - i + 1)
 
         # No overlapping chunks constraint
         for k in range(N):  # For every block
@@ -294,50 +189,14 @@ def solve_gurobi(
         m.addConstr((gp.quicksum(x[i, j] for (i, j) in indices)) <= K)
 
         # Objective function
-        if objective_function == "minimize_budget":
-            m.setObjectiveN(
-                x.prod(new_pure_epsilon_per_chunk), 0, 1
-            )  # Primary objective
-            m.setObjectiveN(
-                x.prod(total_pure_epsilon_per_chunk), 1, 0
-            )  # Secondary objective
-        elif objective_function == "minimize_error":
-            m.setObjectiveN(x.prod(total_pure_epsilon_per_chunk), 0, 1)
-            m.setObjectiveN(x.prod(new_pure_epsilon_per_chunk), 1, 0)
-        # elif objective ==  "minimize_aggregations":
-        # m.setObjectiveN(x.sum(), 0, 1)
-        # m.setObjectiveN(x.prod(budget_cost), 1, 0)
-
+        m.setObjective(x.prod(fresh_pure_epsilon_per_chunk))
         m.ModelSense = GRB.MINIMIZE
         m.optimize()
 
         if m.status == GRB.OPTIMAL:
-            m.params.ObjNumber = 0
-            objval1 = m.ObjNVal
-            m.params.ObjNumber = 1
-            objval2 = m.ObjNVal
-
-            if objective_function == "minimize_budget":
-                objval2 = -math.pow(K, 1.5) / objval2
-            if objective_function == "minimize_error":
-                objval1 = -math.pow(K, 1.5) / objval1
-
             chunks = []
             for (i, j) in indices:
                 if int((abs(x[i, j].x - 1) < 1e-4)) == 1:
-                    chunks.append(Chunk((i, j), -total_pure_epsilon_per_chunk[(i, j)]))
-            return chunks, objval1, objval2
-        return [], math.inf, math.inf
-
-
-def test():
-    def run(request):
-        dplanner = ILP(None, None, None, 100)
-        dplanner.get_execution_plan(None, request, None)
-
-    request = list(range(10))
-    run(request)
-
-
-if __name__ == "__main__":
-    test()
+                    chunks.append(Chunk((i, j), target_noise_std))
+            return chunks, m.ObjVal
+        return [], math.inf

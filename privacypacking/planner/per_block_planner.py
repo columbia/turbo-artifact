@@ -1,8 +1,6 @@
 import math
-
 from privacypacking.budget.block import HyperBlock
 from privacypacking.cache.cache import A, R
-from privacypacking.cache.utils import get_splits
 from privacypacking.planner.planner import Planner
 from privacypacking.utils.compute_utility_curve import compute_utility_curve
 from privacypacking.budget.curves import LaplaceCurve
@@ -12,12 +10,12 @@ from privacypacking.budget.curves import LaplaceCurve
 # This planner instance is naive - has only one option for a plan
 class PerBlockPlanner(Planner):
     def __init__(
-        self, cache, blocks, utility, optimization_objective, variance_reduction
+        self, cache, blocks, utility, p, variance_reduction
     ):
         super().__init__(cache)
         self.blocks = blocks
         self.utility = utility
-        self.p = 0.00001  # Probability that accuracy won't be respected
+        self.p = p
         # self.max_pure_epsilon = 0.5
         self.variance_reduction = variance_reduction
 
@@ -32,16 +30,11 @@ class PerBlockPlanner(Planner):
         noise_std = math.sqrt(2) * laplace_scale
 
         plan = []
-        split = get_splits(block_request, n-1)[0]  # TODO: simplify
-        for x in split:
-            x = (x[0], x[-1])
-            plan += [R(x, noise_std)]
+        for x in block_request:
+            plan += [R((x, x), noise_std)]
         plan = A(query_id, plan)
         # print(plan)
         cost = self.get_cost(plan)
-        # print("Get cost of plan", plan, "cost", cost)
-
-        # Get the cost of the plan - if infinite it's not eligible
         if not math.isinf(cost):
             return plan
         return None
@@ -57,14 +50,15 @@ class PerBlockPlanner(Planner):
             cache_entry= self.cache.get_entry(query_id, hyperblock.id)
             if cache_entry is not None:
                 # TODO: re-enable variance reduction
-                if run_op.noise_std > cache_entry.noise_std:    # Enough budget
+                if run_op.noise_std >= cache_entry.noise_std:    # Good enough estimate
                     continue
 
+            # Check if there is enough budget in the hyperblock
             laplace_scale = run_op.noise_std / math.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             demand = {key: run_budget for key in block_ids}
 
             if not hyperblock.can_run(demand):
-                return math.inf  # This hyperblock does not have enough budget
+                return math.inf
 
         return 0
