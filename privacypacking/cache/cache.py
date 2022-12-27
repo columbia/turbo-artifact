@@ -1,3 +1,8 @@
+from typing import Dict, Tuple
+
+from privacypacking.budget import Budget
+
+
 class R:
     def __init__(self, blocks, noise_std) -> None:
         self.blocks = blocks
@@ -23,7 +28,7 @@ class Cache:
     def dump(self):
         pass
 
-    def run(self):
+    def run(self) -> Tuple[float, Budget, Dict]:
         pass
 
     def get_execution_plan(self):

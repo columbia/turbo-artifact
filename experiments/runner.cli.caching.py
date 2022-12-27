@@ -38,7 +38,7 @@ def caching():
         repetitions=1,
         enable_random_seed=True,
         utility=[100], #[100, 200, 500, 1000],
-        p=[0.00001],    # Probability that accuracy won't be respected
+        beta=[0.0001],    # Probability that accuracy won't be respected
     )
 
 

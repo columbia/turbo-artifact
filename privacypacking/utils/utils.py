@@ -9,7 +9,10 @@ import pandas as pd
 from omegaconf import OmegaConf
 
 from privacypacking.schedulers.utils import ALLOCATED
-from privacypacking.utils.plot import plot_budget_utilization_per_block
+from privacypacking.utils.plot import (
+    plot_budget_utilization_per_block,
+    plot_task_status,
+)
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -105,16 +108,20 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-                result = tasks_info.result[task.id]
-                error = tasks_info.error[task.id]
+                # result = tasks_info.result[task.id]
+                # error = tasks_info.error[task.id]
+
+            # Dictionnary with any key, instead of defining a new custom metric every time
+            metadata = tasks_info.run_metadata.get(task.id, {})
+            task_dump.update(metadata)
 
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    "result": result,
-                    "error": error,
-                    "planning_time": tasks_info.planning_time[task.id],
+                    # "result": result,
+                    # "error": error,
+                    # "planning_time": tasks_info.planning_time[task.id],
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
@@ -181,6 +188,10 @@ def save_mlflow_artifacts(log_dict):
     plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
         artifacts_dir.joinpath("budget_utilization.html")
     )
+    plot_task_status(task_log=log_dict["tasks"]).write_html(
+        artifacts_dir.joinpath("task_status.html")
+    )
+
     mlflow.log_artifacts(artifacts_dir)
 
 

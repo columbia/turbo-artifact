@@ -55,8 +55,9 @@ def plot_budgets(
     return fig
 
 
-def plot_budget_utilization_per_block(block_log: List) -> FigureWidget:
-    best_alpha = 4
+def plot_budget_utilization_per_block(
+    block_log: List, best_alpha: float = 8
+) -> FigureWidget:
     d = defaultdict(list)
     for b in block_log:
         d["id"].append(b["id"])
@@ -70,4 +71,32 @@ def plot_budget_utilization_per_block(block_log: List) -> FigureWidget:
         y="eps",
         title=f"Normalized remaining budget for alpha={best_alpha}",
     )
+    return fig
+
+
+def plot_task_status(task_log: List, rejected_error: float = 0) -> FigureWidget:
+    d = defaultdict(list)
+    for t in task_log:
+        d["task_id"].append(t["id"])
+        d["query_id"].append(t["query_id"])
+        d["size"].append(1)  # In case you want to encode something here
+
+        if not t["allocated"]:
+            d["hard_query"].append("Rejected")
+            d["true_error_fraction"].append(rejected_error)
+        else:
+            d["hard_query"].append("Hard" if t["hard_query"] else "Easy")
+            d["true_error_fraction"].append(t["true_error_fraction"])
+
+    df = pd.DataFrame(d).sort_values(["query_id", "hard_query"])
+    fig = px.scatter(
+        df,
+        x="task_id",
+        y="true_error_fraction",
+        symbol="hard_query",
+        color="query_id",
+        size="size",
+        title=f"True error of the linear query in [0,1]",
+    )
+    fig.update_layout(legend_orientation="h")
     return fig

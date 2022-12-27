@@ -50,7 +50,7 @@ def grid_online(
     repetitions: int = 1,
     enable_random_seed: bool = False,
     utility: List[int] = [100],
-    p: List[int] = [0.00001],
+    beta: List[int] = [0.0001],
 
 ):
     # Progressive unlocking
@@ -61,10 +61,10 @@ def grid_online(
     config = {
         "omegaconf": {
             "epsilon": 10,
-            "delta": 0.00001,
+            "delta": 1e-07,
             "enable_random_seed": enable_random_seed,
-            "utility": tune.grid_search(utility),
-            "p": tune.grid_search(p),
+            # "utility": tune.grid_search(utility),
+            # "p": tune.grid_search(p),
             "scheduler": {
                 "metric_recomputation_period": tune.grid_search(
                     metric_recomputation_period
@@ -83,6 +83,10 @@ def grid_online(
                 "n": tune.grid_search(n),
                 "enable_caching": tune.grid_search(enable_caching),
                 "enable_dp": tune.grid_search(enable_dp),
+                "cache_cfg": {
+                    "alpha": tune.grid_search(utility),
+                    "beta": tune.grid_search(beta),
+                },
             },
             "metric": {
                 "normalize_by": "available_budget",
