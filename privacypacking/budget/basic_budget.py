@@ -42,7 +42,9 @@ class BasicBudget:
         """
         return BasicBudget(min(self.epsilon + other.epsilon, threshold.epsilon))
 
-    def compute_noise(self,):
+    def compute_noise(
+        self,
+    ):
         sensitivity = 1
         return np.random.laplace(scale=sensitivity / self.epsilon)
 

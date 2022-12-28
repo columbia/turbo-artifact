@@ -1,19 +1,11 @@
-import os
 import random
-from functools import partial
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 from loguru import logger
 from omegaconf import OmegaConf
 
 from privacypacking.budget import Block, Task
-from privacypacking.budget.basic_budget import BasicBudget
 from privacypacking.budget.block_selection import BlockSelectionPolicy
-from privacypacking.budget.budget import Budget
-from privacypacking.budget.curves import GaussianCurve
-from privacypacking.budget.renyi_budget import RenyiBudget
 from privacypacking.budget.task import UniformTask
 from privacypacking.utils.utils import DEFAULT_CONFIG_FILE, REPO_ROOT
 
@@ -30,7 +22,6 @@ class Config:
         default_omegaconf = OmegaConf.load(DEFAULT_CONFIG_FILE)
         custom_omegaconf = OmegaConf.create(config.get("omegaconf", {}))
         self.omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
-        # print(self.omegaconf)
 
         # Rest of the configuration below
         if self.omegaconf.enable_random_seed:
@@ -77,33 +68,12 @@ class Config:
     def dump(self) -> dict:
         return {"omegaconf": OmegaConf.to_container(self.omegaconf)}
 
-    def create_task(self, task_id: int, convert_to_rdp=False, gaussian=True) -> Task:
-        # TODO: this has no effect when users do not define the epislon; add accuracy tolerance here?
-
-        # TODO: New omegaconf option for this? Or just use RDP really everywhere?
+    def create_task(self, task_id: int) -> Task:
         _, task_row = next(self.tasks_generator)
 
-        if "rdp_espilons" in task_row:
-            orders = {}
-            parsed_alphas = task_row["alphas"].strip("][").split(", ")
-            parsed_epsilons = task_row["rdp_epsilons"].strip("][").split(", ")
-
-            for i, alpha in enumerate(parsed_alphas):
-                alpha = float(alpha)
-                epsilon = float(parsed_epsilons[i])
-                orders[alpha] = epsilon
-
-            budget = RenyiBudget(parsed_epsilons[0])
-        elif convert_to_rdp:
-            epsilon, delta = float(task_row["epsilon"]), float(task_row["delta"])
-            if gaussian:
-                sigma = np.sqrt(2 * np.log(1.25 / delta)) / epsilon
-                budget = GaussianCurve(sigma=sigma, epsilon=epsilon)
-            else:
-                # It doesn't really make sense (not a real mechanism) but this is just for debugging
-                budget = RenyiBudget.from_epsilon_delta(epsilon, delta)
-        else:
-            budget = BasicBudget(epsilon=float(task_row["epsilon"]))
+        # TODO: For now we read the utility/utility_beta from the config - one global utility applying to all tasks
+        utility = self.omegaconf.utility
+        utility_beta = self.omegaconf.utility_beta
 
         task = UniformTask(
             id=task_id,
@@ -114,7 +84,8 @@ class Config:
                 task_row["block_selection_policy"]
             ),
             n_blocks=int(task_row["n_blocks"]),
-            budget=budget,
+            utility=utility,
+            utility_beta=utility_beta,
             name=task_row["task_name"],
         )
         return task
@@ -136,7 +107,7 @@ class Config:
     def set_task_arrival_time(self):
         if self.omegaconf.tasks.sampling == "poisson":
             task_arrival_interval = random.expovariate(
-                1 / self.omegaconf.tasks.avg_num_tasks_per_block
+                self.omegaconf.tasks.avg_num_tasks_per_block
             )
         elif self.omegaconf.tasks.sampling == "constant":
             task_arrival_interval = self.task_arrival_interval

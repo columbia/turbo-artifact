@@ -14,24 +14,19 @@ from privacypacking.planner.planner import Planner
 from privacypacking.utils.compute_utility_curve import compute_utility_curve
 from privacypacking.budget.curves import LaplaceCurve
 
-# TODO: use noise (e.g. standard deviation) instead of "pure_epsilon"
-
 
 Chunk = namedtuple("Chunk", ["index", "noise_std"])
 
 
 class ILP(Planner):
-    def __init__(self, cache, blocks, utility, p, variance_reduction):
-        super().__init__(cache)
-        self.blocks = blocks
-        self.utility = utility
-        self.p = p
-        self.max_pure_epsilon = 0.5
+    def __init__(self, cache, blocks, planner_args):
+        assert planner_args.enable_caching == True
+        assert planner_args.enable_dp == True
+        super().__init__(cache, blocks, planner_args)
         self.sequencial = False
-        self.variance_reduction = variance_reduction
         self.C = {}
 
-    def get_execution_plan(self, query_id, block_request):
+    def get_execution_plan(self, query_id, utility, utility_beta, block_request):
         n = len(block_request)
         offset = block_request[0]
 
@@ -40,10 +35,14 @@ class ILP(Planner):
         indices = self.get_chunk_indices(n, offset)
         self.get_chunk_cached_noise_std(query_id, indices, offset, self.C)
 
-        f = compute_utility_curve(self.utility, self.p, n, self.max_pure_epsilon)
+        f = {}
+        for k in range(1, n + 1):
+            f[k] = compute_utility_curve(utility, utility_beta, k)
+            if self.max_pure_epsilon is not None and f[k] > self.max_pure_epsilon:
+                break  # No more aggregations allowed
         max_k = len(f)
 
-        if max_k == 0:  # User-accuracy too high - max pure-epsilon exceeded
+        if max_k == 0:  # User-accuracy too high - max pure-epsilon always exceeded
             return None
 
         # Running in Parallel
@@ -83,7 +82,13 @@ class ILP(Planner):
 
         for k, (chunks, objvalue) in return_dict.items():
             if objvalue < best_objvalue:
-                plan = A(query_id, [R((i + offset, j + offset), noise_std) for ((i, j), noise_std) in chunks])
+                plan = A(
+                    query_id,
+                    [
+                        R((i + offset, j + offset), noise_std)
+                        for ((i, j), noise_std) in chunks
+                    ],
+                )
                 best_objvalue = objvalue
 
         if plan is not None:
@@ -99,11 +104,11 @@ class ILP(Planner):
         return [self.blocks[block_id].budget.epsilon for block_id in block_request]
 
     def get_chunk_cached_noise_std(self, query_id, indices, offset, C):
-        for (i,j) in indices:
+        for (i, j) in indices:
             cache_entry = self.cache.get_entry(query_id, (i + offset, j + offset))
             if cache_entry is not None:
-                C[(i,j)] = cache_entry.noise_std
- 
+                C[(i, j)] = cache_entry.noise_std
+
     def get_chunk_indices(self, n, offset):
         indices = OrderedSet()
         for i in range(n):
@@ -124,9 +129,13 @@ class ILP(Planner):
 def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, variance_reduction):
     t = time.time()
     for k in range(kmin, kmax + 1):
-        laplace_scale = 1 / f[k]    # f(k): Minimum pure epsilon for reaching accuracy target given k
+        laplace_scale = (
+            1 / f[k]
+        )  # f(k): Minimum pure epsilon for reaching accuracy target given k
         target_noise_std = math.sqrt(2) * laplace_scale
-        chunks, objval = solve_gurobi(target_noise_std, k, n, indices, C, block_budgets, variance_reduction)
+        chunks, objval = solve_gurobi(
+            target_noise_std, k, n, indices, C, block_budgets, variance_reduction
+        )
         if chunks:
             return_dict[k] = (chunks, objval)
     t = (time.time() - t) / (kmax + 1 - kmin)
@@ -153,10 +162,12 @@ def solve_gurobi(target_noise_std, K, N, indices, C, block_budgets, vr):
             name="x",
         )
 
-        for (i, j) in indices:            
-            if (i,j) in C and target_noise_std >= C[(i,j)].noise_std:    # Good enough estimate in the cache
+        for (i, j) in indices:
+            if (i, j) in C and target_noise_std >= C[
+                (i, j)
+            ].noise_std:  # Good enough estimate in the cache
                 fresh_pure_epsilon = 0
-            else:   # Need to improve on the cache
+            else:  # Need to improve on the cache
                 # TODO: re-enable variance reduction
                 laplace_scale = target_noise_std / np.sqrt(2)
                 fresh_pure_epsilon = 1 / laplace_scale

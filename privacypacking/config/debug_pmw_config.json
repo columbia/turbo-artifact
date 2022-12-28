@@ -13,7 +13,7 @@
             "optimization_objective": "minimize_budget",
             "variance_reduction": false,
             "cache": "ProbabilisticCache",
-            "cache_cfg": {
+            "pmw_cfg": {
                 "alpha": 0.005,
                 "beta": 0.0001
             },

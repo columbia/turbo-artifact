@@ -40,18 +40,20 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    planner: List[str],  # Options = {DynamicProgrammingPlanner, PerBlockPlanner}
-    optimization_objective: List[str],
+    planner: List[str],  # Options = {PerBlockPlanner}
+    # optimization_objective: List[str],
     variance_reduction: List[str],
     cache: List[str],  # Options = {DeterministicCache, ProbabilisticCache}
     enable_caching: List[bool],
     enable_dp: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
+    max_tasks: List[int] = [4000],
     repetitions: int = 1,
     enable_random_seed: bool = False,
     utility: List[int] = [100],
-    beta: List[int] = [0.0001],
-
+    utility_beta: List[int] = [0.0001],
+    alpha: List[int] = [0.005],  # For the PMW
+    beta: List[int] = [0.0001],  # For the PMW
 ):
     # Progressive unlocking
     # n = [1_000]
@@ -63,8 +65,6 @@ def grid_online(
             "epsilon": 10,
             "delta": 1e-07,
             "enable_random_seed": enable_random_seed,
-            # "utility": tune.grid_search(utility),
-            # "p": tune.grid_search(p),
             "scheduler": {
                 "metric_recomputation_period": tune.grid_search(
                     metric_recomputation_period
@@ -74,7 +74,7 @@ def grid_online(
                 "data_lifetime": tune.grid_search(data_lifetime),
                 "task_lifetime": tune.grid_search(task_lifetime),
                 "planner": tune.grid_search(planner),
-                "optimization_objective": tune.grid_search(optimization_objective),
+                # "optimization_objective": tune.grid_search(optimization_objective),
                 "variance_reduction": tune.grid_search(variance_reduction),
                 "cache": tune.grid_search(cache),
                 "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
@@ -83,8 +83,8 @@ def grid_online(
                 "n": tune.grid_search(n),
                 "enable_caching": tune.grid_search(enable_caching),
                 "enable_dp": tune.grid_search(enable_dp),
-                "cache_cfg": {
-                    "alpha": tune.grid_search(utility),
+                "pmw_cfg": {
+                    "alpha": tune.grid_search(alpha),
                     "beta": tune.grid_search(beta),
                 },
             },
@@ -110,6 +110,9 @@ def grid_online(
                 "queries_path": tune.grid_search(queries_path),
                 "block_selection_policy": tune.grid_search(block_selection_policy),
                 "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+                "max_num": tune.grid_search(max_tasks),
+                "utility": tune.grid_search(utility),
+                "utility_beta": tune.grid_search(utility_beta),
             },
             "repetition": tune.grid_search(list(range(1, repetitions + 1))),
         }
@@ -142,16 +145,14 @@ def grid_online(
             metric_columns=[
                 "n_allocated_tasks",
                 "total_tasks",
-                "realized_profit",
-                "budget_utilization",
-                "realized_budget",
+                # "realized_profit",
             ],
             parameter_columns={
                 "omegaconf/scheduler/scheduling_wait_time": "T",
-                "omegaconf/scheduler/enable_caching": "enable_caching",
+                # "omegaconf/scheduler/enable_caching": "enable_caching",
                 "omegaconf/scheduler/planner": "planner",
                 "omegaconf/utility": "utility",
-                "omegaconf/scheduler/optimization_objective": "optimization_objective",
+                # "omegaconf/scheduler/optimization_objective": "optimization_objective",
                 "omegaconf/scheduler/variance_reduction": "variance_reduction",
                 "omegaconf/scheduler/cache": "cache",
                 "omegaconf/scheduler/data_lifetime": "lifetime",

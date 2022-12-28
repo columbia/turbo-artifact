@@ -96,7 +96,7 @@ def get_logs(
     log_tasks = []
     if omegaconf.logs.save:
         for task in tasks:
-            task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
+            task_dump = task.dump()
 
             result = error = None
             maximum_profit += task.profit
@@ -108,8 +108,9 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-                # result = tasks_info.result[task.id]
-                # error = tasks_info.error[task.id]
+                result = tasks_info.run_metadata[task.id].result
+                error = tasks_info.run_metadata[task.id].error
+                planning_time = tasks_info.run_metadata[task.id].planning_time
 
             # Dictionnary with any key, instead of defining a new custom metric every time
             metadata = tasks_info.run_metadata.get(task.id, {})
@@ -119,9 +120,9 @@ def get_logs(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    # "result": result,
-                    # "error": error,
-                    # "planning_time": tasks_info.planning_time[task.id],
+                    "result": result,
+                    "error": error,
+                    "planning_time": planning_time,
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),

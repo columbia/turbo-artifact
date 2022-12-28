@@ -68,9 +68,7 @@ class Block:
     def available_unlocked_budget(self) -> Budget:
         return self.budget
 
-    def load_raw_data(
-        self,
-    ):
+    def load_raw_data(self):
         self.raw_data = pd.read_csv(self.data_path)
 
     def load_histogram(self, attribute_domain_sizes) -> SparseHistogram:

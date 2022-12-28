@@ -4,6 +4,7 @@ from opacus.privacy_analysis import compute_rdp, get_privacy_spent
 
 from privacypacking.budget import ALPHAS
 
+
 def compute_noise_from_target_epsilon(
     target_epsilon,
     target_delta,

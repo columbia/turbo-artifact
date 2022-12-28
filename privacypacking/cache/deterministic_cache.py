@@ -1,15 +1,16 @@
 import numpy as np
 import yaml
-
 from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import LaplaceCurve, ZeroCurve
 from privacypacking.cache.cache import Cache
 
+
 class CacheEntry:
     def __init__(self, result, noise_std, noise):
-        self.result = result        # True result without noise
+        self.result = result  # True result without noise
         self.noise_std = noise_std  # std of Laplace distribution (TODO: generalize for more distributions)
-        self.noise = noise          # The actual noise sampled from the distribution
+        self.noise = noise  # The actual noise sampled from the distribution
+
 
 class DeterministicCache(Cache):
     def __init__(self, variance_reduction):
@@ -38,12 +39,14 @@ class DeterministicCache(Cache):
 
         cache_entry = self.get_entry(query_id, hyperblock.id)
         if cache_entry is None:  # Not cached
-            true_result = hyperblock.run(query)  # Obtain true result by running the query
+            true_result = hyperblock.run(
+                query
+            )  # Obtain true result by running the query
             laplace_scale = noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             noise = np.random.laplace(scale=laplace_scale)
 
-        else:   # Cached
+        else:  # Cached
             true_result = cache_entry.result
 
             if noise_std >= cache_entry.noise_std:
@@ -80,7 +83,9 @@ class DeterministicCache(Cache):
 
         # If we used any fresh noise we need to update the cache
         if not isinstance(run_budget, ZeroCurve):
-            cache_entry = CacheEntry(result=true_result, noise_std=noise_std, noise=noise)
+            cache_entry = CacheEntry(
+                result=true_result, noise_std=noise_std, noise=noise
+            )
             self.add_entry(query_id, hyperblock.id, cache_entry)
 
         result = true_result + noise

@@ -12,7 +12,6 @@ from termcolor import colored
 from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget import Block, HyperBlock, Task
 from privacypacking.budget.block_selection import NotEnoughBlocks
-from privacypacking.cache.cache import A, R
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilisticCache
 from privacypacking.planner.ilp import ILP
@@ -40,8 +39,6 @@ class TasksInfo:
         self.tasks_lifetime = {}
         self.planning_time = defaultdict(lambda: None)
         self.tasks_submit_time = {}
-        self.result = {}
-        self.error = {}
         self.run_metadata = {}
 
     def dump(self):
@@ -102,10 +99,23 @@ class Scheduler:
         self.allocated_task_ids = []
         self.n_allocated_tasks = 0
 
-        self.cache = globals()[self.omegaconf["cache"]](
-            cache_cfg=self.omegaconf.cache_cfg
+        self.variance_reduction = self.omegaconf.variance_reduction
+
+        if self.omegaconf["cache"] == "ProbabilisticCache":
+            self.cache = ProbabilisticCache(cache_cfg=self.omegaconf.pmw_cfg)
+        elif self.omegaconf["cache"] == "DeterministicCache":
+            self.cache = DeterministicCache(self.variance_reduction)
+        else:
+            NotImplementedError
+
+        planner_args = {
+            "variance_reduction": self.variance_reduction,
+            "enable_caching": self.omegaconf.enable_caching,
+            "enable_dp": self.omegaconf.enable_dp,
+        }
+        self.planner = globals()[self.omegaconf["planner"]](
+            self.cache, self.blocks, planner_args
         )
-        self.planner = globals()[self.omegaconf["planner"]](self.cache, self.blocks)
 
         self.experiment_prefix = ""  # f"{self.simulator_config.repetition}/{self.omegaconf['cache']}/{self.omegaconf['planner']}/"
 
@@ -154,36 +164,36 @@ class Scheduler:
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
         Try to run the task.
-        If `just_check_budget` is true, we don't run the actual task, simply check the budget
         If it can run, returns a metadata dict. Otherwise, returns None.
         """
 
         # We are in the special case where tasks request intervals
-        requested_blocks = sorted(list(task.budget_per_block.keys()))
+        requested_blocks = sorted(task.blocks)
         block_tuple = (requested_blocks[0], requested_blocks[-1])
         assert len(requested_blocks) == block_tuple[1] - block_tuple[0] + 1
 
-        # Check if the query can run and compute a plan
-        start_planning = time.process_time()
-        if not self.omegaconf.enable_caching:
-            # Just try to run the query as a single chunk, if enough budget
-            if self.omegaconf.enable_dp and not self.can_run(task.budget_per_block):
-                return None
-            plan = A(
-                [R(query_id=task.query_id, blocks=block_tuple, budget=task.budget)]
-            )
-        else:
-            # The plan returned here if not None is eligible for execution - cost not infinite
-            plan = self.planner.get_execution_plan(
-                task.query_id, requested_blocks, task.budget
-            )
-            if not plan:
-                return None
-        planning_time = time.process_time() - start_planning
+        start_planning = time.time()
+        plan = self.planner.get_execution_plan(
+            task.query_id, task.utility, task.utility_beta, requested_blocks
+        )  # The plan returned here if not None is eligible for execution
 
-        # Run the actual query and consume budget if necessary
+        if not plan:
+            return
+        planning_time = time.time() - start_planning
+
+        # Execute the plan for running the query and consume budget if necessary
         result, run_metadata = self.execute_plan(plan)
+
+        # ---------- Additional Metadata ---------- #
         run_metadata["planning_time"] = planning_time
+        run_metadata["result"] = result
+        query = self.query_pool.get_query(task.query_id)
+        true_result = HyperBlock(
+            {key: self.blocks[key] for key in requested_blocks}
+        ).run(query)
+        error = abs(true_result - result)
+        run_metadata["error"] = error
+        # ---------------------------------------------- #
 
         return run_metadata
 
@@ -209,7 +219,6 @@ class Scheduler:
 
             # Call the planner, cache, executes linear query. Returns None if the query can't run.
             run_metadata = self.try_run_task(task)
-
             if run_metadata:
                 # Store logs and update the runqueue if the task ran
                 self.update_allocated_task(task, run_metadata)
@@ -224,7 +233,9 @@ class Scheduler:
                 self.schedule_queue()
 
     def execute_plan(self, plan) -> Tuple[float, Dict]:
-        ''' run_budget: the budget that will be consumed from the blocks after running the query '''
+        """
+        run_budget: the budget that will be consumed from the blocks after running the query
+        """
         # TODO: pass the right alphas depending on the block sizes?
 
         query_id = plan.query_id
@@ -244,14 +255,15 @@ class Scheduler:
                 )
             else:  # Not using cache
                 if self.omegaconf.enable_dp:  # Add DP noise
-                    result, run_budget, run_metadata = hyperblock.run_dp(query, run_op.noise_std)
+                    result, run_budget, run_metadata = hyperblock.run_dp(
+                        query, run_op.noise_std
+                    )
                 else:
                     result = hyperblock.run(query)
                     run_metadata = 0
                     run_budget = None
-        
+
             if run_budget is not None:
-                # print("consume budget", run_budget)
                 self.consume_budgets(block_ids, run_budget)
 
             run_metadata["hyperblock_size"] = hyperblock.size
@@ -269,7 +281,7 @@ class Scheduler:
             self.task_set_block_ids(task)
             logger.debug(
                 f"Task: {task.id} added to the scheduler at {self.now()}. Name: {task.name}. "
-                f"Blocks: {list(task.budget_per_block.keys())}"
+                f"Blocks: {task.blocks}"
             )
         except NotEnoughBlocks as e:
             logger.warning(
@@ -286,11 +298,11 @@ class Scheduler:
         self.tasks_info.creation_time[task.id] = self.now()
         self.task_queue.tasks.append(task)
 
-        # Express the demands as a sparse matrix (for relevance metrics)
-        if hasattr(self.metric, "compute_relevance_matrix"):
-            self.task_queue.tasks[-1].build_demand_matrix(
-                max_block_id=self.simulator_config.blocks.max_num
-            )
+        # # Express the demands as a sparse matrix (for relevance metrics)
+        # if hasattr(self.metric, "compute_relevance_matrix"):
+        #     self.task_queue.tasks[-1].build_demand_matrix(
+        #         max_block_id=self.simulator_config.blocks.max_num
+        #     )
 
     def add_block(self, block: Block) -> None:
         if block.id in self.blocks:
@@ -373,18 +385,8 @@ class Scheduler:
         )
 
     def task_set_block_ids(self, task: Task) -> None:
-        # Ask the stateful scheduler to set the block ids of the task according to the task's constraints
-        # try:
-        selected_block_ids = task.block_selection_policy.select_blocks(
+        # Ask the stateful scheduler to set the block ids of the task according to the task's policy
+        task.blocks = task.block_selection_policy.select_blocks(
             blocks=self.blocks, task_blocks_num=task.n_blocks
         )
-        # except NotEnoughBlocks as e:
-        #     logger.warning(e)
-        #     logger.warning(
-        #         "Setting block ids to -1, the task will never be allocated.\n Should we count it in the total number of tasks?"
-        #     )
-        #     selected_block_ids = [-1]
-        assert selected_block_ids is not None
-        task.set_budget_per_block(
-            selected_block_ids, demands_tiebreaker=self.omegaconf.demands_tiebreaker
-        )
+        assert task.blocks is not None

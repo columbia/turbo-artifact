@@ -68,7 +68,7 @@ class Tasks:
         task = self.config.create_task(task_id)
 
         logger.debug(
-            f"Task: {task_id} generated at {self.env.now}. Name: {task.name}. Blocks: {list(task.budget_per_block.keys())}"
+            f"Task: {task_id} generated at {self.env.now}. Name: {task.name}. Blocks: {task.blocks}"
         )
 
         allocated_resources_event = self.env.event()
