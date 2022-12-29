@@ -9,6 +9,7 @@ class Simulator:
     def __init__(self, omegaconf):
         self.env = simpy.Environment()
 
+        self.omegaconf = omegaconf
         # Start the block and tasks consumers
         self.rm = ResourceManager(self.env, omegaconf)
         self.env.process(self.rm.start())
@@ -30,7 +31,7 @@ class Simulator:
             self.rm.scheduler.blocks,
             self.rm.scheduler.tasks_info,
             # list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
-            self.config,
+            self.omegaconf,
             scheduling_time=simulation_duration,
             scheduling_queue_info=self.rm.scheduler.scheduling_queue_info
             if hasattr(self.rm.scheduler, "scheduling_queue_info")

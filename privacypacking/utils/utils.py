@@ -80,12 +80,11 @@ def get_logs(
     tasks,
     blocks,
     tasks_info,
-    simulator_config,
+    omegaconf,
     **kwargs,
 ) -> dict:
 
-    simulator_config = simulator_config.dump()
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
+    omegaconf = OmegaConf.create(omegaconf)
 
     n_allocated_tasks = 0
     tasks_scheduling_times = []
@@ -98,7 +97,11 @@ def get_logs(
         for task in tasks:
             task_dump = task.dump()
 
-            result = error = None
+            # Dictionnary with any key, instead of defining a new custom metric every time
+            metadata = tasks_info.run_metadata.get(task.id, {})
+            task_dump.update(metadata)
+
+            result = error = planning_time = None
             maximum_profit += task.profit
             if tasks_info.tasks_status[task.id] == ALLOCATED:
                 n_allocated_tasks += 1
@@ -108,13 +111,9 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-                result = tasks_info.run_metadata[task.id].result
-                error = tasks_info.run_metadata[task.id].error
-                planning_time = tasks_info.run_metadata[task.id].planning_time
-
-            # Dictionnary with any key, instead of defining a new custom metric every time
-            metadata = tasks_info.run_metadata.get(task.id, {})
-            task_dump.update(metadata)
+                result = metadata.get("result")
+                error = metadata.get("error")
+                planning_time = metadata.get("planning_time")
 
             task_dump.update(
                 {
@@ -123,6 +122,8 @@ def get_logs(
                     "result": result,
                     "error": error,
                     "planning_time": planning_time,
+                    "utility": task.utility,
+                    "utility_beta": task.utility_beta,
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
@@ -145,12 +146,11 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
-        "utility": omegaconf.utility,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "planner": omegaconf.scheduler.planner,
-        "optimization_objective": omegaconf.scheduler.optimization_objective,
+        # "optimization_objective": omegaconf.scheduler.optimization_objective,
         "variance_reduction": omegaconf.scheduler.variance_reduction,
         "cache": omegaconf.scheduler.cache,
         "total_tasks": total_tasks,

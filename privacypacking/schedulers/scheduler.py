@@ -179,13 +179,12 @@ class Scheduler:
 
         if not plan:
             return
-        planning_time = time.time() - start_planning
 
         # Execute the plan for running the query and consume budget if necessary
         result, run_metadata = self.execute_plan(plan)
 
         # ---------- Additional Metadata ---------- #
-        run_metadata["planning_time"] = planning_time
+        run_metadata["planning_time"] = time.time() - start_planning
         run_metadata["result"] = result
         query = self.query_pool.get_query(task.query_id)
         true_result = HyperBlock(
@@ -271,8 +270,8 @@ class Scheduler:
             results += [result]
 
         if results:
-            return sum(result)
-        return None
+            return sum(results), run_metadata
+        return None, run_metadata
 
     def add_task(self, task_message: Tuple[Task, Event]):
         (task, allocated_resources_event) = task_message
@@ -386,7 +385,7 @@ class Scheduler:
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's policy
-        task.blocks = task.block_selection_policy.select_blocks(
+        task.blocks = list(task.block_selection_policy.select_blocks(
             blocks=self.blocks, task_blocks_num=task.n_blocks
-        )
+        ))
         assert task.blocks is not None
