@@ -7,7 +7,7 @@ from privacypacking.budget.curves import LaplaceCurve
 
 
 class PerBlockPlanner(Planner):
-    def __init__(self, cache, blocks, planner_args):
+    def __init__(self, cache, blocks, **planner_args):
         assert planner_args.enable_caching == True
         assert planner_args.enable_dp == True
         super().__init__(cache, blocks, planner_args)

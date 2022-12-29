@@ -196,7 +196,7 @@ def save_mlflow_artifacts(log_dict):
     mlflow.log_artifacts(artifacts_dir)
 
 
-def save_logs(config, log_dict, compact=False, compressed=False):
+def save_logs(log_dict, compact=False, compressed=False):
     log_path = LOGS_PATH.joinpath(
         f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
     )

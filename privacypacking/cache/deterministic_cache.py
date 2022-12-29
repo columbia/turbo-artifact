@@ -37,11 +37,11 @@ class DeterministicCache(Cache):
         """
         # TODO: maybe use alpha, beta, or std instead of noise scale? And add sensitivity argument?
 
+        run_metadata = {}
         cache_entry = self.get_entry(query_id, hyperblock.id)
         if cache_entry is None:  # Not cached
-            true_result = hyperblock.run(
-                query
-            )  # Obtain true result by running the query
+            # Obtain true result by running the query
+            true_result = hyperblock.run(query)
             laplace_scale = noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             noise = np.random.laplace(scale=laplace_scale)
@@ -89,7 +89,7 @@ class DeterministicCache(Cache):
             self.add_entry(query_id, hyperblock.id, cache_entry)
 
         result = true_result + noise
-        return result, run_budget
+        return result, run_budget, run_metadata
 
     def dump(self):
         res = yaml.dump(self.key_values)

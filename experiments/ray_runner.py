@@ -1,27 +1,18 @@
 import os
-from pathlib import Path
-from typing import Any, Dict, List
 import ray
 import mlflow
-from loguru import logger
-from ray import tune
-from experiments.ray.analysis import load_ray_experiment
-from privacypacking.config import Config
-from privacypacking.simulator.simulator import Simulator
-from privacypacking.utils.utils import RAY_LOGS, LOGS_PATH
 import datetime
+from ray import tune
+from pathlib import Path
+from loguru import logger
+from typing import Any, Dict, List
+from privacypacking.privacy_packing import privacypacking
+from privacypacking.utils.utils import RAY_LOGS, LOGS_PATH
 
 
 def run_and_report(config: dict, replace=False) -> None:
-    if config["omegaconf"]["logs"]["mlflow"]:
-        omegaconf = config["omegaconf"]
-        run_name = f"{omegaconf['repetition']}/{omegaconf['scheduler']['cache']}/{omegaconf['scheduler']['planner']}"
-        with mlflow.start_run(run_name=run_name):
-            mlflow.log_param("config", config)
-            metrics = Simulator(Config(config)).run()
-    else:
-        metrics = Simulator(Config(config)).run()
-    tune.report(**metrics)
+    logs = privacypacking(config)
+    tune.report(**logs)
 
 
 def grid_online(
@@ -30,6 +21,7 @@ def grid_online(
     scheduler_metrics: List[int],
     n: List[float],
     initial_blocks: List[int],
+    block_arrival_interval: List[int],
     initial_tasks: List[int],
     max_blocks: List[int],
     logs_dir: str,
@@ -60,62 +52,61 @@ def grid_online(
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = False
     block_selection_policy = ["LatestBlocksFirst"]
-    config = {
-        "omegaconf": {
-            "epsilon": 10,
-            "delta": 1e-07,
-            "enable_random_seed": enable_random_seed,
-            "scheduler": {
-                "metric_recomputation_period": tune.grid_search(
-                    metric_recomputation_period
-                ),
-                # "log_warning_every_n_allocated_tasks": 500,
-                "scheduler_timeout_seconds": 20 * 60,
-                "data_lifetime": tune.grid_search(data_lifetime),
-                "task_lifetime": tune.grid_search(task_lifetime),
-                "planner": tune.grid_search(planner),
-                # "optimization_objective": tune.grid_search(optimization_objective),
-                "variance_reduction": tune.grid_search(variance_reduction),
-                "cache": tune.grid_search(cache),
-                "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
-                "method": "batch",
-                "metric": tune.grid_search(scheduler_metrics),
-                "n": tune.grid_search(n),
-                "enable_caching": tune.grid_search(enable_caching),
-                "enable_dp": tune.grid_search(enable_dp),
-                "pmw_cfg": {
-                    "alpha": tune.grid_search(alpha),
-                    "beta": tune.grid_search(beta),
-                },
+    omegaconf = {
+        "epsilon": 10,
+        "delta": 1e-07,
+        "enable_random_seed": enable_random_seed,
+        "scheduler": {
+            "metric_recomputation_period": tune.grid_search(
+                metric_recomputation_period
+            ),
+            # "log_warning_every_n_allocated_tasks": 500,
+            "scheduler_timeout_seconds": 20 * 60,
+            "data_lifetime": tune.grid_search(data_lifetime),
+            "task_lifetime": tune.grid_search(task_lifetime),
+            "planner": tune.grid_search(planner),
+            # "optimization_objective": tune.grid_search(optimization_objective),
+            "variance_reduction": tune.grid_search(variance_reduction),
+            "cache": tune.grid_search(cache),
+            "scheduling_wait_time": tune.grid_search(scheduler_scheduling_time),
+            "method": "batch",
+            "metric": tune.grid_search(scheduler_metrics),
+            "n": tune.grid_search(n),
+            "enable_caching": tune.grid_search(enable_caching),
+            "enable_dp": tune.grid_search(enable_dp),
+            "pmw_cfg": {
+                "alpha": tune.grid_search(alpha),
+                "beta": tune.grid_search(beta),
             },
-            "metric": {
-                "normalize_by": "available_budget",
-                "n_knapsack_solvers": 1,
-            },
-            "logs": {
-                "verbose": False,
-                "save": True,
-                "mlflow": enable_mlflow,
-            },
-            "blocks": {
-                "initial_num": tune.grid_search(initial_blocks),
-                "max_num": tune.grid_search(max_blocks),
-                "path": blocks_path,
-                "metadata": blocks_metadata,
-            },
-            "tasks": {
-                "sampling": tasks_sampling,
-                "initial_num": tune.grid_search(initial_tasks),
-                "path": tune.grid_search(tasks_path),
-                "queries_path": tune.grid_search(queries_path),
-                "block_selection_policy": tune.grid_search(block_selection_policy),
-                "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
-                "max_num": tune.grid_search(max_tasks),
-                "utility": tune.grid_search(utility),
-                "utility_beta": tune.grid_search(utility_beta),
-            },
-            "repetition": tune.grid_search(list(range(1, repetitions + 1))),
-        }
+        },
+        "metric": {
+            "normalize_by": "available_budget",
+            "n_knapsack_solvers": 1,
+        },
+        "logs": {
+            "verbose": False,
+            "save": True,
+            "mlflow": enable_mlflow,
+        },
+        "blocks": {
+            "initial_num": tune.grid_search(initial_blocks),
+            "arrival_interval": tune.grid_search(block_arrival_interval),
+            "max_num": tune.grid_search(max_blocks),
+            "path": blocks_path,
+            "metadata": blocks_metadata,
+        },
+        "tasks": {
+            "sampling": tasks_sampling,
+            "initial_num": tune.grid_search(initial_tasks),
+            "path": tune.grid_search(tasks_path),
+            "queries_path": tune.grid_search(queries_path),
+            "block_selection_policy": tune.grid_search(block_selection_policy),
+            "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+            "max_num": tune.grid_search(max_tasks),
+            "utility": tune.grid_search(utility),
+            "utility_beta": tune.grid_search(utility_beta),
+        },
+        "repetition": tune.grid_search(list(range(1, repetitions + 1))),
     }
 
     if enable_mlflow:
@@ -124,11 +115,11 @@ def grid_online(
         os.environ["MLFLOW_EXPERIMENT_NAME"] = exp_name
         mlflow.create_experiment(exp_name, artifact_location=str(path))
 
-    logger.info(f"Tune config: {config}")
+    logger.info(f"Tune config: {omegaconf}")
 
     experiment_analysis = tune.run(
         run_and_report,
-        config=config,
+        config=omegaconf,
         # resources_per_trial={"cpu": 1},
         resources_per_trial={"cpu": 32},
         local_dir=RAY_LOGS.joinpath(logs_dir),

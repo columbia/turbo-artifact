@@ -268,7 +268,7 @@ class Scheduler:
 
             run_metadata["hyperblock_size"] = hyperblock.size
 
-            results += result
+            results += [result]
 
         if results:
             return sum(result)

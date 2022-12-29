@@ -4,12 +4,14 @@ import sys
 
 import mlflow
 import typer
+import random
+import numpy as np
 from loguru import logger
 from omegaconf import OmegaConf
-from privacypacking.config import Config
 from privacypacking.simulator.simulator import Simulator
+from privacypacking.utils.utils import DEFAULT_CONFIG_FILE
+
 from privacypacking.utils.utils import (
-    DEFAULT_CONFIG_FILE,
     LOGS_PATH,
     save_logs,
     save_mlflow_artifacts,
@@ -18,26 +20,36 @@ from privacypacking.utils.utils import (
 app = typer.Typer()
 
 
-def main(config):
-    conf = Config(config)
+def privacypacking(omegaconf):
+    default_omegaconf = OmegaConf.load(DEFAULT_CONFIG_FILE)
+    custom_omegaconf = OmegaConf.create(omegaconf)
+    omegaconf = OmegaConf.merge(default_omegaconf, custom_omegaconf)
 
-    if conf.omegaconf.logs.mlflow:
+    if omegaconf.enable_random_seed:
+        random.seed(None)
+        np.random.seed(None)
+    else:
+        random.seed(omegaconf.global_seed)
+        np.random.seed(omegaconf.global_seed)
+
+    if omegaconf.logs.mlflow:
         os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
         mlflow.set_experiment(experiment_id="0")
         with mlflow.start_run():
             # You can also log nexted dicts individually if you prefer
-            mlflow.log_params(OmegaConf.to_container(conf.omegaconf))
-            logs = Simulator(conf).run()
+            mlflow.log_params(OmegaConf.to_container(omegaconf))
+            logs = Simulator(omegaconf).run()
             save_mlflow_artifacts(logs)
-            save_logs(conf, logs)
     else:
-        logs = Simulator(conf).run()
-        save_logs(conf, logs)
+        logs = Simulator(omegaconf).run()
+
+    save_logs(logs)
+    return logs
 
 
 @app.command()
 def run(
-    config: str = "privacypacking/config/debug_pmw_config.json",
+    omegaconf: str = "privacypacking/config/debug_pmw_config.json",
     loguru_level: str = "WARNING",
 ):
     # Try environment variable first, CLI arg otherwise
@@ -48,9 +60,9 @@ def run(
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     # Read config file
-    with open(config) as f:
-        config = json.load(f)
-        main(config)
+    with open(omegaconf) as f:
+        omegaconf = json.load(f)
+        privacypacking(omegaconf)
 
 
 if __name__ == "__main__":

@@ -1,18 +1,16 @@
 from datetime import datetime
 
 import simpy
-
 from privacypacking.simulator import Blocks, ResourceManager, Tasks
 from privacypacking.utils.utils import get_logs
 
 
 class Simulator:
-    def __init__(self, config):
+    def __init__(self, omegaconf):
         self.env = simpy.Environment()
-        self.config = config
 
         # Start the block and tasks consumers
-        self.rm = ResourceManager(self.env, self.config)
+        self.rm = ResourceManager(self.env, omegaconf)
         self.env.process(self.rm.start())
 
         # Start the block and tasks producers

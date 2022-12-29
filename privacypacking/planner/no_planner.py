@@ -8,7 +8,7 @@ from privacypacking.budget.curves import LaplaceCurve
 
 class NoPlanner(Planner):
     def __init__(self, cache, blocks, planner_args):
-        super().__init__(cache, blocks, planner_args)
+        super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
         """

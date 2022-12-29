@@ -22,7 +22,7 @@ class ILP(Planner):
     def __init__(self, cache, blocks, planner_args):
         assert planner_args.enable_caching == True
         assert planner_args.enable_dp == True
-        super().__init__(cache, blocks, planner_args)
+        super().__init__(cache, blocks, **planner_args)
         self.sequencial = False
         self.C = {}
 
@@ -129,9 +129,8 @@ class ILP(Planner):
 def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, variance_reduction):
     t = time.time()
     for k in range(kmin, kmax + 1):
-        laplace_scale = (
-            1 / f[k]
-        )  # f(k): Minimum pure epsilon for reaching accuracy target given k
+        # f(k): Minimum pure epsilon for reaching accuracy target given k
+        laplace_scale = 1 / f[k]
         target_noise_std = math.sqrt(2) * laplace_scale
         chunks, objval = solve_gurobi(
             target_noise_std, k, n, indices, C, block_budgets, variance_reduction
@@ -163,9 +162,8 @@ def solve_gurobi(target_noise_std, K, N, indices, C, block_budgets, vr):
         )
 
         for (i, j) in indices:
-            if (i, j) in C and target_noise_std >= C[
-                (i, j)
-            ].noise_std:  # Good enough estimate in the cache
+            # Good enough estimate in the cache
+            if (i, j) in C and target_noise_std >= C[(i, j)].noise_std:
                 fresh_pure_epsilon = 0
             else:  # Need to improve on the cache
                 # TODO: re-enable variance reduction
