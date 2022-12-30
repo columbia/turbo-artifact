@@ -11,9 +11,13 @@ app = typer.Typer()
 
 
 class Task:
-    def __init__(self, n_blocks, query_id, query_type, start_time=None):
+    def __init__(
+        self, n_blocks, query_id, utility, utility_beta, query_type, start_time=None
+    ):
         self.n_blocks = n_blocks
         self.query_id = query_id
+        self.utility = utility
+        self.utility_beta = utility_beta
         self.query_type = query_type
         self.start_time = start_time
 
@@ -27,23 +31,21 @@ class PrivacyWorkload:
         pass
 
     def create_dp_task(self, task) -> dict:
-        submit_time = task.start_time
-        n_blocks = task.n_blocks
-        # task_name = f"task-{task.query_id}-{n_blocks}-{submit_time}"
-        task = {
+        task_name = f"task-{task.query_id}-{task.n_blocks}"
+        dp_task = {
             "query_id": task.query_id,
             "query_type": task.query_type,
-            "n_blocks": n_blocks,
-            # "profit": 1,
+            "n_blocks": task.n_blocks,
+            "utility": task.utility,
+            "utility_beta": task.utility_beta,
             "block_selection_policy": "LatestBlocksFirst",
-            # "task_name": task_name,
+            "task_name": task_name,
         }
+        if task.start_time:
+            dp_task.update({"submit_time": task.start_time})
+        return dp_task
 
-        if submit_time:
-            task.update({"submit_time": submit_time})
-        return task
-
-    def generate(self):
+    def generate(self, utility, utility_beta):
         self.blocks_num = 600  # days
         self.initial_blocks_num = 1
         self.query_types = [0]
@@ -70,8 +72,9 @@ class PrivacyWorkload:
             num_tasks = np.abs(np.random.normal(1, std_num_tasks, 1)).astype(int)
             for _ in range(num_tasks[0]):
                 query_id = np.random.choice(query_types)
-                query_type = "linear"
-                tasks.append(Task(start_time, nblocks, query_id, query_type))
+                tasks.append(
+                    Task(nblocks, query_id, utility, utility_beta, "linear", start_time)
+                )
             return tasks
 
         self.tasks = []
@@ -87,19 +90,33 @@ class PrivacyWorkload:
 
         logger.info(self.tasks.head())
 
-    def generate_nblocks(self, n_queries, nblocks_max, nblocks_step):
+    def generate_nblocks(
+        self, n_queries, nblocks_max, nblocks_step, utility, utility_beta
+    ):
         # Simply lists all the queries, the sampling will happen in the simulator
         self.tasks = []
 
         # Every workload has monoblocks
         for query_id in range(n_queries):
-            self.tasks.append(Task(n_blocks=1, query_id=query_id, query_type="linear"))
-
+            self.tasks.append(
+                Task(
+                    n_blocks=1,
+                    query_id=query_id,
+                    utility=utility,
+                    utility_beta=utility_beta,
+                    query_type="linear",
+                )
+            )
         for b in range(nblocks_step, nblocks_max, nblocks_step):
-            print(b)
             for query_id in range(n_queries):
                 self.tasks.append(
-                    Task(n_blocks=b, query_id=query_id, query_type="linear")
+                    Task(
+                        n_blocks=b,
+                        query_id=query_id,
+                        utility=utility,
+                        utility_beta=utility_beta,
+                        query_type="linear",
+                    )
                 )
         dp_tasks = [self.create_dp_task(t) for t in self.tasks]
         logger.info(f"Collecting results in a dataframe...")
@@ -117,6 +134,8 @@ class PrivacyWorkload:
 
 def main(
     requests_type: str = "monoblock",
+    utility: float = 100,
+    utility_beta: float = 0.0001,
     queries: str = "covid19_queries/all_2way_marginals.queries.json",
     workload_dir: str = str(Path(__file__).resolve().parent.parent),
 ) -> None:
@@ -130,13 +149,18 @@ def main(
 
     # TODO: keeping this for now to generate a very specific workload
     if requests_type == "all-blocks":
-        privacy_workload.generate()
+        privacy_workload.generate(utility, utility_beta)
         path = workload_dir.joinpath(f"covid19_workload/privacy_tasks.csv")
 
     elif requests_type == "monoblock":
         n_different_queries = len(json.load(open(queries, "r")))
         privacy_workload.generate_nblocks(
-            n_different_queries, nblocks_min=1, nblocks_max=1, nblocks_step=1
+            n_different_queries,
+            nblocks_min=1,
+            nblocks_max=1,
+            nblocks_step=1,
+            utility=utility,
+            utility_beta=utility_beta,
         )
         path = workload_dir.joinpath(
             f"covid19_workload/{requests_type}.privacy_tasks.csv"
@@ -150,7 +174,7 @@ def main(
         nblocks_step = int(r[1])
         n_different_queries = len(json.load(open(queries, "r")))
         privacy_workload.generate_nblocks(
-            n_different_queries, nblocks_max, nblocks_step
+            n_different_queries, nblocks_max, nblocks_step, utility, utility_beta
         )
         path = workload_dir.joinpath(
             f"covid19_workload/{requests_type}blocks_{n_different_queries}queries.privacy_tasks.csv"
