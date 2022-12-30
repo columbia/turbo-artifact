@@ -21,7 +21,7 @@ class MinCutsPlanner(Planner):
 
         bs_tuple = (block_request[0], block_request[-1])
         plan = A(query_id=query_id, l=[R(bs_tuple, noise_std)])
-        
+
         cost = 0
         if self.enable_dp:
             cost = self.get_cost(plan)

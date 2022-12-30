@@ -1,4 +1,5 @@
 import os
+import sys
 import ray
 import mlflow
 import datetime
@@ -28,7 +29,6 @@ def grid_online(
     queries_path: List[str],
     blocks_path: str,
     blocks_metadata: str,
-    tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
     planner: List[str],  # Options = {MaxCutsPlanner}
@@ -41,8 +41,6 @@ def grid_online(
     max_tasks: List[int] = [4000],
     repetitions: int = 1,
     enable_random_seed: bool = False,
-    utility: List[int] = [100],
-    utility_beta: List[int] = [0.0001],
     alpha: List[int] = [0.005],  # For the PMW
     beta: List[int] = [0.0001],  # For the PMW
 ):
@@ -86,6 +84,7 @@ def grid_online(
             "verbose": False,
             "save": True,
             "mlflow": enable_mlflow,
+            "loguru_level": "INFO",
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
@@ -94,15 +93,12 @@ def grid_online(
             "metadata": blocks_metadata,
         },
         "tasks": {
-            "sampling": tasks_sampling,
             "initial_num": tune.grid_search(initial_tasks),
             "path": tune.grid_search(tasks_path),
             "queries_path": tune.grid_search(queries_path),
             "block_selection_policy": tune.grid_search(block_selection_policy),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
             "max_num": tune.grid_search(max_tasks),
-            "utility": tune.grid_search(utility),
-            "utility_beta": tune.grid_search(utility_beta),
         },
         "repetition": tune.grid_search(list(range(1, repetitions + 1))),
     }
@@ -158,7 +154,7 @@ class CustomLoggerCallback(tune.logger.LoggerCallback):
     """Custom logger interface"""
 
     def __init__(self, metrics=["scheduler_metric"]) -> None:
-        self.metrics = ["n_allocated_tasks", "realized_profit"]
+        self.metrics = ["n_allocated_tasks"]  # , "realized_profit"]
         self.metrics.extend(metrics)
         super().__init__()
 

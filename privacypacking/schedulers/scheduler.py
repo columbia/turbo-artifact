@@ -2,7 +2,7 @@ import json
 import time
 from collections import defaultdict
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 from loguru import logger
 from omegaconf import DictConfig
@@ -16,8 +16,8 @@ from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT, mlflow_log
 
 from privacypacking.planner.ilp import ILP
-from privacypacking.planner.max_cuts_planner import MinCutsPlanner
-from privacypacking.planner.min_cuts_planner import MaxCutsPlanner
+from privacypacking.planner.max_cuts_planner import MaxCutsPlanner
+from privacypacking.planner.min_cuts_planner import MinCutsPlanner
 
 from privacypacking.cache.deterministic_cache import DeterministicCache
 from privacypacking.cache.probabilistic_cache import ProbabilisticCache
@@ -179,15 +179,21 @@ class Scheduler:
         )  # The plan returned here if not None is eligible for execution
 
         if not plan:
+            logger.info(
+                colored(
+                    f"Can't run task {task.id} on blocks {block_tuple}.",
+                    "red",
+                )
+            )
             return
 
         logger.info(
             colored(
-                f"Got plan (cost={plan.cost}) for blocks {block_tuple}: {plan}",
-                "yellow",
+                f"Plan of cost {plan.cost} for task {task.id} on blocks {block_tuple}: {plan}.",
+                "green",
             )
         )
-        
+
         # Execute the plan for running the query and consume budget if necessary
         result, run_metadata = self.execute_plan(plan)
 

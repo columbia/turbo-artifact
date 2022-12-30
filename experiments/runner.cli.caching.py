@@ -26,10 +26,9 @@ def caching():
         max_blocks=[400],
         initial_blocks=[1],
         data_lifetime=[0.1],
-        tasks_sampling="poisson",
         initial_tasks=[0],
-        max_tasks=[4000],
-        avg_num_tasks_per_block=[500],
+        avg_num_tasks_per_block=[100],
+        # max_tasks=[4000],
         task_lifetime=[1],
         planner=["MinCutsPlanner"],
         # planner=["ILP"],
@@ -41,8 +40,6 @@ def caching():
         enable_dp=[True],
         repetitions=1,
         enable_random_seed=True,
-        utility=[100],  # [100, 200, 500, 1000],
-        utility_beta=[0.0001],
         alpha=[0.005],
         beta=[0.0001],
     )
@@ -51,7 +48,7 @@ def caching():
 @app.command()
 def run(
     exp: str = "caching",
-    loguru_level: str = "WARNING",
+    loguru_level: str = "INFO",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"

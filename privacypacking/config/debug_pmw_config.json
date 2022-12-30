@@ -30,7 +30,8 @@
     "logs": {
         "verbose": false,
         "save": true,
-        "mlflow": true
+        "mlflow": true,
+        "loguru_level": "INFO"
     },
     "blocks": {
         "initial_num": 2,
@@ -39,7 +40,6 @@
         "metadata": "covid19/covid19_data/metadata.json"
     },
     "tasks": {
-        "sampling": "poisson",
         "path": "covid19/covid19_workload/2blocks_1000queries.privacy_tasks.csv",
         "queries_path": "covid19/covid19_queries/1000.queries.json",
         "block_selection_policy": "LatestBlocksFirst",

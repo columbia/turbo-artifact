@@ -32,13 +32,13 @@ blocks:
 tasks:
   path: "tasks"
   initial_num: 1
-  sampling: ""
   max_num: 100
 
 logs:
   verbose: False
   save: False
   mlflow: False
+  loguru_level: "INFO"
 
 alphas:
 - 1.5
