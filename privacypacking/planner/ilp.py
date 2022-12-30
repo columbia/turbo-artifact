@@ -1,18 +1,20 @@
-import math
 import os
+import math
 import time
+import numpy as np
+from loguru import logger
+from termcolor import colored
 from collections import namedtuple
+from sortedcollections import OrderedSet
 from multiprocessing import Manager, Process
 
 import gurobipy as gp
 from gurobipy import GRB
-from sortedcollections import OrderedSet
-from termcolor import colored
-import numpy as np
+
 from privacypacking.cache.cache import A, R
 from privacypacking.planner.planner import Planner
-from privacypacking.utils.compute_utility_curve import compute_utility_curve
 from privacypacking.budget.curves import LaplaceCurve
+from privacypacking.utils.compute_utility_curve import compute_utility_curve
 
 
 Chunk = namedtuple("Chunk", ["index", "noise_std"])
@@ -23,7 +25,6 @@ class ILP(Planner):
         assert planner_args.enable_caching == True
         assert planner_args.enable_dp == True
         super().__init__(cache, blocks, **planner_args)
-        self.sequencial = False
         self.C = {}
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
@@ -76,28 +77,21 @@ class ILP(Planner):
         for i in range(num_processes):
             processes[i].join()
 
-        # Find the best solution
         plan = None
         best_objvalue = math.inf
 
+        # Find the best solution
         for k, (chunks, objvalue) in return_dict.items():
             if objvalue < best_objvalue:
                 plan = A(
-                    query_id,
-                    [
+                    query_id=query_id,
+                    l=[
                         R((i + offset, j + offset), noise_std)
                         for ((i, j), noise_std) in chunks
                     ],
+                    cost=objvalue,
                 )
                 best_objvalue = objvalue
-
-        if plan is not None:
-            print(
-                colored(
-                    f"Got plan (cost={best_objvalue}) for blocks {block_request}: {plan}",
-                    "yellow",
-                )
-            )
         return plan
 
     def get_block_budgets(self, block_request):
@@ -132,7 +126,7 @@ def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, variance_red
         # f(k): Minimum pure epsilon for reaching accuracy target given k
         laplace_scale = 1 / f[k]
         target_noise_std = math.sqrt(2) * laplace_scale
-        chunks, objval = solve_gurobi(
+        chunks, objval = optimize(
             target_noise_std, k, n, indices, C, block_budgets, variance_reduction
         )
         if chunks:
@@ -141,7 +135,7 @@ def solve(kmin, kmax, return_dict, C, block_budgets, f, n, indices, variance_red
     # print(f"    Took:  {t}")
 
 
-def solve_gurobi(target_noise_std, K, N, indices, C, block_budgets, vr):
+def optimize(target_noise_std, K, N, indices, C, block_budgets, vr):
     with gp.Env(empty=True) as env:
         env.setParam("OutputFlag", 0)
         env.start()

@@ -5,20 +5,22 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Union
 
 from loguru import logger
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 from simpy import Event
 from termcolor import colored
 
-from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget import Block, HyperBlock, Task
+from data.covid19.covid19_queries.queries import QueryPool
 from privacypacking.budget.block_selection import NotEnoughBlocks
-from privacypacking.cache.deterministic_cache import DeterministicCache
-from privacypacking.cache.probabilistic_cache import ProbabilisticCache
-from privacypacking.planner.ilp import ILP
-from privacypacking.planner.per_block_planner import PerBlockPlanner
-from privacypacking.planner.no_planner import NoPlanner
 from privacypacking.schedulers.utils import ALLOCATED, FAILED, PENDING
 from privacypacking.utils.utils import REPO_ROOT, mlflow_log
+
+from privacypacking.planner.ilp import ILP
+from privacypacking.planner.max_cuts_planner import MinCutsPlanner
+from privacypacking.planner.min_cuts_planner import MaxCutsPlanner
+
+from privacypacking.cache.deterministic_cache import DeterministicCache
+from privacypacking.cache.probabilistic_cache import ProbabilisticCache
 
 
 # TODO: efficient data structure here? (We have indices)
@@ -163,8 +165,7 @@ class Scheduler:
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
-        Try to run the task.
-        If it can run, returns a metadata dict. Otherwise, returns None.
+        Try to run the task. If it can run, returns a metadata dict. Otherwise, returns None.
         """
 
         # We are in the special case where tasks request intervals
@@ -180,6 +181,13 @@ class Scheduler:
         if not plan:
             return
 
+        logger.info(
+            colored(
+                f"Got plan (cost={plan.cost}) for blocks {block_tuple}: {plan}",
+                "yellow",
+            )
+        )
+        
         # Execute the plan for running the query and consume budget if necessary
         result, run_metadata = self.execute_plan(plan)
 
@@ -377,11 +385,6 @@ class Scheduler:
 
             return sorted_tasks
         return sorted(tasks, reverse=True, key=task_key)
-
-    def can_run(self, demand) -> bool:
-        return HyperBlock({key: self.blocks[key] for key in demand.keys()}).can_run(
-            demand
-        )
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's policy

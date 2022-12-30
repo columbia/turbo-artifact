@@ -1,34 +1,36 @@
 import math
-from privacypacking.budget.block import HyperBlock
 from privacypacking.cache.cache import A, R
 from privacypacking.planner.planner import Planner
-from privacypacking.utils.compute_utility_curve import compute_utility_curve
+from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import LaplaceCurve
+from privacypacking.utils.compute_utility_curve import compute_utility_curve
 
 
-class PerBlockPlanner(Planner):
-    def __init__(self, cache, blocks, **planner_args):
-        assert planner_args.enable_caching == True
-        assert planner_args.enable_dp == True
-        super().__init__(cache, blocks, planner_args)
+class MinCutsPlanner(Planner):
+    def __init__(self, cache, blocks, planner_args):
+        super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
         """
-        For "per-block-planning" a plan has this form: A(R(B1), R(B2), ... , R(Bn))
+        For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn))
         """
-        n = len(block_request)
-        min_pure_epsilon = compute_utility_curve(utility, utility_beta, n)
+        # 0 Aggregations
+        min_pure_epsilon = compute_utility_curve(utility, utility_beta, 1)
         laplace_scale = 1 / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 
-        plan = A(query_id, [R((x, x), noise_std) for x in block_request])
-
-        cost = self.get_cost(plan)
+        bs_tuple = (block_request[0], block_request[-1])
+        plan = A(query_id=query_id, l=[R(bs_tuple, noise_std)])
+        
+        cost = 0
+        if self.enable_dp:
+            cost = self.get_cost(plan)
         if not math.isinf(cost):
+            plan.cost = cost
             return plan
         return None
 
-    # Simple Cost model     # TODO: Migrate this
+    # Simple Cost model     # TODO: Move this elsewhere
     def get_cost(self, plan):
         query_id = plan.query_id
 

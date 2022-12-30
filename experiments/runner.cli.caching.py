@@ -31,9 +31,9 @@ def caching():
         max_tasks=[4000],
         avg_num_tasks_per_block=[500],
         task_lifetime=[1],
-        planner=["NoPlanner"],
+        planner=["MinCutsPlanner"],
         # planner=["ILP"],
-        # planner=["PerBlockPlanner"],
+        # planner=["MaxCutsPlanner"],
         # optimization_objective=["minimize_budget"],   # Disabled - objective fixed to minimize budget
         variance_reduction=[False],  # [True, False],
         cache=["DeterministicCache"],  # ProbabilisticCache

@@ -8,7 +8,7 @@
         "scheduler_timeout_seconds": 1200,
         "data_lifetime": 0.1,
         "task_lifetime": 1,
-        "planner": "PerBlockPlanner",
+        "planner": "MaxCutsPlanner",
         "optimization_objective": "minimize_budget",
         "variance_reduction": false,
         "cache": "ProbabilisticCache",

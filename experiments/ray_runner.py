@@ -31,7 +31,7 @@ def grid_online(
     tasks_sampling: str,
     data_lifetime: List[float],
     task_lifetime: List[int],
-    planner: List[str],  # Options = {PerBlockPlanner}
+    planner: List[str],  # Options = {MaxCutsPlanner}
     # optimization_objective: List[str],
     variance_reduction: List[str],
     cache: List[str],  # Options = {DeterministicCache, ProbabilisticCache}
@@ -137,15 +137,14 @@ def grid_online(
                 # "realized_profit",
             ],
             parameter_columns={
-                "omegaconf/scheduler/scheduling_wait_time": "T",
-                # "omegaconf/scheduler/enable_caching": "enable_caching",
-                "omegaconf/scheduler/planner": "planner",
-                "omegaconf/utility": "utility",
-                # "omegaconf/scheduler/optimization_objective": "optimization_objective",
-                "omegaconf/scheduler/variance_reduction": "variance_reduction",
-                "omegaconf/scheduler/cache": "cache",
-                "omegaconf/scheduler/data_lifetime": "lifetime",
-                "omegaconf/scheduler/metric": "metric",
+                "scheduler/scheduling_wait_time": "T",
+                "scheduler/enable_caching": "enable_caching",
+                "scheduler/planner": "planner",
+                # "scheduler/optimization_objective": "optimization_objective",
+                "scheduler/variance_reduction": "variance_reduction",
+                "scheduler/cache": "cache",
+                "scheduler/data_lifetime": "lifetime",
+                "scheduler/metric": "metric",
             },
             max_report_frequency=60,
         ),

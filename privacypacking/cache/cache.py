@@ -8,20 +8,17 @@ class R:
         self.blocks = blocks
         self.noise_std = noise_std
 
-    def __str__(
-        self,
-    ):
+    def __str__(self):
         return f"Run({self.blocks}, {self.noise_std})"
 
 
 class A:
-    def __init__(self, query_id, l) -> None:
+    def __init__(self, query_id, l, cost=None) -> None:
         self.l = l
+        self.cost = cost
         self.query_id = query_id
 
-    def __str__(
-        self,
-    ):
+    def __str__(self):
         return f"Aggregate({[str(l) for l in self.l]})"
 
 
