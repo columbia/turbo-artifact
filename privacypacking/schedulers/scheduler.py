@@ -181,7 +181,7 @@ class Scheduler:
         if not plan:
             logger.info(
                 colored(
-                    f"Can't run task {task.id} on blocks {block_tuple}.",
+                    f"Can't run query {task.query_id} on blocks {block_tuple}.",
                     "red",
                 )
             )
@@ -189,7 +189,7 @@ class Scheduler:
 
         logger.info(
             colored(
-                f"Plan of cost {plan.cost} for task {task.id} on blocks {block_tuple}: {plan}.",
+                f"Plan of cost {plan.cost} for query {task.query_id} on blocks {block_tuple}: {plan}.",
                 "green",
             )
         )

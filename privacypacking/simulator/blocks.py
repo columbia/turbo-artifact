@@ -20,9 +20,7 @@ class Blocks:
         self.env.process(self.block_producer())
 
     def block_producer(self):
-        """
-        Generate blocks.
-        """
+        """Generate blocks."""
         # Produce initial blocks
         for _ in range(self.omegaconf.blocks.initial_num):
             self.env.process(self.block(next(self.blocks_count)))

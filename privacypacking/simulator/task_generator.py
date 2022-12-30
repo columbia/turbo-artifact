@@ -1,10 +1,7 @@
 import random
 from loguru import logger
 from privacypacking.budget import Task
-from privacypacking.budget.block_selection import (
-    BlockSelectionPolicy,
-    LatestBlocksFirst,
-)
+from privacypacking.budget.block_selection import BlockSelectionPolicy
 
 
 class TaskGenerator:

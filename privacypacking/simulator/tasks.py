@@ -58,24 +58,28 @@ class Tasks:
             if (
                 self.omegaconf.tasks.max_num
                 and task_id > self.omegaconf.tasks.max_num - 1
+            ) or (
+                not self.omegaconf.tasks.max_num
+                and self.resource_manager.block_production_terminated.triggered
             ):
+                # Termination condition: either tasks max num has been reached
+                # or there is no tasks max num limit and the blocks max num has been reached
                 # Send a special message to close the channel
                 self.resource_manager.task_production_terminated.succeed()
                 self.resource_manager.new_tasks_queue.put(LastItem())
-                return
-            else:
-                task_arrival_interval = (
-                    self.task_generator.get_task_arrival_interval_time()
-                )
+                break
 
-                # No task can arrive after the end of the simulation
-                # so we force them to appear right before the end of the last block
-                task_arrival_interval = min(
-                    task_arrival_interval,
-                    self.omegaconf.blocks.max_num - self.env.now - 0.01,
-                )
-                self.env.process(self.task(task_id))
-                yield self.env.timeout(task_arrival_interval)
+            task_arrival_interval = self.task_generator.get_task_arrival_interval_time()
+
+            # No task can arrive after the end of the simulation
+            # so we force them to appear right before the end of the last block
+            task_arrival_interval = min(
+                task_arrival_interval,
+                self.omegaconf.blocks.max_num - self.env.now - 0.01,
+            )
+
+            self.env.process(self.task(task_id))
+            yield self.env.timeout(task_arrival_interval)
 
         logger.info(
             f"Done generating tasks at time {self.env.now}. Current count is: {self.task_count}"

@@ -22,8 +22,8 @@ Chunk = namedtuple("Chunk", ["index", "noise_std"])
 
 class ILP(Planner):
     def __init__(self, cache, blocks, planner_args):
-        assert planner_args.enable_caching == True
-        assert planner_args.enable_dp == True
+        assert planner_args.get("enable_caching") == True
+        assert planner_args.get("enable_dp") == True
         super().__init__(cache, blocks, **planner_args)
         self.C = {}
 

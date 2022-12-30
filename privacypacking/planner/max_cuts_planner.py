@@ -7,10 +7,10 @@ from privacypacking.utils.compute_utility_curve import compute_utility_curve
 
 
 class MaxCutsPlanner(Planner):
-    def __init__(self, cache, blocks, **planner_args):
-        assert planner_args.enable_caching == True
-        assert planner_args.enable_dp == True
-        super().__init__(cache, blocks, planner_args)
+    def __init__(self, cache, blocks, planner_args):
+        assert planner_args.get("enable_caching") == True
+        assert planner_args.get("enable_dp") == True
+        super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
         """

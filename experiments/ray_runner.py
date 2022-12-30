@@ -38,7 +38,7 @@ def grid_online(
     enable_caching: List[bool],
     enable_dp: List[bool],
     avg_num_tasks_per_block: List[int] = [100],
-    max_tasks: List[int] = [4000],
+    max_tasks: List[int] = [None],
     repetitions: int = 1,
     enable_random_seed: bool = False,
     alpha: List[int] = [0.005],  # For the PMW
