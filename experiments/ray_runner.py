@@ -21,7 +21,6 @@ def grid_online(
     scheduler_metrics: List[int],
     n: List[float],
     initial_blocks: List[int],
-    block_arrival_interval: List[int],
     initial_tasks: List[int],
     max_blocks: List[int],
     logs_dir: str,
@@ -90,7 +89,6 @@ def grid_online(
         },
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
-            "arrival_interval": tune.grid_search(block_arrival_interval),
             "max_num": tune.grid_search(max_blocks),
             "path": blocks_path,
             "metadata": blocks_metadata,

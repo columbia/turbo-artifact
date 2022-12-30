@@ -1,8 +1,8 @@
-import numpy as np
 import yaml
+import numpy as np
+from privacypacking.cache.cache import Cache
 from privacypacking.budget.block import HyperBlock
 from privacypacking.budget.curves import LaplaceCurve, ZeroCurve
-from privacypacking.cache.cache import Cache
 
 
 class CacheEntry:

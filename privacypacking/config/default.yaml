@@ -27,6 +27,7 @@ metric:
 blocks:
   initial_num: 1
   max_num: 10
+  arrival_interval: 1
 
 tasks:
   path: "tasks"

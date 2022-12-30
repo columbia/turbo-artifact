@@ -1,13 +1,11 @@
-from itertools import count
 import random
+import pandas as pd
 from loguru import logger
-
-from privacypacking.simulator.resourcemanager import LastItem
+from itertools import count
 from privacypacking.budget import Task
 from privacypacking.utils.utils import REPO_ROOT
-from privacypacking.budget.task import UniformTask
+from privacypacking.simulator.resourcemanager import LastItem
 from privacypacking.budget.block_selection import BlockSelectionPolicy
-import pandas as pd
 
 
 class Tasks:
@@ -29,8 +27,17 @@ class Tasks:
             # Uniform sampling with Poisson arrival from the CSV file
             def row_sampler(df):
                 while True:  # Don't stop, `max_tasks` will take care of that
-                    d = df.sample(1)
-                    yield 0, d.squeeze()  # Same signature as iterrows()
+                    nblocks = len(resource_manager.scheduler.blocks)
+                    # Sample only from tasks who request no more than existing blocks
+                    try:
+                        d = df.query(f"n_blocks <= {nblocks}").sample(1)
+                        yield 0, d.squeeze()  # Same signature as iterrows()
+                    except:
+                        logger.error(
+                            f"There are no tasks in the workload requesting less than {nblocks} blocks to sample from. \
+                                This workload requires at least {df['n_blocks'].min()} initial blocks"
+                        )
+                        exit(1)
 
             self.tasks_generator = row_sampler(self.tasks)
         else:
@@ -120,7 +127,7 @@ class Tasks:
         profit = 1 if "profit" not in task_row else float(task_row["profit"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
 
-        task = UniformTask(
+        task = Task(
             id=task_id,
             query_id=int(task_row["query_id"]),
             query_type=task_row["query_type"],

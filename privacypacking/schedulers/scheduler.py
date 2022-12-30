@@ -385,7 +385,9 @@ class Scheduler:
 
     def task_set_block_ids(self, task: Task) -> None:
         # Ask the stateful scheduler to set the block ids of the task according to the task's policy
-        task.blocks = list(task.block_selection_policy.select_blocks(
-            blocks=self.blocks, task_blocks_num=task.n_blocks
-        ))
+        task.blocks = list(
+            task.block_selection_policy.select_blocks(
+                blocks=self.blocks, task_blocks_num=task.n_blocks
+            )
+        )
         assert task.blocks is not None
