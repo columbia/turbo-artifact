@@ -49,7 +49,9 @@ def create_all_queries(queries_path, attributes_domain_sizes):
         outfile.write(json_object)
 
 
-def create_specific_queries(queries_path, type="positive_cases"):
+def create_specific_queries(
+    queries_path, attributes_domain_sizes, type="positive_cases"
+):
     queries = []
     attributes_domain_sizes = [2, 2, 4, 8]
 
@@ -72,7 +74,7 @@ def create_specific_queries(queries_path, type="positive_cases"):
             {1: 1, 2: 1},
         ]
         for d in dicts:
-            query_tensors.append(k_way_marginal_query_list(d, attribute_sizes))
+            query_tensors.append(k_way_marginal_query_list(d, attributes_domain_sizes))
     elif type == "all_2way_marginals":
         query_tensors = []
         dicts = []
@@ -125,10 +127,12 @@ def create_specific_queries(queries_path, type="positive_cases"):
             query = [list(tup) for tup in product(*query)]
             query_tensors.append(query)
 
-    assert num_queries <= len(query_tensors)
-    print(f"Keeping {num_queries} queries from the total {len(query_tensors)} queries.")
+        assert num_queries <= len(query_tensors)
+        print(
+            f"Keeping {num_queries} queries from the total {len(query_tensors)} queries."
+        )
 
-    query_tensors = query_tensors[0:num_queries]
+        query_tensors = query_tensors[0:num_queries]
 
     # Write queries to a json file
     queries = {}
@@ -191,15 +195,16 @@ def main(
         logger.error("Dataset metadata must have be created first..")
         exit(1)
 
+    attributes_domain_sizes = blocks_metadata["attributes_domain_sizes"]
     # create_all_queries(
     #     queries_path,
     #     blocks_metadata["attributes_domain_sizes"]
     # )  # Query space size for covid dataset: 34425
 
-    # create_specific_queries(queries_path)
-    # create_specific_queries(queries_path, type="2way_marginal_mix")
+    # create_specific_queries(queries_path, attributes_domain_sizes)
+    # create_specific_queries(queries_path, attributes_domain_sizes, type="2way_marginal_mix")
     queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
-    create_specific_queries(queries_path, type=workload)
+    create_specific_queries(queries_path, attributes_domain_sizes, type=workload)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import uuid
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
-
+import numpy as np
 import mlflow
 import pandas as pd
 from omegaconf import OmegaConf
@@ -23,8 +23,6 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("privacypacking/config/default.yaml")
 TaskSpec = namedtuple(
     "TaskSpec", ["profit", "block_selection_policy", "n_blocks", "budget", "name"]
 )
-
-import numpy as np
 
 
 def mlflow_log(key, value, step):
@@ -82,12 +80,11 @@ def get_logs(
     tasks,
     blocks,
     tasks_info,
-    simulator_config,
+    omegaconf,
     **kwargs,
 ) -> dict:
 
-    simulator_config = simulator_config.dump()
-    omegaconf = OmegaConf.create(simulator_config["omegaconf"])
+    omegaconf = OmegaConf.create(omegaconf)
 
     n_allocated_tasks = 0
     tasks_scheduling_times = []
@@ -98,9 +95,13 @@ def get_logs(
     log_tasks = []
     if omegaconf.logs.save:
         for task in tasks:
-            task_dump = task.dump(budget_per_block=omegaconf.logs.verbose)
+            task_dump = task.dump()
 
-            result = error = None
+            # Dictionnary with any key, instead of defining a new custom metric every time
+            metadata = tasks_info.run_metadata.get(task.id, {})
+            task_dump.update(metadata)
+
+            result = error = planning_time = None
             maximum_profit += task.profit
             if tasks_info.tasks_status[task.id] == ALLOCATED:
                 n_allocated_tasks += 1
@@ -110,20 +111,19 @@ def get_logs(
                     tasks_info.scheduling_delay.get(task.id, None)
                 )
 
-                # result = tasks_info.result[task.id]
-                # error = tasks_info.error[task.id]
-
-            # Dictionnary with any key, instead of defining a new custom metric every time
-            metadata = tasks_info.run_metadata.get(task.id, {})
-            task_dump.update(metadata)
+                result = metadata.get("result")
+                error = metadata.get("error")
+                planning_time = metadata.get("planning_time")
 
             task_dump.update(
                 {
                     "allocated": tasks_info.tasks_status[task.id] == ALLOCATED,
                     "status": tasks_info.tasks_status[task.id],
-                    # "result": result,
-                    # "error": error,
-                    # "planning_time": tasks_info.planning_time[task.id],
+                    "result": result,
+                    "error": error,
+                    "planning_time": planning_time,
+                    "utility": task.utility,
+                    "utility_beta": task.utility_beta,
                     "creation_time": tasks_info.creation_time[task.id],
                     "num_blocks": task.n_blocks,
                     "scheduling_time": tasks_info.scheduling_time.get(task.id, None),
@@ -146,11 +146,12 @@ def get_logs(
         "scheduler_n": omegaconf.scheduler.n,
         "scheduler_metric": omegaconf.scheduler.metric,
         "T": omegaconf.scheduler.scheduling_wait_time,
-        # "budget_utilization": bu,
         "data_lifetime": omegaconf.scheduler.data_lifetime,
         "block_selecting_policy": omegaconf.tasks.block_selection_policy,
         "n_allocated_tasks": n_allocated_tasks,
         "planner": omegaconf.scheduler.planner,
+        # "optimization_objective": omegaconf.scheduler.optimization_objective,
+        "variance_reduction": omegaconf.scheduler.variance_reduction,
         "cache": omegaconf.scheduler.cache,
         "total_tasks": total_tasks,
         "realized_profit": realized_profit,
@@ -195,7 +196,7 @@ def save_mlflow_artifacts(log_dict):
     mlflow.log_artifacts(artifacts_dir)
 
 
-def save_logs(config, log_dict, compact=False, compressed=False):
+def save_logs(log_dict, compact=False, compressed=False):
     log_path = LOGS_PATH.joinpath(
         f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
     )

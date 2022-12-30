@@ -1,6 +1,5 @@
 import simpy
 from loguru import logger
-
 from privacypacking.schedulers.methods import initialize_scheduler
 
 
@@ -14,16 +13,16 @@ class ResourceManager:
     Managing blocks and tasks arrival and schedules incoming tasks.
     """
 
-    def __init__(self, environment, configuration):
+    def __init__(self, environment, omegaconf):
         self.env = environment
-        self.config = configuration
+        self.omegaconf = omegaconf
 
         # To store the incoming tasks and blocks
         self.new_tasks_queue = simpy.Store(self.env)
         self.new_blocks_queue = simpy.Store(self.env)
 
         # Initialize the scheduler
-        self.scheduler = initialize_scheduler(self.config, self.env)
+        self.scheduler = initialize_scheduler(omegaconf, self.env)
         self.blocks_initialized = self.env.event()
 
         # Stopping conditions
@@ -42,18 +41,17 @@ class ResourceManager:
         task_consumed_event = self.env.process(self.task_consumer())
 
         # In the online case, start a clock to terminate the simulation
-        if self.config.omegaconf.scheduler.method == "batch":
-            self.block_arrival_interval = self.config.set_block_arrival_time()
+        if self.omegaconf.scheduler.method == "batch":
             self.daemon_clock = self.env.process(self.daemon_clock())
             self.env.process(self.termination_clock())
             self.scheduling = self.env.process(
                 self.scheduler.run_batch_scheduling(
                     simulation_termination_event=self.simulation_terminated,
-                    period=self.config.omegaconf.scheduler.scheduling_wait_time,
+                    period=self.omegaconf.scheduler.scheduling_wait_time,
                 )
             )
 
-        elif self.config.omegaconf.scheduler.method == "offline":
+        elif self.omegaconf.scheduler.method == "offline":
             self.block_production_terminated.succeed()
             self.task_production_terminated.succeed()
 
@@ -70,7 +68,7 @@ class ResourceManager:
             f"Block production terminated at {self.env.now}.\n Producing tasks for the last block..."
         )
 
-        yield self.env.timeout(self.block_arrival_interval)
+        yield self.env.timeout(self.omegaconf.blocks.arrival_interval)
 
         # All the blocks are here, time to stop creating online tasks
         if not self.task_production_terminated.triggered:
@@ -81,7 +79,7 @@ class ResourceManager:
 
         # We even wait a bit longer to ensure that all tasks are allocated (in case we need multiple scheduling steps)
         # TODO: add grace period that depends on T?
-        yield self.env.timeout(self.config.omegaconf.scheduler.data_lifetime)
+        yield self.env.timeout(self.omegaconf.scheduler.data_lifetime)
 
         logger.info(f"Terminating the simulation at {self.env.now}. Closing...")
         # self.terminate_simulation()
@@ -98,18 +96,13 @@ class ResourceManager:
     def block_consumer(self):
         # Needlessly convoluted?
         def consume():
-            # if self.block_production_terminated.triggered:
-            #     # Don't wait forever, no more block will arrive
-            #     return
-
             item = yield self.new_blocks_queue.get()
             block, generated_block_event = item
             self.scheduler.add_block(block)
             generated_block_event.succeed()
 
         # Consume all initial blocks
-        initial_blocks_num = self.config.get_initial_blocks_num()
-        for _ in range(initial_blocks_num):
+        for _ in range(self.omegaconf.blocks.initial_num):
             yield self.env.process(consume())
         self.blocks_initialized.succeed()
         logger.info(f"Initial blocks: {len(self.scheduler.blocks)}")
@@ -127,8 +120,7 @@ class ResourceManager:
             return self.scheduler.add_task(task_message)
 
         # Consume initial tasks
-        initial_tasks_num = self.config.get_initial_tasks_num()
-        for _ in range(initial_tasks_num):
+        for _ in range(self.omegaconf.tasks.initial_num):
             yield self.env.process(consume())
 
         logger.info("Done consuming initial tasks")

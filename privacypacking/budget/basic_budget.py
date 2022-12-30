@@ -20,6 +20,7 @@ class BasicBudget:
     # This means PureDP
     def __init__(self, epsilon) -> None:
         self.epsilon = epsilon
+        self.pure_epsilon = epsilon
 
     def is_positive(self) -> bool:
         if self.epsilon >= 0:
@@ -40,6 +41,12 @@ class BasicBudget:
         The maximum value a budget-epsilon can take is threshold-epsilon.
         """
         return BasicBudget(min(self.epsilon + other.epsilon, threshold.epsilon))
+
+    def compute_noise(
+        self,
+    ):
+        sensitivity = 1
+        return np.random.laplace(scale=sensitivity / self.epsilon)
 
     def can_allocate(self, demand_budget: "Budget") -> bool:
         # TODO: remove if this is too slow
