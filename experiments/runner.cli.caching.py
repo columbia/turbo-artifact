@@ -1,9 +1,7 @@
 import os
 import typer
 
-from experiments.ray_runner import (
-    grid_online,
-)
+from experiments.ray_runner import grid_online
 
 from privacypacking.schedulers.utils import FCFS
 

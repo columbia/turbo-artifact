@@ -221,12 +221,11 @@ class Scheduler:
         sorted_tasks = self.order(self.task_queue.tasks)
 
         for task in sorted_tasks:
-            # Do not schedule tasks whose lifetime has been exceeded
             if (
                 self.tasks_info.tasks_lifetime[task.id]
                 < (self.get_num_blocks() - self.initial_blocks_num)
                 - self.tasks_info.tasks_submit_time[task.id]
-            ):
+            ): # Do not schedule tasks whose lifetime has been exceeded
                 # TODO: we should pop them of the queue then, no? Instead of sorting each time
                 continue
 

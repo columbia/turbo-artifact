@@ -11,9 +11,7 @@ class MinCutsPlanner(Planner):
         super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
-        """
-        For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn))
-        """
+        """ For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn)) """
         # 0 Aggregations
         min_pure_epsilon = compute_utility_curve(utility, utility_beta, 1)
         laplace_scale = 1 / min_pure_epsilon

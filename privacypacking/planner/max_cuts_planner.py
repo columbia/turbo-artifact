@@ -13,9 +13,7 @@ class MaxCutsPlanner(Planner):
         super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
-        """
-        For "MaxCutsPlanner" a plan has this form: A(R(B1), R(B2), ... , R(Bn))
-        """
+        """ For "MaxCutsPlanner" a plan has this form: A(R(B1), R(B2), ... , R(Bn)) """
         n = len(block_request)
         min_pure_epsilon = compute_utility_curve(utility, utility_beta, n)
         laplace_scale = 1 / min_pure_epsilon
