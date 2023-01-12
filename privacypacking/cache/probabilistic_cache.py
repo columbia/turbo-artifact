@@ -28,7 +28,7 @@ class ProbabilisticCache(Cache):
         result, run_budget, run_metadata = pmw.run(query)
         return result, run_budget, run_metadata
 
-    def get_run_budget(self, query_id, hyperblock, noise_std):
+    def estimate_run_budget(self, query_id, hyperblock, noise_std):
         # NOTE: This is different from the deterministic cache. Any run might cost budget,
         # whether the cache is empty or not, and whether we hit or not.
         pmw = self.get_entry(query_id, hyperblock.id)

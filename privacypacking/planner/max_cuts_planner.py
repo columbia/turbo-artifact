@@ -36,7 +36,7 @@ class MaxCutsPlanner(Planner):
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
 
             if self.enable_caching:
-                run_budget = self.cache.get_run_budget(query_id, hyperblock, run_op.noise_std)
+                run_budget = self.cache.estimate_run_budget(query_id, hyperblock, run_op.noise_std)
             else:
                 laplace_scale = run_op.noise_std / math.sqrt(2)
                 run_budget = LaplaceCurve(laplace_noise=laplace_scale)
