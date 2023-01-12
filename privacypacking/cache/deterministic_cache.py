@@ -1,4 +1,5 @@
 import yaml
+import math
 import numpy as np
 from privacypacking.cache.cache import Cache
 from privacypacking.budget.block import HyperBlock
@@ -91,6 +92,17 @@ class DeterministicCache(Cache):
         result = true_result + noise
         return result, run_budget, run_metadata
 
+    def estimate_run_budget(self, query_id, hyperblock, noise_std):
+        cache_entry = self.get_entry(query_id, hyperblock.id)
+        if cache_entry is not None:
+            if noise_std >= cache_entry.noise_std:
+                # Good enough estimate
+                return ZeroCurve()
+        
+        # TODO: re-enable variance reduction
+        laplace_scale = noise_std / math.sqrt(2)
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+        return run_budget
+
     def dump(self):
-        res = yaml.dump(self.key_values)
-        print("Results", res)
+        print("Cache", yaml.dump(self.key_values))

@@ -28,35 +28,21 @@ class ProbabilisticCache(Cache):
         result, run_budget, run_metadata = pmw.run(query)
         return result, run_budget, run_metadata
 
-    # Cost model    # TODO: remove this functionality from the Cache
-    # This is tailored for the per block planning
-    def get_cost(
-        self, plan, blocks
-    ):  # Cost is either infinite or 0 in this implementation
-        if isinstance(plan, A):  # Aggregate cost of arguments/operators
-            return sum([self.get_cost(x, blocks) for x in plan.l])
+    def get_run_budget(self, query_id, hyperblock, noise_std):
+        # NOTE: This is different from the deterministic cache. Any run might cost budget,
+        # whether the cache is empty or not, and whether we hit or not.
+        pmw = self.get_entry(query_id, hyperblock.id)
+        if pmw is None:
+            # Use the defaults or the same config as `add_entry`
+            # TODO: This is leaking privacy, assume we have a good estimate already.
+            run_budget = PMW.worst_case_cost(n=hyperblock.size, **self.pmw_args)
+        else:
+            run_budget = PMW.worst_case_cost(
+                n=hyperblock.size,
+                nu=pmw.nu,
+                ro=pmw.ro,
+                standard_svt=pmw.standard_svt,
+                local_svt_max_queries=pmw.local_svt_max_queries,
+            )
 
-        elif isinstance(plan, R):  # Get cost of Run operator
-            block_ids = list(range(plan.blocks[0], plan.blocks[-1] + 1))
-            hyperblock = HyperBlock({key: blocks[key] for key in block_ids})
-
-            # NOTE: This is different from the deterministic cache. Any run might cost budget,
-            # whether the cache is empty or not, and whether we hit or not.
-            pmw = self.get_entry(plan.query_id, hyperblock.id)
-            if pmw is None:
-                # Use the defaults or the same config as `add_entry`
-                # TODO: This is leaking privacy, assume we have a good estimate already.
-                budget = PMW.worst_case_cost(n=hyperblock.size, **self.pmw_args)
-            else:
-                budget = PMW.worst_case_cost(
-                    n=hyperblock.size,
-                    nu=pmw.nu,
-                    ro=pmw.ro,
-                    standard_svt=pmw.standard_svt,
-                    local_svt_max_queries=pmw.local_svt_max_queries,
-                )
-
-            demand = {key: budget for key in block_ids}
-            if not hyperblock.can_run(demand):
-                return math.inf  # This hyperblock does not have enough budget
-            return 0
+        return run_budget

@@ -36,19 +36,13 @@ class MaxCutsPlanner(Planner):
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
 
             if self.enable_caching:
-                cache_entry = self.cache.get_entry(query_id, hyperblock.id)
-                if cache_entry is not None:
-                    # TODO: re-enable variance reduction
-                    if (
-                        run_op.noise_std >= cache_entry.noise_std
-                    ):  # Good enough estimate
-                        continue
+                run_budget = self.cache.get_run_budget(query_id, hyperblock, run_op.noise_std)
+            else:
+                laplace_scale = run_op.noise_std / math.sqrt(2)
+                run_budget = LaplaceCurve(laplace_noise=laplace_scale)
 
             # Check if there is enough budget in the hyperblock
-            laplace_scale = run_op.noise_std / math.sqrt(2)
-            run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             demand = {key: run_budget for key in block_ids}
-
             if not hyperblock.can_run(demand):
                 return math.inf
 
