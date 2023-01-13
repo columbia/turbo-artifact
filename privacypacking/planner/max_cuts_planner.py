@@ -13,7 +13,7 @@ class MaxCutsPlanner(Planner):
         super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
-        """ For "MaxCutsPlanner" a plan has this form: A(R(B1), R(B2), ... , R(Bn)) """
+        """For "MaxCutsPlanner" a plan has this form: A(R(B1), R(B2), ... , R(Bn))"""
         n = len(block_request)
         min_pure_epsilon = compute_utility_curve(utility, utility_beta, n)
         laplace_scale = 1 / min_pure_epsilon
@@ -27,7 +27,8 @@ class MaxCutsPlanner(Planner):
             return plan
         return None
 
-    # Simple Cost model     # TODO: Move this elsewhere
+    # TODO: Move this elsewhere
+    # Simple Cost model - returns 0 or inf. - used only by max/min_cuts_planners
     def get_cost(self, plan):
         query_id = plan.query_id
 
@@ -36,7 +37,9 @@ class MaxCutsPlanner(Planner):
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
 
             if self.enable_caching:
-                run_budget = self.cache.estimate_run_budget(query_id, hyperblock, run_op.noise_std)
+                run_budget = self.cache.estimate_run_budget(
+                    query_id, hyperblock, run_op.noise_std
+                )
             else:
                 laplace_scale = run_op.noise_std / math.sqrt(2)
                 run_budget = LaplaceCurve(laplace_noise=laplace_scale)

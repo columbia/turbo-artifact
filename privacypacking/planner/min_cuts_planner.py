@@ -11,7 +11,7 @@ class MinCutsPlanner(Planner):
         super().__init__(cache, blocks, **planner_args)
 
     def get_execution_plan(self, query_id, utility, utility_beta, block_request):
-        """ For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn)) """
+        """For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn))"""
         # 0 Aggregations
         min_pure_epsilon = compute_utility_curve(utility, utility_beta, 1)
         laplace_scale = 1 / min_pure_epsilon
@@ -28,7 +28,8 @@ class MinCutsPlanner(Planner):
             return plan
         return None
 
-    # Simple Cost model     # TODO: Move this elsewhere
+    # TODO: Move this elsewhere
+    # Simple Cost model - returns 0 or inf. - used only by max/min_cuts_planners
     def get_cost(self, plan):
         query_id = plan.query_id
 
@@ -37,7 +38,9 @@ class MinCutsPlanner(Planner):
             hyperblock = HyperBlock({key: self.blocks[key] for key in block_ids})
 
             if self.enable_caching:
-                run_budget = self.cache.estimate_run_budget(query_id, hyperblock, run_op.noise_std)
+                run_budget = self.cache.estimate_run_budget(
+                    query_id, hyperblock, run_op.noise_std
+                )
             else:
                 laplace_scale = run_op.noise_std / math.sqrt(2)
                 run_budget = LaplaceCurve(laplace_noise=laplace_scale)
@@ -48,8 +51,3 @@ class MinCutsPlanner(Planner):
                 return math.inf
 
         return 0
-
-
-
-
-         

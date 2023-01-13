@@ -11,7 +11,7 @@ from privacypacking.budget.curves import (
     PureDPtoRDP,
     ZeroCurve,
 )
-from privacypacking.budget.histogram import DenseHistogram, flat_items
+from privacypacking.budget.histogram import DenseHistogram
 from privacypacking.utils.utils import mlflow_log
 
 
@@ -69,7 +69,6 @@ class PMW:
                 0, self.Delta * self.ro
             )
 
-    @classmethod
     def worst_case_cost(
         cls,
         n=1000,
@@ -95,6 +94,38 @@ class PMW:
         else:
             svt_cost = BoundedOneShotSVT(ro=ro, nu=nu, kmax=local_svt_max_queries)
         return svt_cost + query_cost
+
+    # TODO: this heuristic is a toy example that I use as a mock up.
+    def predict_hit(
+        self,
+    ):
+        """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
+        # threshold = 30
+        # if self.hard_queries_ran - self.queries_ran > threshold:
+        # return 1
+        # for now only returns worst case (miss)
+        return 0
+
+    def estimate_run_budget(
+        self,
+        n=1000,
+        nu=None,
+        ro=None,
+        alpha=0.05,
+        beta=0.001,
+        k=None,
+        standard_svt=True,
+        local_svt_max_queries=None,
+    ) -> Budget:
+
+        if self.predict_hit():
+            # Easy query case
+            return ZeroCurve()
+        else:
+            # Hard query case
+            return self.worst_case_cost(
+                n, nu, ro, alpha, beta, k, standard_svt, local_svt_max_queries
+            )
 
     def run(self, query):
         assert isinstance(query, torch.Tensor)

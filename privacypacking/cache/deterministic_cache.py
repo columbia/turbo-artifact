@@ -93,12 +93,16 @@ class DeterministicCache(Cache):
         return result, run_budget, run_metadata
 
     def estimate_run_budget(self, query_id, hyperblock, noise_std):
+        """
+        Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
+        """
+
         cache_entry = self.get_entry(query_id, hyperblock.id)
         if cache_entry is not None:
             if noise_std >= cache_entry.noise_std:
                 # Good enough estimate
                 return ZeroCurve()
-        
+
         # TODO: re-enable variance reduction
         laplace_scale = noise_std / math.sqrt(2)
         run_budget = LaplaceCurve(laplace_noise=laplace_scale)

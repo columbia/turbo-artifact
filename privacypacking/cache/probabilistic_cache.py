@@ -29,15 +29,19 @@ class ProbabilisticCache(Cache):
         return result, run_budget, run_metadata
 
     def estimate_run_budget(self, query_id, hyperblock, noise_std):
+        """
+        Checks the cache and returns the budget we need to spend if we want to run this query with given accuracy guarantees.
+        """
+
         # NOTE: This is different from the deterministic cache. Any run might cost budget,
         # whether the cache is empty or not, and whether we hit or not.
         pmw = self.get_entry(query_id, hyperblock.id)
         if pmw is None:
             # Use the defaults or the same config as `add_entry`
             # TODO: This is leaking privacy, assume we have a good estimate already.
-            run_budget = PMW.worst_case_cost(n=hyperblock.size, **self.pmw_args)
+            run_budget = PMW.estimate_run_budget(n=hyperblock.size, **self.pmw_args)
         else:
-            run_budget = PMW.worst_case_cost(
+            run_budget = PMW.estimate_run_budget(
                 n=hyperblock.size,
                 nu=pmw.nu,
                 ro=pmw.ro,

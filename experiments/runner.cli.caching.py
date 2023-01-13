@@ -29,8 +29,8 @@ def caching():
         # max_tasks=[4000],
         task_lifetime=[1],
         # planner=["MinCutsPlanner"],
-        planner=["MaxCutsPlanner"],
-        # planner=["ILP"],
+        # planner=["MaxCutsPlanner"],
+        planner=["ILP"],
         # optimization_objective=["minimize_budget"],   # Disabled - objective fixed to minimize budget
         variance_reduction=[False],  # [True, False],
         cache=["DeterministicCache"],  # ProbabilisticCache
