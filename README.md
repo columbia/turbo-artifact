@@ -1,9 +1,5 @@
 # Precycle
 
-## Warnings
-
-- We need AutoDP's last version, which is not available on Pip. Clone their repo and run `pip install -e autodp`
-
 ## Organization
 
 
