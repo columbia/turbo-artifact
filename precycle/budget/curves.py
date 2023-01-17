@@ -8,7 +8,7 @@ from autodp.transformer_zoo import AmplificationBySampling
 from opacus.privacy_analysis import compute_rdp
 from scipy.interpolate import interp1d, splev, splrep
 
-from pricycle.budget import ALPHAS, RenyiBudget
+from precycle.budget import ALPHAS, RenyiBudget
 
 
 class ZeroCurve(RenyiBudget):

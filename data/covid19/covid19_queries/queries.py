@@ -7,16 +7,15 @@ from typing import Optional
 import typer
 from loguru import logger
 
-from privacypacking.budget.histogram import (
+from precycle.budget.histogram import (
     build_sparse_tensor,
     k_way_marginal_query_list,
 )
-from privacypacking.utils.utils import REPO_ROOT
+from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
 # Note: this file is independent to the covid dataset - applies to all datasets
-
 
 def powerset(iter):
     s = list(iter)

@@ -1,6 +1,6 @@
 from typing import Any, Iterable, Union, List
-from pricycle.budget.renyi_budget import ALPHAS
-from pricycle.utils.utils import sample_one_from_string
+from precycle.budget.renyi_budget import ALPHAS
+from precycle.utils.utils import sample_one_from_string
 
 
 class Task:
