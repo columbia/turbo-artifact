@@ -7,8 +7,8 @@ from ray import tune
 from pathlib import Path
 from loguru import logger
 from typing import Any, Dict, List
-from privacypacking.privacy_packing import privacypacking
-from privacypacking.utils.utils import RAY_LOGS, LOGS_PATH
+from pricycle.workload_simulator import privacypacking
+from pricycle.utils.utils import RAY_LOGS, LOGS_PATH
 
 
 def run_and_report(config: dict, replace=False) -> None:
