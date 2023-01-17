@@ -12,9 +12,9 @@
 - Follow these instructions to install Timescaledb/postgres https://docs.timescale.com/install/latest/self-hosted/installation-debian/
 
 - Set up the  database and the hypertable to store covid data
-`    CREATE database covid;									# Create database
+```    CREATE database covid;
 
-    CREATE EXTENSION IF NOT EXISTS timescaledb;				# Install timescaledb extension
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 
     # Create the covid data table - for simplicity time is an incrementing integer
@@ -32,7 +32,7 @@
     # Now time t takes values 1,2,3,4, and the chunks will be splitted per t -> temporary hack to get easily chunk/block ids.
 
     SELECT create_hypertable('covid_data', 'time', chunk_time_interval => 1);
-`
+```
 
 ## Contributing
 
