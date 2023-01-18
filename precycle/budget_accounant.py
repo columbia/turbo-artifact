@@ -1,7 +1,5 @@
 import redis
-from pricycle.budget import (
-    RenyiBudget,
-)
+from budget import RenyiBudget
 
 # class BudgetAccountantEntry:
 #     def __init__(self, budget):
@@ -15,7 +13,8 @@ class BudgetAccountantKey:
 class BudgetAccountant:
     def __init__(self, config) -> None:
         self.config = config
-        self.kv_store = redis.Redis(host=config.localhost, port=config.port, db=0)
+        # print(config)
+        self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
         self.blocks_count = 0     # TODO: Initialize from KV store
         self.epsilon = float(self.config.epsilon)
         self.delta = float(self.config.delta)

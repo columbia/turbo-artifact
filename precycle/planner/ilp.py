@@ -11,11 +11,10 @@ from multiprocessing import Manager, Process
 import gurobipy as gp
 from gurobipy import GRB
 
-from privacypacking.cache.cache import A, R
-from privacypacking.budget import HyperBlock
-from privacypacking.planner.planner import Planner
-from privacypacking.budget.curves import ZeroCurve
-from privacypacking.utils.compute_utility_curve import compute_utility_curve
+from executor import A, R
+from planner.planner import Planner
+from budget.curves import ZeroCurve
+from utils.compute_utility_curve import compute_utility_curve
 
 
 Chunk = namedtuple("Chunk", ["index", "noise_std"])

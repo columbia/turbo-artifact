@@ -1,8 +1,8 @@
 import yaml
 import math
 import redis
-from pricycle.cache.cache import Cache
-from pricycle.budget.curves import LaplaceCurve, ZeroCurve
+from cache.cache import Cache
+from budget.curves import LaplaceCurve, ZeroCurve
 
 
 class CacheEntry:
@@ -19,7 +19,7 @@ class CacheKey:
 
 class DeterministicCache(Cache):
     def __init__(self, config):
-        self.kv_store = redis.Redis(host=config.localhost, port=config.port, db=0)
+        self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
 
     def add_entry(self, query_id, hyperblock_id, cache_entry):
         key = CacheKey(query_id, hyperblock_id).key

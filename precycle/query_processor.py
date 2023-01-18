@@ -6,17 +6,17 @@ from typing import Dict, Optional
 from loguru import logger
 from termcolor import colored
 
-from pricycle.budget import Task
-from pricycle.utils.utils import mlflow_log
+from budget import Task
+from utils.utils import mlflow_log
 
-from pricycle.executor import Executor
+from executor import Executor
 
-from pricycle.planner.ilp import ILP
-from pricycle.planner.max_cuts_planner import MaxCutsPlanner
-from pricycle.planner.min_cuts_planner import MinCutsPlanner
+from planner.ilp import ILP
+from planner.max_cuts_planner import MaxCutsPlanner
+from planner.min_cuts_planner import MinCutsPlanner
 
-from pricycle.cache.deterministic_cache import DeterministicCache
-from pricycle.cache.probabilistic_cache import ProbabilisticCache
+from cache.deterministic_cache import DeterministicCache
+from cache.probabilistic_cache import ProbabilisticCache
 
 FAILED = "failed"
 PENDING = "pending"
@@ -51,7 +51,7 @@ class QueryProcessor:
         self.budget_accountant = budget_accountant
 
         self.tasks_info = TasksInfo()
-        self.cache = DeterministicCache(config)
+        self.cache = DeterministicCache(config.cache)
         self.executor = Executor(self.psql_conn)
 
         self.start_time = datetime.now()
@@ -63,7 +63,7 @@ class QueryProcessor:
             "enable_caching": self.config.enable_caching,
             "enable_dp": self.config.enable_dp,
         }
-        self.planner = globals()[self.config["planner"]](
+        self.planner = globals()[self.config.planner.method](
             self.cache, self.budget_accountant, planner_args
         )
 

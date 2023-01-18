@@ -1,4 +1,9 @@
+import typer
 import socket
+from omegaconf import OmegaConf
+from utils.utils import DEFAULT_CONFIG_FILE
+
+app = typer.Typer()
 
 
 class BlocksClient:
@@ -14,3 +19,20 @@ class BlocksClient:
             data = s.recv(1024)
 
         print(f"Received {data!r}")
+
+
+
+@app.command()
+def run(
+    omegaconf: str = "precycle/config/precycle.json",
+):
+    omegaconf = OmegaConf.load(omegaconf)
+    default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
+    omegaconfig = OmegaConf.create(omegaconfig)
+    config = OmegaConf.merge(default_config, omegaconfig)
+    
+    BlocksClient(config).send_request()
+
+
+if __name__ == "__main__":
+    app()

@@ -1,9 +1,6 @@
-import math
 from typing import Dict
-
-from privacypacking.budget.block import Block, HyperBlock
-from privacypacking.cache.cache import A, Cache, R
-from privacypacking.cache.pmw import PMW
+from cache.cache import Cache
+from cache.pmw import PMW
 
 
 class ProbabilisticCache(Cache):
@@ -11,7 +8,7 @@ class ProbabilisticCache(Cache):
         self.key_values = {}
         self.pmw_args = cache_cfg
 
-    def add_entry(self, hyperblock: HyperBlock):
+    def add_entry(self, hyperblock):
         pmw = PMW(hyperblock, **self.pmw_args)
         self.key_values[hyperblock.id] = pmw
         return pmw
@@ -21,7 +18,7 @@ class ProbabilisticCache(Cache):
             return self.key_values[hyperblock_id]
         return None
 
-    def run(self, query_id, query, run_budget, hyperblock: HyperBlock):
+    def run(self, query_id, query, run_budget, hyperblock):
         pmw = self.get_entry(query_id, hyperblock.id)
         if not pmw:  # If there is no PMW for the hyperblock then create it
             pmw = self.add_entry(hyperblock)

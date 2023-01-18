@@ -1,8 +1,8 @@
 import math
-from pricycle.cache.cache import A, R
-from pricycle.planner.planner import Planner
-from pricycle.budget.curves import LaplaceCurve
-from pricycle.utils.compute_utility_curve import compute_utility_curve
+from executor import A, R
+from planner.planner import Planner
+from budget.curves import LaplaceCurve
+from utils.compute_utility_curve import compute_utility_curve
 
 
 class MinCutsPlanner(Planner):

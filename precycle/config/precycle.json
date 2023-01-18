@@ -5,8 +5,8 @@
     "enable_dp": true,
 
     "cache": {
-        "ip": "localhost",
-        "port": 1234,
+        "host": "localhost",
+        "port": 1027,
 
         "pmw_cfg": {
             "alpha": 0.005,
@@ -20,29 +20,29 @@
     },
 
     "budget_accountant": {
-        "ip": "localhost",
-        "port": 1234,
+        "host": "localhost",
+        "port": 1026,
         "epsilon": 10,
         "delta": 1e-07
     },
 
     "postgres": {
-        "ip": "localhost",
-        "port": 1234,
+        "host": "localhost",
+        "port": 5432,
         "database": "covid",
         "username": "postgres",
-        "password": "password"
+        "password": "postgres"
     },
 
     "blocks_server": {
-        "ip": "localhost",
-        "port": 1234,
+        "host": "localhost",
+        "port": 1025,
         "block_data_path": "fdsfs"
     },
 
     "tasks_server": {
-        "ip": "localhost",
-        "port": 1234
+        "host": "localhost",
+        "port": 1024
     },
     "logs": {
         "verbose": false,

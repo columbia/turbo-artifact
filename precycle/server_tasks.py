@@ -1,6 +1,6 @@
 import json
 import socket
-from pricycle.budget import Task
+from budget import Task
 
 
 class TasksServer:

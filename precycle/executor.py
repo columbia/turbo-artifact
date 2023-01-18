@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, Tuple
-from precycle.budget.curves import LaplaceCurve, ZeroCurve
-from precycle.cache.deterministic_cache import CacheEntry
+from budget.curves import LaplaceCurve, ZeroCurve
+from cache.deterministic_cache import CacheEntry
 
 class R:
     def __init__(self, blocks, noise_std, cache_type) -> None:

@@ -5,20 +5,21 @@ import psycopg2
 
 from loguru import logger
 from omegaconf import OmegaConf
-from pricycle.utils.utils import DEFAULT_CONFIG_FILE
-from pricycle.query_processor import QueryProcessor
-from pricycle.budget_accounant import BudgetAccountant
+from utils.utils import DEFAULT_CONFIG_FILE
+from query_processor import QueryProcessor
+from budget_accounant import BudgetAccountant
 
-from pricycle.server_blocks import server_blocks
-from pricycle.server_tasks import server_tasks
+from server_blocks import BlocksServer
+from server_tasks import TasksServer
 
 app = typer.Typer()
 
 
-def pricycle(custom_config):
+def precycle(custom_config):
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
-    custom_config = OmegaConf.create(custom_config)
-    config = OmegaConf.merge(default_config, custom_config)
+    omegaconfig = OmegaConf.create(custom_config)
+    config = OmegaConf.merge(default_config, omegaconfig)
+    print(config)
 
     # Initialize the Budget Accountant
     # Keeps track of the privacy budgets of the blocks entering the database
@@ -30,7 +31,7 @@ def pricycle(custom_config):
         psql_conn = psycopg2.connect(
             host=config.postgres.host,
             database=config.postgres.database,
-            user=config.postgres.user,
+            user=config.postgres.username,
             password=config.postgres.password,
         )
     except (Exception, psycopg2.DatabaseError) as error:
@@ -40,8 +41,8 @@ def pricycle(custom_config):
     # Initialize Query Processor
     query_processor = QueryProcessor(psql_conn, budget_accountant, config)
 
-    server_blocks(psql_conn, budget_accountant, config)  # TODO:make it  non blocking
-    server_tasks(query_processor, budget_accountant, config)
+    BlocksServer(psql_conn, budget_accountant, config).run()  # TODO: make it  non blocking
+    #TasksServer(query_processor, budget_accountant, config).run()
     
     if psql_conn is not None:
         psql_conn.close()
@@ -50,7 +51,7 @@ def pricycle(custom_config):
 
 @app.command()
 def run(
-    omegaconf: str = "privacypacking/config/pricycle.json",
+    omegaconf: str = "precycle/config/precycle.json",
     loguru_level: str = "INFO",
 ):
 
@@ -61,7 +62,8 @@ def run(
 
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
-    pricycle(omegaconf)
+    omegaconf = OmegaConf.load(omegaconf)
+    precycle(omegaconf)
 
 
 if __name__ == "__main__":

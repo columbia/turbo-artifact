@@ -1,6 +1,4 @@
-from typing import Any, Iterable, Union, List
-from pricycle.budget.renyi_budget import ALPHAS
-from pricycle.utils.utils import sample_one_from_string
+from typing import Union, List
 
 
 class Task:
@@ -24,17 +22,17 @@ class Task:
         self.utility_beta = utility_beta
         self.name = name
 
-    def sample_n_blocks_and_profit(self):
-        """
-        If profit and n_blocks are stochastic, we sample their value when the task is added to the scheduler.
-        Do not cache this for all the instances of a same task, unless this is intended.
-        """
+    # def sample_n_blocks_and_profit(self):
+    #     """
+    #     If profit and n_blocks are stochastic, we sample their value when the task is added to the scheduler.
+    #     Do not cache this for all the instances of a same task, unless this is intended.
+    #     """
 
-        if isinstance(self.n_blocks, str):
-            self.n_blocks = int(sample_one_from_string(self.n_blocks))
+    #     if isinstance(self.n_blocks, str):
+    #         self.n_blocks = int(sample_one_from_string(self.n_blocks))
 
-        if isinstance(self.profit, str):
-            self.profit = sample_one_from_string(self.profit)
+    #     if isinstance(self.profit, str):
+    #         self.profit = sample_one_from_string(self.profit)
 
     def dump(self):
         d = {

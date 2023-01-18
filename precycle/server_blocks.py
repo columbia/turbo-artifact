@@ -30,6 +30,7 @@ class BlocksServer:
 
     def serve_request(self, block_data_path):
         # Add the block in the database as a new chunk of data
+        print("AA", block_data_path)
         try:
             cur = self.psql_conn.cursor()
             cmd = f"""

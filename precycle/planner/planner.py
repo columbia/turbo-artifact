@@ -1,10 +1,10 @@
 class Planner:
     def __init__(
-        self, cache, budget_accountant, variance_reduction, enable_caching, enable_dp
+        self, cache, budget_accountant, enable_caching, enable_dp
     ):
         self.cache = cache
         self.budget_accountant = budget_accountant
-        self.variance_reduction = variance_reduction
+        # self.variance_reduction = variance_reduction
         self.enable_caching = enable_caching
         self.enable_dp = enable_dp
         self.max_pure_epsilon = 0.5

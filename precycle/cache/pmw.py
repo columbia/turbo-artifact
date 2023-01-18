@@ -2,23 +2,23 @@ import numpy as np
 import torch
 from loguru import logger
 
-from privacypacking.budget import Budget
-from privacypacking.budget.block import HyperBlock
-from privacypacking.budget.curves import (
+from budget import Budget
+# from budget.block import HyperBlock
+from budget.curves import (
     BoundedOneShotSVT,
     GaussianCurve,
     LaplaceCurve,
     PureDPtoRDP,
     ZeroCurve,
 )
-from privacypacking.budget.histogram import DenseHistogram
-from privacypacking.utils.utils import mlflow_log
+from budget.histogram import DenseHistogram
+from utils.utils import mlflow_log
 
 
 class PMW:
     def __init__(
         self,
-        hyperblock: HyperBlock,
+        hyperblock,
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.005,  # Max error guarantee, expressed as fraction.
