@@ -30,6 +30,14 @@
     SELECT create_hypertable('covid_data', 'time', chunk_time_interval => 1);
 ```
 
+
+- Create the default data blocks
+```python data/covid19/covid19_data/dataset_generator.py```
+
+- Create the default queries
+```python data/covid19/covid19_queries/queries.py.py```
+
+For more options. on creating the data blocks, queries and workload see the relevant read_me files.
 ## Contributing
 
 
