@@ -1,6 +1,6 @@
 import json
 import socket
-from pricycle.budget import Task
+from precycle.budget import Task
 
 
 class TasksServer:
@@ -9,8 +9,8 @@ class TasksServer:
 
     def __init__(self, query_processor, budget_accountant, config) -> None:
         self.config = config
-        self.host = self.config.tasks_server.host
-        self.port = self.config.tasks_server.port
+        self.host = self.config.host
+        self.port = self.config.port
 
         self.tasks_count = 0
 

@@ -1,9 +1,9 @@
 import pandas as pd
 from loguru import logger
 from itertools import count
-from pricycle.utils.utils import REPO_ROOT
-from pricycle.simulator.resourcemanager import LastItem
-from pricycle.simulator.task_generator import (
+from precycle.utils.utils import REPO_ROOT
+from precycle.simulator.resourcemanager import LastItem
+from precycle.simulator.task_generator import (
     CSVTaskGenerator,
     PoissonTaskGenerator,
 )

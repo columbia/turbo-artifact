@@ -8,8 +8,8 @@ import mlflow
 import pandas as pd
 from omegaconf import OmegaConf
 
-from pricycle.query_processor import ALLOCATED
-from pricycle.utils.plot import (
+from precycle.query_processor import ALLOCATED
+from precycle.utils.plot import (
     plot_budget_utilization_per_block,
     plot_task_status,
 )

@@ -1,5 +1,5 @@
 import redis
-from pricycle.budget import (
+from precycle.budget import (
     RenyiBudget,
 )
 

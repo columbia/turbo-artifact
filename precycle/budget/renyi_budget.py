@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from opacus.privacy_analysis import get_privacy_spent
 
-from pricycle.budget.budget import Budget
+from precycle.budget.budget import Budget
 
 ALPHAS = [
     1.5,

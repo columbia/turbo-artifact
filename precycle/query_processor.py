@@ -6,17 +6,17 @@ from typing import Dict, Optional
 from loguru import logger
 from termcolor import colored
 
-from pricycle.budget import Task
-from pricycle.utils.utils import mlflow_log
+from precycle.budget import Task
+from precycle.utils.utils import mlflow_log
 
-from pricycle.executor import Executor
+from precycle.executor import Executor
 
-from pricycle.planner.ilp import ILP
-from pricycle.planner.max_cuts_planner import MaxCutsPlanner
-from pricycle.planner.min_cuts_planner import MinCutsPlanner
+from precycle.planner.ilp import ILP
+from precycle.planner.max_cuts_planner import MaxCutsPlanner
+from precycle.planner.min_cuts_planner import MinCutsPlanner
 
-from pricycle.cache.deterministic_cache import DeterministicCache
-from pricycle.cache.probabilistic_cache import ProbabilisticCache
+from precycle.cache.deterministic_cache import DeterministicCache
+from precycle.cache.probabilistic_cache import ProbabilisticCache
 
 FAILED = "failed"
 PENDING = "pending"
@@ -26,11 +26,8 @@ ALLOCATED = "allocated"
 class TasksInfo:
     def __init__(self):
         self.allocated_tasks = {}
-        self.allocated_resources_events = {}
         self.tasks_status = {}
-        self.creation_time = {}
         self.allocation_index = {}
-        self.tasks_lifetime = {}
         self.planning_time = defaultdict(lambda: None)
         self.tasks_submit_time = {}
         self.run_metadata = {}
@@ -38,21 +35,20 @@ class TasksInfo:
     def dump(self):
         tasks_info = {
             "status": self.tasks_status,
-            "creation_time": self.creation_time,
         }
         return tasks_info
 
 
 class QueryProcessor:
-    def __init__(self, psql_conn, budget_accountant, config):
+    def __init__(self, psql_conn, budget_accountant, sql_converter, config):
         self.config = config
         self.psql_conn = psql_conn
 
         self.budget_accountant = budget_accountant
-
+        self.sql_converter = sql_converter
         self.tasks_info = TasksInfo()
         self.cache = DeterministicCache(config)
-        self.executor = Executor(self.psql_conn)
+        self.executor = Executor(self.psql_conn, sql_converter)
 
         self.start_time = datetime.now()
         self.allocated_task_ids = []
@@ -105,7 +101,6 @@ class QueryProcessor:
         # Consume budget from blocks
         for blocks, run_budget in run_budget_per_block.items():
             self.budget_accountant.consume_blocks_budget(blocks, run_budget)
-
 
 
         # ---------- Additional Metadata and Logging ---------- #

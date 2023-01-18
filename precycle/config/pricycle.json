@@ -37,7 +37,8 @@
     "blocks_server": {
         "ip": "localhost",
         "port": 1234,
-        "block_data_path": "fdsfs"
+        "block_data_path": "data/covid19/covid19_data/blocks",
+        "block_metadata_path": "data/covid19/covid19_data/metadata.json"
     },
 
     "tasks_server": {

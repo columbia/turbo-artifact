@@ -5,12 +5,12 @@ import psycopg2
 
 from loguru import logger
 from omegaconf import OmegaConf
-from pricycle.utils.utils import DEFAULT_CONFIG_FILE
-from pricycle.query_processor import QueryProcessor
-from pricycle.budget_accounant import BudgetAccountant
-
-from pricycle.server_blocks import server_blocks
-from pricycle.server_tasks import server_tasks
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+from precycle.query_processor import QueryProcessor
+from precycle.budget_accounant import BudgetAccountant
+from precycle.sql_converter import SQLConverter
+from precycle.server_blocks import server_blocks
+from precycle.server_tasks import server_tasks
 
 app = typer.Typer()
 
@@ -37,11 +37,15 @@ def pricycle(custom_config):
         print(error)
         exit(1)
 
-    # Initialize Query Processor
-    query_processor = QueryProcessor(psql_conn, budget_accountant, config)
 
-    server_blocks(psql_conn, budget_accountant, config)  # TODO:make it  non blocking
-    server_tasks(query_processor, budget_accountant, config)
+    sql_converter = SQLConverter(config.blocks_server.block_metadata_path)
+
+    # Initialize Query Processor
+    query_processor = QueryProcessor(psql_conn, budget_accountant, sql_converter, config)
+
+    # TODO:make it  non blocking
+    server_blocks(psql_conn, budget_accountant, config.blocks_server)
+    server_tasks(query_processor, budget_accountant, config.tasks_server)
     
     if psql_conn is not None:
         psql_conn.close()
@@ -50,7 +54,7 @@ def pricycle(custom_config):
 
 @app.command()
 def run(
-    omegaconf: str = "privacypacking/config/pricycle.json",
+    omegaconf: str = "precycle/config/pricycle.json",
     loguru_level: str = "INFO",
 ):
 

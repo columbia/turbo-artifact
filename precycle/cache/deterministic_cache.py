@@ -1,8 +1,8 @@
 import yaml
 import math
 import redis
-from pricycle.cache.cache import Cache
-from pricycle.budget.curves import LaplaceCurve, ZeroCurve
+from precycle.cache.cache import Cache
+from precycle.budget.curves import LaplaceCurve, ZeroCurve
 
 
 class CacheEntry:

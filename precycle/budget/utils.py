@@ -2,7 +2,7 @@
 
 from opacus.privacy_analysis import compute_rdp, get_privacy_spent
 
-from pricycle.budget import ALPHAS
+from precycle.budget import ALPHAS
 
 
 def compute_noise_from_target_epsilon(
