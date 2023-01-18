@@ -28,6 +28,7 @@ class TasksServer:
                     if not data:
                         break
                     deserialized_data = json.loads(data)
+                    print(deserialized_data)
                     response = self.serve_request(deserialized_data)
                     conn.sendall(response)  # Send response
 

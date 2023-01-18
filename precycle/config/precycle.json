@@ -37,7 +37,8 @@
     "blocks_server": {
         "host": "localhost",
         "port": 1025,
-        "block_data_path": "data/covid19/covid19_data/"
+        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json"
     },
 
     "tasks_server": {

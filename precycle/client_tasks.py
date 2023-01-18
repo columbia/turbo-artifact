@@ -20,8 +20,7 @@ class TasksClient:
                 "utility": utility,
                 "utility_beta": utility_beta,
             }
-
-            serialized_data = json.dumps(data)
+            serialized_data = json.dumps(data).encode('utf-8')
             s.sendall(serialized_data)
             data = s.recv(1024)
 

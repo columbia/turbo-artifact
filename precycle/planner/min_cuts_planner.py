@@ -1,5 +1,5 @@
 import math
-from precycle.cache.cache import A, R
+from precycle.executor import A, R
 from precycle.planner.planner import Planner
 from precycle.budget.curves import LaplaceCurve
 from precycle.utils.compute_utility_curve import compute_utility_curve

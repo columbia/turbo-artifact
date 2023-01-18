@@ -6,7 +6,7 @@ from typing import Dict, Optional
 from loguru import logger
 from termcolor import colored
 
-from precycle.budget import Task
+from precycle.task import Task
 from precycle.utils.utils import mlflow_log
 
 from precycle.executor import Executor
@@ -48,7 +48,7 @@ class QueryProcessor:
         self.sql_converter = sql_converter
         self.tasks_info = TasksInfo()
         self.cache = DeterministicCache(config.cache)
-        self.executor = Executor(self.psql_conn)
+        self.executor = Executor(self.psql_conn, sql_converter)
 
         self.start_time = datetime.now()
         self.allocated_task_ids = []

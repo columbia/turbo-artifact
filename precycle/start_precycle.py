@@ -4,13 +4,15 @@ import typer
 import psycopg2
 
 from loguru import logger
+from pathlib import Path
 from omegaconf import OmegaConf
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
+
 from precycle.query_processor import QueryProcessor
 from precycle.budget_accounant import BudgetAccountant
 from precycle.sql_converter import SQLConverter
-from precycle.server_blocks import server_blocks
-from precycle.server_tasks import server_tasks
+from precycle.server_blocks import BlocksServer
+from precycle.server_tasks import TasksServer
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 app = typer.Typer()
 
@@ -34,6 +36,8 @@ def precycle(custom_config):
             user=config.postgres.username,
             password=config.postgres.password,
         )
+        psql_conn.autocommit = True
+
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         exit(1)
@@ -44,8 +48,8 @@ def precycle(custom_config):
     # Initialize Query Processor
     query_processor = QueryProcessor(psql_conn, budget_accountant, sql_converter, config)
 
-    BlocksServer(psql_conn, budget_accountant, config).run()  # TODO: make it  non blocking
-    #TasksServer(query_processor, budget_accountant, config).run()
+    BlocksServer(psql_conn, budget_accountant, config.blocks_server).run()  # TODO: make it  non blocking
+    #TasksServer(query_processor, budget_accountant, config.tasks_server).run()
     
     if psql_conn is not None:
         psql_conn.close()
