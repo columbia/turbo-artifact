@@ -8,10 +8,10 @@ import random
 import numpy as np
 from loguru import logger
 from omegaconf import OmegaConf
-from pricycle.simulator.simulator import Simulator
-from pricycle.utils.utils import DEFAULT_CONFIG_FILE
+from precycle.simulator.simulator import Simulator
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
-from pricycle.utils.utils import (
+from precycle.utils.utils import (
     LOGS_PATH,
     save_logs,
     save_mlflow_artifacts,

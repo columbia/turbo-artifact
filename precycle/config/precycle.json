@@ -37,7 +37,7 @@
     "blocks_server": {
         "host": "localhost",
         "port": 1025,
-        "block_data_path": "fdsfs"
+        "block_data_path": "data/covid19/covid19_data/"
     },
 
     "tasks_server": {

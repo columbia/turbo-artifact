@@ -1,5 +1,7 @@
 import redis
-from budget import RenyiBudget
+from precycle.budget import (
+    RenyiBudget,
+)
 
 # class BudgetAccountantEntry:
 #     def __init__(self, budget):

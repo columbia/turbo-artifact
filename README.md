@@ -1,17 +1,47 @@
-# Privacy packing project
-
-This repo contains code to simulate and evaluate different privacy packing policies, in different settings (offline/online, multi-block/single-block). We use Rényi DP only (not epsilon-delta DP).
-
-## Warnings
-
-- We need AutoDP's last version, which is not available on Pip. Clone their repo and run `pip install -e autodp`
+# Precycle
 
 ## Organization
 
--  See [privacypacking/](privacypacking/) for some documentation about the code
--  Let's try to add some tests in [tests/](tests/)
--  [notebooks/](notebooks/) for the Jupyter notebooks (that can import the code with `import privacypacking` when the virtual environment is activated)
 
+## Setup
+
+- Follow these instructions to install Timescaledb/postgres https://docs.timescale.com/install/latest/self-hosted/installation-debian/
+
+- Set up the  database and the hypertable to store covid data
+```    CREATE database covid;
+
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+
+    # Create the covid data table - for simplicity time is an incrementing integer
+
+    CREATE TABLE covid_data (
+    time        INT               NOT NULL,
+    positive    INT               NOT NULL,
+    gender      INT               NOT NULL,
+    age         INT               NOT NULL,
+    ethnicity   INT               NOT NULL
+    );
+
+
+    # Create the hypertable 'covid-data' and set a chunk-time-interval equal to 1.
+    # Now time t takes values 1,2,3,4, and the chunks will be splitted per t -> temporary hack to get easily chunk/block ids.
+
+    SELECT create_hypertable('covid_data', 'time', chunk_time_interval => 1);
+```
+
+
+- Create the default data blocks
+```python data/covid19/covid19_data/dataset_generator.py```
+
+- Create the default queries
+```python data/covid19/covid19_queries/queries.py```
+
+- Create the default workload
+```python data/covid19/covid19_workload/workload_generator.py --requests-type 400:7```
+
+
+For more options. on creating the data blocks, queries and workload see the relevant read_me files.
 ## Contributing
 
 

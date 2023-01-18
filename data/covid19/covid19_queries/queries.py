@@ -17,7 +17,6 @@ app = typer.Typer()
 
 # Note: this file is independent to the covid dataset - applies to all datasets
 
-
 def powerset(iter):
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))

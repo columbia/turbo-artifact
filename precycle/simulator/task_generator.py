@@ -1,7 +1,7 @@
 import random
 from loguru import logger
-from pricycle.budget import Task
-from pricycle.budget.block_selection import BlockSelectionPolicy
+from precycle.budget import Task
+from precycle.budget.block_selection import BlockSelectionPolicy
 
 
 class TaskGenerator:

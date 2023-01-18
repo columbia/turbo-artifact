@@ -8,8 +8,8 @@ class BlocksServer:
 
     def __init__(self, psql_conn, budget_accountant, config) -> None:
         self.config = config
-        self.host = self.config.blocks_server.host
-        self.port = self.config.blocks_server.port
+        self.host = self.config.host
+        self.port = self.config.port
         self.psql_conn = psql_conn
         self.budget_accountant = budget_accountant
 

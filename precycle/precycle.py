@@ -5,12 +5,12 @@ import psycopg2
 
 from loguru import logger
 from omegaconf import OmegaConf
-from utils.utils import DEFAULT_CONFIG_FILE
-from query_processor import QueryProcessor
-from budget_accounant import BudgetAccountant
-
-from server_blocks import BlocksServer
-from server_tasks import TasksServer
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+from precycle.query_processor import QueryProcessor
+from precycle.budget_accounant import BudgetAccountant
+from precycle.sql_converter import SQLConverter
+from precycle.server_blocks import server_blocks
+from precycle.server_tasks import server_tasks
 
 app = typer.Typer()
 
@@ -38,8 +38,11 @@ def precycle(custom_config):
         print(error)
         exit(1)
 
+
+    sql_converter = SQLConverter(config.blocks_server.block_metadata_path)
+
     # Initialize Query Processor
-    query_processor = QueryProcessor(psql_conn, budget_accountant, config)
+    query_processor = QueryProcessor(psql_conn, budget_accountant, sql_converter, config)
 
     BlocksServer(psql_conn, budget_accountant, config).run()  # TODO: make it  non blocking
     #TasksServer(query_processor, budget_accountant, config).run()
