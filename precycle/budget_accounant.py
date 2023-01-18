@@ -1,7 +1,11 @@
+import typer
 import redis
-from precycle.budget import (
-    RenyiBudget,
-)
+from omegaconf import OmegaConf
+from precycle.budget import RenyiBudget
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+
+app = typer.Typer()
+
 
 # class BudgetAccountantEntry:
 #     def __init__(self, budget):
@@ -15,7 +19,6 @@ class BudgetAccountantKey:
 class BudgetAccountant:
     def __init__(self, config) -> None:
         self.config = config
-        # print(config)
         self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
         self.blocks_count = 0     # TODO: Initialize from KV store
         self.epsilon = float(self.config.epsilon)
@@ -25,7 +28,8 @@ class BudgetAccountant:
     def update_block_budget(self, block, budget):
         key = BudgetAccountantKey(block).key
         # Add budget in the key value store
-        for alpha in budget.alphas():
+        print(key)
+        for alpha in budget.alphas:
             self.kv_store.hset(key, str(alpha), str(budget.epsilon(alpha)))
 
     def add_new_block_budget(self):
@@ -62,3 +66,21 @@ class BudgetAccountant:
     def consume_blocks_budget(self, blocks, run_budget):
         for block in blocks:
             self.consume_block_budget(block, run_budget)
+
+
+
+@app.command()
+def run(
+    omegaconf: str = "precycle/config/precycle.json",
+):
+    omegaconf = OmegaConf.load(omegaconf)
+    default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
+    omegaconf = OmegaConf.create(omegaconf)
+    config = OmegaConf.merge(default_config, omegaconf)
+    
+    budget_accountant = BudgetAccountant(config=config.budget_accountant)
+    budget_accountant.add_new_block_budget()
+
+
+if __name__ == "__main__":
+    app()

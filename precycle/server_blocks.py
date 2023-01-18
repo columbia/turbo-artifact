@@ -35,24 +35,28 @@ class BlocksServer:
 
 
     def serve_request(self, block_data_path):
-        # Add the block in the database as a new chunk of data
-        print(block_data_path)
+        # # Add the block in the database as a new chunk of data
         status = b"success"
+        print("try")
         try:
-            cur = self.psql_conn.cursor()
-            cmd = f"""
-                    COPY covid_data(time, positive, gender, age, ethnicity)
-                    FROM '{block_data_path}'
-                    DELIMITER ','
-                    CSV HEADER;
-                """
-            cur.execute(cmd)
-            cur.close()
+        #     cur = self.psql_conn.cursor()
+        #     cmd = f"""
+        #             COPY covid_data(time, positive, gender, age, ethnicity)
+        #             FROM '{block_data_path}'
+        #             DELIMITER ','
+        #             CSV HEADER;
+        #         """
+        #     cur.execute(cmd)
+        #     cur.close()
+            
+        #     self.psql_conn.commit()
+
+            # TODO: if commit succeeds redis shouldn't fail
+            # Add the block budget in KV store
+            self.budget_accountant.add_new_block_budget()
+
         except (Exception, psycopg2.DatabaseError) as error:
             status = b"failed"
             print(error)
-            exit(1)
 
-        # Add the block budget in KV store
-        # self.budget_accountant.add_new_block_budget()
         return status

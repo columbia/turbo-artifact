@@ -4,7 +4,6 @@ import typer
 import psycopg2
 
 from loguru import logger
-from pathlib import Path
 from omegaconf import OmegaConf
 
 from precycle.query_processor import QueryProcessor
@@ -36,8 +35,6 @@ def precycle(custom_config):
             user=config.postgres.username,
             password=config.postgres.password,
         )
-        psql_conn.autocommit = True
-
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
         exit(1)

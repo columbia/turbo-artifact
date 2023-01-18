@@ -1,4 +1,3 @@
-import json
 import typer
 import socket
 from omegaconf import OmegaConf
@@ -16,7 +15,9 @@ class BlocksClient:
     def send_request(self, block_data_path):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.host, self.port))
-            s.sendall(block_data_path)
+            data = bytes(block_data_path, 'utf-8')
+            print(data)
+            s.sendall(data)
             data = s.recv(1024)
         print(f"Received {data!r}")
 
@@ -32,9 +33,7 @@ def run(
     config = OmegaConf.merge(default_config, omegaconf)
     
     block_data_path = config.blocks_server.block_data_path + "/block_1.csv"
-    data = bytes(block_data_path, 'utf-8')
-
-    BlocksClient(config.blocks_server).send_request(data)
+    BlocksClient(config.blocks_server).send_request(block_data_path)
 
 
 if __name__ == "__main__":

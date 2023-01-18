@@ -1,5 +1,6 @@
 import json
 import socket
+from precycle.task import Task
 
 class TasksServer:
 
@@ -26,8 +27,8 @@ class TasksServer:
                     # Simple blocking connection # TODO: allow for multiple connections
                     data = conn.recv(1024)
                     if not data:
-                        break
-                    deserialized_data = json.loads(data)
+                        continue
+                    deserialized_data = json.loads(data).decode("utf-8")
                     print(deserialized_data)
                     response = self.serve_request(deserialized_data)
                     conn.sendall(response)  # Send response
