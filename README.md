@@ -35,7 +35,11 @@
 ```python data/covid19/covid19_data/dataset_generator.py```
 
 - Create the default queries
-```python data/covid19/covid19_queries/queries.py.py```
+```python data/covid19/covid19_queries/queries.py```
+
+- Create the default workload
+```python data/covid19/covid19_workload/workload_generator.py --requests-type 400:7```
+
 
 For more options. on creating the data blocks, queries and workload see the relevant read_me files.
 ## Contributing
