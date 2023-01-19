@@ -20,26 +20,27 @@ class BudgetAccountant:
     def __init__(self, config) -> None:
         self.config = config
         self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
-        self.blocks_count = 0     # TODO: Initialize from KV store
         self.epsilon = float(self.config.epsilon)
         self.delta = float(self.config.delta)
         self.alphas = self.config.alphas
 
+    def get_blocks_count(self):
+        return len(self.kv_store.keys('*'))
+
+
     def update_block_budget(self, block, budget):
         key = BudgetAccountantKey(block).key
         # Add budget in the key value store
-        print(key)
         for alpha in budget.alphas:
             self.kv_store.hset(key, str(alpha), str(budget.epsilon(alpha)))
 
     def add_new_block_budget(self):
-        block = self.blocks_count
+        block = self.get_blocks_count()
         # Initialize block's budget from epsilon and delta
         budget = RenyiBudget.from_epsilon_delta(
                 epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
             )
         self.update_block_budget(block, budget)
-        self.blocks_count += 1
 
     def get_block_budget(self, block):
         ''' Returns the remaining block budget'''

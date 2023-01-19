@@ -45,6 +45,13 @@
 - Create the default workload
 ```python data/covid19/covid19_workload/workload_generator.py --requests-type 400:7```
 
+- You can use the db-functions.py script to manually check or change the status of the databases
+    Examples:
+    ```python3 precycle/db-functions.py --storage postgres --function get-all```
+    ```python3 precycle/db-functions.py --storage redis-budgets --function get-all```
+    ```python3 precycle/db-functions.py --storage redis-cache --function get-all```
+    ```python3 precycle/db-functions.py --storage postgres --function get-all```
+
 
 For more options. on creating the data blocks, queries and workload see the relevant read_me files.
 ## Contributing
