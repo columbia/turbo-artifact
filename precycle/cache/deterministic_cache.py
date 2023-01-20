@@ -52,3 +52,42 @@ class DeterministicCache(Cache):
 
     def dump(self):
         pass
+
+
+class MockDeterministicCache(Cache):
+    def __init__(self, config):
+        # key-value store is just an in-memory dictionary
+        self.kv_store = {}
+
+    def add_entry(self, query_id, hyperblock_id, cache_entry):
+        key = CacheKey(query_id, hyperblock_id).key
+        self.kv_store[key] = {
+            "result": cache_entry.result,
+            "noise_std": cache_entry.noise_std,
+            "noise": cache_entry.noise,
+        }
+
+    def get_entry(self, query_id, hyperblock_id):
+        key = CacheKey(query_id, hyperblock_id).key
+        if key in self.kv_store:
+            entry = self.kv_store[key]
+            return CacheEntry(entry["result"], entry["noise_std"], entry["noise"])
+        return None
+
+    def estimate_run_budget(self, query_id, hyperblock_id, noise_std):
+        """
+        Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
+        """
+        cache_entry = self.get_entry(query_id, hyperblock_id)
+        if cache_entry is not None:
+            if noise_std >= cache_entry.noise_std:
+                # Good enough estimate
+                return ZeroCurve()
+
+        # TODO: re-enable variance reduction
+        laplace_scale = noise_std / math.sqrt(2)
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+        return run_budget
+
+    def dump(self):
+        print("Cache", yaml.dump(self.key_values))

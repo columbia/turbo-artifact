@@ -1,19 +1,23 @@
-import typer
-from omegaconf import OmegaConf
-from precycle.client_tasks import TasksClient
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
-
-app = typer.Typer()
+import json
+from precycle.budget.histogram import build_sparse_tensor
 
 
-@app.command()
-def run(
-    omegaconf: str = "precycle/config/precycle.json",
-):
-    omegaconf = OmegaConf.load(omegaconf)
-    default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
-    omegaconf = OmegaConf.create(omegaconf)
-    config = OmegaConf.merge(default_config, omegaconf)
+class TensorConverter:
+    def __init__(self, block_metadata_path) -> None:
+        with open(block_metadata_path, "r") as f:
+            self.metadata = json.load(f)
+            self.attribute_domain_sizes = self.metadata["attributes_domain_sizes"]
+
+    def query_vector_to_tensor(self, query_vector):
+        tensor = build_sparse_tensor(
+            bin_indices=query_vector,
+            values=[1.0] * len(query_vector),
+            attribute_sizes=self.attribute_domain_sizes,
+        )
+        return tensor
+
+
+def main():
 
     query_vector = [
         [0, 0, 0, 0],
@@ -49,16 +53,11 @@ def run(
         [0, 0, 3, 6],
         [0, 0, 3, 7],
     ]
-    task = {
-        "query_id": 0,
-        "query": query_vector,
-        "nblocks": 1,
-        "utility": 100,
-        "utility_beta": 0.0001,
-    }
 
-    TasksClient(config.tasks_server).send_request(task)
+    tensor_converter = TensorConverter()
+    tensor = tensor_converter.query_vector_to_tensor(query_vector)
+    print(tensor)
 
 
 if __name__ == "__main__":
-    app()
+    main()

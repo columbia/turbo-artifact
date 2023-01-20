@@ -5,6 +5,7 @@ from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 app = typer.Typer()
 
+
 @app.command()
 def run(
     omegaconf: str = "precycle/config/precycle.json",

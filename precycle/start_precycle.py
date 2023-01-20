@@ -7,16 +7,15 @@ from omegaconf import OmegaConf
 
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
-from precycle.query_processor import QueryProcessor
-from precycle.sql_converter import SQLConverter
-from precycle.server_blocks import BlocksServer
 from precycle.server_tasks import TasksServer
-from precycle.budget_accounant import BudgetAccountant
-from precycle.mock_budget_accounant import MockBudgetAccountant
-from precycle.psql_connection import PSQLConnection
-from precycle.mock_psql_connection import MockPSQLConnection
-from precycle.cache.deterministic_cache import DeterministicCache
-from precycle.cache.mock_deterministic_cache import MockDeterministicCache
+from precycle.server_blocks import BlocksServer
+from precycle.query_processor import QueryProcessor
+from precycle.psql_connection import PSQLConnection, MockPSQLConnection
+from precycle.budget_accounant import BudgetAccountant, MockBudgetAccountant
+from precycle.cache.deterministic_cache import (
+    DeterministicCache,
+    MockDeterministicCache,
+)
 
 # from precycle.cache.probabilistic_cache import ProbabilisticCache
 
@@ -33,22 +32,17 @@ def precycle(custom_config):
         db = MockPSQLConnection(config)
         cache = MockDeterministicCache(config.cache)
         budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
-        sql_converter = None
     else:
-        budget_accountant = BudgetAccountant(config=config.budget_accountant)
-        sql_converter = SQLConverter(config.blocks.block_metadata_path)
-        db = PSQLConnection(config, sql_converter)
+        db = PSQLConnection(config)
         cache = DeterministicCache(config.cache)
+        budget_accountant = BudgetAccountant(config=config.budget_accountant)
 
     # Initialize Query Processor
-    query_processor = QueryProcessor(
-        db, cache, budget_accountant, sql_converter, config
-    )
-    
-    # TODO: make it  non blocking
-    BlocksServer(db, budget_accountant, config.blocks_server).run()  
-    # TasksServer(query_processor, budget_accountant, config.tasks_server).run()
+    query_processor = QueryProcessor(db, cache, budget_accountant, config)
 
+    # TODO: make it  non blocking
+    BlocksServer(db, budget_accountant, config.blocks_server).run()
+    # TasksServer(query_processor, budget_accountant, config.tasks_server).run()
 
 
 @app.command()

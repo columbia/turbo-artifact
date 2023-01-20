@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, Tuple
-from budget.curves import LaplaceCurve, ZeroCurve
-from cache.deterministic_cache import CacheEntry
+from precycle.budget.curves import LaplaceCurve, ZeroCurve
+from precycle.cache.deterministic_cache import CacheEntry
 
 
 class R:
@@ -24,10 +24,9 @@ class A:
 
 
 class Executor:
-    def __init__(self, cache, db, sql_converter) -> None:
+    def __init__(self, cache, db) -> None:
         self.db = db
         self.cache = cache
-        self.sql_converter = sql_converter
 
     def execute_plan(self, plan, task) -> Tuple[float, Dict]:
         """
@@ -58,7 +57,7 @@ class Executor:
         if not cache_entry:  # Not cached
             # Obtain true result by running the query
             true_result = self.db.run_query(query, run_op.blocks)
-            
+
             laplace_scale = run_op.noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             noise = np.random.laplace(scale=laplace_scale)

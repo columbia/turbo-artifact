@@ -23,10 +23,10 @@ class RedisHelper:
             res = "fail"
             print(error)
         return res
-        
+
     def get_all(self):
         return self.kv_store.keys("*")
-    
+
 
 class PostgresHelper:
     def __init__(self, config) -> None:

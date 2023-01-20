@@ -16,7 +16,7 @@
     },
 
     "planner": {
-        "method": "MaxCutsPlanner",
+        "method": "MinCutsPlanner",
         "branching_factor_constraint": 2
     },
 

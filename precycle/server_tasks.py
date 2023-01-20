@@ -47,7 +47,7 @@ class TasksServer:
             return
 
         # Latest Blocks first
-        requested_blocks = (num_blocks-num_requested_blocks, num_blocks-1)
+        requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
 
         # At this point user's request should be translated to a collection of block/chunk ids
         task = Task(

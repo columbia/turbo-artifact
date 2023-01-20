@@ -1,15 +1,17 @@
-import typer
+import json
 import psycopg2
-from omegaconf import OmegaConf
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
-
-app = typer.Typer()
+import pandas as pd
+from loguru import logger
+from collections import namedtuple
+from precycle.budget import SparseHistogram
+from precycle.sql_converter import SQLConverter
+from precycle.tesnor_converter import TensorConverter
 
 
 class PSQLConnection:
-    def __init__(self, config, sql_converter) -> None:
+    def __init__(self, config) -> None:
         self.config = config
-        self.sql_converter = sql_converter
+        self.sql_converter = SQLConverter(config.blocks.block_metadata_path)
 
         # Initialize the PSQL connection
         try:
@@ -23,7 +25,6 @@ class PSQLConnection:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             exit(1)
-
 
     def add_new_block(self, block_data_path):
         status = b"success"
@@ -44,20 +45,17 @@ class PSQLConnection:
         return status
 
     def run_query(self, query, blocks):
-        sql_query = self.sql_converter.query_vector_to_sql(query, blocks)
+        sql_query = self.sql_converter.query_vector_to_tensor(query, blocks)
         try:
             cur = self.psql_conn.cursor()
             cur.execute(sql_query)
             true_result = float(cur.fetchone()[0])
-            print(true_result)
             cur.close()
-
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             exit(1)
-
+        print(true_result)
         return true_result
-        
 
     def close(self):
         if self.psql_conn is not None:
@@ -65,16 +63,47 @@ class PSQLConnection:
             print("Database connection closed.")
 
 
-@app.command()
-def run(
-    omegaconf: str = "precycle/config/precycle.json",
-):
-    omegaconf = OmegaConf.load(omegaconf)
-    default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
-    omegaconf = OmegaConf.create(omegaconf)
-    config = OmegaConf.merge(default_config, omegaconf)
+Block = namedtuple("Block", ["size", "histogram"])
 
 
+class MockPSQLConnection:
+    def __init__(self, config) -> None:
+        self.config = config
+        self.tensor_convertor = TensorConverter(config.blocks.block_metadata_path)
 
-if __name__ == "__main__":
-    app()
+        # Blocks are in-memory histograms
+        self.blocks = {}
+        self.blocks_count = 0
+
+        try:
+            with open(config.blocks.block_metadata_path) as f:
+                self.blocks_metadata = json.load(f)
+        except NameError:
+            logger.error("Dataset metadata must have be created first..")
+            exit(1)
+
+        self.attributes_domain_sizes = self.blocks_metadata["attributes_domain_sizes"]
+        self.domain_size = float(self.blocks_metadata["domain_size"])
+
+    def add_new_block(self, block_data_path):
+        raw_data = pd.read_csv(block_data_path)
+        histogram_data = SparseHistogram.from_dataframe(
+            raw_data, self.attributes_domain_sizes
+        )
+        block_id = self.blocks_count
+        block_size = float(self.blocks_metadata["blocks"][str(block_id)]["size"])
+        block = Block(block_size, histogram_data)
+        self.blocks[self.blocks_count] = block
+        self.blocks_count += 1
+
+    def run_query(self, query, blocks):
+        tensor_query = self.tensor_convertor.query_vector_to_tensor(query)
+        true_result = 0
+        for block_id in range(blocks[0], blocks[1] + 1):
+            block = self.blocks[block_id]
+            true_result += block.size * block.histogram.run(tensor_query)
+        print(true_result)
+        return true_result
+
+    def close(self):
+        pass

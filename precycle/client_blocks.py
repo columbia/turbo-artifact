@@ -1,5 +1,6 @@
 import socket
 
+
 class BlocksClient:
     def __init__(self, config) -> None:
         self.config = config

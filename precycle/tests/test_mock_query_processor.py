@@ -2,10 +2,9 @@ import typer
 from omegaconf import OmegaConf
 from precycle.task import Task
 from precycle.query_processor import QueryProcessor
-from precycle.sql_converter import SQLConverter
-from precycle.cache.deterministic_cache import DeterministicCache
-from precycle.budget_accounant import BudgetAccountant
-from precycle.psql_connection import PSQLConnection
+from precycle.psql_connection import MockPSQLConnection
+from precycle.budget_accounant import MockBudgetAccountant
+from precycle.cache.deterministic_cache import MockDeterministicCache
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -55,9 +54,16 @@ def test(
         [0, 0, 3, 7],
     ]
 
+    db = MockPSQLConnection(config)
+    budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
+
+    block_data_path = config.blocks.block_data_path + "/block_0.csv"
+    db.add_new_block(block_data_path)
+    budget_accountant.add_new_block_budget()
+
     num_requested_blocks = 1
-    budget_accountant = BudgetAccountant(config=config.budget_accountant)
     num_blocks = budget_accountant.get_blocks_count()
+    assert num_blocks > 0
 
     # Latest Blocks first
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
@@ -74,10 +80,10 @@ def test(
         utility_beta=0.0001,
         name=0,
     )
-    db = PSQLConnection(config)
-    cache = DeterministicCache(config.cache)
 
+    cache = MockDeterministicCache(config.cache)
     query_processor = QueryProcessor(db, cache, budget_accountant, config)
+
     run_metadata = query_processor.try_run_task(task)
     print(run_metadata)
 

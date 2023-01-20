@@ -1,17 +1,14 @@
 import time
-from collections import defaultdict
-from datetime import datetime
-from typing import Dict, Optional
-
 from loguru import logger
 from termcolor import colored
-
-from precycle.task import Task
+from typing import Dict, Optional
+from collections import defaultdict
 from precycle.utils.utils import mlflow_log
 
+from precycle.task import Task
 from precycle.executor import Executor
 
-from precycle.planner.ilp import ILP
+# from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
 
@@ -30,19 +27,19 @@ class TasksInfo:
         self.run_metadata = {}
         self.n_allocated_tasks = 0
 
+
 class QueryProcessor:
-    def __init__(self, db, cache, budget_accountant, sql_converter, config):
+    def __init__(self, db, cache, budget_accountant, config):
         self.config = config
-        
+
         self.db = db
         self.cache = cache
         self.budget_accountant = budget_accountant
-        self.sql_converter = sql_converter
 
         self.tasks_info = TasksInfo()
-        
-        self.executor = Executor(self.cache, self.db, sql_converter)
-        
+
+        self.executor = Executor(self.cache, self.db)
+
         # Initialize the Planner
         planner_args = {
             "enable_caching": self.config.enable_caching,
