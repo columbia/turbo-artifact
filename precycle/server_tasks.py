@@ -1,10 +1,12 @@
+import ast
 import json
 import socket
 from precycle.task import Task
 
+
 class TasksServer:
 
-    ''' Entrypoint for sending new user requests/tasks to the system. '''
+    """Entrypoint for sending new user requests/tasks to the system."""
 
     def __init__(self, query_processor, budget_accountant, config) -> None:
         self.config = config
@@ -20,12 +22,12 @@ class TasksServer:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen()
-            conn, addr = s.accept()
-            with conn:
-                print(f"Connected by {addr}")
-                while True:
+            while True:
+                conn, addr = s.accept()
+                with conn:
+                    print(f"Connected by {addr}")
                     # Simple blocking connection # TODO: allow for multiple connections
-                    data = conn.recv(1024)
+                    data = conn.recv(4096)
                     if not data:
                         continue
                     deserialized_data = json.loads(data).decode("utf-8")
@@ -38,22 +40,21 @@ class TasksServer:
         self.tasks_count += 1
 
         num_requested_blocks = int(data["nblocks"])
-        num_blocks = self.budget_accountant.num_blocks()
+        num_blocks = self.budget_accountant.get_blocks_count()
 
         if num_requested_blocks > num_blocks:
             print("return an error")
             return
 
         # Latest Blocks first
-        requested_blocks = reversed(
-            [i for i in range(num_blocks - num_requested_blocks, num_blocks)]
-        )
+        requested_blocks = (num_blocks-num_requested_blocks, num_blocks-1)
 
         # At this point user's request should be translated to a collection of block/chunk ids
         task = Task(
             id=task_id,
             query_id=int(data["query_id"]),
             query_type="linear",
+            query=ast.literal_eval(data["query"]),
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(data["utility"]),

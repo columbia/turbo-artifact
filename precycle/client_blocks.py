@@ -15,12 +15,10 @@ class BlocksClient:
     def send_request(self, block_data_path):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.host, self.port))
-            data = bytes(block_data_path, 'utf-8')
-            print(data)
+            data = bytes(block_data_path, "utf-8")
             s.sendall(data)
             data = s.recv(1024)
         print(f"Received {data!r}")
-
 
 
 @app.command()
@@ -31,7 +29,7 @@ def run(
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
     omegaconf = OmegaConf.create(omegaconf)
     config = OmegaConf.merge(default_config, omegaconf)
-    
+
     block_data_path = config.blocks_server.block_data_path + "/block_1.csv"
     BlocksClient(config.blocks_server).send_request(block_data_path)
 

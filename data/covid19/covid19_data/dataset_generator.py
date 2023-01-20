@@ -452,7 +452,7 @@ def main(
             chunk = blocks[block_size * idx : block_size * (idx + 1)]
             # Add a timestamp to each block
             # chunk.loc[:, "time"] = idx
-            chunk.insert(0, 'time', idx)
+            chunk.insert(0, "time", idx)
 
             chunk.to_csv(output_dir.joinpath(f"block_{idx}.csv"), index=False)
             logger.info(f"Saved block {idx}")

@@ -11,6 +11,7 @@ app = typer.Typer()
 #     def __init__(self, budget):
 #         self.budget = budget
 
+
 class BudgetAccountantKey:
     def __init__(self, block):
         self.key = f"{block}"
@@ -25,8 +26,7 @@ class BudgetAccountant:
         self.alphas = self.config.alphas
 
     def get_blocks_count(self):
-        return len(self.kv_store.keys('*'))
-
+        return len(self.kv_store.keys("*"))
 
     def update_block_budget(self, block, budget):
         key = BudgetAccountantKey(block).key
@@ -38,27 +38,29 @@ class BudgetAccountant:
         block = self.get_blocks_count()
         # Initialize block's budget from epsilon and delta
         budget = RenyiBudget.from_epsilon_delta(
-                epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
-            )
+            epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
+        )
         self.update_block_budget(block, budget)
 
     def get_block_budget(self, block):
-        ''' Returns the remaining block budget'''
+        """Returns the remaining block budget"""
         key = BudgetAccountantKey(block).key
         orders = self.kv_store.hgetall(key)
-        # TODO: convert strings to floats
-        budget = RenyiBudget.from_epsilon_list(orders)
+        alphas = [float(alpha) for alpha in orders.keys()]
+        epsilons = [float(epsilon) for epsilon in orders.values()]
+        budget = RenyiBudget.from_epsilon_list(epsilons, alphas)
         return budget
 
     def can_run(self, blocks, run_budget):
-        for block in blocks:
+        for block in range(blocks[0], blocks[1]+1):
             budget = self.get_block_budget(block)
+            print(budget)
             if not budget.can_allocate(run_budget):
                 return False
         return True
 
     def consume_block_budget(self, block, run_budget):
-        ''' Consumes 'run_budget' from the remaining block budget'''
+        """Consumes 'run_budget' from the remaining block budget"""
         budget = self.get_block_budget(block)
         budget -= run_budget
         # Re-write the budget in the KV store
@@ -69,7 +71,6 @@ class BudgetAccountant:
             self.consume_block_budget(block, run_budget)
 
 
-
 @app.command()
 def run(
     omegaconf: str = "precycle/config/precycle.json",
@@ -78,7 +79,7 @@ def run(
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
     omegaconf = OmegaConf.create(omegaconf)
     config = OmegaConf.merge(default_config, omegaconf)
-    
+
     budget_accountant = BudgetAccountant(config=config.budget_accountant)
     budget_accountant.add_new_block_budget()
 

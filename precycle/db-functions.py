@@ -16,16 +16,22 @@ class RedisHelper:
         return self.kv_store.hgetall(key)
 
     def delete_all(self):
-        self.kv_store.flushdb()
-
+        res = "success"
+        try:
+            self.kv_store.flushdb()
+        except Exception as error:
+            res = "fail"
+            print(error)
+        return res
+        
     def get_all(self):
-        return self.kv_store.keys('*')
-
+        return self.kv_store.keys("*")
+    
 
 class PostgresHelper:
     def __init__(self, config) -> None:
         self.config = config
-    # Initialize the PSQL connection
+        # Initialize the PSQL connection
         try:
             # Connect to the PostgreSQL database server
             self.psql_conn = psycopg2.connect(
@@ -41,10 +47,10 @@ class PostgresHelper:
     def get(self, key):
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""SELECT COUNT(*) FROM covid_data WHERE time >= {key} AND time <= {key} GROUP BY time;""" 
+            cmd = f"""SELECT COUNT(*) FROM covid_data WHERE time >= {key} AND time <= {key} GROUP BY time;"""
             cur.execute(cmd)
             res = cur.fetchall()
-            cur.close()        
+            cur.close()
             self.psql_conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -55,23 +61,23 @@ class PostgresHelper:
         status = "success"
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""DELETE FROM covid_data;""" 
+            cmd = f"""DELETE FROM covid_data;"""
             cur.execute(cmd)
-            cur.close()        
+            cur.close()
             self.psql_conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:
             status = "fail"
             print(error)
             exit(1)
         return status
- 
+
     def get_all(self):
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""SELECT COUNT(*) FROM covid_data GROUp BY time;""" 
+            cmd = f"""SELECT time, COUNT(*) FROM covid_data GROUP BY time;"""
             cur.execute(cmd)
             res = cur.fetchall()
-            cur.close()        
+            cur.close()
             self.psql_conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -82,9 +88,9 @@ class PostgresHelper:
 @app.command()
 def run(
     omegaconf: str = "precycle/config/precycle.json",
-    storage: str = "redis-budgets",       # "redis-budgets", 'postgres', '*'
-    function: str = "delete-all",       # "get", "size", "get-all", "delete-all-caches"
-    key: str = ""
+    storage: str = "redis-budgets",  # "redis-budgets", 'postgres', '*'
+    function: str = "delete-all",  # "get", "size", "get-all", "delete-all-caches"
+    key: str = "",
 ):
     omegaconf = OmegaConf.load(omegaconf)
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
@@ -102,7 +108,6 @@ def run(
                 res = "fail"
                 print(error)
 
-        
     elif storage == "postgres":
         postgres_helper = PostgresHelper(config.postgres)
         if function == "delete-all":
@@ -112,9 +117,9 @@ def run(
         elif function == "get-all" or function == "size":
             res = postgres_helper.get_all()
         # elif function == "size":
-            # return len(postgres_helper.get_all())
+        # return len(postgres_helper.get_all())
 
-    else:   # Redis
+    else:  # Redis
         if storage == "redis-budgets":
             redis_helper = RedisHelper(config.budget_accountant)
         elif storage == "redis-cache":
@@ -128,6 +133,7 @@ def run(
         elif function == "size":
             res = len(redis_helper.get_all())
     print(res)
+
 
 if __name__ == "__main__":
     app()

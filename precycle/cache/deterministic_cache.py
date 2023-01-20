@@ -14,7 +14,7 @@ class CacheEntry:
 
 class CacheKey:
     def __init__(self, query_id, hyperblock_id):
-        self.key = f"{query_id} : {hyperblock_id}"
+        self.key = f"{query_id}:{hyperblock_id}"
 
 
 class DeterministicCache(Cache):
@@ -29,9 +29,15 @@ class DeterministicCache(Cache):
 
     def get_entry(self, query_id, hyperblock_id):
         key = CacheKey(query_id, hyperblock_id).key
+        print("key:", key)
         entry = self.kv_store.hgetall(key)
-        cache_entry = CacheEntry(entry["result"], entry["noise_std"], entry["noise"])
-        return cache_entry
+        
+        entry_values = [float(value) for value in entry.values()]
+        
+        print("entry", entry)
+        if entry:
+            return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
+        return None
 
     def estimate_run_budget(self, query_id, hyperblock_id, noise_std):
         """

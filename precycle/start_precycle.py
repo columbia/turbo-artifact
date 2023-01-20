@@ -39,15 +39,18 @@ def precycle(custom_config):
         print(error)
         exit(1)
 
-
     sql_converter = SQLConverter(config.blocks_server.block_metadata_path)
 
     # Initialize Query Processor
-    query_processor = QueryProcessor(psql_conn, budget_accountant, sql_converter, config)
+    query_processor = QueryProcessor(
+        psql_conn, budget_accountant, sql_converter, config
+    )
 
-    BlocksServer(psql_conn, budget_accountant, config.blocks_server).run()  # TODO: make it  non blocking
-    #TasksServer(query_processor, budget_accountant, config.tasks_server).run()
-    
+    BlocksServer(
+        psql_conn, budget_accountant, config.blocks_server
+    ).run()  # TODO: make it  non blocking
+    # TasksServer(query_processor, budget_accountant, config.tasks_server).run()
+
     if psql_conn is not None:
         psql_conn.close()
         print("Database connection closed.")

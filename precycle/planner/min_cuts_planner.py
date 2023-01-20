@@ -18,7 +18,9 @@ class MinCutsPlanner(Planner):
         laplace_scale = 1 / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 
-        plan = A(query_id=task.query_id, l=[R(task.blocks, noise_std)])
+        plan = A(
+            l=[R(blocks=task.blocks, noise_std=noise_std, cache_type=self.cache_type)]
+        )
 
         cost = 0
         if self.enable_dp:
