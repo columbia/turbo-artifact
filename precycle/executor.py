@@ -1,4 +1,3 @@
-import psycopg2
 import numpy as np
 from typing import Dict, Tuple
 from budget.curves import LaplaceCurve, ZeroCurve
@@ -25,9 +24,9 @@ class A:
 
 
 class Executor:
-    def __init__(self, cache, psql_conn, sql_converter) -> None:
+    def __init__(self, cache, db, sql_converter) -> None:
+        self.db = db
         self.cache = cache
-        self.psql_conn = psql_conn
         self.sql_converter = sql_converter
 
     def execute_plan(self, plan, task) -> Tuple[float, Dict]:
@@ -57,11 +56,9 @@ class Executor:
         cache_entry = self.cache.get_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
-            print("not cached")
             # Obtain true result by running the query
-            sql_query = self.sql_converter.query_vector_to_sql(query, run_op.blocks)
-            true_result = self.run_sql_query(sql_query)
-
+            true_result = self.db.run_query(query, run_op.blocks)
+            
             laplace_scale = run_op.noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
             noise = np.random.laplace(scale=laplace_scale)
@@ -113,29 +110,3 @@ class Executor:
 
     def run_probabilistic(self, run_op, query_id, query, run_metadata):
         pass
-
-    def run_sql_query(self, query):
-        try:
-            cur = self.psql_conn.cursor()
-            cur.execute(query)
-
-            res = float(cur.fetchone()[0])
-            print("runninggg")
-            print(res)
-            cur.close()
-
-        except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
-            exit(1)
-
-        return res
-        
-        # else:  # Not using cache
-        #     if self.omegaconf.enable_dp:  # Add DP noise
-        #         result, run_budget, run_metadata = hyperblock.run_dp(
-        #             query, run_op.noise_std
-        #         )
-        #     else:
-        #         result = hyperblock.run(query)
-        #         run_metadata = 0
-        #         run_budget = None

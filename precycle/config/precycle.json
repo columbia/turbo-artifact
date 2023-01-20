@@ -1,5 +1,6 @@
 {   
 
+    "mock": true,
     "enable_random_seed": true,
     "enable_caching": true,
     "enable_dp": true,
@@ -15,7 +16,7 @@
     },
 
     "planner": {
-        "method": "MinCutsPlanner",
+        "method": "MaxCutsPlanner",
         "branching_factor_constraint": 2
     },
 
@@ -34,11 +35,14 @@
         "password": "postgres"
     },
 
+    "blocks": {
+        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json",
+    },
+
     "blocks_server": {
         "host": "localhost",
         "port": 1025,
-        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json"
     },
 
     "tasks_server": {

@@ -1,6 +1,5 @@
 import yaml
 import math
-import redis
 from precycle.cache.cache import Cache
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 
@@ -17,22 +16,22 @@ class CacheKey:
         self.key = f"{query_id}:{hyperblock_id}"
 
 
-class DeterministicCache(Cache):
+class MockDeterministicCache(Cache):
     def __init__(self, config):
-        self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
+        # key-value store is just an in-memory dictionary
+        self.kv_store = {}
 
     def add_entry(self, query_id, hyperblock_id, cache_entry):
         key = CacheKey(query_id, hyperblock_id).key
-        self.kv_store.hset(key, "result", cache_entry.result)
-        self.kv_store.hset(key, "noise_std", cache_entry.noise_std)
-        self.kv_store.hset(key, "noise", cache_entry.noise)
-
+        self.kv_store[key] = {"result": cache_entry.result, 
+                                    "noise_std": cache_entry.noise_std, 
+                                    "noise": cache_entry.noise}
+        
     def get_entry(self, query_id, hyperblock_id):
         key = CacheKey(query_id, hyperblock_id).key
-        entry = self.kv_store.hgetall(key)
-        entry_values = [float(value) for value in entry.values()]
-        if entry:
-            return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
+        if key in self.kv_store:
+            entry = self.kv_store[key]
+            return CacheEntry(entry['result'], entry['noise_std'], entry['noise'])
         return None
 
     def estimate_run_budget(self, query_id, hyperblock_id, noise_std):
@@ -51,4 +50,4 @@ class DeterministicCache(Cache):
         return run_budget
 
     def dump(self):
-        pass
+        print("Cache", yaml.dump(self.key_values))

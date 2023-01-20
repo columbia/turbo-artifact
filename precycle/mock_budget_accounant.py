@@ -1,5 +1,9 @@
-import redis
+import typer
+from omegaconf import OmegaConf
 from precycle.budget import RenyiBudget
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+
+app = typer.Typer()
 
 
 class BudgetAccountantKey:
@@ -7,22 +11,22 @@ class BudgetAccountantKey:
         self.key = f"{block}"
 
 
-class BudgetAccountant:
+class MockBudgetAccountant:
     def __init__(self, config) -> None:
         self.config = config
-        self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
+        # key-value store is just an in-memory dictionary
+        self.kv_store = {}
         self.epsilon = float(self.config.epsilon)
         self.delta = float(self.config.delta)
         self.alphas = self.config.alphas
 
     def get_blocks_count(self):
-        return len(self.kv_store.keys("*"))
+        return len(self.kv_store.keys())
 
     def update_block_budget(self, block, budget):
         key = BudgetAccountantKey(block).key
         # Add budget in the key value store
-        for alpha in budget.alphas:
-            self.kv_store.hset(key, str(alpha), str(budget.epsilon(alpha)))
+        self.kv_store[key] = budget
 
     def add_new_block_budget(self):
         block = self.get_blocks_count()
@@ -35,11 +39,10 @@ class BudgetAccountant:
     def get_block_budget(self, block):
         """Returns the remaining block budget"""
         key = BudgetAccountantKey(block).key
-        orders = self.kv_store.hgetall(key)
-        alphas = [float(alpha) for alpha in orders.keys()]
-        epsilons = [float(epsilon) for epsilon in orders.values()]
-        budget = RenyiBudget.from_epsilon_list(epsilons, alphas)
-        return budget
+        if key in self.kv_store:
+            budget = self.kv_store[key]
+            return budget
+        return None
 
     def can_run(self, blocks, run_budget):
         for block in range(blocks[0], blocks[1]+1):
@@ -59,3 +62,20 @@ class BudgetAccountant:
     def consume_blocks_budget(self, blocks, run_budget):
         for block in blocks:
             self.consume_block_budget(block, run_budget)
+
+
+@app.command()
+def run(
+    omegaconf: str = "precycle/config/precycle.json",
+):
+    omegaconf = OmegaConf.load(omegaconf)
+    default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
+    omegaconf = OmegaConf.create(omegaconf)
+    config = OmegaConf.merge(default_config, omegaconf)
+
+    budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
+    budget_accountant.add_new_block_budget()
+
+
+if __name__ == "__main__":
+    app()

@@ -1,17 +1,24 @@
 import os
 import sys
 import typer
-import psycopg2
 
 from loguru import logger
 from omegaconf import OmegaConf
 
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+
 from precycle.query_processor import QueryProcessor
-from precycle.budget_accounant import BudgetAccountant
 from precycle.sql_converter import SQLConverter
 from precycle.server_blocks import BlocksServer
 from precycle.server_tasks import TasksServer
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
+from precycle.budget_accounant import BudgetAccountant
+from precycle.mock_budget_accounant import MockBudgetAccountant
+from precycle.psql_connection import PSQLConnection
+from precycle.mock_psql_connection import MockPSQLConnection
+from precycle.cache.deterministic_cache import DeterministicCache
+from precycle.cache.mock_deterministic_cache import MockDeterministicCache
+
+# from precycle.cache.probabilistic_cache import ProbabilisticCache
 
 app = typer.Typer()
 
@@ -22,38 +29,26 @@ def precycle(custom_config):
     config = OmegaConf.merge(default_config, omegaconfig)
     print(config)
 
-    # Initialize the Budget Accountant
-    # Keeps track of the privacy budgets of the blocks entering the database
-    budget_accountant = BudgetAccountant(config=config.budget_accountant)
-
-    # Initialize the PSQL connection
-    try:
-        # Connect to the PostgreSQL database server
-        psql_conn = psycopg2.connect(
-            host=config.postgres.host,
-            database=config.postgres.database,
-            user=config.postgres.username,
-            password=config.postgres.password,
-        )
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-        exit(1)
-
-    sql_converter = SQLConverter(config.blocks_server.block_metadata_path)
+    if config.mock:
+        db = MockPSQLConnection(config)
+        cache = MockDeterministicCache(config.cache)
+        budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
+        sql_converter = None
+    else:
+        budget_accountant = BudgetAccountant(config=config.budget_accountant)
+        sql_converter = SQLConverter(config.blocks.block_metadata_path)
+        db = PSQLConnection(config, sql_converter)
+        cache = DeterministicCache(config.cache)
 
     # Initialize Query Processor
     query_processor = QueryProcessor(
-        psql_conn, budget_accountant, sql_converter, config
+        db, cache, budget_accountant, sql_converter, config
     )
-
-    BlocksServer(
-        psql_conn, budget_accountant, config.blocks_server
-    ).run()  # TODO: make it  non blocking
+    
+    # TODO: make it  non blocking
+    BlocksServer(db, budget_accountant, config.blocks_server).run()  
     # TasksServer(query_processor, budget_accountant, config.tasks_server).run()
 
-    if psql_conn is not None:
-        psql_conn.close()
-        print("Database connection closed.")
 
 
 @app.command()

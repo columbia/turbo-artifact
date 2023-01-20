@@ -4,8 +4,6 @@ import json
 class SQLConverter:
     def __init__(self, block_metadata_path) -> None:
         with open(block_metadata_path, "r") as f:
-            # self.config = config
-            # self.database = self.config.postgres.database
             self.metadata = json.load(f)
             self.attribute_names = self.metadata["attribute_names"]
             self.attribute_domain_sizes = self.metadata["attributes_domain_sizes"]
