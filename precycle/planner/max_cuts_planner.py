@@ -15,9 +15,13 @@ class MaxCutsPlanner(Planner):
 
         """For "MaxCutsPlanner" a plan has this form: A(R(B1), R(B2), ... , R(Bn))"""
 
+        # Num-blocks Aggregations
         block_request = range(task.blocks[0], task.blocks[1] + 1)
-        n = len(block_request)
-        min_pure_epsilon = compute_utility_curve(task.utility, task.utility_beta, n)
+        num_blocks = len(block_request)
+        total_data_size = num_blocks * self.blocks_metadata["block_size"]
+        min_pure_epsilon = compute_utility_curve(
+            task.utility, task.utility_beta, total_data_size, num_blocks
+        )
         laplace_scale = 1 / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 

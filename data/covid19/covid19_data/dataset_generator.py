@@ -443,8 +443,8 @@ def main(
         # 151279929
         k = 6000
         block_size = total_size // k
+        metadata["block_size"] = block_size
         metadata["blocks"] = dict()
-
         for idx in range(k):
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["size"] = block_size

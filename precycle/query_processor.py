@@ -45,6 +45,7 @@ class QueryProcessor:
             "enable_caching": self.config.enable_caching,
             "enable_dp": self.config.enable_dp,
             "cache_type": self.config.cache.type,
+            "blocks_metadata": self.config.blocks_metadata,
         }
         self.planner = globals()[self.config.planner.method](
             self.cache, self.budget_accountant, planner_args

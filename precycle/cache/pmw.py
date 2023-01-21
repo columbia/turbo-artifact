@@ -15,7 +15,6 @@ from utils.utils import mlflow_log
 from precycle.tesnor_converter import TensorConverter
 
 
-
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
 class PMW:
     def __init__(
@@ -40,12 +39,15 @@ class PMW:
         self.blocks_metadata = blocks_metadata
 
         # Generic PMW arguments
-        self.n = sum(
-            [
-                float(blocks_metadata["blocks"][str(id)]["size"])
-                for id in range(blocks[0], blocks[1] + 1)
-            ]
-        )
+        # Assuming all blocks have the same size
+        self.n = (blocks[1] - blocks[0] + 1) * blocks_metadata["block_size"]
+
+        # self.n = sum(
+        #     [
+        #         float(blocks_metadata["blocks"][str(id)]["size"])
+        #         for id in range(blocks[0], blocks[1] + 1)
+        #     ]
+        # )
         self.M = float(blocks_metadata["domain_size"])
         self.k = k  # max_total_queries
         self.queries_ran = 0
@@ -210,8 +212,6 @@ class PMW:
             output *= self.n
 
         return output, run_budget, run_metadata
-
-
 
     def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)

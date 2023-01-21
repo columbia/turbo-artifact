@@ -14,7 +14,11 @@ class MinCutsPlanner(Planner):
         """For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn))"""
 
         # 0 Aggregations
-        min_pure_epsilon = compute_utility_curve(task.utility, task.utility_beta, 1)
+        num_blocks = task.blocks[1] - task.blocks[0] + 1
+        total_data_size = num_blocks * self.blocks_metadata["block_size"]
+        min_pure_epsilon = compute_utility_curve(
+            task.utility, task.utility_beta, total_data_size, 1
+        )
         laplace_scale = 1 / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 
@@ -42,7 +46,7 @@ class MinCutsPlanner(Planner):
                 laplace_scale = run_op.noise_std / math.sqrt(2)
                 run_budget = LaplaceCurve(laplace_noise=laplace_scale)
 
-            # Check if there is enough budget in the hyperblock
+            # Check if there is enough budget in the blocks
             if not self.budget_accountant.can_run(run_op.blocks, run_budget):
                 return math.inf
         return 0
