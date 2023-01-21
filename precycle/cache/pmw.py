@@ -28,7 +28,7 @@ class PMW:
         beta=0.01,  # Failure probability for the alpha error bound
         k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
-        output_counts=True,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
+        output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
