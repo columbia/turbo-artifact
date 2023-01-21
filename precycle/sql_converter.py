@@ -1,12 +1,7 @@
-import json
-
-
 class SQLConverter:
-    def __init__(self, block_metadata_path) -> None:
-        with open(block_metadata_path, "r") as f:
-            self.metadata = json.load(f)
-            self.attribute_names = self.metadata["attribute_names"]
-            self.attribute_domain_sizes = self.metadata["attributes_domain_sizes"]
+    def __init__(self, blocks_metadata) -> None:
+        self.attribute_names = blocks_metadata["attribute_names"]
+        self.attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
 
     def query_vector_to_sql(self, query_vector, blocks):
         p = [set() for _ in self.attribute_names]

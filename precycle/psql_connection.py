@@ -1,7 +1,5 @@
-import json
 import psycopg2
 import pandas as pd
-from loguru import logger
 from collections import namedtuple
 from precycle.budget import SparseHistogram
 from precycle.sql_converter import SQLConverter
@@ -11,7 +9,7 @@ from precycle.tesnor_converter import TensorConverter
 class PSQLConnection:
     def __init__(self, config) -> None:
         self.config = config
-        self.sql_converter = SQLConverter(config.blocks.block_metadata_path)
+        self.sql_converter = SQLConverter(config.blocks_metadata)
 
         # Initialize the PSQL connection
         try:
@@ -69,21 +67,16 @@ Block = namedtuple("Block", ["size", "histogram"])
 class MockPSQLConnection:
     def __init__(self, config) -> None:
         self.config = config
-        self.tensor_convertor = TensorConverter(config.blocks.block_metadata_path)
+        self.tensor_convertor = TensorConverter(config.blocks_metadata)
 
         # Blocks are in-memory histograms
         self.blocks = {}
         self.blocks_count = 0
 
-        try:
-            with open(config.blocks.block_metadata_path) as f:
-                self.blocks_metadata = json.load(f)
-        except NameError:
-            logger.error("Dataset metadata must have be created first..")
-            exit(1)
-
-        self.attributes_domain_sizes = self.blocks_metadata["attributes_domain_sizes"]
-        self.domain_size = float(self.blocks_metadata["domain_size"])
+        self.attributes_domain_sizes = self.config.blocks_metadata[
+            "attributes_domain_sizes"
+        ]
+        self.domain_size = float(self.config.blocks_metadata["domain_size"])
 
     def add_new_block(self, block_data_path):
         raw_data = pd.read_csv(block_data_path)
@@ -91,7 +84,7 @@ class MockPSQLConnection:
             raw_data, self.attributes_domain_sizes
         )
         block_id = self.blocks_count
-        block_size = float(self.blocks_metadata["blocks"][str(block_id)]["size"])
+        block_size = float(self.config.blocks_metadata["blocks"][str(block_id)]["size"])
         block = Block(block_size, histogram_data)
         self.blocks[self.blocks_count] = block
         self.blocks_count += 1

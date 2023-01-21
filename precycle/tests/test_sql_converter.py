@@ -1,5 +1,5 @@
-
 from precycle.sql_converter import SQLConverter
+
 
 def main():
     query_vector = [
@@ -36,7 +36,6 @@ def main():
         [0, 0, 3, 6],
         [0, 0, 3, 7],
     ]
-
 
     blocks = (1, 10)
     sql_converter = SQLConverter("data/covid19/covid19_data/metadata.json")

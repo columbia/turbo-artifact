@@ -1,10 +1,13 @@
+import json
 import typer
-from omegaconf import OmegaConf
+from loguru import logger
 from precycle.task import Task
+from omegaconf import OmegaConf
 from precycle.query_processor import QueryProcessor
 from precycle.psql_connection import MockPSQLConnection
 from precycle.budget_accounant import MockBudgetAccountant
 from precycle.cache.deterministic_cache import MockDeterministicCache
+from precycle.cache.probabilistic_cache import MockProbabilisticCache
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -18,6 +21,14 @@ def test(
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
     omegaconf = OmegaConf.create(omegaconf)
     config = OmegaConf.merge(default_config, omegaconf)
+
+    try:
+        with open(config.blocks.block_metadata_path) as f:
+            blocks_metadata = json.load(f)
+    except NameError:
+        logger.error("Dataset metadata must have be created first..")
+    assert blocks_metadata is not None
+    config.update({"blocks_metadata": blocks_metadata})
 
     query_vector = [
         [0, 0, 0, 0],
@@ -81,7 +92,8 @@ def test(
         name=0,
     )
 
-    cache = MockDeterministicCache(config.cache)
+    cache = MockDeterministicCache(config)
+    cache = MockProbabilisticCache(config)
     query_processor = QueryProcessor(db, cache, budget_accountant, config)
 
     run_metadata = query_processor.try_run_task(task)

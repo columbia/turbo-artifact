@@ -41,8 +41,10 @@ class Executor:
                 result, run_budget, run_metadata = self.run_deterministic(
                     run_op, task.query_id, task.query, run_metadata
                 )
-            # elif run_op.cache_type == "probabilistic":
-            #     result, run_budget, run_metadata = self.run_probabilistic(run_op, query_id, query, run_metadata)
+            elif run_op.cache_type == "probabilistic":
+                result, run_budget, run_metadata = self.run_probabilistic(
+                    run_op, task.query_id, task.query, run_metadata
+                )
             run_budget_per_block[run_op.blocks] = run_budget
             results += [result]
 
@@ -55,7 +57,7 @@ class Executor:
         cache_entry = self.cache.get_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
-            # Obtain true result by running the query
+            # True output never released except in debugging logs
             true_result = self.db.run_query(query, run_op.blocks)
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
@@ -108,4 +110,11 @@ class Executor:
         return result, run_budget, run_metadata
 
     def run_probabilistic(self, run_op, query_id, query, run_metadata):
-        pass
+        pmw = self.cache.get_entry(query_id, run_op.blocks)
+        if not pmw:  # If there is no PMW for the blocks then create it
+            pmw = self.cache.add_entry(run_op.blocks)
+
+        # True output never released except in debugging logs
+        true_result = self.db.run_query(query, run_op.blocks)
+        result, run_budget, run_metadata = pmw.run(query, true_result)
+        return result, run_budget, run_metadata

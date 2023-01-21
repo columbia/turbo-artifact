@@ -1,10 +1,9 @@
-import numpy as np
 import torch
+import numpy as np
 from loguru import logger
 
 from budget import Budget
-
-# from budget.block import HyperBlock
+from budget.histogram import DenseHistogram
 from budget.curves import (
     BoundedOneShotSVT,
     GaussianCurve,
@@ -12,14 +11,17 @@ from budget.curves import (
     PureDPtoRDP,
     ZeroCurve,
 )
-from budget.histogram import DenseHistogram
 from utils.utils import mlflow_log
+from precycle.tesnor_converter import TensorConverter
 
 
+
+# TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
 class PMW:
     def __init__(
         self,
-        hyperblock,
+        blocks,
+        blocks_metadata,
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.005,  # Max error guarantee, expressed as fraction.
@@ -35,15 +37,21 @@ class PMW:
         # - MWEM makes bigger steps when the error is higher, we could try that too
         # - Is it better to use Laplace after hard queries, for composition? By how much?
 
+        self.blocks_metadata = blocks_metadata
+
         # Generic PMW arguments
-        self.hyperblock = hyperblock
-        self.n = hyperblock.size
+        self.n = sum(
+            [
+                float(blocks_metadata["blocks"][str(id)]["size"])
+                for id in range(blocks[0], blocks[1] + 1)
+            ]
+        )
+        self.M = float(blocks_metadata["domain_size"])
         self.k = k  # max_total_queries
-        self.M = hyperblock.domain_size
         self.queries_ran = 0
         self.hard_queries_ran = 0
         self.histogram = DenseHistogram(self.M)
-        self.id = str(hyperblock.id)[1:-1].replace(", ", "-")
+        self.id = str(blocks)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
 
         # From my maths. It's cheap to be accurate when n is large.
@@ -70,36 +78,22 @@ class PMW:
                 0, self.Delta * self.ro
             )
 
-    def worst_case_cost(
-        cls,
-        n=1000,
-        nu=None,
-        ro=None,
-        alpha=0.05,
-        beta=0.001,
-        k=None,
-        standard_svt=True,
-        local_svt_max_queries=None,
-    ) -> Budget:
+    def worst_case_cost(self) -> Budget:
         # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
         # and we still do a cache miss, so we pay for a true query on top of that
-        nu = nu if nu else n * alpha / np.log(2 / beta)
-        ro = ro if ro else nu
-
         # query_cost = GaussianCurve(sigma=nu)
-        query_cost = LaplaceCurve(laplace_noise=nu)
-
-        if standard_svt:
+        query_cost = LaplaceCurve(laplace_noise=self.nu)
+        if self.standard_svt:
             # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
-            svt_cost = PureDPtoRDP(epsilon=1 / nu + 2 / nu)
+            svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
         else:
-            svt_cost = BoundedOneShotSVT(ro=ro, nu=nu, kmax=local_svt_max_queries)
+            svt_cost = BoundedOneShotSVT(
+                ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+            )
         return svt_cost + query_cost
 
     # TODO: this heuristic is a toy example that I use as a mock up.
-    def predict_hit(
-        self,
-    ):
+    def predict_hit(self):
         """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
         # threshold = 30
         # if self.hard_queries_ran - self.queries_ran > threshold:
@@ -107,28 +101,11 @@ class PMW:
         # for now only returns worst case (miss)
         return 0
 
-    def estimate_run_budget(
-        self,
-        n=1000,
-        nu=None,
-        ro=None,
-        alpha=0.05,
-        beta=0.001,
-        k=None,
-        standard_svt=True,
-        local_svt_max_queries=None,
-    ) -> Budget:
+    def estimate_run_budget(self) -> Budget:
+        return ZeroCurve() if self.predict_hit() else self.worst_case_cost()
 
-        if self.predict_hit():
-            # Easy query case
-            return ZeroCurve()
-        else:
-            # Hard query case
-            return self.worst_case_cost(
-                n, nu, ro, alpha, beta, k, standard_svt, local_svt_max_queries
-            )
-
-    def run(self, query):
+    def run(self, query, true_output):
+        self.tensor_convertor = TensorConverter(self.blocks_metadata)
         assert isinstance(query, torch.Tensor)
 
         run_metadata = {}
@@ -162,11 +139,8 @@ class PMW:
 
         # Comes for free (public histogram). Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
-
-        # Never released except in debugging logs
-        true_output = self.hyperblock.run(query)
         if self.output_counts:
-            # The hyperblock doesn't run normalized queries
+            # Executor doesn't run normalized queries
             true_output /= self.n
 
         self.queries_ran += 1
@@ -229,6 +203,17 @@ class PMW:
             self.histogram.normalize()
             output = noisy_output
 
+        self.mlflow_log_run(output, true_output)
+        run_metadata["true_error_fraction"] = abs(output - true_output)
+
+        if self.output_counts:
+            output *= self.n
+
+        return output, run_budget, run_metadata
+
+
+
+    def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)
         mlflow_log(
             f"{self.id}/hard_queries_ran", self.hard_queries_ran, self.queries_ran
@@ -243,9 +228,3 @@ class PMW:
             self.n * abs(output - true_output),
             self.queries_ran,
         )
-        run_metadata["true_error_fraction"] = abs(output - true_output)
-
-        if self.output_counts:
-            output *= self.n
-
-        return output, run_budget, run_metadata

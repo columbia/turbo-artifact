@@ -1,5 +1,5 @@
-
 from precycle.tesnor_converter import TensorConverter
+
 
 def main():
     query_vector = [
