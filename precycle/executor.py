@@ -32,25 +32,30 @@ class Executor:
         """
         run_budget: the budget that will be consumed from the blocks after running the query
         """
+        result = None
+        total_size = 0
         run_metadata = {}
         run_budget_per_block = {}
 
         results = []
         for run_op in plan.l:
             if run_op.cache_type == "deterministic":
-                result, run_budget, run_metadata = self.run_deterministic(
+                result, blocks_size, run_budget, run_metadata = self.run_deterministic(
                     run_op, task.query_id, task.query, run_metadata
                 )
             elif run_op.cache_type == "probabilistic":
-                result, run_budget, run_metadata = self.run_probabilistic(
+                result, blocks_size, run_budget, run_metadata = self.run_probabilistic(
                     run_op, task.query_id, task.query, run_metadata
                 )
             run_budget_per_block[run_op.blocks] = run_budget
-            results += [result]
+
+            results += [result * blocks_size]
+            total_size += blocks_size
 
         if results:
-            return sum(results), run_budget_per_block, run_metadata
-        return None, run_budget_per_block, run_metadata
+            result = sum(results) / total_size  # Aggregate RunOp operators
+        return result, run_budget_per_block, run_metadata
+        
 
     def run_deterministic(self, run_op, query_id, query, run_metadata):
         # Check for the entry inside the cache
@@ -58,7 +63,7 @@ class Executor:
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
-            true_result = self.db.run_query(query, run_op.blocks)
+            true_result, blocks_size = self.db.run_query(query, run_op.blocks)
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale)
@@ -107,7 +112,7 @@ class Executor:
             self.cache.add_entry(query_id, run_op.blocks, cache_entry)
 
         result = true_result + noise
-        return result, run_budget, run_metadata
+        return result, blocks_size, run_budget, run_metadata
 
     def run_probabilistic(self, run_op, query_id, query, run_metadata):
         pmw = self.cache.get_entry(query_id, run_op.blocks)
@@ -115,6 +120,6 @@ class Executor:
             pmw = self.cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
-        true_result = self.db.run_query(query, run_op.blocks)
+        true_result, blocks_size = self.db.run_query(query, run_op.blocks)
         result, run_budget, run_metadata = pmw.run(query, true_result)
-        return result, run_budget, run_metadata
+        return result, blocks_size, run_budget, run_metadata

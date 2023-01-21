@@ -8,9 +8,9 @@
     "cache": {
         "host": "localhost",
         "port": 6378,
-        "type": "deterministic",
+        "type": "DeterministicCache",
         "pmw_cfg": {
-            "alpha": 0.005,
+            "alpha": 0.05,
             "beta": 0.0001,
             "standart_svt": true,
             "output_counts": true
@@ -39,18 +39,19 @@
 
     "blocks": {
         "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json",
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json"
     },
 
     "blocks_server": {
         "host": "localhost",
-        "port": 1025,
+        "port": 1025
     },
 
     "tasks_server": {
         "host": "localhost",
         "port": 1024
     },
+
     "logs": {
         "verbose": false,
         "save": true,

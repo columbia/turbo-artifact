@@ -29,27 +29,16 @@ class TasksInfo:
 
 
 class QueryProcessor:
-    def __init__(self, db, cache, budget_accountant, config):
+    def __init__(self, db, cache, planner, budget_accountant, config):
         self.config = config
 
         self.db = db
         self.cache = cache
+        self.planner = planner
         self.budget_accountant = budget_accountant
-
-        self.tasks_info = TasksInfo()
-
         self.executor = Executor(self.cache, self.db)
 
-        # Initialize the Planner
-        planner_args = {
-            "enable_caching": self.config.enable_caching,
-            "enable_dp": self.config.enable_dp,
-            "cache_type": self.config.cache.type,
-            "blocks_metadata": self.config.blocks_metadata,
-        }
-        self.planner = globals()[self.config.planner.method](
-            self.cache, self.budget_accountant, planner_args
-        )
+        self.tasks_info = TasksInfo()
 
     # Call the planner, cache, executes linear query. Returns None if the query can't run.
     def try_run_task(self, task: Task) -> Optional[Dict]:

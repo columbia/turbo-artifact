@@ -1,13 +1,12 @@
 import math
 from precycle.executor import A, R
 from precycle.planner.planner import Planner
-from precycle.budget.curves import LaplaceCurve
 from precycle.utils.compute_utility_curve import compute_utility_curve
 
 
 class MinCutsPlanner(Planner):
-    def __init__(self, cache, budget_accountant, planner_args):
-        super().__init__(cache, budget_accountant, **planner_args)
+    def __init__(self, cache, budget_accountant, config):
+        super().__init__(cache, budget_accountant, config)
 
     def get_execution_plan(self, task):
 
@@ -19,7 +18,8 @@ class MinCutsPlanner(Planner):
         min_pure_epsilon = compute_utility_curve(
             task.utility, task.utility_beta, total_data_size, 1
         )
-        laplace_scale = 1 / min_pure_epsilon
+        sensitivity = 1 / total_data_size
+        laplace_scale = sensitivity / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 
         plan = A(
@@ -38,15 +38,10 @@ class MinCutsPlanner(Planner):
     # Simple Cost model - returns 0 or inf. - used only by max/min_cuts_planners
     def get_cost(self, plan, query_id):
         for run_op in plan.l:
-            if self.enable_caching:
-                run_budget = self.cache.estimate_run_budget(
-                    query_id, run_op.blocks, run_op.noise_std
-                )
-            else:
-                laplace_scale = run_op.noise_std / math.sqrt(2)
-                run_budget = LaplaceCurve(laplace_noise=laplace_scale)
-
-            # Check if there is enough budget in the blocks
-            if not self.budget_accountant.can_run(run_op.blocks, run_budget):
-                return math.inf
+            run_budget = self.cache.estimate_run_budget(
+                query_id, run_op.blocks, run_op.noise_std
+            )
+        # Check if there is enough budget in the blocks
+        if not self.budget_accountant.can_run(run_op.blocks, run_budget):
+            return math.inf
         return 0

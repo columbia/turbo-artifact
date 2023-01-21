@@ -52,8 +52,12 @@ class PSQLConnection:
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
             exit(1)
-        print(true_result)
-        return true_result
+
+        num_blocks = blocks[1]-blocks[0]+1
+        blocks_size = num_blocks * self.config.blocks_metadata['block_size']
+        true_result /= blocks_size
+        print("result:", true_result, "total-size:", blocks_size)
+        return true_result, blocks_size
 
     def close(self):
         if self.psql_conn is not None:
@@ -83,8 +87,8 @@ class MockPSQLConnection:
         histogram_data = SparseHistogram.from_dataframe(
             raw_data, self.attributes_domain_sizes
         )
-        block_id = self.blocks_count
-        block_size = float(self.config.blocks_metadata["blocks"][str(block_id)]["size"])
+        #float(self.config.blocks_metadata["blocks"][str(block_id)]["size"])
+        block_size = self.config.blocks_metadata['block_size'] 
         block = Block(block_size, histogram_data)
         self.blocks[self.blocks_count] = block
         self.blocks_count += 1
@@ -92,11 +96,14 @@ class MockPSQLConnection:
     def run_query(self, query, blocks):
         tensor_query = self.tensor_convertor.query_vector_to_tensor(query)
         true_result = 0
+        blocks_size = 0
         for block_id in range(blocks[0], blocks[1] + 1):
             block = self.blocks[block_id]
             true_result += block.size * block.histogram.run(tensor_query)
-        print(true_result)
-        return true_result
+            blocks_size += block.size
+        true_result /= blocks_size
+        print("result:", true_result, "total-size:", blocks_size)
+        return true_result, blocks_size
 
     def close(self):
         pass

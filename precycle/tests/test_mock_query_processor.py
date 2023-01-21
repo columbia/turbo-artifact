@@ -92,9 +92,11 @@ def test(
         name=0,
     )
 
-    cache = MockDeterministicCache(config)
-    cache = MockProbabilisticCache(config)
-    query_processor = QueryProcessor(db, cache, budget_accountant, config)
+    cache = globals()[config.cache.type](config)
+    planner = globals()[config.planner.method](
+        cache, budget_accountant, config
+    )
+    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     run_metadata = query_processor.try_run_task(task)
     print(run_metadata)
