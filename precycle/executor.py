@@ -60,15 +60,16 @@ class Executor:
         
 
     def run_deterministic(self, run_op, query_id, query, run_metadata):
-        sensitivity = 1 / get_blocks_size(run_op.blocks, self.config.blocks_metadata)
 
-        
+        blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+        sensitivity = 1 / blocks_size
+
         # Check for the entry inside the cache
         cache_entry = self.cache.get_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
-            true_result, blocks_size = self.db.run_query(query, run_op.blocks)
+            true_result = self.db.run_query(query, run_op.blocks)
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
@@ -120,11 +121,14 @@ class Executor:
         return result, blocks_size, run_budget, run_metadata
 
     def run_probabilistic(self, run_op, query_id, query, run_metadata):
+
+        blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+
         pmw = self.cache.get_entry(query_id, run_op.blocks)
         if not pmw:  # If there is no PMW for the blocks then create it
             pmw = self.cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
-        true_result, blocks_size = self.db.run_query(query, run_op.blocks)
+        true_result = self.db.run_query(query, run_op.blocks)
         result, run_budget, run_metadata = pmw.run(query, true_result)
         return result, blocks_size, run_budget, run_metadata

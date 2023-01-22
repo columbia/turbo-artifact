@@ -12,8 +12,6 @@ class Blocks:
         self.resource_manager = resource_manager
         self.config = self.resource_manager.config
         self.blocks_count = count()
-
-        self.config.blocks.max_num = self.config.blocks.initial_num
         self.env.process(self.block_producer())
 
     def block_producer(self):

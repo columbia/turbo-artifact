@@ -28,7 +28,7 @@ app = typer.Typer()
 
 
 class Simulator:
-    def __init__(self, config):
+    def __init__(self, omegaconf):
         self.env = simpy.Environment()
 
         # Initialize configuration

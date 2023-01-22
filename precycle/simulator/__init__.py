@@ -1,3 +1,3 @@
-from privacypacking.simulator.tasks import Tasks
-from privacypacking.simulator.blocks import Blocks
-from privacypacking.simulator.resourcemanager import ResourceManager
+from precycle.simulator.tasks import Tasks
+from precycle.simulator.blocks import Blocks
+from precycle.simulator.resourcemanager import ResourceManager

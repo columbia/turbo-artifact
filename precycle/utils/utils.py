@@ -1,5 +1,7 @@
-from pathlib import Path
+import json
+import math
 import mlflow
+from pathlib import Path
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -38,6 +40,21 @@ def get_blocks_size(blocks, blocks_metadata):
         return n
     else:
         return float(blocks_metadata["blocks"][str(blocks)]["size"])
+
+class QueryPool:
+    def __init__(self, attribute_domain_sizes, queries_path) -> None:
+        self.attribute_domain_sizes = attribute_domain_sizes
+        self.domain_size = math.prod(attribute_domain_sizes)
+        self.queries = None
+        with open(queries_path) as f:
+            self.queries = json.load(f)
+
+    def get_query(self, query_id: int):
+        query_id_str = str(query_id)
+        if query_id_str in self.queries:
+            query_vector = self.queries[query_id_str]
+        assert query_vector is not None
+        return query_vector
 
 
 # def sample_one_from_string(stochastic_string: str) -> float:

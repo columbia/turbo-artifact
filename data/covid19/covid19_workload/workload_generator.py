@@ -38,7 +38,6 @@ class PrivacyWorkload:
             "n_blocks": task.n_blocks,
             "utility": task.utility,
             "utility_beta": task.utility_beta,
-            "block_selection_policy": "LatestBlocksFirst",
             "task_name": task_name,
         }
         if task.start_time:

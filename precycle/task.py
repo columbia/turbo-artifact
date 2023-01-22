@@ -28,11 +28,11 @@ class Task:
         d = {
             "id": self.id,
             "query_id": self.query_id,
-            # "query": self.query,
-            "blocks": self.blocks0,
-            "start_time": None,
-            "allocation_time": None,
-            "n_blocks": len(self.blocks),
-            "max_block_id": max(self.blocks),
+            "query": self.query,
+            "blocks": self.blocks,
+            "n_blocks": self.n_blocks,
+            "utility": self.utility,
+            "utility_beta": self.utility_beta,
+            "name": self.name,
         }
         return d

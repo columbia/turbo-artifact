@@ -37,8 +37,19 @@
     },
 
     "blocks": {
-        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/metadata.json"
+        "initial_num": 1,
+        "max_num": 10,
+        "arrival_interval": 1,
+        "block_data_path": "data/covid19/covid19_data/blocks",
+        "block_metadata_path": "data/covid19/covid19_data/metadata.json"
+    },
+    
+    "tasks": {
+        "path": "data/covid19/covid19_workload/400:7blocks_84queries.privacy_tasks.csv",
+        "queries_path": "data/covid19/covid19_queries/all_2way_marginals.queries.json",
+        "avg_num_tasks_per_block": 1,
+        "max_num": 15,
+        "initial_num": 0
     },
 
     "blocks_server": {

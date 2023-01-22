@@ -1,7 +1,6 @@
 import pandas as pd
 from loguru import logger
 from itertools import count
-from precycle.utils.utils import REPO_ROOT
 from precycle.simulator.resourcemanager import LastItem
 from precycle.simulator.task_generator import (
     CSVTaskGenerator,
@@ -18,8 +17,7 @@ class Tasks:
         self.config = resource_manager.config
         self.task_count = count()
 
-        self.tasks_path = REPO_ROOT.joinpath("data").joinpath(self.config.tasks.path)
-        self.tasks_df = pd.read_csv(self.tasks_path)
+        self.tasks_df = pd.read_csv(self.config.tasks.path)
 
         if "submit_time" in self.tasks_df:
             logger.info("Reading tasks in order with hardcoded arrival times.")
@@ -65,14 +63,14 @@ class Tasks:
                 self.resource_manager.new_tasks_queue.put(LastItem())
                 break
 
-            task_arrival_interval = self.task_generator.get_task_arrival_interval_time()
+            
 
             # No task can arrive after the end of the simulation
             # so we force them to appear right before the end of the last block
-            task_arrival_interval = min(
-                task_arrival_interval,
-                self.config.blocks.max_num - self.env.now - 0.01,
-            )
+            if self.resource_manager.block_production_terminated.triggered:
+                task_arrival_interval = 0
+            else:
+                task_arrival_interval = self.task_generator.get_task_arrival_interval_time()
 
             self.env.process(self.task(task_id))
             yield self.env.timeout(task_arrival_interval)

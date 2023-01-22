@@ -1,7 +1,7 @@
 import random
 from loguru import logger
-from precycle.budget import Task
-from data.covid19.covid19_queries.queries import QueryPool
+from precycle.task import Task
+from precycle.utils.utils import QueryPool
 
 
 class TaskGenerator:
@@ -9,7 +9,7 @@ class TaskGenerator:
         self.config = config
         self.tasks = df_tasks
         self.query_pool = QueryPool(
-            config.blocks_metadata["attributes_domain_sizes"], config.queries_path
+            config.blocks_metadata["attributes_domain_sizes"], config.tasks.queries_path
         )
 
     def sample_task_row(self):
@@ -18,9 +18,8 @@ class TaskGenerator:
     def create_task(self, task_id, num_blocks):
         task_row = self.sample_task_row(num_blocks).squeeze()
 
-        name = task_id if "task_name" not in task_row else task_row["task_name"]
         query_id = int(task_row["query_id"])
-        query_vector = self.query_pool.get_query(task_row[query_id])
+        name = task_id if "task_name" not in task_row else task_row["task_name"]
         num_requested_blocks = int(task_row["n_blocks"])        
         requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
         
@@ -28,13 +27,14 @@ class TaskGenerator:
             id=task_id,
             query_id=query_id,
             query_type=task_row["query_type"],
-            query=query_vector,
+            query=self.query_pool.get_query(query_id),
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(task_row["utility"]),
             utility_beta=float(task_row["utility_beta"]),
             name=name,
         )
+        print("\nTask", task.dump())
 
         return task
 
