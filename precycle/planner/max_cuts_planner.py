@@ -2,6 +2,7 @@ import math
 from precycle.executor import A, R
 from precycle.planner.planner import Planner
 from precycle.utils.compute_utility_curve import compute_utility_curve
+from precycle.utils.utils import get_blocks_size
 
 
 class MaxCutsPlanner(Planner):
@@ -15,11 +16,12 @@ class MaxCutsPlanner(Planner):
         # Num-blocks Aggregations
         block_request = range(task.blocks[0], task.blocks[1] + 1)
         num_blocks = len(block_request)
-        total_data_size = num_blocks * self.blocks_metadata["block_size"]
+        blocks_size = get_blocks_size(task.blocks, self.blocks_metadata)
+
         min_pure_epsilon = compute_utility_curve(
-            task.utility, task.utility_beta, total_data_size, num_blocks
+            task.utility, task.utility_beta, blocks_size, num_blocks
         )
-        sensitivity = 1 / total_data_size
+        sensitivity = 1 / blocks_size
         laplace_scale = sensitivity / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 

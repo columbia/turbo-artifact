@@ -2,6 +2,7 @@ import math
 from precycle.executor import A, R
 from precycle.planner.planner import Planner
 from precycle.utils.compute_utility_curve import compute_utility_curve
+from precycle.utils.utils import get_blocks_size
 
 
 class MinCutsPlanner(Planner):
@@ -13,22 +14,25 @@ class MinCutsPlanner(Planner):
         """For "MinCutsPlanner" a plan has this form: A(R(B1,B2, ... , Bn))"""
 
         # 0 Aggregations
-        num_blocks = task.blocks[1] - task.blocks[0] + 1
-        total_data_size = num_blocks * self.blocks_metadata["block_size"]
+        blocks_size = get_blocks_size(task.blocks, self.blocks_metadata)
         min_pure_epsilon = compute_utility_curve(
-            task.utility, task.utility_beta, total_data_size, 1
+            task.utility, task.utility_beta, blocks_size, 1
         )
-        sensitivity = 1 / total_data_size
+        sensitivity = 1 / blocks_size
         laplace_scale = sensitivity / min_pure_epsilon
         noise_std = math.sqrt(2) * laplace_scale
 
+        print("min pure epsilon", min_pure_epsilon)
+        print("total size", blocks_size)
+        print("sensitivity", sensitivity)
+        print("laplace scale", laplace_scale)
+        print("noise std", noise_std)
+        
         plan = A(
             l=[R(blocks=task.blocks, noise_std=noise_std, cache_type=self.cache_type)]
         )
 
-        cost = 0
-        if self.enable_dp:
-            cost = self.get_cost(plan, task.query_id)
+        cost = self.get_cost(plan, task.query_id)
         if not math.isinf(cost):
             plan.cost = cost
             return plan

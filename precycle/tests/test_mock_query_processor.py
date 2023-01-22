@@ -3,11 +3,17 @@ import typer
 from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
+
 from precycle.query_processor import QueryProcessor
 from precycle.psql_connection import MockPSQLConnection
 from precycle.budget_accounant import MockBudgetAccountant
+
 from precycle.cache.deterministic_cache import MockDeterministicCache
 from precycle.cache.probabilistic_cache import MockProbabilisticCache
+
+# from precycle.planner.ilp import ILP
+from precycle.planner.max_cuts_planner import MaxCutsPlanner
+from precycle.planner.min_cuts_planner import MinCutsPlanner
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -67,7 +73,14 @@ def test(
 
     db = MockPSQLConnection(config)
     budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
+    cache_type = f"Mock{config.cache.type}"
+    cache = globals()[cache_type](config)
+    planner = globals()[config.planner.method](
+        cache, budget_accountant, config
+    )
+    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
+    # Initialize Task
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
@@ -80,6 +93,9 @@ def test(
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
     print(requested_blocks)
 
+    utility=0.05
+    utility_beta=0.00001
+
     task = Task(
         id=0,
         query_id=0,
@@ -87,16 +103,10 @@ def test(
         query=query_vector,
         blocks=requested_blocks,
         n_blocks=num_requested_blocks,
-        utility=100,
-        utility_beta=0.0001,
+        utility=utility,
+        utility_beta=utility_beta,
         name=0,
     )
-
-    cache = globals()[config.cache.type](config)
-    planner = globals()[config.planner.method](
-        cache, budget_accountant, config
-    )
-    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     run_metadata = query_processor.try_run_task(task)
     print(run_metadata)

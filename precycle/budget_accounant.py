@@ -45,7 +45,6 @@ class BudgetAccountant:
     def can_run(self, blocks, run_budget):
         for block in range(blocks[0], blocks[1] + 1):
             budget = self.get_block_budget(block)
-            print(budget)
             if not budget.can_allocate(run_budget):
                 return False
         return True
@@ -86,7 +85,6 @@ class MockBudgetAccountant:
             epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
         )
         self.update_block_budget(block, budget)
-        print(self.kv_store)
 
     def get_block_budget(self, block):
         """Returns the remaining block budget"""
@@ -100,7 +98,6 @@ class MockBudgetAccountant:
     def can_run(self, blocks, run_budget):
         for block in range(blocks[0], blocks[1] + 1):
             budget = self.get_block_budget(block)
-            print(budget)
             if not budget.can_allocate(run_budget):
                 return False
         return True

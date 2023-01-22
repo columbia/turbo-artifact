@@ -2,6 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 from precycle.cache.deterministic_cache import CacheEntry
+from precycle.utils.utils import get_blocks_size
 
 
 class R:
@@ -24,9 +25,10 @@ class A:
 
 
 class Executor:
-    def __init__(self, cache, db) -> None:
+    def __init__(self, cache, db, config) -> None:
         self.db = db
         self.cache = cache
+        self.config = config
 
     def execute_plan(self, plan, task) -> Tuple[float, Dict]:
         """
@@ -39,11 +41,11 @@ class Executor:
 
         results = []
         for run_op in plan.l:
-            if run_op.cache_type == "deterministic":
+            if run_op.cache_type == "DeterministicCache":
                 result, blocks_size, run_budget, run_metadata = self.run_deterministic(
                     run_op, task.query_id, task.query, run_metadata
                 )
-            elif run_op.cache_type == "probabilistic":
+            elif run_op.cache_type == "ProbabilisticCache":
                 result, blocks_size, run_budget, run_metadata = self.run_probabilistic(
                     run_op, task.query_id, task.query, run_metadata
                 )
@@ -58,6 +60,9 @@ class Executor:
         
 
     def run_deterministic(self, run_op, query_id, query, run_metadata):
+        sensitivity = 1 / get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+
+        
         # Check for the entry inside the cache
         cache_entry = self.cache.get_entry(query_id, run_op.blocks)
 
@@ -66,7 +71,7 @@ class Executor:
             true_result, blocks_size = self.db.run_query(query, run_op.blocks)
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
-            run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+            run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
             noise = np.random.laplace(scale=laplace_scale)
 
         else:  # Cached
@@ -81,7 +86,7 @@ class Executor:
                 # if not self.variance_reduction:
                 # Just compute from scratch and pay for it
                 laplace_scale = run_op.noise_std / np.sqrt(2)
-                run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+                run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                 noise = np.random.laplace(scale=laplace_scale)
                 # else:
                 #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
@@ -101,7 +106,7 @@ class Executor:
                 #     # Get some fresh noise with optimal variance and take a linear combination with the old noise
                 #     laplace_scale = y / np.sqrt(2)
                 #     fresh_noise = np.random.laplace(scale=laplace_scale)
-                #     run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+                #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                 #     noise = a * noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache

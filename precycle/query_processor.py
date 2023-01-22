@@ -3,14 +3,10 @@ from loguru import logger
 from termcolor import colored
 from typing import Dict, Optional
 from collections import defaultdict
-from precycle.utils.utils import mlflow_log
 
+from precycle.utils.utils import mlflow_log
 from precycle.task import Task
 from precycle.executor import Executor
-
-# from precycle.planner.ilp import ILP
-from precycle.planner.max_cuts_planner import MaxCutsPlanner
-from precycle.planner.min_cuts_planner import MinCutsPlanner
 
 
 FAILED = "failed"
@@ -36,11 +32,10 @@ class QueryProcessor:
         self.cache = cache
         self.planner = planner
         self.budget_accountant = budget_accountant
-        self.executor = Executor(self.cache, self.db)
+        self.executor = Executor(self.cache, self.db, config)
 
         self.tasks_info = TasksInfo()
 
-    # Call the planner, cache, executes linear query. Returns None if the query can't run.
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
         Try to run the task. If it can run, returns a metadata dict. Otherwise, returns None.

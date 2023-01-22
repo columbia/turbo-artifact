@@ -1,6 +1,7 @@
 import ast
 import json
 import socket
+from loguru import logger
 from precycle.task import Task
 
 
@@ -25,7 +26,7 @@ class TasksServer:
             while True:
                 conn, addr = s.accept()
                 with conn:
-                    print(f"Connected by {addr}")
+                    logger.info(f"Connected by {addr}")
                     # Simple blocking connection # TODO: allow for multiple connections
                     data = conn.recv(4096)
                     if not data:
@@ -43,7 +44,7 @@ class TasksServer:
         num_blocks = self.budget_accountant.get_blocks_count()
 
         if num_requested_blocks > num_blocks:
-            print("return an error")
+            logger.info("return an error")
             return
 
         # Latest Blocks first

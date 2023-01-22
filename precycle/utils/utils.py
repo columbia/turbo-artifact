@@ -1,15 +1,5 @@
-import json
-import uuid
-from collections import namedtuple
-from datetime import datetime
 from pathlib import Path
-import numpy as np
 import mlflow
-import pandas as pd
-from omegaconf import OmegaConf
-
-# from precycle.query_processor import ALLOCATED
-
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -30,6 +20,24 @@ def mlflow_log(key, value, step):
             value,
             step=step,
         )
+
+def get_blocks_size(blocks, blocks_metadata):
+
+    if isinstance(blocks, tuple):
+        num_blocks = blocks[1]-blocks[0]+1
+        if "block_size" in blocks_metadata:
+            # All blocks have the same size
+            n = num_blocks * blocks_metadata['block_size']
+        else:
+            n = sum(
+                [
+                    float(blocks_metadata["blocks"][str(id)]["size"])
+                    for id in range(blocks[0], blocks[1] + 1)
+                ]
+            )
+        return n
+    else:
+        return float(blocks_metadata["blocks"][str(blocks)]["size"])
 
 
 # def sample_one_from_string(stochastic_string: str) -> float:

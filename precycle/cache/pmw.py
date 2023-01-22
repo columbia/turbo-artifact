@@ -2,16 +2,16 @@ import torch
 import numpy as np
 from loguru import logger
 
-from budget import Budget
-from budget.histogram import DenseHistogram
-from budget.curves import (
+from precycle.budget import Budget
+from precycle.budget.histogram import DenseHistogram
+from precycle.budget.curves import (
     BoundedOneShotSVT,
     GaussianCurve,
     LaplaceCurve,
     PureDPtoRDP,
     ZeroCurve,
 )
-from utils.utils import mlflow_log
+from precycle.utils.utils import mlflow_log, get_blocks_size
 from precycle.tesnor_converter import TensorConverter
 
 
@@ -41,15 +41,7 @@ class PMW:
 
         # Generic PMW arguments
         # Assuming all blocks have the same size for now
-        num_blocks = blocks[1]-blocks[0]+1
-        self.n = num_blocks * blocks_metadata['block_size']
-        
-        # self.n = sum(
-        #     [
-        #         float(blocks_metadata["blocks"][str(id)]["size"])
-        #         for id in range(blocks[0], blocks[1] + 1)
-        #     ]
-        # )
+        self.n = get_blocks_size(blocks, blocks_metadata)
         self.M = float(blocks_metadata["domain_size"])
         self.k = k  # max_total_queries
         self.queries_ran = 0

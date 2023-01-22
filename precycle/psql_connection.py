@@ -4,8 +4,8 @@ from collections import namedtuple
 from precycle.budget import SparseHistogram
 from precycle.sql_converter import SQLConverter
 from precycle.tesnor_converter import TensorConverter
-
-
+from precycle.utils.utils import get_blocks_size
+from loguru import logger
 class PSQLConnection:
     def __init__(self, config) -> None:
         self.config = config
@@ -21,7 +21,7 @@ class PSQLConnection:
                 password=config.postgres.password,
             )
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            logger.info(error)
             exit(1)
 
     def add_new_block(self, block_data_path):
@@ -39,7 +39,7 @@ class PSQLConnection:
             self.psql_conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:
             status = b"failed"
-            print(error)
+            logger.info(error)
         return status
 
     def run_query(self, query, blocks):
@@ -50,11 +50,10 @@ class PSQLConnection:
             true_result = float(cur.fetchone()[0])
             cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            logger.info(error)
             exit(1)
 
-        num_blocks = blocks[1]-blocks[0]+1
-        blocks_size = num_blocks * self.config.blocks_metadata['block_size']
+        blocks_size = get_blocks_size(blocks, self.config.blocks_metadata)
         true_result /= blocks_size
         print("result:", true_result, "total-size:", blocks_size)
         return true_result, blocks_size
@@ -62,7 +61,7 @@ class PSQLConnection:
     def close(self):
         if self.psql_conn is not None:
             self.psql_conn.close()
-            print("Database connection closed.")
+            logger.info("Database connection closed.")
 
 
 Block = namedtuple("Block", ["size", "histogram"])
@@ -83,14 +82,14 @@ class MockPSQLConnection:
         self.domain_size = float(self.config.blocks_metadata["domain_size"])
 
     def add_new_block(self, block_data_path):
-        raw_data = pd.read_csv(block_data_path)
+        raw_data = pd.read_csv(block_data_path).drop(columns=['time'])
         histogram_data = SparseHistogram.from_dataframe(
             raw_data, self.attributes_domain_sizes
         )
-        #float(self.config.blocks_metadata["blocks"][str(block_id)]["size"])
-        block_size = self.config.blocks_metadata['block_size'] 
+        block_id = self.blocks_count
+        block_size = get_blocks_size(block_id, self.config.blocks_metadata)
         block = Block(block_size, histogram_data)
-        self.blocks[self.blocks_count] = block
+        self.blocks[block_id] = block
         self.blocks_count += 1
 
     def run_query(self, query, blocks):
@@ -102,7 +101,7 @@ class MockPSQLConnection:
             true_result += block.size * block.histogram.run(tensor_query)
             blocks_size += block.size
         true_result /= blocks_size
-        print("result:", true_result, "total-size:", blocks_size)
+        print("true result:", true_result, "total-size:", blocks_size)
         return true_result, blocks_size
 
     def close(self):

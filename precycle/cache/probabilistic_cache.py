@@ -1,10 +1,9 @@
-from cache.pmw import PMW
-from cache.cache import Cache
+from precycle.cache.pmw import PMW
+from precycle.cache.cache import Cache
 
 
 class MockProbabilisticCache(Cache):
     def __init__(self, config):
-
         self.key_values = {}
         self.pmw_args = config.cache.pmw_cfg
         self.pmw_args["blocks_metadata"] = config.blocks_metadata

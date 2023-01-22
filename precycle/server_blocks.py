@@ -1,5 +1,5 @@
 import socket
-
+from loguru import logger
 
 class BlocksServer:
 
@@ -19,7 +19,7 @@ class BlocksServer:
             while True:
                 conn, addr = s.accept()
                 with conn:
-                    print(f"Connected by {addr}")
+                    logger.info(f"Connected by {addr}")
                     try:
                         # Simple blocking connection # TODO: allow for multiple connections
                         data = conn.recv(1024)
@@ -28,7 +28,7 @@ class BlocksServer:
                         response = self.serve_request(data.decode())
                         conn.sendall(response)
                     except (Exception) as error:
-                        print(error)
+                        logger.info(error)
                         exit(1)
 
     def serve_request(self, block_data_path):
@@ -41,6 +41,6 @@ class BlocksServer:
             self.budget_accountant.add_new_block_budget()
         except (Exception) as error:
             status = b"fail"
-            print(error)
+            logger.info(error)
             exit(1)
         return status

@@ -3,6 +3,7 @@ import math
 import redis
 from precycle.cache.cache import Cache
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
+from precycle.utils.utils import get_blocks_size
 
 
 class CacheEntry:
@@ -37,6 +38,7 @@ class DeterministicCache(Cache):
             return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
         return None
 
+
     def estimate_run_budget(self, query_id, blocks, noise_std):
         """
         Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
@@ -49,7 +51,9 @@ class DeterministicCache(Cache):
 
         # TODO: re-enable variance reduction
         laplace_scale = noise_std / math.sqrt(2)
-        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+        # Budget doesn't care about sensitivity
+        sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
         return run_budget
 
     def dump(self):
@@ -59,6 +63,7 @@ class DeterministicCache(Cache):
 class MockDeterministicCache(Cache):
     def __init__(self, config):
         # key-value store is just an in-memory dictionary
+        self.config = config
         self.kv_store = {}
 
     def add_entry(self, query_id, blocks, cache_entry):
@@ -88,7 +93,10 @@ class MockDeterministicCache(Cache):
 
         # TODO: re-enable variance reduction
         laplace_scale = noise_std / math.sqrt(2)
-        run_budget = LaplaceCurve(laplace_noise=laplace_scale)
+        # Budget doesn't care about sensitivity
+        sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
+        run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+        print("run budget", run_budget)
         return run_budget
 
     def dump(self):
