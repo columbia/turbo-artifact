@@ -1,11 +1,16 @@
+import json
 import typer
-from omegaconf import OmegaConf
+from loguru import logger
 from precycle.task import Task
+from omegaconf import OmegaConf
 from precycle.query_processor import QueryProcessor
-from precycle.sql_converter import SQLConverter
 from precycle.cache.deterministic_cache import DeterministicCache
 from precycle.budget_accounant import BudgetAccountant
 from precycle.psql_connection import PSQLConnection
+
+# from precycle.planner.ilp import ILP
+from precycle.planner.max_cuts_planner import MaxCutsPlanner
+from precycle.planner.min_cuts_planner import MinCutsPlanner
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -19,6 +24,14 @@ def test(
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
     omegaconf = OmegaConf.create(omegaconf)
     config = OmegaConf.merge(default_config, omegaconf)
+
+    try:
+        with open(config.blocks.block_metadata_path) as f:
+            blocks_metadata = json.load(f)
+    except NameError:
+        logger.error("Dataset metadata must have be created first..")
+    assert blocks_metadata is not None
+    config.update({"blocks_metadata": blocks_metadata})
 
     query_vector = [
         [0, 0, 0, 0],
@@ -54,14 +67,31 @@ def test(
         [0, 0, 3, 6],
         [0, 0, 3, 7],
     ]
+    
+    db = PSQLConnection(config)
+    budget_accountant = BudgetAccountant(config=config.budget_accountant)
+    cache_type = f"Mock{config.cache.type}"
+    cache = globals()[cache_type](config)
+    planner = globals()[config.planner.method](
+        cache, budget_accountant, config
+    )
+    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
+
+    # Initialize Task
+    block_data_path = config.blocks.block_data_path + "/block_0.csv"
+    db.add_new_block(block_data_path)
+    budget_accountant.add_new_block_budget()
 
     num_requested_blocks = 1
-    budget_accountant = BudgetAccountant(config=config.budget_accountant)
     num_blocks = budget_accountant.get_blocks_count()
+    assert num_blocks > 0
 
     # Latest Blocks first
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
     print(requested_blocks)
+
+    utility=0.05
+    utility_beta=0.00001
 
     task = Task(
         id=0,
@@ -70,14 +100,11 @@ def test(
         query=query_vector,
         blocks=requested_blocks,
         n_blocks=num_requested_blocks,
-        utility=100,
-        utility_beta=0.0001,
+        utility=utility,
+        utility_beta=utility_beta,
         name=0,
     )
-    db = PSQLConnection(config)
-    cache = DeterministicCache(config.cache)
 
-    query_processor = QueryProcessor(db, cache, budget_accountant, config)
     run_metadata = query_processor.try_run_task(task)
     print(run_metadata)
 

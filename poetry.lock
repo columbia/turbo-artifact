@@ -928,6 +928,14 @@ plots = ["ipython", "matplotlib"]
 test = ["catboost", "lightgbm", "opencv-python", "pyod", "pyspark", "pytest", "pytest-cov", "pytest-mpl", "sentencepiece", "torch", "transformers", "xgboost"]
 
 [[package]]
+name = "simpy"
+version = "4.0.1"
+description = "Event discrete, process based simulation for Python."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -1208,7 +1216,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "a627d5140db7ba3931b1fb61fa1cb0f1a7346493ec71f3d7af23ac977f52ea32"
+content-hash = "41fbb050d3c3ce8851a69584ded8f4ef251bc4db9ef9489754c00f2c2e224573"
 
 [metadata.files]
 alembic = [
@@ -2182,6 +2190,10 @@ shap = [
     {file = "shap-0.41.0-cp39-cp39-win32.whl", hash = "sha256:2736eb55633d1fe95d091c54edde220fc30ba0a6f99cdf985337f19fd9eff8bd"},
     {file = "shap-0.41.0-cp39-cp39-win_amd64.whl", hash = "sha256:c7afe5d5e3547e4392bc43f47dc2b6cef2a4a8b366bd7ef8495736af7013c8e7"},
     {file = "shap-0.41.0.tar.gz", hash = "sha256:a49ea4d65aadbc845a695fa3d7ea0bdfc8c928b8e213b0feedf5868ade4b3ca5"},
+]
+simpy = [
+    {file = "simpy-4.0.1-py2.py3-none-any.whl", hash = "sha256:6c90c105628a5b4c9c3ee822b45b9980c60d3126b99295b616bb72cd69b6a35e"},
+    {file = "simpy-4.0.1.tar.gz", hash = "sha256:b36542e2faab612f861c5ef4da17220ac1553f5892b3583c67281dbe4faad404"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},

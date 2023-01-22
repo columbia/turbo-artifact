@@ -10,7 +10,7 @@ class BudgetAccountantKey:
 
 class BudgetAccountant:
     def __init__(self, config) -> None:
-        self.config = config
+        self.config = config.budget_accountant
         self.kv_store = redis.Redis(host=config.host, port=config.port, db=0)
         self.epsilon = float(self.config.epsilon)
         self.delta = float(self.config.delta)
@@ -63,7 +63,7 @@ class BudgetAccountant:
 
 class MockBudgetAccountant:
     def __init__(self, config) -> None:
-        self.config = config
+        self.config = config.budget_accountant
         # key-value store is just an in-memory dictionary
         self.kv_store = {}
         self.epsilon = float(self.config.epsilon)

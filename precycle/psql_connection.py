@@ -1,11 +1,13 @@
 import psycopg2
 import pandas as pd
+from loguru import logger
 from collections import namedtuple
 from precycle.budget import SparseHistogram
 from precycle.sql_converter import SQLConverter
 from precycle.tesnor_converter import TensorConverter
 from precycle.utils.utils import get_blocks_size
-from loguru import logger
+
+
 class PSQLConnection:
     def __init__(self, config) -> None:
         self.config = config

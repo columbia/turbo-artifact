@@ -72,7 +72,7 @@ def test(
     ]
 
     db = MockPSQLConnection(config)
-    budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
+    budget_accountant = MockBudgetAccountant(config)
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
     planner = globals()[config.planner.method](
@@ -80,12 +80,17 @@ def test(
     )
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
-    # Initialize Task
+    # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
+    
+    block_data_path = config.blocks.block_data_path + "/block_1.csv"
+    db.add_new_block(block_data_path)
+    budget_accountant.add_new_block_budget()
 
-    num_requested_blocks = 1
+    # Initialize Task
+    num_requested_blocks = 2
     num_blocks = budget_accountant.get_blocks_count()
     assert num_blocks > 0
 

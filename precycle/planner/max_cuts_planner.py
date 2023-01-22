@@ -21,16 +21,25 @@ class MaxCutsPlanner(Planner):
         min_pure_epsilon = compute_utility_curve(
             task.utility, task.utility_beta, blocks_size, num_blocks
         )
-        sensitivity = 1 / blocks_size
-        laplace_scale = sensitivity / min_pure_epsilon
-        noise_std = math.sqrt(2) * laplace_scale
 
-        plan = A(
-            l=[
-                R(blocks=(x, x), noise_std=noise_std, cache_type=self.cache_type)
-                for x in block_request
-            ]
-        )
+        run_ops = []
+        for b in block_request:
+            block_size = get_blocks_size(b, self.blocks_metadata)
+            sensitivity = 1 / block_size
+            laplace_scale = sensitivity / min_pure_epsilon
+            noise_std = math.sqrt(2) * laplace_scale
+                        
+            print("\n++++++++++++++++++++++++++++++++++++++++++++")
+            print("min pure epsilon", min_pure_epsilon)
+            print("total size", blocks_size)
+            print("sensitivity", sensitivity)
+            print("laplace scale", laplace_scale)
+            print("noise std", noise_std)
+            print("++++++++++++++++++++++++++++++++++++++++++++\n")
+
+            run_ops += [R(blocks=(b, b), noise_std=noise_std, cache_type=self.cache_type)]
+
+        plan = A(run_ops)
 
         cost = self.get_cost(plan, task.query_id)
         if not math.isinf(cost):

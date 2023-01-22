@@ -2,7 +2,6 @@ import math
 
 
 # def compute_utility_curve(utility, utility_beta, n, k):
-#     # TODO: replace by generic std?
 #     def min_epsilon(u, b, n, k):
 #         return (math.sqrt(8 * k) * math.log(2 / b)) / (n * u)
 #     return min_epsilon(utility, utility_beta, n, k)
