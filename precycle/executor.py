@@ -57,7 +57,6 @@ class Executor:
         if results:
             result = sum(results) / total_size  # Aggregate RunOp operators
         return result, run_budget_per_block, run_metadata
-        
 
     def run_deterministic(self, run_op, query_id, query, run_metadata):
 

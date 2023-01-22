@@ -11,17 +11,23 @@ from omegaconf import OmegaConf
 from precycle.simulator import Blocks, ResourceManager, Tasks
 
 from precycle.query_processor import QueryProcessor
-from precycle.psql_connection import MockPSQLConnection, PSQLConnection
+from precycle.psql import MockPSQL, PSQL
 from precycle.budget_accounant import MockBudgetAccountant, BudgetAccountant
 
-from precycle.cache.deterministic_cache import MockDeterministicCache, DeterministicCache
-from precycle.cache.probabilistic_cache import MockProbabilisticCache
+from precycle.cache.deterministic_cache import (
+    MockDeterministicCache,
+    DeterministicCache,
+)
+from precycle.cache.probabilistic_cache import (
+    MockProbabilisticCache,
+    ProbabilisticCache,
+)
 
 # from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
 
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
+from precycle.utils.utils import DEFAULT_CONFIG_FILE, get_logs
 
 
 app = typer.Typer()
@@ -35,65 +41,64 @@ class Simulator:
         omegaconf = OmegaConf.load(omegaconf)
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
-        config = OmegaConf.merge(default_config, omegaconf)
+        self.config = OmegaConf.merge(default_config, omegaconf)
 
         try:
-            with open(config.blocks.block_metadata_path) as f:
+            with open(self.config.blocks.block_metadata_path) as f:
                 blocks_metadata = json.load(f)
         except NameError:
             logger.error("Dataset metadata must have be created first..")
         assert blocks_metadata is not None
-        config.update({"blocks_metadata": blocks_metadata})
+        self.config.update({"blocks_metadata": blocks_metadata})
 
-        if config.enable_random_seed:
+        if self.config.enable_random_seed:
             random.seed(None)
             np.random.seed(None)
         else:
-            random.seed(config.global_seed)
-            np.random.seed(config.global_seed)
-
+            random.seed(self.config.global_seed)
+            np.random.seed(self.config.global_seed)
 
         # Initialize all components
-        if config.mock:
-            db = MockPSQLConnection(config)
-            budget_accountant = MockBudgetAccountant(config)
-            cache = globals()[f"Mock{config.cache.type}"](config)
+        if self.config.mock:
+            db = MockPSQL(self.config)
+            budget_accountant = MockBudgetAccountant(self.config)
+            cache = globals()[f"Mock{self.config.cache.type}"](self.config)
         else:
-            db = PSQLConnection(config)
-            budget_accountant = BudgetAccountant(config)
-            cache = globals()[config.cache.type](config)
-        
-        planner = globals()[config.planner.method](
-            cache, budget_accountant, config
+            db = PSQL(self.config)
+            budget_accountant = BudgetAccountant(self.config)
+            cache = globals()[self.config.cache.type](self.config)
+
+        planner = globals()[self.config.planner.method](
+            cache, budget_accountant, self.config
         )
-        
-        query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
+
+        query_processor = QueryProcessor(
+            db, cache, planner, budget_accountant, self.config
+        )
 
         # Start the block and tasks consumers
-        self.rm = ResourceManager(self.env, db, budget_accountant, query_processor, config)
+        self.rm = ResourceManager(
+            self.env, db, budget_accountant, query_processor, self.config
+        )
         self.env.process(self.rm.start())
 
         # Start the block and tasks producers
         Blocks(self.env, self.rm)
         Tasks(self.env, self.rm)
 
-
     def run(self):
         self.env.run()
 
-        # Rough estimate of the scheduler's performance
-        # logs = get_logs(
-        #     self.rm.scheduler.task_queue.tasks
-        #     + list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
-        #     self.rm.scheduler.blocks,
-        #     self.rm.scheduler.tasks_info,
-        #     # list(self.rm.scheduler.tasks_info.allocated_tasks.keys()),
-        #     self.omegaconf,
-        #     scheduling_time=simulation_duration,
-        #     scheduling_queue_info=self.rm.scheduler.scheduling_queue_info
-        #     if hasattr(self.rm.scheduler, "scheduling_queue_info")
-        #     else None,
-        # )
+        logs = {}
+        logs["tasks_info"] = self.rm.query_processor.tasks_info
+        logs["block_budgets_info"] = self.budget_accountant.get_all_block_budgets()
+        logs["config"] = self.config
+        # Get logs
+        logs = get_logs(
+            +list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
+            self.rm.scheduler.blocks,
+            self.config,
+        )
         return
 
 

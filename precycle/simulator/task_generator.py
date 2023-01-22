@@ -20,9 +20,9 @@ class TaskGenerator:
 
         query_id = int(task_row["query_id"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
-        num_requested_blocks = int(task_row["n_blocks"])        
+        num_requested_blocks = int(task_row["n_blocks"])
         requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
-        
+
         task = Task(
             id=task_id,
             query_id=query_id,

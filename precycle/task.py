@@ -28,7 +28,7 @@ class Task:
         d = {
             "id": self.id,
             "query_id": self.query_id,
-            "query": self.query,
+            # "query": self.query,
             "blocks": self.blocks,
             "n_blocks": self.n_blocks,
             "utility": self.utility,

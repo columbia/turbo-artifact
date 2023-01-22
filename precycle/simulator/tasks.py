@@ -27,9 +27,7 @@ class Tasks:
         else:
             logger.info("Poisson sampling.")
             self.task_generator = PoissonTaskGenerator(
-                self.tasks_df,
-                self.config.tasks.avg_num_tasks_per_block,
-                self.config
+                self.tasks_df, self.config.tasks.avg_num_tasks_per_block, self.config
             )
 
         self.env.process(self.task_producer())
@@ -50,8 +48,7 @@ class Tasks:
         while not self.resource_manager.task_production_terminated.triggered:
             task_id = next(self.task_count)
             if (
-                self.config.tasks.max_num
-                and task_id > self.config.tasks.max_num - 1
+                self.config.tasks.max_num and task_id > self.config.tasks.max_num - 1
             ) or (
                 not self.config.tasks.max_num
                 and self.resource_manager.block_production_terminated.triggered
@@ -63,14 +60,14 @@ class Tasks:
                 self.resource_manager.new_tasks_queue.put(LastItem())
                 break
 
-            
-
             # No task can arrive after the end of the simulation
             # so we force them to appear right before the end of the last block
             if self.resource_manager.block_production_terminated.triggered:
                 task_arrival_interval = 0
             else:
-                task_arrival_interval = self.task_generator.get_task_arrival_interval_time()
+                task_arrival_interval = (
+                    self.task_generator.get_task_arrival_interval_time()
+                )
 
             self.env.process(self.task(task_id))
             yield self.env.timeout(task_arrival_interval)

@@ -2,6 +2,11 @@ from precycle.cache.pmw import PMW
 from precycle.cache.cache import Cache
 
 
+class ProbabilisticCache(Cache):
+    def __init__(self, config):
+        raise NotImplementedError
+
+
 class MockProbabilisticCache(Cache):
     def __init__(self, config):
         self.key_values = {}

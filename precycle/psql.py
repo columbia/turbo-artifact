@@ -8,7 +8,7 @@ from precycle.tesnor_converter import TensorConverter
 from precycle.utils.utils import get_blocks_size
 
 
-class PSQLConnection:
+class PSQL:
     def __init__(self, config) -> None:
         self.config = config
         self.sql_converter = SQLConverter(config.blocks_metadata)
@@ -69,7 +69,7 @@ class PSQLConnection:
 Block = namedtuple("Block", ["size", "histogram"])
 
 
-class MockPSQLConnection:
+class MockPSQL:
     def __init__(self, config) -> None:
         self.config = config
         self.tensor_convertor = TensorConverter(config.blocks_metadata)
@@ -84,7 +84,7 @@ class MockPSQLConnection:
         self.domain_size = float(self.config.blocks_metadata["domain_size"])
 
     def add_new_block(self, block_data_path):
-        raw_data = pd.read_csv(block_data_path).drop(columns=['time'])
+        raw_data = pd.read_csv(block_data_path).drop(columns=["time"])
         histogram_data = SparseHistogram.from_dataframe(
             raw_data, self.attributes_domain_sizes
         )

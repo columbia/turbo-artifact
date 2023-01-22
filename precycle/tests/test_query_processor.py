@@ -6,11 +6,12 @@ from omegaconf import OmegaConf
 from precycle.query_processor import QueryProcessor
 from precycle.cache.deterministic_cache import DeterministicCache
 from precycle.budget_accounant import BudgetAccountant
-from precycle.psql_connection import PSQLConnection
+from precycle.psql import PSQL
 
 # from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
+
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -67,14 +68,12 @@ def test(
         [0, 0, 3, 6],
         [0, 0, 3, 7],
     ]
-    
-    db = PSQLConnection(config)
+
+    db = PSQL(config)
     budget_accountant = BudgetAccountant(config=config.budget_accountant)
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
-    planner = globals()[config.planner.method](
-        cache, budget_accountant, config
-    )
+    planner = globals()[config.planner.method](cache, budget_accountant, config)
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Initialize Task
@@ -90,8 +89,8 @@ def test(
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
     print(requested_blocks)
 
-    utility=0.05
-    utility_beta=0.00001
+    utility = 0.05
+    utility_beta = 0.00001
 
     task = Task(
         id=0,

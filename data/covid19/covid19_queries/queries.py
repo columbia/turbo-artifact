@@ -15,6 +15,7 @@ def powerset(iter):
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
+
 def create_all_queries(queries_path, attributes_domain_sizes):
     queries = []
     attr_values = []

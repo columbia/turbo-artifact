@@ -1,10 +1,5 @@
 class Planner:
-    def __init__(
-        self,
-        cache,
-        budget_accountant,
-        config
-    ):
+    def __init__(self, cache, budget_accountant, config):
         self.cache = cache
         self.budget_accountant = budget_accountant
         self.cache_type = config.cache.type

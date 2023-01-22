@@ -15,7 +15,6 @@ from precycle.utils.utils import mlflow_log, get_blocks_size
 from precycle.tesnor_converter import TensorConverter
 
 
-
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
 class PMW:
     def __init__(
@@ -206,8 +205,6 @@ class PMW:
             output *= self.n
 
         return output, run_budget, run_metadata
-
-
 
     def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)

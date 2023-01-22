@@ -65,7 +65,7 @@
     "logs": {
         "verbose": false,
         "save": true,
-        "mlflow": true,
+        "mlflow": false,
         "loguru_level": "INFO"
     }
 }

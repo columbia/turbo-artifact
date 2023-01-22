@@ -1,6 +1,7 @@
 import socket
 from loguru import logger
 
+
 class BlocksServer:
 
     """Entrypoint for adding new blocks in Postgres and the 'budget_accountant' KV store."""

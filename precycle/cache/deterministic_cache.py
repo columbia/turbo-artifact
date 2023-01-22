@@ -38,7 +38,6 @@ class DeterministicCache(Cache):
             return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
         return None
 
-
     def estimate_run_budget(self, query_id, blocks, noise_std):
         """
         Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'

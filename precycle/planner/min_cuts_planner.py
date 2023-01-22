@@ -29,7 +29,7 @@ class MinCutsPlanner(Planner):
         print("laplace scale", laplace_scale)
         print("noise std", noise_std)
         print("++++++++++++++++++++++++++++++++++++++++++++\n")
-        
+
         plan = A(
             l=[R(blocks=task.blocks, noise_std=noise_std, cache_type=self.cache_type)]
         )

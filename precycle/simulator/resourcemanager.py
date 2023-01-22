@@ -2,6 +2,7 @@ import simpy
 from loguru import logger
 import time
 
+
 class LastItem:
     def __init__(self):
         return
@@ -33,13 +34,11 @@ class ResourceManager:
         self.block_consumption_terminated = self.env.event()
         self.task_consumption_terminated = self.env.event()
 
-
     def start(self):
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
         self.daemon_clock = self.env.process(self.daemon_clock())
         yield self.env.process(self.termination_clock())
-
 
     def termination_clock(self):
         yield self.block_production_terminated
@@ -57,12 +56,13 @@ class ResourceManager:
             except simpy.Interrupt as i:
                 return
 
-
     def block_consumer(self):
         def consume():
             item = yield self.new_blocks_queue.get()
             block_id, generated_block_event = item
-            block_data_path = self.config.blocks.block_data_path + f"/block_{block_id}.csv"
+            block_data_path = (
+                self.config.blocks.block_data_path + f"/block_{block_id}.csv"
+            )
             self.db.add_new_block(block_data_path)
             self.budget_accountant.add_new_block_budget()
             generated_block_event.succeed()

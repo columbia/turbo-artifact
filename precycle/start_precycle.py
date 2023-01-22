@@ -5,19 +5,18 @@ import typer
 from loguru import logger
 from omegaconf import OmegaConf
 
-from precycle.utils.utils import DEFAULT_CONFIG_FILE
-
 from precycle.server_tasks import TasksServer
 from precycle.server_blocks import BlocksServer
 from precycle.query_processor import QueryProcessor
-from precycle.psql_connection import PSQLConnection, MockPSQLConnection
+from precycle.psql import PSQL, MockPSQL
 from precycle.budget_accounant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.deterministic_cache import (
     DeterministicCache,
     MockDeterministicCache,
 )
 
-# from precycle.cache.probabilistic_cache import ProbabilisticCache
+from precycle.utils.utils import DEFAULT_CONFIG_FILE
+
 
 app = typer.Typer()
 
@@ -29,11 +28,11 @@ def precycle(custom_config):
     print(config)
 
     if config.mock:
-        db = MockPSQLConnection(config)
+        db = MockPSQL(config)
         cache = MockDeterministicCache(config.cache)
         budget_accountant = MockBudgetAccountant(config=config.budget_accountant)
     else:
-        db = PSQLConnection(config)
+        db = PSQL(config)
         cache = DeterministicCache(config.cache)
         budget_accountant = BudgetAccountant(config=config.budget_accountant)
 
@@ -42,7 +41,7 @@ def precycle(custom_config):
 
     # TODO: make it  non blocking
     BlocksServer(db, budget_accountant, config.blocks_server).run()
-    # TasksServer(query_processor, budget_accountant, config.tasks_server).run()
+    TasksServer(query_processor, budget_accountant, config.tasks_server).run()
 
 
 @app.command()

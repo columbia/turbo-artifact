@@ -28,7 +28,7 @@ class MaxCutsPlanner(Planner):
             sensitivity = 1 / block_size
             laplace_scale = sensitivity / min_pure_epsilon
             noise_std = math.sqrt(2) * laplace_scale
-                        
+
             print("\n++++++++++++++++++++++++++++++++++++++++++++")
             print("min pure epsilon", min_pure_epsilon)
             print("total size", blocks_size)
@@ -37,7 +37,9 @@ class MaxCutsPlanner(Planner):
             print("noise std", noise_std)
             print("++++++++++++++++++++++++++++++++++++++++++++\n")
 
-            run_ops += [R(blocks=(b, b), noise_std=noise_std, cache_type=self.cache_type)]
+            run_ops += [
+                R(blocks=(b, b), noise_std=noise_std, cache_type=self.cache_type)
+            ]
 
         plan = A(run_ops)
 

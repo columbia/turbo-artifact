@@ -5,7 +5,7 @@ from precycle.task import Task
 from omegaconf import OmegaConf
 
 from precycle.query_processor import QueryProcessor
-from precycle.psql_connection import MockPSQLConnection
+from precycle.psql import MockPSQL
 from precycle.budget_accounant import MockBudgetAccountant
 
 from precycle.cache.deterministic_cache import MockDeterministicCache
@@ -14,6 +14,7 @@ from precycle.cache.probabilistic_cache import MockProbabilisticCache
 # from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
+
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 test = typer.Typer()
@@ -71,20 +72,18 @@ def test(
         [0, 0, 3, 7],
     ]
 
-    db = MockPSQLConnection(config)
+    db = MockPSQL(config)
     budget_accountant = MockBudgetAccountant(config)
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
-    planner = globals()[config.planner.method](
-        cache, budget_accountant, config
-    )
+    planner = globals()[config.planner.method](cache, budget_accountant, config)
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
-    
+
     block_data_path = config.blocks.block_data_path + "/block_1.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
@@ -98,8 +97,8 @@ def test(
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
     print(requested_blocks)
 
-    utility=0.05
-    utility_beta=0.00001
+    utility = 0.05
+    utility_beta = 0.00001
 
     task = Task(
         id=0,

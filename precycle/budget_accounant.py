@@ -42,6 +42,9 @@ class BudgetAccountant:
         budget = RenyiBudget.from_epsilon_list(epsilons, alphas)
         return budget
 
+    def get_all_block_budgets(self):
+        raise NotImplementedError
+
     def can_run(self, blocks, run_budget):
         for block in range(blocks[0], blocks[1] + 1):
             budget = self.get_block_budget(block)
@@ -87,13 +90,16 @@ class MockBudgetAccountant:
         self.update_block_budget(block, budget)
 
     def get_block_budget(self, block):
-        """Returns the remaining block budget"""
+        """Returns the remaining budget of block"""
         key = BudgetAccountantKey(block).key
         if key in self.kv_store:
             budget = self.kv_store[key]
             return budget
         logger.info(f"Block {block} does not exist")
         return None
+
+    def get_all_block_budgets(self):
+        return self.kv_store.items()
 
     def can_run(self, blocks, run_budget):
         for block in range(blocks[0], blocks[1] + 1):
