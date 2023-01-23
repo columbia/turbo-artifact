@@ -6,7 +6,7 @@ from omegaconf import OmegaConf
 
 from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
-from precycle.budget_accounant import MockBudgetAccountant
+from precycle.budget_accountant import MockBudgetAccountant
 
 from precycle.cache.deterministic_cache import MockDeterministicCache
 from precycle.cache.probabilistic_cache import MockProbabilisticCache

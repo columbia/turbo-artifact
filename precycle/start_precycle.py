@@ -9,7 +9,7 @@ from precycle.server_tasks import TasksServer
 from precycle.server_blocks import BlocksServer
 from precycle.query_processor import QueryProcessor
 from precycle.psql import PSQL, MockPSQL
-from precycle.budget_accounant import BudgetAccountant, MockBudgetAccountant
+from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.deterministic_cache import (
     DeterministicCache,
     MockDeterministicCache,

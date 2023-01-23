@@ -12,7 +12,7 @@ from precycle.simulator import Blocks, ResourceManager, Tasks
 
 from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL, PSQL
-from precycle.budget_accounant import MockBudgetAccountant, BudgetAccountant
+from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
 
 from precycle.cache.deterministic_cache import (
     MockDeterministicCache,

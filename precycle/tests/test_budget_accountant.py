@@ -1,6 +1,6 @@
 import typer
 from omegaconf import OmegaConf
-from precycle.budget_accounant import BudgetAccountant
+from precycle.budget_accountant import BudgetAccountant
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
 app = typer.Typer()
