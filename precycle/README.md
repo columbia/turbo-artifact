@@ -17,4 +17,4 @@
 - `run_simulation.py`: Entrypoint for running precycle in a simulation.
 - `precycle.json`: configuration file to setup the precycle execution. Contains configuration for the simulation as well. 
 
-To run everything using the mock modules set the flag "mock": true.
+To run everything using the mock modules set the flag `"mock": true`.
