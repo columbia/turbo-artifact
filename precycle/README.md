@@ -2,9 +2,9 @@
 
 - `budget`: various implementations for the privacy budget
 - `task.py`: the Task specification
-- `cache`: deterministic / probabilistic caches for storing results. Implemented as Redis key-value stores. There are 'Mock' versions for both with simple in-memory dictionaries for key-value stores.
+- `cache`: deterministic / probabilistic caches for storing results. Implemented as Redis key-value stores. There are 'Mock' versions for both where the key value stores are implemented as simple in-memory dictionaries.
 - `planner`: max_cuts / min_cuts / ILP - our three versions of the planner
-- `budget_accountant.py`: Redis key-value store for storing the budgets of blocks. There is a 'Mock' version with a simple in-memory dictionary for the key-value store.
+- `budget_accountant.py`: Redis key-value store for storing the budgets of blocks. There is a 'Mock' version where the key value store is implemented as a simple in-memory dictionary.
 - `psql`: An API for storing block data to TimeScaleDB using and running SQL queries using a PSQL client.  There is a 'Mock' version that stores block data in a in-memory dictionary as "histograms" instead, and runs queries using tensor operations.
 - `server_blocks.py`: a Blocks Server listening to a socket for new requests for adding block data (both in TimeScaleDB and in the budget_accountant).
 - `server_tasks.py`: a Tasks Server listening to a socket for new requests for running a query.
