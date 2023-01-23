@@ -1,14 +1,35 @@
 import json
 import math
+import uuid
 import mlflow
 from pathlib import Path
-from omegaconf import OmegaConf
+from datetime import datetime
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
 LOGS_PATH = REPO_ROOT.joinpath("logs")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
 DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.yaml")
+
+FAILED = "failed"
+PENDING = "pending"
+SUCCESS = "success"
+
+
+class QueryPool:
+    def __init__(self, attribute_domain_sizes, queries_path) -> None:
+        self.attribute_domain_sizes = attribute_domain_sizes
+        self.domain_size = math.prod(attribute_domain_sizes)
+        self.queries = None
+        with open(queries_path) as f:
+            self.queries = json.load(f)
+
+    def get_query(self, query_id: int):
+        query_id_str = str(query_id)
+        if query_id_str in self.queries:
+            query_vector = self.queries[query_id_str]
+        assert query_vector is not None
+        return query_vector
 
 
 def mlflow_log(key, value, step):
@@ -39,54 +60,6 @@ def get_blocks_size(blocks, blocks_metadata):
         return float(blocks_metadata["blocks"][str(blocks)]["size"])
 
 
-class QueryPool:
-    def __init__(self, attribute_domain_sizes, queries_path) -> None:
-        self.attribute_domain_sizes = attribute_domain_sizes
-        self.domain_size = math.prod(attribute_domain_sizes)
-        self.queries = None
-        with open(queries_path) as f:
-            self.queries = json.load(f)
-
-    def get_query(self, query_id: int):
-        query_id_str = str(query_id)
-        if query_id_str in self.queries:
-            query_vector = self.queries[query_id_str]
-        assert query_vector is not None
-        return query_vector
-
-
-# def sample_one_from_string(stochastic_string: str) -> float:
-#     events = stochastic_string.split(",")
-#     values = [float(event.split(":")[0]) for event in events]
-#     frequencies = [float(event.split(":")[1]) for event in events]
-#     return np.random.choice(values, p=frequencies)
-
-
-# def add_workload_args_to_results(results_df: pd.DataFrame):
-#     def get_row_parameters(row):
-#         task_path = row["tasks_path"]
-#         args = get_args_from_taskname(task_path)
-#         args["trial_id"] = row["trial_id"]
-#         return pd.Series(args)
-
-#     df = results_df.apply(get_row_parameters, axis=1)
-#     return results_df.merge(df, on="trial_id")
-
-
-# def get_name_from_args(arg_dict: dict, category="task") -> str:
-#     arg_string = ",".join([f"{key}={value}" for key, value in arg_dict.items()])
-#     task_path = f"{category}-{arg_string}"
-#     return task_path
-
-
-# def get_args_from_taskname(task_path: str) -> dict:
-#     arg_string = task_path.split("-")[1]
-#     arg_dict = {
-#         kv.split("=")[0]: float(kv.split("=")[1]) for kv in arg_string.split(",")
-#     }
-#     return arg_dict
-
-
 def load_logs(log_path: str, relative_path=True) -> dict:
     full_path = Path(log_path)
     if relative_path:
@@ -96,109 +69,29 @@ def load_logs(log_path: str, relative_path=True) -> dict:
     return logs
 
 
-FAILED = "failed"
-PENDING = "pending"
-ALLOCATED = "allocated"
+def save_logs(log_dict):
+    log_path = LOGS_PATH.joinpath(
+        f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+    )
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_path, "w") as fp:
+        json_object = json.dumps(log_dict, indent=4)
+        fp.write(json_object)
 
 
-def get_logs(
-    tasks,
-    blocks,
-    tasks_info,
-    omegaconf,
-    **kwargs,
-) -> dict:
+# def save_mlflow_artifacts(log_dict):
+#     """
+#     Write down some figures directly in Mlflow instead of having to fire Plotly by hand in a notebook
+#     See also: `analysis.py`
+#     """
+#     # TODO: save in a custom dir when we run with Ray?
+#     artifacts_dir = LOGS_PATH.joinpath("mlflow_artifacts")
+#     artifacts_dir.mkdir(parents=True, exist_ok=True)
+#     plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
+#         artifacts_dir.joinpath("budget_utilization.html")
+#     )
+#     plot_task_status(task_log=log_dict["tasks"]).write_html(
+#         artifacts_dir.joinpath("task_status.html")
+#     )
 
-    omegaconf = OmegaConf.create(omegaconf)
-
-    n_allocated_tasks = 0
-    log_tasks = []
-    if omegaconf.logs.save:
-        for task in tasks:
-            task_dump = task.dump()
-
-            # Dictionary with any key, instead of defining a new custom metric every time
-            metadata = tasks_info.run_metadata.get(task.id, {})
-            task_dump.update(metadata)
-            result = error = planning_time = None
-            if tasks_info.status[task.id] == ALLOCATED:
-                n_allocated_tasks += 1
-                result = metadata.get("result")
-                # error = metadata.get("error")
-                planning_time = metadata.get("planning_time")
-
-            task_dump.update(
-                {
-                    "allocated": tasks_info.status[task.id] == ALLOCATED,
-                    "status": tasks_info.status[task.id],
-                    "result": result,
-                    # "error": error,
-                    "planning_time": planning_time,
-                    "utility": task.utility,
-                    "utility_beta": task.utility_beta,
-                    "num_blocks": task.n_blocks,
-                }
-            )
-            log_tasks.append(task_dump)
-
-    log_blocks = []
-    if omegaconf.logs.save:
-        for block in blocks.values():
-            log_blocks.append(block.dump())
-    total_tasks = len(tasks)
-    allocated_tasks_scheduling_delays = allocated_tasks_scheduling_delays
-
-    datapoint = {
-        "n_allocated_tasks": n_allocated_tasks,
-        "planner": omegaconf.planner.method,
-        # "variance_reduction": omegaconf.scheduler.variance_reduction,
-        "cache": omegaconf.cache.type,
-        "total_tasks": total_tasks,
-        "n_initial_blocks": omegaconf.blocks.initial_num,
-        "avg_task_per_block": omegaconf.tasks.avg_num_tasks_per_block,
-        "path": omegaconf.tasks.path,
-        "initial_blocks": omegaconf.blocks.initial_num,
-        "max_blocks": omegaconf.blocks.max_num,
-        "tasks": log_tasks,
-        "blocks": log_blocks,
-    }
-
-    # Any other thing to log
-    for key, value in kwargs.items():
-        datapoint[key] = value
-    return datapoint
-
-
-# # def save_mlflow_artifacts(log_dict):
-# #     """
-# #     Write down some figures directly in Mlflow instead of having to fire Plotly by hand in a notebook
-# #     See also: `analysis.py`
-# #     """
-# #     # TODO: save in a custom dir when we run with Ray?
-# #     artifacts_dir = LOGS_PATH.joinpath("mlflow_artifacts")
-# #     artifacts_dir.mkdir(parents=True, exist_ok=True)
-# #     plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
-# #         artifacts_dir.joinpath("budget_utilization.html")
-# #     )
-# #     plot_task_status(task_log=log_dict["tasks"]).write_html(
-# #         artifacts_dir.joinpath("task_status.html")
-# #     )
-
-# #     mlflow.log_artifacts(artifacts_dir)
-
-
-# # def save_logs(log_dict, compact=False, compressed=False):
-# #     log_path = LOGS_PATH.joinpath(
-# #         f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
-# #     )
-# #     log_path.parent.mkdir(parents=True, exist_ok=True)
-# #     if compressed:
-# #         raise NotImplementedError
-# #     else:
-# #         with open(log_path, "w") as fp:
-# #             if compact:
-# #                 json_object = json.dumps(log_dict, separators=(",", ":"))
-# #             else:
-# #                 json_object = json.dumps(log_dict, indent=4)
-
-# #             fp.write(json_object)
+#     mlflow.log_artifacts(artifacts_dir)

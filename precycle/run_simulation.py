@@ -1,13 +1,13 @@
-import simpy
-import json
-import typer
-import random
 import os
 import sys
+import json
+import typer
+import simpy
+import random
 import numpy as np
 from loguru import logger
-
 from omegaconf import OmegaConf
+
 from precycle.simulator import Blocks, ResourceManager, Tasks
 
 from precycle.query_processor import QueryProcessor
@@ -27,7 +27,7 @@ from precycle.cache.probabilistic_cache import (
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
 
-from precycle.utils.utils import DEFAULT_CONFIG_FILE, get_logs
+from precycle.utils.utils import DEFAULT_CONFIG_FILE, save_logs
 
 
 app = typer.Typer()
@@ -89,17 +89,15 @@ class Simulator:
     def run(self):
         self.env.run()
 
+        config = OmegaConf.to_object(self.config)
+        del config["blocks_metadata"]
+
+        # Collecting logs
         logs = {}
         logs["tasks_info"] = self.rm.query_processor.tasks_info
-        logs["block_budgets_info"] = self.budget_accountant.get_all_block_budgets()
-        logs["config"] = self.config
-        # Get logs
-        logs = get_logs(
-            +list(self.rm.scheduler.tasks_info.allocated_tasks.values()),
-            self.rm.scheduler.blocks,
-            self.config,
-        )
-        return
+        logs["block_budgets_info"] = self.rm.budget_accountant.dump()
+        logs["config"] = config
+        return logs
 
 
 @app.command()
@@ -107,7 +105,6 @@ def run(
     omegaconf: str = "precycle/config/precycle.json",
     loguru_level: str = "INFO",
 ):
-
     # Try environment variable first, CLI arg otherwise
     level = os.environ.get("LOGURU_LEVEL", loguru_level)
     logger.remove()
@@ -116,6 +113,7 @@ def run(
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     logs = Simulator(omegaconf).run()
+    save_logs(logs)
 
 
 if __name__ == "__main__":

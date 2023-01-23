@@ -36,3 +36,19 @@ class Task:
             "name": self.name,
         }
         return d
+
+
+class TaskInfo:
+    def __init__(self, task, status, planning_time, run_metadta, result) -> None:
+        self.d = task.dump()
+        self.d.update(
+            {
+                "status": status,
+                "planning_time": planning_time,
+                "run_metadata": run_metadta,
+                "result": result,
+            }
+        )
+
+    def dump(self):
+        return self.d

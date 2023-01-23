@@ -118,3 +118,9 @@ class MockBudgetAccountant:
     def consume_blocks_budget(self, blocks, run_budget):
         for block in blocks:
             self.consume_block_budget(block, run_budget)
+
+    def dump(self):
+        budgets = [
+            (block, budget.dump()) for (block, budget) in self.get_all_block_budgets()
+        ]
+        return budgets

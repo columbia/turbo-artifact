@@ -2,18 +2,12 @@ import time
 from loguru import logger
 from termcolor import colored
 from typing import Dict, Optional
-from collections import namedtuple
 
-from precycle.task import Task
 from precycle.executor import Executor
+from precycle.task import Task, TaskInfo
 
 from precycle.utils.utils import mlflow_log
-from precycle.utils.utils import ALLOCATED, FAILED
-
-
-TaskInfo = namedtuple(
-    "TaskInfo", ["task", "status", "planning_time", "run_metadata", "result"]
-)
+from precycle.utils.utils import SUCCESS, FAILED
 
 
 class QueryProcessor:
@@ -26,7 +20,7 @@ class QueryProcessor:
         self.budget_accountant = budget_accountant
         self.executor = Executor(self.cache, self.db, config)
 
-        self.tasks_info = {}  # TODO: make this persistent
+        self.tasks_info = []  # TODO: make this persistent
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -41,6 +35,8 @@ class QueryProcessor:
         planning_time = time.time() - start_planning
 
         if plan:
+            status = SUCCESS
+
             logger.info(
                 colored(
                     f"Plan of cost {plan.cost} for query {task.query_id} on blocks {task.blocks}: {plan}.",
@@ -57,8 +53,6 @@ class QueryProcessor:
             for blocks, run_budget in run_budget_per_block.items():
                 self.budget_accountant.consume_blocks_budget(blocks, run_budget)
 
-        if run_metadata:
-            status = ALLOCATED
             for key, value in run_metadata.items():
                 mlflow_log(f"{key}", value, task.id)
 
@@ -73,8 +67,8 @@ class QueryProcessor:
                 )
             )
 
-        self.tasks_info[task.id] = TaskInfo(
-            task, status, planning_time, run_metadata, result
+        self.tasks_info.append(
+            TaskInfo(task, status, planning_time, run_metadata, result).dump()
         )
         return run_metadata
 
