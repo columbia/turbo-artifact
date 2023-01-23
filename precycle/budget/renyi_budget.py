@@ -1,10 +1,9 @@
+import numpy as np
+from precycle.budget.budget import Budget
 from collections import namedtuple
 from typing import Dict, List, Tuple
+from opacus.accountants import RDPAccountant
 
-import numpy as np
-from opacus.privacy_analysis import get_privacy_spent
-
-from precycle.budget.budget import Budget
 
 ALPHAS = [
     1.5,
@@ -105,7 +104,7 @@ class RenyiBudget:
         if hasattr(self, "dp_budget_cached"):
             return self.dp_budget_cached
 
-        epsilon, best_alpha = get_privacy_spent(
+        epsilon, best_alpha = RDPAccountant().get_privacy_spent(
             orders=list(self.alphas),
             rdp=list(self.epsilons),
             delta=delta,

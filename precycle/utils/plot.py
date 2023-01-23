@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.missing_ipywidgets import FigureWidget
 
-from privacypacking.budget import Budget, RenyiBudget
+from precycle.budget import Budget, RenyiBudget
 
 
 def df_normalized_curves(curves: Dict[str, Budget], epsilon=10, delta=1e-6):

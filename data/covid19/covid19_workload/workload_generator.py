@@ -38,7 +38,6 @@ class PrivacyWorkload:
             "n_blocks": task.n_blocks,
             "utility": task.utility,
             "utility_beta": task.utility_beta,
-            "block_selection_policy": "LatestBlocksFirst",
             "task_name": task_name,
         }
         if task.start_time:
@@ -134,8 +133,8 @@ class PrivacyWorkload:
 
 def main(
     requests_type: str = "monoblock",
-    utility: float = 100,
-    utility_beta: float = 0.0001,
+    utility: float = 0.05,
+    utility_beta: float = 0.00001,
     queries: str = "covid19_queries/all_2way_marginals.queries.json",
     workload_dir: str = str(Path(__file__).resolve().parent.parent),
 ) -> None:

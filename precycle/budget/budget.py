@@ -1,9 +1,3 @@
-from collections import namedtuple
-from typing import Dict, List, Tuple
-
-import numpy as np
-from opacus.privacy_analysis import get_privacy_spent
-
 ALPHAS = [
     1.5,
     1.75,

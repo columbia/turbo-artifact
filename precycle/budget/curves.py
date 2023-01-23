@@ -4,9 +4,7 @@ import numpy as np
 from autodp.mechanism_zoo import LaplaceMechanism
 from autodp.transformer_zoo import AmplificationBySampling
 
-# from opacus.accountants.analysis.rdp import compute_rdp
-from opacus.privacy_analysis import compute_rdp
-from scipy.interpolate import interp1d, splev, splrep
+from opacus.accountants.analysis.rdp import compute_rdp
 
 from precycle.budget import ALPHAS, RenyiBudget
 

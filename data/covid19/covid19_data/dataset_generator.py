@@ -39,7 +39,7 @@ def load_and_preprocess_datasets(metadata):
     age = age.reset_index(drop=True)
 
     # Normalizing to make rates add to 1
-    ageGroup = age.groupby("date").sum()
+    ageGroup = age.groupby("date").sum(numeric_only=True)
     ageGroup = pd.concat([ageGroup] * 4, ignore_index=False).sort_values(["date"])
     age["age_based_case_rate"] /= ageGroup["age_based_case_rate"].values
 
@@ -63,7 +63,7 @@ def load_and_preprocess_datasets(metadata):
     gender = gender.reset_index(drop=True)
 
     # Normalizing to make rates add to 1
-    genderGroup = gender.groupby("date").sum()
+    genderGroup = gender.groupby("date").sum(numeric_only=True)
     genderGroup = pd.concat([genderGroup] * 2, ignore_index=False).sort_values(["date"])
     gender["gender_based_case_rate"] /= genderGroup["gender_based_case_rate"].values
 
@@ -86,7 +86,7 @@ def load_and_preprocess_datasets(metadata):
     ethnicity = ethnicity.reset_index(drop=True)
 
     # Normalizing to make rates add to 1
-    ethnicityGroup = ethnicity.groupby("date").sum()
+    ethnicityGroup = ethnicity.groupby("date").sum(numeric_only=True)
     ethnicityGroup = pd.concat([ethnicityGroup] * 8, ignore_index=False).sort_values(
         ["date"]
     )
@@ -443,15 +443,17 @@ def main(
         # 151279929
         k = 6000
         block_size = total_size // k
+        metadata["block_size"] = block_size
         metadata["blocks"] = dict()
-
         for idx in range(k):
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["size"] = block_size
 
             chunk = blocks[block_size * idx : block_size * (idx + 1)]
             # Add a timestamp to each block
-            chunk["time"] = idx
+            # chunk.loc[:, "time"] = idx
+            chunk.insert(0, "time", idx)
+
             chunk.to_csv(output_dir.joinpath(f"block_{idx}.csv"), index=False)
             logger.info(f"Saved block {idx}")
 

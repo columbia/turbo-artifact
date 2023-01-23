@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from privacypacking.budget.budget import Budget
+from precycle.budget.budget import Budget
 
 # Default values for some datasets
 DELTA_MNIST = 1e-5

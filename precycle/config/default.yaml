@@ -17,16 +17,6 @@ budget_accountant:
   - 32
   - 64
 
-blocks:
-  initial_num: 1
-  max_num: 10
-  arrival_interval: 1
-
-tasks:
-  path: "tasks"
-  initial_num: 1
-  max_num: None
-
 logs:
   verbose: False
   save: False

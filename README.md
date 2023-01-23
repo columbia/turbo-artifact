@@ -5,6 +5,11 @@
 
 ## Setup
 
+- Follow these instructions to install Redis https://redis.io/docs/getting-started/installation/install-redis-on-linux/
+    Some more help: https://www.tutorialspoint.com/redis/redis_environment.htm
+
+- Run a second Redis instance: https://gist.github.com/Paprikas/ef55f5b2401c4beec75f021590de6a67
+    ( We need to different Redis instances: one for the Cache and one for the BlockBudgets)
 - Follow these instructions to install Timescaledb/postgres https://docs.timescale.com/install/latest/self-hosted/installation-debian/
 
 - Set up the  database and the hypertable to store covid data
@@ -39,6 +44,13 @@
 
 - Create the default workload
 ```python data/covid19/covid19_workload/workload_generator.py --requests-type 400:7```
+
+- You can use the db-functions.py script to manually check or change the status of the databases
+    Examples:
+    ```python3 precycle/db-functions.py --storage postgres --function get-all```
+    ```python3 precycle/db-functions.py --storage redis-budgets --function get-all```
+    ```python3 precycle/db-functions.py --storage redis-cache --function get-all```
+    ```python3 precycle/db-functions.py --storage postgres --function get-all```
 
 
 For more options. on creating the data blocks, queries and workload see the relevant read_me files.
