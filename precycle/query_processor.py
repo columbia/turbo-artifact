@@ -48,7 +48,7 @@ class QueryProcessor:
             result, run_budget_per_block, run_metadata = self.executor.execute_plan(
                 plan, task
             )
-    
+
             # Consume budget from blocks if necessary
             for blocks, run_budget in run_budget_per_block.items():
                 print(run_budget)

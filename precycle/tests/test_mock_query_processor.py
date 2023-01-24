@@ -80,7 +80,9 @@ def test(
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
     planner = globals()[config.planner.method](cache, budget_accountant, config)
-    query_processor = QueryProcessor(db, cache, planner, budget_accountant, query_converter, config)
+    query_processor = QueryProcessor(
+        db, cache, planner, budget_accountant, query_converter, config
+    )
 
     # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
@@ -114,6 +116,7 @@ def test(
     for i in range(10):
         run_metadata = query_processor.try_run_task(task)
         # print(run_metadata)
+
 
 if __name__ == "__main__":
     test()

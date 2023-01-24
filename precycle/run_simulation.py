@@ -116,11 +116,15 @@ class Simulator:
 
         mlflow.log_params(config)
         mlflow.end_run()
+
+        if config.logs.save:
+            save_logs(logs)
+
         return logs
 
 
 @app.command()
-def run(
+def run_simulation(
     omegaconf: str = "precycle/config/precycle.json",
     loguru_level: str = "INFO",
 ):
@@ -133,7 +137,7 @@ def run(
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     logs = Simulator(omegaconf).run()
-    save_logs(logs)
+    return logs
 
 
 if __name__ == "__main__":
