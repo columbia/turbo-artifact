@@ -118,13 +118,14 @@ class Simulator:
 @app.command()
 def run(
     omegaconf: str = "precycle/config/precycle.json",
-    loguru_level: str = "DEBUG",
+    loguru_level: str = "INFO",
 ):
     # Try environment variable first, CLI arg otherwise
     # level = os.environ.get("LOGURU_LEVEL", loguru_level)
     # logger.remove()
     # logger.add(sys.stdout, level=loguru_level)
 
+    os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     logs = Simulator(omegaconf).run()

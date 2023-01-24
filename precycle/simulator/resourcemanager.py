@@ -33,9 +33,10 @@ class ResourceManager:
         self.task_consumption_terminated = self.env.event()
 
     def start(self):
+        self.daemon_clock = self.env.process(self.daemon_clock())
+
         self.env.process(self.block_consumer())
         self.env.process(self.task_consumer())
-        self.daemon_clock = self.env.process(self.daemon_clock())
 
         # Termination conditions
         yield self.block_production_terminated

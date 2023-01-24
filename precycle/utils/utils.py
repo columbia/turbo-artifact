@@ -1,10 +1,10 @@
 import json
-import math
 import uuid
 import mlflow
 from pathlib import Path
 from datetime import datetime
-from utils.plot import plot_budget_utilization_per_block, plot_task_status
+from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
+
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -15,22 +15,6 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.yaml")
 FAILED = "failed"
 PENDING = "pending"
 SUCCESS = "success"
-
-
-class QueryPool:
-    def __init__(self, attribute_domain_sizes, queries_path) -> None:
-        self.attribute_domain_sizes = attribute_domain_sizes
-        self.domain_size = math.prod(attribute_domain_sizes)
-        self.queries = None
-        with open(queries_path) as f:
-            self.queries = json.load(f)
-
-    def get_query(self, query_id: int):
-        query_id_str = str(query_id)
-        if query_id_str in self.queries:
-            query_vector = self.queries[query_id_str]
-        assert query_vector is not None
-        return query_vector
 
 
 def mlflow_log(key, value, step):

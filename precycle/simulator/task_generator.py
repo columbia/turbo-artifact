@@ -1,16 +1,12 @@
 import random
 from loguru import logger
 from precycle.task import Task
-from precycle.utils.utils import QueryPool
 
 
 class TaskGenerator:
     def __init__(self, df_tasks, config) -> None:
         self.config = config
         self.tasks = df_tasks
-        self.query_pool = QueryPool(
-            config.blocks_metadata["attributes_domain_sizes"], config.tasks.queries_path
-        )
 
     def sample_task_row(self):
         raise NotImplementedError("Must override")
@@ -27,7 +23,7 @@ class TaskGenerator:
             id=task_id,
             query_id=query_id,
             query_type=task_row["query_type"],
-            query=self.query_pool.get_query(query_id),
+            query=eval(task_row["query"]),
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(task_row["utility"]),
@@ -35,7 +31,6 @@ class TaskGenerator:
             name=name,
         )
         # print("\nTask", task.dump())
-
         return task
 
 

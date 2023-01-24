@@ -1,4 +1,3 @@
-import ast
 import json
 import socket
 from loguru import logger
@@ -55,7 +54,7 @@ class TasksServer:
             id=task_id,
             query_id=int(data["query_id"]),
             query_type="linear",
-            query=ast.literal_eval(data["query"]),
+            query=eval(data["query"]),
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(data["utility"]),

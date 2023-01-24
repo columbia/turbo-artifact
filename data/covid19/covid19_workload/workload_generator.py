@@ -6,20 +6,47 @@ import pandas as pd
 import typer
 from loguru import logger
 import typer
+import math
+from precycle.utils.utils import REPO_ROOT
+
 
 app = typer.Typer()
 
 
 class Task:
     def __init__(
-        self, n_blocks, query_id, utility, utility_beta, query_type, start_time=None
+        self,
+        n_blocks,
+        query_id,
+        utility,
+        utility_beta,
+        query_type,
+        query,
+        start_time=None,
     ):
         self.n_blocks = n_blocks
         self.query_id = query_id
         self.utility = utility
         self.utility_beta = utility_beta
         self.query_type = query_type
+        self.query = query
         self.start_time = start_time
+
+
+class QueryPool:
+    def __init__(self, attribute_domain_sizes, queries_path) -> None:
+        self.attribute_domain_sizes = attribute_domain_sizes
+        self.domain_size = math.prod(attribute_domain_sizes)
+        self.queries = None
+        with open(queries_path) as f:
+            self.queries = json.load(f)
+
+    def get_query(self, query_id: int):
+        query_id_str = str(query_id)
+        if query_id_str in self.queries:
+            query_vector = self.queries[query_id_str]
+        assert query_vector is not None
+        return query_vector
 
 
 class PrivacyWorkload:
@@ -27,8 +54,15 @@ class PrivacyWorkload:
     csv-based privacy workload.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, blocks_metadata_path, queries):
+        try:
+            with open(blocks_metadata_path) as f:
+                blocks_metadata = json.load(f)
+        except NameError:
+            logger.error("Dataset metadata must have be created first..")
+            exit(1)
+
+        self.query_pool = QueryPool(blocks_metadata["attributes_domain_sizes"], queries)
 
     def create_dp_task(self, task) -> dict:
         task_name = f"task-{task.query_id}-{task.n_blocks}"
@@ -39,6 +73,7 @@ class PrivacyWorkload:
             "utility": task.utility,
             "utility_beta": task.utility_beta,
             "task_name": task_name,
+            "query": self.query_pool.get_query(task.query_id),
         }
         if task.start_time:
             dp_task.update({"submit_time": task.start_time})
@@ -104,6 +139,7 @@ class PrivacyWorkload:
                     utility=utility,
                     utility_beta=utility_beta,
                     query_type="linear",
+                    query=self.query_pool.get_query(query_id),
                 )
             )
         for b in range(nblocks_step, nblocks_max, nblocks_step):
@@ -115,6 +151,7 @@ class PrivacyWorkload:
                         utility=utility,
                         utility_beta=utility_beta,
                         query_type="linear",
+                        query=self.query_pool.get_query(query_id),
                     )
                 )
         dp_tasks = [self.create_dp_task(t) for t in self.tasks]
@@ -137,14 +174,14 @@ def main(
     utility_beta: float = 0.0001,
     queries: str = "covid19_queries/all_2way_marginals.queries.json",
     workload_dir: str = str(Path(__file__).resolve().parent.parent),
+    blocks_metadata_path: str = REPO_ROOT.joinpath(
+        "data/covid19/covid19_data/metadata.json"
+    ),
 ) -> None:
-    privacy_workload = PrivacyWorkload()
-
-    # TODO: refactor more at some point, especially if we add more workloads.
-    # workload -> arrival and requests pattern, covid19 -> covid19-workload, separate generation scripts from the workload data
 
     workload_dir = Path(workload_dir)
     queries = workload_dir.joinpath(queries)
+    privacy_workload = PrivacyWorkload(blocks_metadata_path, queries)
 
     # TODO: keeping this for now to generate a very specific workload
     if requests_type == "all-blocks":
