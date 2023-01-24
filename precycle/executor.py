@@ -25,9 +25,10 @@ class A:
 
 
 class Executor:
-    def __init__(self, cache, db, config) -> None:
+    def __init__(self, cache, db, query_converter, config) -> None:
         self.db = db
         self.cache = cache
+        self.query_converter = query_converter
         self.config = config
 
     def execute_plan(self, plan, task) -> Tuple[float, Dict]:
@@ -68,6 +69,7 @@ class Executor:
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
+            query = self.query_converter.convert(query)
             true_result = self.db.run_query(query, run_op.blocks)
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
@@ -128,6 +130,7 @@ class Executor:
             pmw = self.cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
+        query = self.query_converter.convert(query)
         true_result = self.db.run_query(query, run_op.blocks)
         result, run_budget, run_metadata = pmw.run(query, true_result)
         return result, blocks_size, run_budget, run_metadata

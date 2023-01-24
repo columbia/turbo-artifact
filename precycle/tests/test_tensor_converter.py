@@ -1,4 +1,4 @@
-from precycle.tesnor_converter import TensorConverter
+from precycle.query_converter import TensorConverter
 
 
 def main():

@@ -12,7 +12,6 @@ from precycle.budget.curves import (
     ZeroCurve,
 )
 from precycle.utils.utils import mlflow_log, get_blocks_size
-from precycle.tesnor_converter import TensorConverter
 
 
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
@@ -23,8 +22,8 @@ class PMW:
         blocks_metadata,
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
-        alpha=0.005,  # Max error guarantee, expressed as fraction.
-        beta=0.01,  # Failure probability for the alpha error bound
+        alpha=0.05,  # Max error guarantee, expressed as fraction.
+        beta=0.0001,  # Failure probability for the alpha error bound
         k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
@@ -41,7 +40,7 @@ class PMW:
         # Generic PMW arguments
         # Assuming all blocks have the same size for now
         self.n = get_blocks_size(blocks, blocks_metadata)
-        self.M = float(blocks_metadata["domain_size"])
+        self.M = blocks_metadata["domain_size"]
         self.k = k  # max_total_queries
         self.queries_ran = 0
         self.hard_queries_ran = 0
@@ -100,7 +99,6 @@ class PMW:
         return ZeroCurve() if self.predict_hit() else self.worst_case_cost()
 
     def run(self, query, true_output):
-        self.tensor_convertor = TensorConverter(self.blocks_metadata)
         assert isinstance(query, torch.Tensor)
 
         run_metadata = {}

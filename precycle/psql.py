@@ -3,15 +3,12 @@ import pandas as pd
 from loguru import logger
 from collections import namedtuple
 from precycle.budget import SparseHistogram
-from precycle.sql_converter import SQLConverter
-from precycle.tesnor_converter import TensorConverter
 from precycle.utils.utils import get_blocks_size
 
 
 class PSQL:
     def __init__(self, config) -> None:
         self.config = config
-        self.sql_converter = SQLConverter(config.blocks_metadata)
 
         # Initialize the PSQL connection
         try:
@@ -45,10 +42,9 @@ class PSQL:
         return status
 
     def run_query(self, query, blocks):
-        sql_query = self.sql_converter.query_vector_to_tensor(query, blocks)
         try:
             cur = self.psql_conn.cursor()
-            cur.execute(sql_query)
+            cur.execute(query)
             true_result = float(cur.fetchone()[0])
             cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
@@ -72,7 +68,6 @@ Block = namedtuple("Block", ["size", "histogram"])
 class MockPSQL:
     def __init__(self, config) -> None:
         self.config = config
-        self.tensor_convertor = TensorConverter(config.blocks_metadata)
 
         # Blocks are in-memory histograms
         self.blocks = {}
@@ -95,15 +90,14 @@ class MockPSQL:
         self.blocks_count += 1
 
     def run_query(self, query, blocks):
-        tensor_query = self.tensor_convertor.query_vector_to_tensor(query)
         true_result = 0
         blocks_size = 0
         for block_id in range(blocks[0], blocks[1] + 1):
             block = self.blocks[block_id]
-            true_result += block.size * block.histogram.run(tensor_query)
+            true_result += block.size * block.histogram.run(query)
             blocks_size += block.size
         true_result /= blocks_size
-        print("true result:", true_result, "total-size:", blocks_size)
+        # print("true result:", true_result, "total-size:", blocks_size)
         return true_result
 
     def close(self):

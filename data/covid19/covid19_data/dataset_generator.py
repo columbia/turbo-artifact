@@ -441,7 +441,7 @@ def main(
         total_size, blocks = get_all_blocks(covid["date"].values)
         # print(blocks)
         # 151279929
-        k = 6000
+        k = 1000
         block_size = total_size // k
         metadata["block_size"] = block_size
         metadata["blocks"] = dict()

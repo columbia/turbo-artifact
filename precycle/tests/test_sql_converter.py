@@ -1,4 +1,4 @@
-from precycle.sql_converter import SQLConverter
+from precycle.query_converter import SQLConverter
 
 
 def main():

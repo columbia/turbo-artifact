@@ -95,7 +95,6 @@ class MockDeterministicCache(Cache):
         # Budget doesn't care about sensitivity
         sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
         run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-        print("run budget", run_budget)
         return run_budget
 
     def dump(self):

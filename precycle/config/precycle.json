@@ -7,12 +7,10 @@
     "cache": {
         "host": "localhost",
         "port": 6378,
-        "type": "DeterministicCache",
+        "type": "ProbabilisticCache",
         "pmw_cfg": {
             "alpha": 0.05,
-            "beta": 0.0001,
-            "standart_svt": true,
-            "output_counts": true
+            "beta": 0.0001
         }
     },
 
@@ -45,9 +43,9 @@
     },
     
     "tasks": {
-        "path": "data/covid19/covid19_workload/1:1blocks_84queries.privacy_tasks.csv",
-        "avg_num_tasks_per_block": 1e4,
-        "max_num": 1e4,
+        "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
+        "avg_num_tasks_per_block": 5e4,
+        "max_num": 5e4,
         "initial_num": 0
     },
 

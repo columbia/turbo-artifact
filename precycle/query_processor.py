@@ -7,18 +7,18 @@ from precycle.executor import Executor
 from precycle.task import Task, TaskInfo
 
 from precycle.utils.utils import mlflow_log
-from precycle.utils.utils import SUCCESS, FAILED
+from precycle.utils.utils import FINISHED, FAILED
 
 
 class QueryProcessor:
-    def __init__(self, db, cache, planner, budget_accountant, config):
+    def __init__(self, db, cache, planner, budget_accountant, query_converter, config):
         self.config = config
 
         self.db = db
         self.cache = cache
         self.planner = planner
         self.budget_accountant = budget_accountant
-        self.executor = Executor(self.cache, self.db, config)
+        self.executor = Executor(self.cache, self.db, query_converter, config)
 
         self.tasks_info = []  # TODO: make this persistent
 
@@ -35,7 +35,7 @@ class QueryProcessor:
         planning_time = time.time() - start_planning
 
         if plan:
-            status = SUCCESS
+            status = FINISHED
 
             logger.info(
                 colored(
@@ -48,9 +48,10 @@ class QueryProcessor:
             result, run_budget_per_block, run_metadata = self.executor.execute_plan(
                 plan, task
             )
-
+    
             # Consume budget from blocks if necessary
             for blocks, run_budget in run_budget_per_block.items():
+                print(run_budget)
                 self.budget_accountant.consume_blocks_budget(blocks, run_budget)
 
             for key, value in run_metadata.items():
@@ -68,7 +69,7 @@ class QueryProcessor:
                 )
             )
 
-        for block in range(blocks[0], blocks[1] + 1):
+        for block in range(task.blocks[0], task.blocks[1] + 1):
             budget = self.budget_accountant.get_block_budget(block)
             mlflow_log(f"{block}", max(budget.epsilons), task.id)
 

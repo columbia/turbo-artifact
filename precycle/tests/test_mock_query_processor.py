@@ -4,6 +4,8 @@ from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
 
+from precycle.query_converter import TensorConverter
+
 from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
 from precycle.budget_accountant import MockBudgetAccountant
@@ -73,23 +75,20 @@ def test(
     ]
 
     db = MockPSQL(config)
+    query_converter = TensorConverter(config.blocks_metadata)
     budget_accountant = MockBudgetAccountant(config)
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
     planner = globals()[config.planner.method](cache, budget_accountant, config)
-    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
+    query_processor = QueryProcessor(db, cache, planner, budget_accountant, query_converter, config)
 
     # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
 
-    block_data_path = config.blocks.block_data_path + "/block_1.csv"
-    db.add_new_block(block_data_path)
-    budget_accountant.add_new_block_budget()
-
     # Initialize Task
-    num_requested_blocks = 2
+    num_requested_blocks = 1
     num_blocks = budget_accountant.get_blocks_count()
     assert num_blocks > 0
 
@@ -98,7 +97,7 @@ def test(
     print(requested_blocks)
 
     utility = 0.05
-    utility_beta = 0.00001
+    utility_beta = 0.0001
 
     task = Task(
         id=0,
@@ -112,9 +111,9 @@ def test(
         name=0,
     )
 
-    run_metadata = query_processor.try_run_task(task)
-    print(run_metadata)
-
+    for i in range(10):
+        run_metadata = query_processor.try_run_task(task)
+        # print(run_metadata)
 
 if __name__ == "__main__":
     test()

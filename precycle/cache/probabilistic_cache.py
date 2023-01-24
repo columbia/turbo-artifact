@@ -11,7 +11,7 @@ class MockProbabilisticCache(Cache):
     def __init__(self, config):
         self.key_values = {}
         self.pmw_args = config.cache.pmw_cfg
-        self.pmw_args["blocks_metadata"] = config.blocks_metadata
+        self.pmw_args.update({"blocks_metadata": config.blocks_metadata})
 
     def add_entry(self, blocks):
         pmw = PMW(blocks, **self.pmw_args)

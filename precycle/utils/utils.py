@@ -14,7 +14,7 @@ DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.yaml")
 
 FAILED = "failed"
 PENDING = "pending"
-SUCCESS = "success"
+FINISHED = "finished"
 
 
 def mlflow_log(key, value, step):

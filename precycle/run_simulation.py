@@ -24,6 +24,8 @@ from precycle.cache.probabilistic_cache import (
     ProbabilisticCache,
 )
 
+from precycle.query_converter import TensorConverter, SQLConverter
+
 # from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
@@ -73,17 +75,19 @@ class Simulator:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
             cache = globals()[f"Mock{self.config.cache.type}"](self.config)
+            query_converter = TensorConverter(blocks_metadata)
         else:
             db = PSQL(self.config)
             budget_accountant = BudgetAccountant(self.config)
             cache = globals()[self.config.cache.type](self.config)
+            query_converter = SQLConverter(blocks_metadata)
 
         planner = globals()[self.config.planner.method](
             cache, budget_accountant, self.config
         )
 
         query_processor = QueryProcessor(
-            db, cache, planner, budget_accountant, self.config
+            db, cache, planner, budget_accountant, query_converter, self.config
         )
 
         # Start the block and tasks consumers
@@ -102,7 +106,7 @@ class Simulator:
         self.env.run()
 
         config = OmegaConf.to_object(self.config)
-        del config["blocks_metadata"]
+        config["blocks_metadata"] = {}
 
         # Collecting logs
         logs = {}
