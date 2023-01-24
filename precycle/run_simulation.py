@@ -5,6 +5,7 @@ import typer
 import simpy
 import random
 import numpy as np
+import mlflow
 from loguru import logger
 from omegaconf import OmegaConf
 
@@ -27,7 +28,12 @@ from precycle.cache.probabilistic_cache import (
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
 
-from precycle.utils.utils import DEFAULT_CONFIG_FILE, save_logs
+from precycle.utils.utils import (
+    DEFAULT_CONFIG_FILE,
+    LOGS_PATH,
+    save_logs,
+    save_mlflow_artifacts,
+)
 
 
 app = typer.Typer()
@@ -42,6 +48,10 @@ class Simulator:
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
+
+        if self.config.logs.mlflow:
+            os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
+            mlflow.set_experiment(experiment_id="768944864734992566")
 
         try:
             with open(self.config.blocks.block_metadata_path) as f:
@@ -87,6 +97,8 @@ class Simulator:
         Tasks(self.env, self.rm)
 
     def run(self):
+        mlflow.start_run()
+
         self.env.run()
 
         config = OmegaConf.to_object(self.config)
@@ -97,18 +109,21 @@ class Simulator:
         logs["tasks_info"] = self.rm.query_processor.tasks_info
         logs["block_budgets_info"] = self.rm.budget_accountant.dump()
         logs["config"] = config
+
+        mlflow.log_params(config)
+        mlflow.end_run()
         return logs
 
 
 @app.command()
 def run(
     omegaconf: str = "precycle/config/precycle.json",
-    loguru_level: str = "INFO",
+    loguru_level: str = "DEBUG",
 ):
     # Try environment variable first, CLI arg otherwise
-    level = os.environ.get("LOGURU_LEVEL", loguru_level)
-    logger.remove()
-    logger.add(sys.stdout, level=level)
+    # level = os.environ.get("LOGURU_LEVEL", loguru_level)
+    # logger.remove()
+    # logger.add(sys.stdout, level=loguru_level)
 
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 

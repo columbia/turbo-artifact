@@ -105,6 +105,29 @@ def create_specific_queries(
         for d in dicts:
             query_tensors.append(k_way_marginal_query_list(d, attributes_domain_sizes))
 
+    elif type == "8":
+        # number of people who tested positive AND are females AND 18-49 AND any ethnicity
+        q1 = [[1], [1], [1], [0, 1, 2, 3, 4, 5, 6, 7]]
+        # are positive AND are either female or male AND are either one of the 4 age groups AND are either one of the 8 ethnicities
+        q2 = [[1], [0, 1], [0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6, 7]]
+        # got tested AND male or female and 18-49 and white
+        q3 = [[0, 1], [0, 1], [1], [6]]
+        # number of people who tested positive AND are male AND 50-64 AND American Indian, Latino, Black,  or Multi-Race
+        q4 = [[1], [0], [2], [0, 2, 3, 7]]
+        # number of people who tested positive AND are female AND any age AND American Indian, Latino, Black, or Multi-Race
+        q5 = [[1], [1], [0, 1, 2, 3], [0, 2, 3, 7]]
+        # number of people who tested negative AND are male AND 18-49 AND white or asian
+        q6 = [[0], [0], [1], [1, 6]]
+        # got tested AND male and 18-49 and white
+        q7 = [[0, 1], [0], [1], [1, 6]]
+        # number of people who got tested  AND are female AND any age AND American Indian, Latino, Black, or Multi-Race
+        q8 = [[[0, 1], [1], [0, 1, 2, 3], [0, 2, 3, 7]]]
+        queries = [q1, q2, q3, q4, q5, q6, q7, q8]
+        query_tensors = []
+        for query in queries:
+            query = [list(tup) for tup in query]
+            query = [list(tup) for tup in product(*query)]
+            query_tensors.append(query)
     else:
         num_queries = int(type)
         queries = []
@@ -152,17 +175,18 @@ def main(
     except NameError:
         logger.error("Dataset metadata must have be created first..")
         exit(1)
+    queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
 
     attributes_domain_sizes = blocks_metadata["attributes_domain_sizes"]
-    # create_all_queries(
-    #     queries_path,
-    #     blocks_metadata["attributes_domain_sizes"]
-    # )  # Query space size for covid dataset: 34425
+    if workload == "all":
+        create_all_queries(
+            queries_path, blocks_metadata["attributes_domain_sizes"]
+        )  # Query space size for covid dataset: 34425
 
     # create_specific_queries(queries_path, attributes_domain_sizes)
     # create_specific_queries(queries_path, attributes_domain_sizes, type="2way_marginal_mix")
-    queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
-    create_specific_queries(queries_path, attributes_domain_sizes, type=workload)
+    else:
+        create_specific_queries(queries_path, attributes_domain_sizes, type=workload)
 
 
 if __name__ == "__main__":

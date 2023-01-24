@@ -39,7 +39,7 @@ class QueryProcessor:
 
             logger.info(
                 colored(
-                    f"Plan of cost {plan.cost} for query {task.query_id} on blocks {task.blocks}: {plan}.",
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}.",
                     "green",
                 )
             )
@@ -63,9 +63,14 @@ class QueryProcessor:
 
             logger.info(
                 colored(
-                    f"Can't run query {task.query_id} on blocks {task.blocks}.", "red"
+                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
+                    "red",
                 )
             )
+
+        for block in range(blocks[0], blocks[1] + 1):
+            budget = self.budget_accountant.get_block_budget(block)
+            mlflow_log(f"{block}", max(budget.epsilons), task.id)
 
         self.tasks_info.append(
             TaskInfo(task, status, planning_time, run_metadata, result).dump()

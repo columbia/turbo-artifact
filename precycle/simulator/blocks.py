@@ -1,5 +1,6 @@
 from itertools import count
 from loguru import logger
+from precycle.simulator.resourcemanager import LastItem
 
 
 class Blocks:
@@ -16,15 +17,16 @@ class Blocks:
 
     def block_producer(self):
         """Generate blocks."""
+
         # Produce initial blocks
         for _ in range(self.config.blocks.initial_num):
-            self.env.process(self.block(next(self.blocks_count)))
+            self.block(next(self.blocks_count))
 
         for _ in range(self.config.blocks.max_num - self.config.blocks.initial_num):
-            block_id = next(self.blocks_count)
-            self.env.process(self.block(block_id))
+            self.block(next(self.blocks_count))
             yield self.env.timeout(self.config.blocks.arrival_interval)
 
+        self.resource_manager.new_blocks_queue.put(LastItem())
         self.resource_manager.block_production_terminated.succeed()
 
     def block(self, block_id):
@@ -33,9 +35,5 @@ class Blocks:
         waits till it gets generated
         """
 
-        generated_block_event = self.env.event()
-        yield self.resource_manager.new_blocks_queue.put(
-            (block_id, generated_block_event)
-        )
-        yield generated_block_event
+        self.resource_manager.new_blocks_queue.put(block_id)
         logger.debug(f"Block: {block_id} generated at {self.env.now}")

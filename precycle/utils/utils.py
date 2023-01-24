@@ -4,6 +4,7 @@ import uuid
 import mlflow
 from pathlib import Path
 from datetime import datetime
+from utils.plot import plot_budget_utilization_per_block, plot_task_status
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -79,19 +80,19 @@ def save_logs(log_dict):
         fp.write(json_object)
 
 
-# def save_mlflow_artifacts(log_dict):
-#     """
-#     Write down some figures directly in Mlflow instead of having to fire Plotly by hand in a notebook
-#     See also: `analysis.py`
-#     """
-#     # TODO: save in a custom dir when we run with Ray?
-#     artifacts_dir = LOGS_PATH.joinpath("mlflow_artifacts")
-#     artifacts_dir.mkdir(parents=True, exist_ok=True)
-#     plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
-#         artifacts_dir.joinpath("budget_utilization.html")
-#     )
-#     plot_task_status(task_log=log_dict["tasks"]).write_html(
-#         artifacts_dir.joinpath("task_status.html")
-#     )
+def save_mlflow_artifacts(log_dict):
+    """
+    Write down some figures directly in Mlflow instead of having to fire Plotly by hand in a notebook
+    See also: `analysis.py`
+    """
+    # TODO: save in a custom dir when we run with Ray?
+    artifacts_dir = LOGS_PATH.joinpath("mlflow_artifacts")
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    plot_budget_utilization_per_block(block_log=log_dict["blocks"]).write_html(
+        artifacts_dir.joinpath("budget_utilization.html")
+    )
+    plot_task_status(task_log=log_dict["tasks"]).write_html(
+        artifacts_dir.joinpath("task_status.html")
+    )
 
-#     mlflow.log_artifacts(artifacts_dir)
+    mlflow.log_artifacts(artifacts_dir)

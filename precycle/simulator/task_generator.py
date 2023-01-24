@@ -34,7 +34,7 @@ class TaskGenerator:
             utility_beta=float(task_row["utility_beta"]),
             name=name,
         )
-        print("\nTask", task.dump())
+        # print("\nTask", task.dump())
 
         return task
 
