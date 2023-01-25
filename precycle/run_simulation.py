@@ -31,9 +31,10 @@ from precycle.planner.max_cuts_planner import MaxCutsPlanner
 from precycle.planner.min_cuts_planner import MinCutsPlanner
 
 from precycle.utils.utils import (
-    DEFAULT_CONFIG_FILE,
-    LOGS_PATH,
+    get_logs,
     save_logs,
+    LOGS_PATH,
+    DEFAULT_CONFIG_FILE,
     save_mlflow_artifacts,
 )
 
@@ -46,7 +47,6 @@ class Simulator:
         self.env = simpy.Environment()
 
         # Initialize configuration
-        omegaconf = OmegaConf.load(omegaconf)
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
@@ -101,24 +101,22 @@ class Simulator:
         Tasks(self.env, self.rm)
 
     def run(self):
-        mlflow.start_run()
 
-        self.env.run()
+        logs = None
 
-        config = OmegaConf.to_object(self.config)
-        config["blocks_metadata"] = {}
+        with mlflow.start_run():
+            self.env.run()
 
-        # Collecting logs
-        logs = {}
-        logs["tasks_info"] = self.rm.query_processor.tasks_info
-        logs["block_budgets_info"] = self.rm.budget_accountant.dump()
-        logs["config"] = config
-
-        mlflow.log_params(config)
-        mlflow.end_run()
-
-        if config.logs.save:
-            save_logs(logs)
+            if self.config.logs.save:
+                config = OmegaConf.to_object(self.config)
+                config["blocks_metadata"] = {}
+                mlflow.log_params(config)
+                logs = get_logs(
+                    self.rm.query_processor.tasks_info,
+                    self.rm.budget_accountant.dump(),
+                    config,
+                )
+                save_logs(logs)
 
         return logs
 
@@ -136,6 +134,7 @@ def run_simulation(
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
+    omegaconf = OmegaConf.load(omegaconf)
     logs = Simulator(omegaconf).run()
     return logs
 

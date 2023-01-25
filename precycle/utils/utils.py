@@ -3,8 +3,9 @@ import uuid
 import mlflow
 from pathlib import Path
 from datetime import datetime
+import pandas as pd
 from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
-
+from precycle.budget.renyi_budget import RenyiBudget
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -52,6 +53,52 @@ def load_logs(log_path: str, relative_path=True) -> dict:
     with open(full_path, "r") as f:
         logs = json.load(f)
     return logs
+
+
+def get_logs(
+    tasks_info,
+    block_budgets_info,
+    config_dict,
+    **kwargs,
+) -> dict:
+
+    n_allocated_tasks = 0
+    hard_queries = 0
+    for task_info in tasks_info:
+        if task_info["status"] == FINISHED:
+            n_allocated_tasks += 1
+            if task_info["run_metadata"]["hard_query"]:
+                hard_queries += 1
+
+    blocks_initial_budget = RenyiBudget.from_epsilon_delta(
+        epsilon=config_dict["budget_accountant"]["epsilon"],
+        delta=config_dict["budget_accountant"]["delta"],
+        alpha_list=config_dict["budget_accountant"]["alphas"],
+    ).dump()
+
+    workload = pd.read_csv(config_dict["tasks"]["path"], header=None)
+    query_pool_size = len(workload) - 1
+    config = {}
+    config.update(
+        {
+            "n_allocated_tasks": n_allocated_tasks,
+            "hard_queries": hard_queries,
+            "total_tasks": len(tasks_info),
+            "cache": config_dict["cache"]["type"],
+            "planner": config_dict["planner"]["method"],
+            "workload_path": config_dict["tasks"]["path"],
+            "query_pool_size": query_pool_size,
+            "tasks_info": tasks_info,
+            "block_budgets_info": block_budgets_info,
+            "blocks_initial_budget": blocks_initial_budget,
+            "config": config_dict,
+        }
+    )
+
+    # Any other thing to log
+    for key, value in kwargs.items():
+        config[key] = value
+    return config
 
 
 def save_logs(log_dict):

@@ -51,7 +51,7 @@ class QueryProcessor:
 
             # Consume budget from blocks if necessary
             for blocks, run_budget in run_budget_per_block.items():
-                print(run_budget)
+                # logger.info(run_budget)
                 self.budget_accountant.consume_blocks_budget(blocks, run_budget)
 
             for key, value in run_metadata.items():

@@ -47,7 +47,7 @@ class Tasks:
             task_id = next(self.task_count)
         logger.debug("Done producing all the initial tasks.")
 
-        while self.config.tasks.max_num >= task_id:
+        while self.config.tasks.max_num > task_id:
             # No task can arrive after the end of the simulation
             # so we force them to appear right before the end of the last block
             task_arrival_interval = (

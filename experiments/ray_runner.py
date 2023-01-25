@@ -1,17 +1,17 @@
 import os
-import sys
 import ray
 import mlflow
 import datetime
 from ray import tune
-from pathlib import Path
 from loguru import logger
-from typing import Any, Dict, List
-from precycle.run_simulation import run_simulation
+from typing import List
+from precycle.utils.utils import LOGS_PATH, RAY_LOGS
+from precycle.run_simulation import Simulator
 
 
 def run_and_report(config: dict, replace=False) -> None:
-    logs = run_simulation(config)
+
+    logs = Simulator(config).run()
     tune.report(**logs)
 
 
@@ -23,13 +23,13 @@ def grid_online(
     tasks_path: List[str],
     blocks_path: str,
     blocks_metadata: str,
-    planner: List[str],  # Options = {MaxCutsPlanner}
-    cache: List[str],  # Options = {DeterministicCache, ProbabilisticCache}
+    planner: List[str],
+    cache: List[str],
     avg_num_tasks_per_block: List[int] = [100],
     max_tasks: List[int] = [None],
     enable_random_seed: bool = False,
-    alpha: List[int] = [0.05],  # For the PMW
-    beta: List[int] = [0.0001],  # For the PMW
+    alpha: List[int] = [0.05],
+    beta: List[int] = [0.0001],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -44,7 +44,7 @@ def grid_online(
             },
         },
         "planner": {
-            "mehod": tune.grid_search(planner),
+            "method": tune.grid_search(planner),
             "branching_factor_constraint": 2,
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},
@@ -93,12 +93,11 @@ def grid_online(
             metric_columns=[
                 "n_allocated_tasks",
                 "total_tasks",
-                # "realized_profit",
             ],
             parameter_columns={
-                "planner": "planner",
-                # "scheduler/variance_reduction": "variance_reduction",
-                "cache": "cache",
+                "planner/method": "planner",
+                "cache/type": "cache",
+                "tasks/path": "tasks_path",
             },
             max_report_frequency=60,
         ),

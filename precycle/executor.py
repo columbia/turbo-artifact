@@ -68,6 +68,7 @@ class Executor:
         cache_entry = self.cache.get_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
+            run_metadata["hard_query"] = True
             # True output never released except in debugging logs
             query = self.query_converter.convert(query)
             true_result = self.db.run_query(query, run_op.blocks)
@@ -77,6 +78,7 @@ class Executor:
             noise = np.random.laplace(scale=laplace_scale)
 
         else:  # Cached
+            run_metadata["hard_query"] = False
             true_result = cache_entry.result
 
             if run_op.noise_std >= cache_entry.noise_std:

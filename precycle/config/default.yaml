@@ -1,4 +1,7 @@
 global_seed: 64
+enable_random_seed: True
+enable_caching: True
+enable_dp: True,
 
 budget_accountant:
   epsilon: 10

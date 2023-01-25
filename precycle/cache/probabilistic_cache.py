@@ -10,11 +10,11 @@ class ProbabilisticCache(Cache):
 class MockProbabilisticCache(Cache):
     def __init__(self, config):
         self.key_values = {}
+        self.config = config
         self.pmw_args = config.cache.pmw_cfg
-        self.pmw_args.update({"blocks_metadata": config.blocks_metadata})
 
     def add_entry(self, blocks):
-        pmw = PMW(blocks, **self.pmw_args)
+        pmw = PMW(blocks, self.config.blocks_metadata, **self.pmw_args)
         self.key_values[blocks] = pmw
         return pmw
 
@@ -30,7 +30,9 @@ class MockProbabilisticCache(Cache):
 
         pmw = self.get_entry(query_id, blocks)
         run_budget = (
-            PMW(blocks, **self.pmw_args).estimate_run_budget()
+            PMW(
+                blocks, self.config.blocks_metadata, **self.pmw_args
+            ).estimate_run_budget()
             if not pmw
             else pmw.estimate_run_budget()
         )
