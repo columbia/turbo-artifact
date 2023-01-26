@@ -1,7 +1,9 @@
 import yaml
 import math
 import redis
+import numpy as np
 from precycle.cache.cache import Cache
+from precycle.budget import RenyiBudget
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 from precycle.utils.utils import get_blocks_size
 
@@ -38,7 +40,7 @@ class DeterministicCache(Cache):
             return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
         return None
 
-    def estimate_run_budget(self, query_id, blocks, noise_std):
+    def estimate_run_budget(self, query_id, query, blocks, noise_std):
         """
         Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
         """
@@ -80,22 +82,43 @@ class MockDeterministicCache(Cache):
             return CacheEntry(entry["result"], entry["noise_std"], entry["noise"])
         return None
 
-    def estimate_run_budget(self, query_id, blocks, noise_std):
+    def update_entry(self, query_id, query, blocks, true_result, noise_std, noise):
+        variance_reduction = False  # No VR for now
+
+        cache_entry = self.get_entry(query_id, blocks)
+        if not cache_entry or not noise_std >= cache_entry.noise_std:
+            # If not cached or the entry cached is worse than the new one
+            new_cache_entry = CacheEntry(
+                result=true_result, noise_std=noise_std, noise=noise
+            )
+            self.add_entry(query_id, blocks, new_cache_entry)
+
+        elif variance_reduction:
+            # Cached and the entry cached is better than the new one
+            # TODO: variance reduction here too
+            pass
+
+    def estimate_run_budget(self, query_id, query, blocks, noise_std):
         """
         Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
         """
+        variance_reduction = False  # No VR for now
         cache_entry = self.get_entry(query_id, blocks)
-        if cache_entry is not None:
+
+        if not cache_entry or not variance_reduction:
+            laplace_scale = noise_std / math.sqrt(2)
+            sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
+            run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+        else:
+            # Cached and variance reduction enabled
+            # Estimate budget required to reach target laplace scale
             if noise_std >= cache_entry.noise_std:
                 # Good enough estimate
-                return ZeroCurve()
-
-        # TODO: re-enable variance reduction
-        laplace_scale = noise_std / math.sqrt(2)
-        # Budget doesn't care about sensitivity
-        sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
-        run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-        return run_budget
+                run_budget = ZeroCurve()
+            else:
+                # TODO: re-enable variance reduction
+                pass
+        return RenyiBudget.from_epsilon_list(run_budget.epsilons)
 
     def dump(self):
         print("Cache", yaml.dump(self.key_values))

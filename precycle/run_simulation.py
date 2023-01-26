@@ -24,7 +24,7 @@ from precycle.cache.probabilistic_cache import (
     ProbabilisticCache,
 )
 
-from precycle.query_converter import TensorConverter, SQLConverter
+from precycle.cache.combined_cache import MockCombinedCache
 
 # from precycle.planner.ilp import ILP
 from precycle.planner.max_cuts_planner import MaxCutsPlanner
@@ -74,20 +74,19 @@ class Simulator:
         if self.config.mock:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
-            cache = globals()[f"Mock{self.config.cache.type}"](self.config)
-            query_converter = TensorConverter(blocks_metadata)
+            # cache = globals()[f"Mock{self.config.cache.type}"](self.config)
+            cache = MockCombinedCache(self.config)
         else:
             db = PSQL(self.config)
             budget_accountant = BudgetAccountant(self.config)
             cache = globals()[self.config.cache.type](self.config)
-            query_converter = SQLConverter(blocks_metadata)
 
         planner = globals()[self.config.planner.method](
             cache, budget_accountant, self.config
         )
 
         query_processor = QueryProcessor(
-            db, cache, planner, budget_accountant, query_converter, self.config
+            db, cache, planner, budget_accountant, self.config
         )
 
         # Start the block and tasks consumers

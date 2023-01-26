@@ -13,13 +13,13 @@ from precycle.budget.curves import (
 )
 from precycle.utils.utils import mlflow_log, get_blocks_size
 
-
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
 class PMW:
     def __init__(
         self,
         blocks,
         blocks_metadata,
+        heuristic_threshold=100,
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.05,  # Max error guarantee, expressed as fraction.
@@ -47,6 +47,10 @@ class PMW:
         self.histogram = DenseHistogram(self.M)
         self.id = str(blocks)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
+        self.heuristic_threshold = heuristic_threshold
+
+        # To be used as a heuristic to estimate cost
+        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
@@ -86,17 +90,20 @@ class PMW:
             )
         return svt_cost + query_cost
 
-    # TODO: this heuristic is a toy example that I use as a mock up.
-    def predict_hit(self):
+    def predict_hit(self, query):
         """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
-        # threshold = 30
-        # if self.hard_queries_ran - self.queries_ran > threshold:
-        # return 1
-        # for now only returns worst case (miss)
-        return 0
 
-    def estimate_run_budget(self) -> Budget:
-        return ZeroCurve() if self.predict_hit() else self.worst_case_cost()
+        avg_bin_visits = 0
+        for i in query.indices()[1]:
+            avg_bin_visits += self.visits_count_histogram[0, i]
+        avg_bin_visits /= len(query.indices()[1])
+        # print("avg_bin_visits", avg_bin_visits)
+        if avg_bin_visits > self.heuristic_threshold:
+            return True
+        return False
+
+    def estimate_run_budget(self, query) -> Budget:
+        return ZeroCurve() if self.predict_hit(query) else self.worst_case_cost()
 
     def run(self, query, true_output):
         assert isinstance(query, torch.Tensor)
@@ -193,6 +200,8 @@ class PMW:
                 updates = torch.exp(-values * self.alpha / 8)
             for i, u in zip(query.indices()[1], updates):
                 self.histogram.tensor[0, i] *= u
+                self.visits_count_histogram[0, i] += 1
+
             self.histogram.normalize()
             output = noisy_output
 
@@ -203,6 +212,22 @@ class PMW:
             output *= self.n
 
         return output, run_budget, run_metadata
+
+    def external_update(self, query_id, query, noisy_result):
+        # Important: External updates probably breaks proofs
+        predicted_output = self.histogram.run(query)
+
+        # Multiplicative weights update for the relevant bins
+        values = query.values()
+        if noisy_result > predicted_output:
+            # We need to make the estimated count higher to be closer to reality
+            updates = torch.exp(values * self.alpha / 8)
+        else:
+            updates = torch.exp(-values * self.alpha / 8)
+        for i, u in zip(query.indices()[1], updates):
+            self.histogram.tensor[0, i] *= u
+            self.visits_count_histogram[0, i] += 1
+        self.histogram.normalize()
 
     def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)

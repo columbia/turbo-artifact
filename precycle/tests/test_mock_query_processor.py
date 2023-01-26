@@ -4,8 +4,6 @@ from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
 
-from precycle.query_converter import TensorConverter
-
 from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
 from precycle.budget_accountant import MockBudgetAccountant
@@ -75,14 +73,11 @@ def test(
     ]
 
     db = MockPSQL(config)
-    query_converter = TensorConverter(config.blocks_metadata)
     budget_accountant = MockBudgetAccountant(config)
     cache_type = f"Mock{config.cache.type}"
     cache = globals()[cache_type](config)
     planner = globals()[config.planner.method](cache, budget_accountant, config)
-    query_processor = QueryProcessor(
-        db, cache, planner, budget_accountant, query_converter, config
-    )
+    query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"

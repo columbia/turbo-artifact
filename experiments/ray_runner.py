@@ -30,6 +30,7 @@ def grid_online(
     enable_random_seed: bool = False,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
+    heuristic_threshold: List[int] = [100],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -41,6 +42,7 @@ def grid_online(
             "pmw_cfg": {
                 "alpha": tune.grid_search(alpha),
                 "beta": tune.grid_search(beta),
+                "heuristic_threshold": tune.grid_search(heuristic_threshold),
             },
         },
         "planner": {

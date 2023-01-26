@@ -1,12 +1,12 @@
 from precycle.budget.histogram import build_sparse_tensor
 
 
-class SQLConverter:
+class QueryConverter:
     def __init__(self, blocks_metadata) -> None:
         self.attribute_names = blocks_metadata["attribute_names"]
         self.attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
 
-    def convert(self, query_vector, blocks):
+    def convert_to_sql(self, query_vector, blocks):
         p = [set() for _ in self.attribute_names]
 
         for entry in query_vector:
@@ -31,12 +31,7 @@ class SQLConverter:
         )
         return sql
 
-
-class TensorConverter:
-    def __init__(self, blocks_metadata) -> None:
-        self.attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
-
-    def convert(self, query_vector):
+    def convert_to_tensor(self, query_vector):
         tensor = build_sparse_tensor(
             bin_indices=query_vector,
             values=[1.0] * len(query_vector),

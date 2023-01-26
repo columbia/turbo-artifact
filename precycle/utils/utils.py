@@ -63,13 +63,38 @@ def get_logs(
 ) -> dict:
 
     n_allocated_tasks = 0
-    hard_queries = 0
+    avg_total_hard_run_ops = 0
+
     for task_info in tasks_info:
+
         if task_info["status"] == FINISHED:
             n_allocated_tasks += 1
-            if task_info["run_metadata"]["hard_query"]:
-                hard_queries += 1
 
+            run_metadata = task_info["run_metadata"]
+            avg_task_hard_run_ops = 0
+            for run_op_metadata in run_metadata.values():
+                if run_op_metadata["hard_query"]:
+                    avg_task_hard_run_ops += 1
+            avg_task_hard_run_ops /= len(run_metadata)
+
+            avg_total_hard_run_ops += avg_task_hard_run_ops
+
+            probabilistic_runs = deterministic_runs = 0
+            for run_op_metadata in run_metadata.values():
+                if run_op_metadata["cache_type"] == "DeterministicCache":
+                    deterministic_runs += 1
+                elif run_op_metadata["cache_type"] == "ProbabilisticCache":
+                    probabilistic_runs += 1
+
+            task_info.update(
+                {
+                    "deterministic_runs": deterministic_runs,
+                    "probabilistic_runs": probabilistic_runs,
+                }
+            )
+
+    avg_total_hard_run_ops /= len(tasks_info)
+    
     blocks_initial_budget = RenyiBudget.from_epsilon_delta(
         epsilon=config_dict["budget_accountant"]["epsilon"],
         delta=config_dict["budget_accountant"]["delta"],
@@ -82,8 +107,8 @@ def get_logs(
     config.update(
         {
             "n_allocated_tasks": n_allocated_tasks,
-            "hard_queries": hard_queries,
             "total_tasks": len(tasks_info),
+            "avg_total_hard_run_ops": avg_total_hard_run_ops,
             "cache": config_dict["cache"]["type"],
             "planner": config_dict["planner"]["method"],
             "workload_path": config_dict["tasks"]["path"],
@@ -91,6 +116,9 @@ def get_logs(
             "tasks_info": tasks_info,
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
+            "heuristic_threshold": config_dict["cache"]["pmw_cfg"][
+                "heuristic_threshold"
+            ],
             "config": config_dict,
         }
     )

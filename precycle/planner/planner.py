@@ -1,3 +1,8 @@
+import math
+from precycle.budget.curves import ZeroCurve
+import time
+
+
 class Planner:
     def __init__(self, cache, budget_accountant, config):
         self.cache = cache
@@ -9,3 +14,60 @@ class Planner:
 
     def get_execution_plan(sself, query_id, utility, utility_beta, block_request):
         pass
+
+    # Used only by max/min_cuts_planners
+    def get_plan_cost_and_set_cache_types(self, plan, query_id, query):
+        cost = ZeroCurve()
+
+        if self.cache_type == "DeterministicCache":
+            for run_op in plan.l:
+                run_op.cache_type = self.cache_type
+                run_cost = self.get_run_cost(
+                    self.cache.deterministic_cache, run_op, query_id, query
+                )
+                if isinstance(run_cost, float) and math.isinf(run_cost):
+                    return math.inf
+                cost += run_cost
+            return cost
+
+        elif self.cache_type == "ProbabilisticCache":
+            for run_op in plan.l:
+                run_op.cache_type = self.cache_type
+                run_cost = self.get_run_cost(
+                    self.cache.probabilistic_cache, run_op, query_id, query
+                )
+
+                if isinstance(run_cost, float) and math.isinf(run_cost):
+                    return math.inf
+                cost += run_cost
+            return cost
+
+        elif self.cache_type == "CombinedCache":
+            for run_op in plan.l:
+                deterministic_cost = self.get_run_cost(
+                    self.cache.deterministic_cache, run_op, query_id, query
+                )
+                probabilistic_cost = self.get_run_cost(
+                    self.cache.probabilistic_cache, run_op, query_id, query
+                )
+                if probabilistic_cost >= deterministic_cost:
+                    run_op.cache_type = "DeterministicCache"
+                    run_cost = deterministic_cost
+                else:
+                    run_op.cache_type = "ProbabilisticCache"
+                    run_cost = probabilistic_cost
+
+                if isinstance(run_cost, float) and math.isinf(run_cost):
+                    return math.inf
+                cost += run_cost
+
+        return cost
+
+    def get_run_cost(self, cache, run_op, query_id, query):
+        run_budget = cache.estimate_run_budget(
+            query_id, query, run_op.blocks, run_op.noise_std
+        )
+        # Check if there is enough budget in the blocks
+        if not self.budget_accountant.can_run(run_op.blocks, run_budget):
+            return math.inf
+        return run_budget

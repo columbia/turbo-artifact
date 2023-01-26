@@ -29,34 +29,13 @@ class MaxCutsPlanner(Planner):
             laplace_scale = sensitivity / min_pure_epsilon
             noise_std = math.sqrt(2) * laplace_scale
 
-            print("\n++++++++++++++++++++++++++++++++++++++++++++")
-            print("min pure epsilon", min_pure_epsilon)
-            print("total size", blocks_size)
-            print("sensitivity", sensitivity)
-            print("laplace scale", laplace_scale)
-            print("noise std", noise_std)
-            print("++++++++++++++++++++++++++++++++++++++++++++\n")
-
-            run_ops += [
-                R(blocks=(b, b), noise_std=noise_std, cache_type=self.cache_type)
-            ]
+            run_ops += [R(blocks=(b, b), noise_std=noise_std)]
 
         plan = A(run_ops)
+        # Gets the cost of the plan and sets the cache type of each run operator
+        cost = self.get_plan_cost_and_set_cache_types(plan, task.query_id, task.query)
 
-        cost = self.get_cost(plan, task.query_id)
-        if not math.isinf(cost):
+        if not isinstance(cost, float) or not math.isinf(cost):
             plan.cost = cost
             return plan
         return None
-
-    # TODO: Move this elsewhere
-    # Simple Cost model - returns 0 or inf. - used only by max/min_cuts_planners
-    def get_cost(self, plan, query_id):
-        for run_op in plan.l:
-            run_budget = self.cache.estimate_run_budget(
-                query_id, run_op.blocks, run_op.noise_std
-            )
-        # Check if there is enough budget in the blocks
-        if not self.budget_accountant.can_run(run_op.blocks, run_budget):
-            return math.inf
-        return 0
