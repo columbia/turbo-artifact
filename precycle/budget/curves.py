@@ -1,6 +1,6 @@
-from typing import List
-
+import math
 import numpy as np
+from typing import List
 from autodp.mechanism_zoo import LaplaceMechanism
 from autodp.transformer_zoo import AmplificationBySampling
 
@@ -12,6 +12,12 @@ from precycle.budget import ALPHAS, RenyiBudget
 class ZeroCurve(RenyiBudget):
     def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: 0 for alpha in alpha_list}
+        super().__init__(orders)
+
+
+class InfinityCurve(RenyiBudget):
+    def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
+        orders = {alpha: math.inf for alpha in alpha_list}
         super().__init__(orders)
 
 

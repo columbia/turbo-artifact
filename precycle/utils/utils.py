@@ -94,15 +94,15 @@ def get_logs(
             )
 
     avg_total_hard_run_ops /= len(tasks_info)
-    
+
     blocks_initial_budget = RenyiBudget.from_epsilon_delta(
         epsilon=config_dict["budget_accountant"]["epsilon"],
         delta=config_dict["budget_accountant"]["delta"],
         alpha_list=config_dict["budget_accountant"]["alphas"],
     ).dump()
 
-    workload = pd.read_csv(config_dict["tasks"]["path"], header=None)
-    query_pool_size = len(workload) - 1
+    workload = pd.read_csv(config_dict["tasks"]["path"])
+    query_pool_size = len(workload["query_id"].unique())
     config = {}
     config.update(
         {
@@ -116,9 +116,9 @@ def get_logs(
             "tasks_info": tasks_info,
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
-            "heuristic_threshold": config_dict["cache"]["pmw_cfg"][
-                "heuristic_threshold"
-            ],
+            "avg_bin_visits": config_dict["cache"]["pmw_cfg"]["avg_bin_visits"],
+            "past_queries_len": config_dict["cache"]["pmw_cfg"]["past_queries_len"],
+            "heuristic": config_dict["cache"]["pmw_cfg"]["heuristic"],
             "config": config_dict,
         }
     )

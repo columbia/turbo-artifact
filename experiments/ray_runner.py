@@ -30,7 +30,9 @@ def grid_online(
     enable_random_seed: bool = False,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
-    heuristic_threshold: List[int] = [100],
+    avg_bin_visits: List[int] = [100],
+    past_queries_len: List[int] = [10],
+    heuristic: str = "past_queries_len",
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -42,7 +44,9 @@ def grid_online(
             "pmw_cfg": {
                 "alpha": tune.grid_search(alpha),
                 "beta": tune.grid_search(beta),
-                "heuristic_threshold": tune.grid_search(heuristic_threshold),
+                "avg_bin_visits": tune.grid_search(avg_bin_visits),
+                "past_queries_len": tune.grid_search(past_queries_len),
+                "heuristic": heuristic,
             },
         },
         "planner": {

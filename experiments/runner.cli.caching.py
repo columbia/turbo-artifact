@@ -11,21 +11,21 @@ def caching():
     tasks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_workload/")
     blocks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_data/")
 
-    # task_paths = [
-    #     "1:1blocks_10queries.privacy_tasks.csv",
-    #     "1:1blocks_100queries.privacy_tasks.csv",
-    #     "1:1blocks_1000queries.privacy_tasks.csv",
-    #     "1:1blocks_5000queries.privacy_tasks.csv",
-    #     "1:1blocks_10000queries.privacy_tasks.csv",
-    #     "1:1blocks_15000queries.privacy_tasks.csv",
-    #     "1:1blocks_20000queries.privacy_tasks.csv",
-    #     "1:1blocks_25000queries.privacy_tasks.csv",
-    #     "1:1blocks_30000queries.privacy_tasks.csv",
-    #     "1:1blocks_34000queries.privacy_tasks.csv",
-    # ]
     task_paths = [
+        "1:1blocks_10queries.privacy_tasks.csv",
+        "1:1blocks_100queries.privacy_tasks.csv",
+        "1:1blocks_1000queries.privacy_tasks.csv",
+        "1:1blocks_5000queries.privacy_tasks.csv",
+        "1:1blocks_10000queries.privacy_tasks.csv",
+        "1:1blocks_15000queries.privacy_tasks.csv",
+        "1:1blocks_20000queries.privacy_tasks.csv",
+        "1:1blocks_25000queries.privacy_tasks.csv",
+        "1:1blocks_30000queries.privacy_tasks.csv",
         "1:1blocks_34000queries.privacy_tasks.csv",
     ]
+    # task_paths = [
+    # "1:1blocks_34000queries.privacy_tasks.csv",
+    # ]
 
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
@@ -37,15 +37,19 @@ def caching():
         blocks_path=str(blocks_path_prefix.joinpath("blocks")),
         blocks_metadata=str(blocks_path_prefix.joinpath("metadata.json")),
         planner=["MinCutsPlanner"],
-        cache=["CombinedCache"], #["DeterministicCache", "ProbabilisticCache"],
+        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        # cache=["CombinedCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[5e2],
-        max_tasks=[5e2],
+        avg_num_tasks_per_block=[5e4],
+        max_tasks=[5e4],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
-        heuristic_threshold=[10, 50, 100, 1000],
+        # avg_bin_visits=[10, 50, 100, 500, 1000],
+        avg_bin_visits=[100],
+        # past_queries_len=[5, 20, 50, 100, 200, 500, 1000, 2000],
+        heuristic="avg_bin_visits",
     )
 
 

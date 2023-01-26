@@ -2,6 +2,7 @@ import math
 from precycle.executor import A, R
 from precycle.planner.planner import Planner
 from precycle.utils.compute_utility_curve import compute_utility_curve
+from precycle.budget.curves import InfinityCurve
 from precycle.utils.utils import get_blocks_size
 
 
@@ -27,7 +28,7 @@ class MinCutsPlanner(Planner):
 
         cost = self.get_plan_cost_and_set_cache_types(plan, task.query_id, task.query)
 
-        if not isinstance(cost, float) or not math.isinf(cost):
+        if not isinstance(cost, InfinityCurve):
             plan.cost = cost
             return plan
         return None

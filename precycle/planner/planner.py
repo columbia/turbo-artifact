@@ -1,5 +1,5 @@
-import math
-from precycle.budget.curves import ZeroCurve
+from precycle.budget import RenyiBudget
+from precycle.budget.curves import ZeroCurve, InfinityCurve
 import time
 
 
@@ -25,8 +25,8 @@ class Planner:
                 run_cost = self.get_run_cost(
                     self.cache.deterministic_cache, run_op, query_id, query
                 )
-                if isinstance(run_cost, float) and math.isinf(run_cost):
-                    return math.inf
+                if isinstance(run_cost, InfinityCurve):
+                    return InfinityCurve()
                 cost += run_cost
             return cost
 
@@ -36,9 +36,8 @@ class Planner:
                 run_cost = self.get_run_cost(
                     self.cache.probabilistic_cache, run_op, query_id, query
                 )
-
-                if isinstance(run_cost, float) and math.isinf(run_cost):
-                    return math.inf
+                if isinstance(run_cost, InfinityCurve):
+                    return InfinityCurve()
                 cost += run_cost
             return cost
 
@@ -50,15 +49,23 @@ class Planner:
                 probabilistic_cost = self.get_run_cost(
                     self.cache.probabilistic_cache, run_op, query_id, query
                 )
-                if probabilistic_cost >= deterministic_cost:
+
+                # Comparison is meaningful because we don't have heterogeneous curves - only Laplace
+                if RenyiBudget.from_epsilon_list(
+                    probabilistic_cost.epsilons
+                ) >= RenyiBudget.from_epsilon_list(deterministic_cost.epsilons):
                     run_op.cache_type = "DeterministicCache"
                     run_cost = deterministic_cost
+                    # print("Deterministic Won")
                 else:
                     run_op.cache_type = "ProbabilisticCache"
                     run_cost = probabilistic_cost
+                    # print("Probabilistic Won")
 
-                if isinstance(run_cost, float) and math.isinf(run_cost):
-                    return math.inf
+                # time.sleep(2)
+
+                if isinstance(run_cost, InfinityCurve):
+                    return InfinityCurve()
                 cost += run_cost
 
         return cost
@@ -69,5 +76,5 @@ class Planner:
         )
         # Check if there is enough budget in the blocks
         if not self.budget_accountant.can_run(run_op.blocks, run_budget):
-            return math.inf
+            return InfinityCurve()
         return run_budget

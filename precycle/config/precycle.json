@@ -8,7 +8,10 @@
         "pmw_cfg": {
             "alpha": 0.05,
             "beta": 0.0001,
-            "heuristic_threshold": 100
+            "avg_bin_visits": 1000,
+            "past_queries_len": 10,
+            "heuristic": "past_queries_len"
+
         }
     },
 
@@ -41,7 +44,7 @@
     },
     
     "tasks": {
-        "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
+        "path": "data/covid19/covid19_workload/1:1blocks_34000queries.privacy_tasks.csv",
         "avg_num_tasks_per_block": 5e4,
         "max_num": 5e4,
         "initial_num": 0

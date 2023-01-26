@@ -60,6 +60,7 @@ class Executor:
                 run_return_value = self.run_deterministic(
                     run_op, task.query_id, task.query
                 )
+                # Use the result to update the Probabilistic cache as well
                 if self.config.cache.type == "CombinedCache":
                     self.cache.probabilistic_cache.update_entry(
                         task.query_id,
@@ -73,6 +74,7 @@ class Executor:
                 run_return_value = self.run_probabilistic(
                     run_op, task.query_id, task.query
                 )
+                # Use the result to update the Deterministic cache as well
                 if self.config.cache.type == "CombinedCache":
                     self.cache.deterministic_cache.update_entry(
                         task.query_id,
@@ -107,7 +109,6 @@ class Executor:
             run_op_metadata["hard_query"] = True
             # True output never released except in debugging logs
             true_result = self.db.run_query(query, run_op.blocks)
-
             laplace_scale = run_op.noise_std / np.sqrt(2)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
             noise = np.random.laplace(scale=laplace_scale)
@@ -124,32 +125,32 @@ class Executor:
                 variance_reduction = False  # No VR for now
 
                 # We need to improve on the cache
-                if variance_reduction:
+                if not variance_reduction:
                     # Just compute from scratch and pay for it
                     laplace_scale = run_op.noise_std / np.sqrt(2)
                     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                     noise = np.random.laplace(scale=laplace_scale)
-                else:
-                    # TODO: re-enable variance reduction
-                    # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
-                    # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
-                    # We set a ∈ [0,1] and b = 1-a
-                    # Then, we maximize y^2 = f(a) = (c - 2(ax)^2)/2(1-a)^2
-                    # We have (1-a)^3 f'(a) = c - 2ax^2
-                    # So we take a = c/(2x^2)
-                    x = cache_entry.noise_std / np.sqrt(2)
-                    c = run_op.noise_std**2
-                    a = c / (2 * (x**2))
-                    b = 1 - a
-                    y = np.sqrt((c - 2 * (a * x) ** 2) / (2 * b**2))
+                # else:
+                #     # TODO: re-enable variance reduction
+                #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
+                #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
+                #     # We set a ∈ [0,1] and b = 1-a
+                #     # Then, we maximize y^2 = f(a) = (c - 2(ax)^2)/2(1-a)^2
+                #     # We have (1-a)^3 f'(a) = c - 2ax^2
+                #     # So we take a = c/(2x^2)
+                #     x = cache_entry.noise_std / np.sqrt(2)
+                #     c = run_op.noise_std**2
+                #     a = c / (2 * (x**2))
+                #     b = 1 - a
+                #     y = np.sqrt((c - 2 * (a * x) ** 2) / (2 * b**2))
 
-                    assert np.isclose(2 * (a * x) ** 2 + 2 * (b * y) ** 2, c)
+                #     assert np.isclose(2 * (a * x) ** 2 + 2 * (b * y) ** 2, c)
 
-                    # Get some fresh noise with optimal variance and take a linear combination with the old noise
-                    laplace_scale = y / np.sqrt(2)
-                    fresh_noise = np.random.laplace(scale=laplace_scale)
-                    run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-                    noise = a * cache_entry.noise + b * fresh_noise
+                #     # Get some fresh noise with optimal variance and take a linear combination with the old noise
+                #     laplace_scale = y / np.sqrt(2)
+                #     fresh_noise = np.random.laplace(scale=laplace_scale)
+                #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+                #     noise = a * cache_entry.noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache
         if not isinstance(run_budget, ZeroCurve):
@@ -175,7 +176,7 @@ class Executor:
         true_result = self.db.run_query(query, run_op.blocks)
         noisy_result, run_budget, run_op_metadata = pmw.run(query, true_result)
         run_op_metadata["cache_type"] = "ProbabilisticCache"
-        
+
         noise = noisy_result - true_result
         rv = RunReturnValue(
             noisy_result, true_result, run_budget, run_op_metadata, noise

@@ -15,15 +15,6 @@ from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL, PSQL
 from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
 
-from precycle.cache.deterministic_cache import (
-    MockDeterministicCache,
-    DeterministicCache,
-)
-from precycle.cache.probabilistic_cache import (
-    MockProbabilisticCache,
-    ProbabilisticCache,
-)
-
 from precycle.cache.combined_cache import MockCombinedCache
 
 # from precycle.planner.ilp import ILP
@@ -74,12 +65,11 @@ class Simulator:
         if self.config.mock:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
-            # cache = globals()[f"Mock{self.config.cache.type}"](self.config)
             cache = MockCombinedCache(self.config)
-        else:
-            db = PSQL(self.config)
-            budget_accountant = BudgetAccountant(self.config)
-            cache = globals()[self.config.cache.type](self.config)
+        # else:
+        #     db = PSQL(self.config)
+        #     budget_accountant = BudgetAccountant(self.config)
+        #     cache = globals()[self.config.cache.type](self.config)
 
         planner = globals()[self.config.planner.method](
             cache, budget_accountant, self.config

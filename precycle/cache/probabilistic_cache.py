@@ -38,8 +38,8 @@ class MockProbabilisticCache(Cache):
         laplace_noise = laplace_scale / sensitivity
 
         # If the new entry is good enough for the PMW
-        if not laplace_noise >= pmw.nu:
-            pmw.external_update(query_id, query, noisy_result)
+        if pmw.nu >= laplace_noise:
+            pmw.external_update(query, noisy_result)
 
     def estimate_run_budget(self, query_id, query, blocks, noise_std):
         """

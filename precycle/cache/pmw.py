@@ -19,7 +19,9 @@ class PMW:
         self,
         blocks,
         blocks_metadata,
-        heuristic_threshold=100,
+        avg_bin_visits=100,
+        past_queries_len=10,
+        heuristic="past_queries_len",
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.05,  # Max error guarantee, expressed as fraction.
@@ -47,10 +49,14 @@ class PMW:
         self.histogram = DenseHistogram(self.M)
         self.id = str(blocks)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
-        self.heuristic_threshold = heuristic_threshold
 
-        # To be used as a heuristic to estimate cost
+        # Heuristics
+        self.heuristic = heuristic
+        self.avg_bin_visits = avg_bin_visits
         self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        # Initialize with past_queries_len easy queries
+        self.past_queries_len = past_queries_len
+        self.past_queries_difficulty = [0] * self.past_queries_len
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
@@ -90,20 +96,37 @@ class PMW:
             )
         return svt_cost + query_cost
 
-    def predict_hit(self, query):
+    def predict_hit_avg_bin_visits_heuristic(self, query):
         """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
 
         avg_bin_visits = 0
         for i in query.indices()[1]:
             avg_bin_visits += self.visits_count_histogram[0, i]
         avg_bin_visits /= len(query.indices()[1])
+        print("avg_bin_visits", avg_bin_visits)
         # print("avg_bin_visits", avg_bin_visits)
-        if avg_bin_visits > self.heuristic_threshold:
+        if avg_bin_visits > self.avg_bin_visits:
             return True
         return False
 
+    def predict_hit_hard_queries_heuristic(self, query):
+        last_n_queries = self.past_queries_difficulty[-self.past_queries_len :]
+        # print(last_n_queries)
+        easy_queries = 1 - sum(last_n_queries) / self.past_queries_len
+        print(easy_queries)
+        if easy_queries >= 0.5:
+            return True
+        else:
+            # Give 20% chance for the PMW to run, otherwise we will never have queries
+            return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
+
     def estimate_run_budget(self, query) -> Budget:
-        return ZeroCurve() if self.predict_hit(query) else self.worst_case_cost()
+        hit = (
+            self.predict_hit_hard_queries_heuristic(query)
+            if self.heuristic == "past_queries_len"
+            else self.predict_hit_avg_bin_visits_heuristic(query)
+        )
+        return ZeroCurve() if hit else self.worst_case_cost()
 
     def run(self, query, true_output):
         assert isinstance(query, torch.Tensor)
@@ -160,6 +183,7 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             run_metadata["hard_query"] = False
+            self.past_queries_difficulty.append(0)
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -168,6 +192,7 @@ class PMW:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
+            self.past_queries_difficulty.append(1)
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -213,8 +238,8 @@ class PMW:
 
         return output, run_budget, run_metadata
 
-    def external_update(self, query_id, query, noisy_result):
-        # Important: External updates probably breaks proofs
+    def external_update(self, query, noisy_result):
+        # Important: External updates probably break proofs
         predicted_output = self.histogram.run(query)
 
         # Multiplicative weights update for the relevant bins
