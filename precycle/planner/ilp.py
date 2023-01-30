@@ -183,12 +183,12 @@ def optimize(
             # fresh_pure_epsilon_prob = f(k,i,j)    probabilistic?
             # fresh_pure_epsilon = y*fresh_pure_epsilon_det - (1-y)*fresh_pure_epsilon_prob
 
-            hyperblock = HyperBlock(
-                {
-                    requested_blocks[idx].id: requested_blocks[idx]
-                    for idx in range(i, j + 1)
-                }
-            )
+            # hyperblock = HyperBlock(
+            #     {
+            #         requested_blocks[idx].id: requested_blocks[idx]
+            #         for idx in range(i, j + 1)
+            #     }
+            # )
             laplace_scale = 1 / compute_utility_curve(
                 utility, utility_beta, K
             )  # This will also depend on i and j and will be different for each chunk
@@ -201,6 +201,10 @@ def optimize(
                 0 if isinstance(run_budget, ZeroCurve) else run_budget.pure_epsilon
             )
 
+
+
+
+
             # Enough budget in blocks constraint to accommodate "fresh_pure_epsilon"
             # If at least one block in chunk i,j does not have enough budget then Xij=0
             for k in range(i, j + 1):  # For every block in the chunk i,j
@@ -209,6 +213,12 @@ def optimize(
                     break
 
             fresh_pure_epsilon_per_chunk[(i, j)] = fresh_pure_epsilon * (j - i + 1)
+
+
+
+
+
+
 
         # No overlapping chunks constraint
         for k in range(N):  # For every block

@@ -11,22 +11,7 @@ def caching():
     tasks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_workload/")
     blocks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_data/")
 
-    task_paths = [
-        "1:1blocks_10queries.privacy_tasks.csv",
-        "1:1blocks_100queries.privacy_tasks.csv",
-        "1:1blocks_1000queries.privacy_tasks.csv",
-        "1:1blocks_5000queries.privacy_tasks.csv",
-        "1:1blocks_10000queries.privacy_tasks.csv",
-        "1:1blocks_15000queries.privacy_tasks.csv",
-        "1:1blocks_20000queries.privacy_tasks.csv",
-        "1:1blocks_25000queries.privacy_tasks.csv",
-        "1:1blocks_30000queries.privacy_tasks.csv",
-        "1:1blocks_34000queries.privacy_tasks.csv",
-    ]
-    # task_paths = [
-    # "1:1blocks_34000queries.privacy_tasks.csv",
-    # ]
-
+    task_paths = ["1:1blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -35,7 +20,7 @@ def caching():
         logs_dir="experiment",
         tasks_path=task_paths,
         blocks_path=str(blocks_path_prefix.joinpath("blocks")),
-        blocks_metadata=str(blocks_path_prefix.joinpath("metadata.json")),
+        blocks_metadata=str(blocks_path_prefix.joinpath("blocks/metadata.json")),
         planner=["MinCutsPlanner"],
         cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
         # cache=["CombinedCache"],
@@ -46,15 +31,14 @@ def caching():
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
-        # avg_bin_visits=[10, 50, 100, 500, 1000],
-        avg_bin_visits=[100],
-        # past_queries_len=[5, 20, 50, 100, 200, 500, 1000, 2000],
-        heuristic="avg_bin_visits",
+        zipf_k=[0, 0.5, 1, 1.5],
+        heuristic="total_updates_counts",
+        heuristic_value=[2000], #[100, 250, 500, 750, 1000]
     )
 
 
 @app.command()
-def run(exp: str = "caching", loguru_level: str = "INFO"):
+def run(exp: str = "caching", loguru_level: str = "CRITICAL"):
 
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"

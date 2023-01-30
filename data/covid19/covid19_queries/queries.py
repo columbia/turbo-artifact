@@ -3,7 +3,6 @@ from itertools import chain, combinations, product
 from pathlib import Path
 
 import typer
-import random
 from loguru import logger
 
 from precycle.budget.histogram import k_way_marginal_query_list
@@ -159,14 +158,10 @@ def main(
     write_queries(queries_dir, "all", query_tensors)
 
     # Using the query tensors from the "all" workload  type to create various synthetic workloads
-    # max_num = len(query_tensors)
-    # workloads_num = 15
-    # k = int(max_num / workloads_num)
-
-    workload_sizes = [10, 100, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 34000]
-    for workload_size in workload_sizes:
-        sample = random.sample(query_tensors, workload_size)
-        write_queries(queries_dir, f"synthetic.{workload_size}", sample)
+    # workload_sizes = [10, 100, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 34000]
+    # for workload_size in workload_sizes:
+    #     sample = random.sample(query_tensors, workload_size)
+    #     write_queries(queries_dir, f"synthetic.{workload_size}", sample)
 
 
 if __name__ == "__main__":

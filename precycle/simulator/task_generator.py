@@ -1,6 +1,21 @@
 import random
+import numpy as np
 from loguru import logger
 from precycle.task import Task
+
+
+def Zipf(a: np.float64, min: np.uint64, max: np.uint64, size=None):
+    """
+    Generate Zipf-like random variables,
+    but in inclusive [min...max] interval
+    """
+    if min == 0:
+        raise ZeroDivisionError("")
+
+    v = np.arange(min, max + 1)  # values to sample
+    p = 1.0 / np.power(v, a)  # probabilities
+    p /= np.sum(p)
+    return np.random.choice(v, size=size, replace=True, p=p)
 
 
 class TaskGenerator:
@@ -39,10 +54,24 @@ class PoissonTaskGenerator(TaskGenerator):
         super().__init__(df_tasks, config)
         self.avg_num_tasks_per_block = avg_num_tasks_per_block
 
+        def zipf():
+            query_pool_size = len(self.tasks["query_id"].unique())
+            min = np.uint64(1)
+            max = np.uint64(query_pool_size)
+            samples = Zipf(config.tasks.zipf_k, min, max, int(config.tasks.max_num))
+            for sample in samples:
+                yield sample
+
+        self.zipf_sampling = zipf()
+
     def sample_task_row(self, num_blocks):
         try:
             # Sample only from tasks that request no more than existing blocks
-            return self.tasks.query(f"n_blocks <= {num_blocks}").sample(1)
+            next_query_id = int(next(self.zipf_sampling)) - 1
+            return self.tasks.query(
+                f"n_blocks <= {num_blocks} and query_id == {next_query_id}"
+            ).sample(1)
+
         except:
             logger.error(
                 f"There are no tasks in the workload requesting less than {num_blocks} blocks to sample from. \

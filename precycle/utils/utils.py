@@ -116,9 +116,9 @@ def get_logs(
             "tasks_info": tasks_info,
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
-            "avg_bin_visits": config_dict["cache"]["pmw_cfg"]["avg_bin_visits"],
-            "past_queries_len": config_dict["cache"]["pmw_cfg"]["past_queries_len"],
+            "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": config_dict["cache"]["pmw_cfg"]["heuristic"],
+            "heuristic_value": config_dict["cache"]["pmw_cfg"]["heuristic_value"],
             "config": config_dict,
         }
     )

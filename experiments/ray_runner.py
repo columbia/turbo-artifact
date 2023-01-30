@@ -4,7 +4,7 @@ import mlflow
 import datetime
 from ray import tune
 from loguru import logger
-from typing import List
+from typing import List, Any, Dict
 from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 from precycle.run_simulation import Simulator
 
@@ -30,9 +30,9 @@ def grid_online(
     enable_random_seed: bool = False,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
-    avg_bin_visits: List[int] = [100],
-    past_queries_len: List[int] = [10],
-    heuristic: str = "past_queries_len",
+    heuristic: str = "total_updates_counts",
+    heuristic_value: List[float] = [100],
+    zipf_k: List[int] = [0.5],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -44,9 +44,8 @@ def grid_online(
             "pmw_cfg": {
                 "alpha": tune.grid_search(alpha),
                 "beta": tune.grid_search(beta),
-                "avg_bin_visits": tune.grid_search(avg_bin_visits),
-                "past_queries_len": tune.grid_search(past_queries_len),
                 "heuristic": heuristic,
+                "heuristic_value": tune.grid_search(heuristic_value),
             },
         },
         "planner": {
@@ -66,6 +65,7 @@ def grid_online(
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
             "max_num": tune.grid_search(max_tasks),
             "initial_num": tune.grid_search(initial_tasks),
+            "zipf_k": tune.grid_search(zipf_k),
         },
         "logs": {
             "verbose": False,
@@ -92,7 +92,7 @@ def grid_online(
         resume=False,
         verbose=1,
         callbacks=[
-            # CustomLoggerCallback(),
+            CustomLoggerCallback(),
             tune.logger.JsonLoggerCallback(),
         ],
         progress_reporter=ray.tune.CLIReporter(
@@ -103,7 +103,7 @@ def grid_online(
             parameter_columns={
                 "planner/method": "planner",
                 "cache/type": "cache",
-                "tasks/path": "tasks_path",
+                "tasks/zipf_k": "zipf_k",
             },
             max_report_frequency=60,
         ),
@@ -112,18 +112,18 @@ def grid_online(
     # experiment_dir = Path(all_trial_paths[0]).parent
 
 
-# class CustomLoggerCallback(tune.logger.LoggerCallback):
+class CustomLoggerCallback(tune.logger.LoggerCallback):
 
-#     """Custom logger interface"""
+    """Custom logger interface"""
 
-#     def __init__(self, metrics=["scheduler_metric"]) -> None:
-#         self.metrics = ["n_allocated_tasks"]  # , "realized_profit"]
-#         self.metrics.extend(metrics)
-#         super().__init__()
+    def __init__(self, metrics=[]) -> None:
+        self.metrics = ["n_allocated_tasks"]
+        self.metrics.extend(metrics)
+        super().__init__()
 
-#     def log_trial_result(self, iteration: int, trial: Any, result: Dict):
-#         logger.info([f"{key}: {result[key]}" for key in self.metrics])
-#         return
+    def log_trial_result(self, iteration: int, trial: Any, result: Dict):
+        logger.info([f"{key}: {result[key]}" for key in self.metrics])
+        return
 
-#     def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
-#         return
+    def on_trial_complete(self, iteration: int, trials: List, trial: Any, **info):
+        return

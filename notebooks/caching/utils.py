@@ -14,9 +14,7 @@ def get_df(path):
 def get_tasks_information(df):
     dfs = []
 
-    for (tasks, key, query_pool_size, heuristic_threshold) in df[
-        ["tasks_info", "key", "query_pool_size", "heuristic_threshold"]
-    ].values:
+    for (tasks, key, zipf_k) in df[["tasks_info", "key", "zipf_k"]].values:
 
         for task in tasks:
 
@@ -38,8 +36,7 @@ def get_tasks_information(df):
                             "utility_beta": task["utility_beta"],
                             "status": task["status"],
                             "key": key,
-                            "query_pool_size": query_pool_size,
-                            "heuristic_threshold": heuristic_threshold,
+                            "zipf_k": zipf_k,
                             "deterministic_runs": deterministic_runs,
                             "probabilistic_runs": probabilistic_runs,
                         }
@@ -58,13 +55,12 @@ def get_tasks_information(df):
 def get_blocks_information(df):
     dfs = []
 
-    for (blocks, initial_budget, key, query_pool_size, past_queries_len) in df[
+    for (blocks, initial_budget, key, zipf_k) in df[
         [
             "block_budgets_info",
             "blocks_initial_budget",
             "key",
-            "query_pool_size",
-            "past_queries_len",
+            "zipf_k",
         ]
     ].values:
         for block_id, budget in blocks:
@@ -80,8 +76,7 @@ def get_blocks_information(df):
                             "initial_budget": max_initial_budget,
                             "budget": max_available_budget,
                             "key": key,
-                            "query_pool_size": query_pool_size,
-                            "past_queries_len": past_queries_len,
+                            "zipf_k": zipf_k,
                         }
                     ]
                 )
@@ -94,21 +89,17 @@ def get_blocks_information(df):
 
 def analyze_experiment1(experiment_path):
     def plot_num_allocated_tasks(df, total_tasks):
-        total_tasks = df["total_tasks"].max()
-        query_pool_sizes_order = [
-            str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
-        ]
 
         fig = px.bar(
             df,
-            x="query_pool_size",
+            x="zipf_k",
             y="n_allocated_tasks",
             color="key",
             barmode="group",
             title=f"Num allocated tasks - total tasks={total_tasks}",
             width=900,
             height=500,
-            category_orders={"query_pool_size": query_pool_sizes_order},
+            # category_orders={"query_pool_size": query_pool_sizes_order},
         )
         return fig
 
@@ -116,20 +107,17 @@ def analyze_experiment1(experiment_path):
         df["budget_utilization"] = (df["initial_budget"] - df["budget"]) / df[
             "initial_budget"
         ]
-        query_pool_sizes_order = [
-            str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
-        ]
 
         fig = px.bar(
             df,
-            x="query_pool_size",
+            x="zipf_k",
             y="budget_utilization",
             color="key",
             barmode="group",
             title=f"Budget Utilization - total tasks-{total_tasks}",
             width=900,
             height=500,
-            category_orders={"query_pool_size": query_pool_sizes_order},
+            # category_orders={"query_pool_size": query_pool_sizes_order},
             color_discrete_map={
                 "DeterministicCache": "blue",
                 "ProbabilisticCache": "green",
@@ -139,19 +127,17 @@ def analyze_experiment1(experiment_path):
         return fig
 
     def plot_hard_run_ops(df, total_tasks):
-        query_pool_sizes_order = [
-            str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
-        ]
+
         fig = px.bar(
             df,
-            x="query_pool_size",
+            x="zipf_k",
             y="avg_total_hard_run_ops",
             color="key",
             barmode="group",
             title=f"Hard Queries - total tasks={total_tasks}",
             width=900,
             height=500,
-            category_orders={"query_pool_size": query_pool_sizes_order},
+            # category_orders={"query_pool_size": query_pool_sizes_order},
             color_discrete_map={
                 "DeterministicCache": "blue",
                 "ProbabilisticCache": "green",
@@ -161,7 +147,7 @@ def analyze_experiment1(experiment_path):
         return fig
 
     df = get_df(experiment_path)
-    df["query_pool_size"] = df["query_pool_size"].astype(str)
+    # df["query_pool_size"] = df["query_pool_size"].astype(str)
     df["key"] = df["cache"]
     df.sort_values(["key"], ascending=[True], inplace=True)
     total_tasks = df["total_tasks"].max()
@@ -172,16 +158,33 @@ def analyze_experiment1(experiment_path):
 
 
 def analyze_experiment2(experiment_path):
+    def plot_num_allocated_tasks(df, total_tasks):
+        total_tasks = df["total_tasks"].max()
+        # query_pool_sizes_order = [
+        #     str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
+        # ]
+
+        fig = px.bar(
+            df,
+            x="zipf_k",
+            y="n_allocated_tasks",
+            color="key",
+            barmode="group",
+            title=f"Num allocated tasks - total tasks={total_tasks}",
+            width=900,
+            height=500,
+            # category_orders={"query_pool_size": query_pool_sizes_order},
+        )
+        return fig
+
     def plot_budget_utilization(df, total_tasks):
         df["budget_utilization"] = (df["initial_budget"] - df["budget"]) / df[
             "initial_budget"
         ]
-        query_pool_sizes_order = [
-            str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
-        ]
+
         fig = px.bar(
             df,
-            x="query_pool_size",
+            x="zipf_k",
             y="budget_utilization",
             color="key",
             barmode="group",
@@ -189,7 +192,7 @@ def analyze_experiment2(experiment_path):
             width=900,
             height=500,
             range_y=[0, 1],
-            category_orders={"query_pool_size": query_pool_sizes_order},
+            # category_orders={"query_pool_size": query_pool_sizes_order},
         )
         return fig
 
@@ -199,7 +202,7 @@ def analyze_experiment2(experiment_path):
         ]
         fig = px.bar(
             df,
-            x="query_pool_size",
+            x="zipf_k",
             y="avg_total_hard_run_ops",
             color="key",
             barmode="group",
@@ -215,18 +218,14 @@ def analyze_experiment2(experiment_path):
     df = df.drop(columns=["tasks_info"])  # Make it lighter
     total_tasks = df["total_tasks"].max()
 
-    df.sort_values(["past_queries_len"], ascending=[True], inplace=True)
-    df["query_pool_size"] = df["query_pool_size"].astype(str)
-    df["avg_bin_visits"] = df["avg_bin_visits"].astype(str)
-    df["past_queries_len"] = df["past_queries_len"].astype(str)
-
+    df.sort_values(["heuristic_value"], ascending=[True], inplace=True)
+    df["heuristic_value"] = df["heuristic_value"].astype(str)
     heuristic = df["heuristic"].max()
-    df["key"] = (
-        df["cache"] + "-" + "heuristic_" + df["heuristic"] + "_" + df[f"{heuristic}"]
-    )
+    df["key"] = df["cache"] + "-" + "heuristic_" + df[f"{heuristic}"]
 
     blocks = get_blocks_information(df)
 
+    iplot(plot_num_allocated_tasks(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
     iplot(plot_hard_run_ops(df, total_tasks))
     # tasks = get_tasks_information(df)

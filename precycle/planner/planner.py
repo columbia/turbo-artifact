@@ -1,6 +1,5 @@
 from precycle.budget import RenyiBudget
 from precycle.budget.curves import ZeroCurve, InfinityCurve
-import time
 
 
 class Planner:
@@ -50,6 +49,8 @@ class Planner:
                     self.cache.probabilistic_cache, run_op, query_id, query
                 )
 
+                # print("Deterministic", deterministic_cost.epsilons)
+                # print("Probabilistic", probabilistic_cost.epsilons)
                 # Comparison is meaningful because we don't have heterogeneous curves - only Laplace
                 if RenyiBudget.from_epsilon_list(
                     probabilistic_cost.epsilons
@@ -61,8 +62,6 @@ class Planner:
                     run_op.cache_type = "ProbabilisticCache"
                     run_cost = probabilistic_cost
                     # print("Probabilistic Won")
-
-                # time.sleep(2)
 
                 if isinstance(run_cost, InfinityCurve):
                     return InfinityCurve()

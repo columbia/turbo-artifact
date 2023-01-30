@@ -19,9 +19,8 @@ class PMW:
         self,
         blocks,
         blocks_metadata,
-        avg_bin_visits=100,
-        past_queries_len=10,
-        heuristic="past_queries_len",
+        heuristic,
+        heuristic_value,
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         alpha=0.05,  # Max error guarantee, expressed as fraction.
@@ -52,11 +51,11 @@ class PMW:
 
         # Heuristics
         self.heuristic = heuristic
-        self.avg_bin_visits = avg_bin_visits
-        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        self.heuristic_value = heuristic_value
         # Initialize with past_queries_len easy queries
-        self.past_queries_len = past_queries_len
-        self.past_queries_difficulty = [0] * self.past_queries_len
+        self.past_queries_difficulty = [0] * self.heuristic_value
+        self.pmw_updates_count = 0
+        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
@@ -96,6 +95,7 @@ class PMW:
             )
         return svt_cost + query_cost
 
+    # Heuristic 1
     def predict_hit_avg_bin_visits_heuristic(self, query):
         """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
 
@@ -103,16 +103,21 @@ class PMW:
         for i in query.indices()[1]:
             avg_bin_visits += self.visits_count_histogram[0, i]
         avg_bin_visits /= len(query.indices()[1])
-        print("avg_bin_visits", avg_bin_visits)
         # print("avg_bin_visits", avg_bin_visits)
-        if avg_bin_visits > self.avg_bin_visits:
+        if avg_bin_visits > self.heuristic_value:
             return True
         return False
 
+    # Heuristic 2
+    def predict_hit_total_updates_heuristic(self, query):
+        # print(self.pmw_updates_count, self.heuristic_value)
+        return self.pmw_updates_count > self.heuristic_value
+
+    # Heuristic 3
     def predict_hit_hard_queries_heuristic(self, query):
-        last_n_queries = self.past_queries_difficulty[-self.past_queries_len :]
+        last_n_queries = self.past_queries_difficulty[-self.heuristic_value :]
         # print(last_n_queries)
-        easy_queries = 1 - sum(last_n_queries) / self.past_queries_len
+        easy_queries = 1 - sum(last_n_queries) / self.heuristic_value
         print(easy_queries)
         if easy_queries >= 0.5:
             return True
@@ -121,11 +126,12 @@ class PMW:
             return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
 
     def estimate_run_budget(self, query) -> Budget:
-        hit = (
-            self.predict_hit_hard_queries_heuristic(query)
-            if self.heuristic == "past_queries_len"
-            else self.predict_hit_avg_bin_visits_heuristic(query)
-        )
+        if self.heuristic == "n_past_queries":
+            hit = self.predict_hit_hard_queries_heuristic(query)
+        elif self.heuristic == "avg_bin_visits":
+            hit = self.predict_hit_avg_bin_visits_heuristic(query)
+        elif self.heuristic == "total_updates_counts":
+            hit = self.predict_hit_total_updates_heuristic(query)
         return ZeroCurve() if hit else self.worst_case_cost()
 
     def run(self, query, true_output):
@@ -228,6 +234,7 @@ class PMW:
                 self.visits_count_histogram[0, i] += 1
 
             self.histogram.normalize()
+            self.pmw_updates_count += 1
             output = noisy_output
 
         self.mlflow_log_run(output, true_output)
@@ -253,6 +260,7 @@ class PMW:
             self.histogram.tensor[0, i] *= u
             self.visits_count_histogram[0, i] += 1
         self.histogram.normalize()
+        self.pmw_updates_count += 1
 
     def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)
