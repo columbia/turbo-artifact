@@ -80,7 +80,7 @@ class MockDeterministicCache(Cache):
             return CacheEntry(entry["result"], entry["noise_std"], entry["noise"])
         return None
 
-    def update_entry(self, query_id, query, blocks, true_result, noise_std, noise):
+    def update_entry(self, query_id, blocks, true_result, noise_std, noise):
         cache_entry = self.get_entry(query_id, blocks)
 
         if not cache_entry:
@@ -103,7 +103,7 @@ class MockDeterministicCache(Cache):
             #     # TODO: variance reduction here too
             #     pass
 
-    def estimate_run_budget(self, query_id, query, blocks, noise_std):
+    def estimate_run_budget(self, query_id, blocks, noise_std):
         """
         Checks the cache and returns the budget we need to spend to reach the desired 'noise_std'
         """

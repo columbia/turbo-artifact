@@ -8,12 +8,10 @@ from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
 from precycle.budget_accountant import MockBudgetAccountant
 
-from precycle.cache.deterministic_cache import MockDeterministicCache
-from precycle.cache.probabilistic_cache import MockProbabilisticCache
+from precycle.planner.ilp import ILP
+from precycle.cache.combined_cache import MockCombinedCache
 
-# from precycle.planner.ilp import ILP
-from precycle.planner.max_cuts_planner import MaxCutsPlanner
-from precycle.planner.min_cuts_planner import MinCutsPlanner
+from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
@@ -36,6 +34,25 @@ def test(
         logger.error("Dataset metadata must have be created first..")
     assert blocks_metadata is not None
     config.update({"blocks_metadata": blocks_metadata})
+
+    if not config.cache.type == "DeterministicCache":
+        # This is the global accuracy supported by the probabilistic cache.
+        # If a query comes requesting more accuracy than that it won't be able to serve it.
+        assert config.cache.probabilistic_cfg.max_pmw_k is not None
+        assert config.cache.probabilistic_cfg.alpha is not None
+        assert config.cache.probabilistic_cfg.beta is not None
+
+        # No aggregations in min_cuts, no need for more powerful PMWs than needed
+        if config.planner.method == "min_cuts":
+            config.cache.probabilistic_cfg.max_pmw_k = 1
+
+        pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
+            config.cache.probabilistic_cfg.alpha,
+            config.cache.probabilistic_cfg.beta,
+            config.cache.probabilistic_cfg.max_pmw_k,
+        )
+        config.cache.pmw_cfg.update({"alpha": pmw_alpha, "beta": pmw_beta})
+        print(config.cache.pmw_cfg)
 
     query_vector = [
         [0, 0, 0, 0],
@@ -74,24 +91,26 @@ def test(
 
     db = MockPSQL(config)
     budget_accountant = MockBudgetAccountant(config)
-    cache_type = f"Mock{config.cache.type}"
-    cache = globals()[cache_type](config)
-    planner = globals()[config.planner.method](cache, budget_accountant, config)
+    cache = MockCombinedCache(config)
+    planner = ILP(cache, budget_accountant, config)
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Insert two blocks
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
+    block_data_path = config.blocks.block_data_path + "/block_1.csv"
+    db.add_new_block(block_data_path)
+    budget_accountant.add_new_block_budget()
 
     # Initialize Task
-    num_requested_blocks = 1
+    num_requested_blocks = 2
     num_blocks = budget_accountant.get_blocks_count()
     assert num_blocks > 0
 
     # Latest Blocks first
     requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
-    print(requested_blocks)
+    # print(requested_blocks)
 
     utility = 0.05
     utility_beta = 0.0001
@@ -108,9 +127,8 @@ def test(
         name=0,
     )
 
-    for i in range(10):
-        run_metadata = query_processor.try_run_task(task)
-        # print(run_metadata)
+    run_metadata = query_processor.try_run_task(task)
+    print(run_metadata)
 
 
 if __name__ == "__main__":

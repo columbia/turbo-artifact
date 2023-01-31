@@ -64,7 +64,7 @@ class Tasks:
         self.resource_manager.new_tasks_queue.put(LastItem())
 
         logger.info(
-            f"Done generating tasks at time {self.env.now}. Current count is: {self.task_count}"
+            f"Done generating tasks at time {self.env.now}. Current count is: {task_id}"
         )
 
     def task(self, task_id: int) -> None:

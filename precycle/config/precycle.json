@@ -4,18 +4,20 @@
     "cache": {
         "host": "localhost",
         "port": 6378,
-        "type": "CombinedCache",
-        "pmw_cfg": {
+        "type": "DeterministicCache",
+        "probabilistic_cfg": {
             "alpha": 0.05,
             "beta": 0.0001,
-            "heuristic": "n_past_queries",
+            "max_pmw_k": 10
+        },
+        "pmw_cfg": {
+            "heuristic": "total_updates_counts",
             "heuristic_value": 100
         }
     },
 
     "planner": {
-        "method": "MinCutsPlanner",
-        "branching_factor_constraint": 2
+        "method": "min_cuts"
     },
 
     "budget_accountant": {
@@ -38,13 +40,13 @@
         "max_num": 1,
         "arrival_interval": 1,
         "block_data_path": "data/covid19/covid19_data/blocks",
-        "block_metadata_path": "data/covid19/covid19_data/metadata.json"
+        "block_metadata_path": "data/covid19/covid19_data/blocks/metadata.json"
     },
     
     "tasks": {
         "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
-        "avg_num_tasks_per_block": 5e4,
-        "max_num": 5e4,
+        "avg_num_tasks_per_block": 5e2,
+        "max_num": 5e2,
         "initial_num": 0,
         "zipf_k": 0.5
     },

@@ -16,10 +16,8 @@ from precycle.psql import MockPSQL, PSQL
 from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
 
 from precycle.cache.combined_cache import MockCombinedCache
-
-# from precycle.planner.ilp import ILP
-from precycle.planner.max_cuts_planner import MaxCutsPlanner
-from precycle.planner.min_cuts_planner import MinCutsPlanner
+from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
+from precycle.planner.ilp import ILP
 
 from precycle.utils.utils import (
     get_logs,
@@ -61,6 +59,31 @@ class Simulator:
             random.seed(self.config.global_seed)
             np.random.seed(self.config.global_seed)
 
+        # # Initialize max pmw k from alpha, beta of PMW
+        # b = task.utility_beta
+        # b_p = self.config.cache.pmw_cfg.beta
+        # max_pmw_k = int(math.log(1-b) / math.log(1-b_p))
+        # print("max_pmw_k", max_pmw_k)
+
+        if not self.config.cache.type == "DeterministicCache":
+            # This is the global accuracy supported by the probabilistic cache.
+            # If a query comes requesting more accuracy than that it won't be able to serve it.
+            assert self.config.cache.probabilistic_cfg.max_pmw_k is not None
+            assert self.config.cache.probabilistic_cfg.alpha is not None
+            assert self.config.cache.probabilistic_cfg.beta is not None
+
+            # No aggregations in min_cuts, no need for more powerful PMWs than needed
+            if self.config.planner.method == "min_cuts":
+                self.config.cache.probabilistic_cfg.max_pmw_k = 1
+
+            pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
+                self.config.cache.probabilistic_cfg.alpha,
+                self.config.cache.probabilistic_cfg.beta,
+                self.config.cache.probabilistic_cfg.max_pmw_k,
+            )
+            self.config.cache.pmw_cfg.update({"alpha": pmw_alpha, "beta": pmw_beta})
+            print(self.config.cache.pmw_cfg)
+
         # Initialize all components
         if self.config.mock:
             db = MockPSQL(self.config)
@@ -71,9 +94,7 @@ class Simulator:
         #     budget_accountant = BudgetAccountant(self.config)
         #     cache = globals()[self.config.cache.type](self.config)
 
-        planner = globals()[self.config.planner.method](
-            cache, budget_accountant, self.config
-        )
+        planner = ILP(cache, budget_accountant, self.config)
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config

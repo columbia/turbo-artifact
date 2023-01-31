@@ -1,4 +1,5 @@
 import numpy as np
+from loguru import logger
 from typing import Dict, Tuple
 from collections import namedtuple
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
@@ -6,14 +7,23 @@ from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 
 
-class R:
-    def __init__(self, blocks, noise_std, cache_type=None) -> None:
+class RDet:
+    def __init__(self, blocks, noise_std) -> None:
         self.blocks = blocks
         self.noise_std = noise_std
-        self.cache_type = cache_type
 
     def __str__(self):
-        return f"Run({self.blocks}, {self.noise_std})"
+        return f"RunDet({self.blocks}, {self.noise_std})"
+
+
+class RProb:
+    def __init__(self, blocks, alpha, beta) -> None:
+        self.blocks = blocks
+        self.alpha = alpha
+        self.beta = beta
+
+    def __str__(self):
+        return f"RunProb({self.blocks}, {self.alpha}, {self.beta})"
 
 
 class A:
@@ -32,7 +42,7 @@ RunReturnValue = namedtuple(
         "true_result",
         "run_budget",
         "run_metadata",
-        "noise",
+        "noise_std" "noise",
     ],
 )
 
@@ -56,32 +66,31 @@ class Executor:
         for run_op in plan.l:
             blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
 
-            if run_op.cache_type == "DeterministicCache":
+            if isinstance(run_op, RDet):
                 run_return_value = self.run_deterministic(
                     run_op, task.query_id, task.query
                 )
                 # Use the result to update the Probabilistic cache as well
                 if self.config.cache.type == "CombinedCache":
                     self.cache.probabilistic_cache.update_entry(
-                        task.query_id,
                         task.query,
                         run_op.blocks,
                         run_return_value.true_result,
                         run_op.noise_std,
                         run_return_value.noise,
                     )
-            elif run_op.cache_type == "ProbabilisticCache":
-                run_return_value = self.run_probabilistic(
-                    run_op, task.query_id, task.query
-                )
+            elif isinstance(run_op, RProb):
+                run_return_value = self.run_probabilistic(run_op, task.query)
                 # Use the result to update the Deterministic cache as well
-                if self.config.cache.type == "CombinedCache":
+                if (
+                    self.config.cache.type == "CombinedCache"
+                    and run_return_value.run_metadata["hard_query"]
+                ):
                     self.cache.deterministic_cache.update_entry(
                         task.query_id,
-                        task.query,
                         run_op.blocks,
                         run_return_value.true_result,
-                        run_op.noise_std,
+                        run_return_value.noise_std,
                         run_return_value.noise,
                     )
 
@@ -167,18 +176,28 @@ class Executor:
         )
         return rv
 
-    def run_probabilistic(self, run_op, query_id, query):
-        pmw = self.cache.probabilistic_cache.get_entry(query_id, run_op.blocks)
-        if not pmw:  # If there is no PMW for the blocks then create it
-            pmw = self.cache.probabilistic_cache.add_entry(run_op.blocks)
+    def run_probabilistic(self, run_op, query):
+        pmw = self.cache.probabilistic_cache.get_entry(run_op.blocks)
+        obj = pmw if pmw else self.config.cache.pmw_cfg
+
+        if run_op.alpha > obj.alpha or run_op.beta < obj.beta:
+            pmw = self.cache.probabilistic_cache.add_entry(
+                run_op.blocks, run_op.alpha, run_op.beta, pmw
+            )
+            logger.error(
+                "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
+            )
+        elif not pmw:
+            pmw = self.cache.probabilistic_cache.add_entry(
+                run_op.blocks, obj.alpha, obj.beta
+            )
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
         noisy_result, run_budget, run_op_metadata = pmw.run(query, true_result)
         run_op_metadata["cache_type"] = "ProbabilisticCache"
-
         noise = noisy_result - true_result
         rv = RunReturnValue(
-            noisy_result, true_result, run_budget, run_op_metadata, noise
+            noisy_result, true_result, run_budget, run_op_metadata, pmw.noise_std, noise
         )
         return rv

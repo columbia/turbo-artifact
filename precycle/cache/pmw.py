@@ -19,15 +19,16 @@ class PMW:
         self,
         blocks,
         blocks_metadata,
-        heuristic,
-        heuristic_value,
+        alpha,  # Max error guarantee, expressed as fraction.
+        beta,  # Failure probability for the alpha error bound
+        old_pmw=None,  # PMW to initialize from
         nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
-        alpha=0.05,  # Max error guarantee, expressed as fraction.
-        beta=0.0001,  # Failure probability for the alpha error bound
         k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
+        heuristic=None,
+        heuristic_value=None,
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
@@ -35,6 +36,9 @@ class PMW:
         # - cheap version of the previous point: dynamic k, increase over time
         # - MWEM makes bigger steps when the error is higher, we could try that too
         # - Is it better to use Laplace after hard queries, for composition? By how much?
+
+        # PMW will always be initialized by alpha, beta
+        assert alpha is not None and beta is not None
 
         self.blocks_metadata = blocks_metadata
 
@@ -45,20 +49,24 @@ class PMW:
         self.k = k  # max_total_queries
         self.queries_ran = 0
         self.hard_queries_ran = 0
-        self.histogram = DenseHistogram(self.M)
+        self.histogram = DenseHistogram(self.M) if not old_pmw else old_pmw.histogram
         self.id = str(blocks)[1:-1].replace(", ", "-")
         self.output_counts = output_counts
 
         # Heuristics
         self.heuristic = heuristic
         self.heuristic_value = heuristic_value
-        # Initialize with past_queries_len easy queries
         self.past_queries_difficulty = [0] * self.heuristic_value
         self.pmw_updates_count = 0
         self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
+
+        laplace_scale = self.nu * self.Delta
+        self.noise_std = laplace_scale * np.sqrt(
+            2
+        )  # noise std of noise added on queries. using it to check if an external update is eligible
 
         # Sparse Vector parameters
         self.alpha = alpha

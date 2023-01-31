@@ -21,19 +21,20 @@ def caching():
         tasks_path=task_paths,
         blocks_path=str(blocks_path_prefix.joinpath("blocks")),
         blocks_metadata=str(blocks_path_prefix.joinpath("blocks/metadata.json")),
-        planner=["MinCutsPlanner"],
-        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
-        # cache=["CombinedCache"],
+        planner=["ILP"],
+        # cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        cache=["DeterministicCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[5e4],
-        max_tasks=[5e4],
+        avg_num_tasks_per_block=[5e2],
+        max_tasks=[5e2],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
-        zipf_k=[0, 0.5, 1, 1.5],
+        # zipf_k=[0, 0.5, 1, 1.5],
+        zipf_k=[0],
         heuristic="total_updates_counts",
-        heuristic_value=[2000], #[100, 250, 500, 750, 1000]
+        heuristic_value=[100],  # [100, 250, 500, 750, 1000]
     )
 
 

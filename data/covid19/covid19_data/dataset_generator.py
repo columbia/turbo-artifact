@@ -500,7 +500,7 @@ def main(
 
     # Saving metadata
     json_object = json.dumps(metadata, indent=4)
-    with open("metadata.json", "w") as outfile:
+    with open(output_dir.joinpath("metadata.json"), "w") as outfile:
         outfile.write(json_object)
     logger.info("Saved metadata")
 

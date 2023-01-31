@@ -1,7 +1,6 @@
-import math
+from loguru import logger
 from precycle.cache.pmw import PMW
 from precycle.cache.cache import Cache
-from precycle.utils.utils import get_blocks_size
 
 
 class ProbabilisticCache(Cache):
@@ -15,44 +14,50 @@ class MockProbabilisticCache(Cache):
         self.config = config
         self.pmw_args = config.cache.pmw_cfg
 
-    def add_entry(self, blocks):
-        pmw = PMW(blocks, self.config.blocks_metadata, **self.pmw_args)
+    def add_entry(self, blocks, alpha, beta, old_pmw=None):
+        pmw = PMW(
+            blocks, self.config.blocks_metadata, alpha, beta, old_pmw, **self.pmw_args
+        )
         self.key_values[blocks] = pmw
         return pmw
 
-    def get_entry(self, query_id, blocks):
+    def get_entry(self, blocks):
         if blocks in self.key_values:
             return self.key_values[blocks]
         return None
 
-    def update_entry(self, query_id, query, blocks, true_result, noise_std, noise):
-        pmw = self.get_entry(query_id, blocks)
+    def update_entry(self, query, blocks, true_result, noise_std, noise):
+        pmw = self.get_entry(blocks)
         if not pmw:  # If there is no PMW for the blocks then create it
-            pmw = self.add_entry(blocks)
-
-        # Compute laplace noise from noise_std
-        blocks_size = get_blocks_size(blocks, self.config.blocks_metadata)
-        sensitivity = 1 / blocks_size
-        noisy_result = true_result + noise
-        laplace_scale = noise_std / math.sqrt(2)
-        laplace_noise = laplace_scale / sensitivity
-
+            pmw = self.add_entry(blocks, self.pmw_args.alpha, self.pmw_args.beta)
         # If the new entry is good enough for the PMW
-        if pmw.nu >= laplace_noise:
-            pmw.external_update(query, noisy_result)
+        if pmw.noise_std >= noise_std:
+            pmw.external_update(query=query, noisy_result=true_result + noise)
 
-    def estimate_run_budget(self, query_id, query, blocks, noise_std):
+    def estimate_run_budget(self, query, blocks, alpha, beta):
         """
         Checks the cache and returns the budget we need to spend if we want to run this query with given accuracy guarantees.
         """
+        pmw = self.get_entry(blocks)
+        obj = pmw if pmw else self.pmw_args
 
-        pmw = self.get_entry(query_id, blocks)
-        run_budget = (
-            PMW(
-                blocks, self.config.blocks_metadata, **self.pmw_args
-            ).estimate_run_budget(query)
-            if not pmw
-            else pmw.estimate_run_budget(query)
-        )
+        if alpha > obj.alpha or beta < obj.beta:
+            pmw = PMW(blocks, self.config.blocks_metadata, alpha, beta, **self.pmw_args)
+            run_budget = pmw.estimate_run_budget(query)
+            logger.error(
+                "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
+            )
+        elif not pmw:
+            pmw = PMW(
+                blocks,
+                self.config.blocks_metadata,
+                obj.alpha,
+                obj.beta,
+                **self.pmw_args
+            )
+            run_budget = pmw.estimate_run_budget(query)
+        else:
+            run_budget = pmw.estimate_run_budget(query)
+
         # TODO: This is leaking privacy, assume we have a good estimate already.
         return run_budget
