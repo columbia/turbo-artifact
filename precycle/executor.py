@@ -95,7 +95,7 @@ class Executor:
                         run_return_value.noise,
                     )
 
-            run_ops_metadata[f"R({run_op.blocks})"] = run_return_value.run_metadata
+            run_ops_metadata[str(run_op.blocks)] = run_return_value.run_metadata
             run_budget_per_block[run_op.blocks] = run_return_value.run_budget
 
             results += [run_return_value.noisy_result * blocks_size]
@@ -162,6 +162,8 @@ class Executor:
                 #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                 #     noise = a * cache_entry.noise + b * fresh_noise
 
+        run_op_metadata["run_budget"] = run_budget.dump()
+
         # If we used any fresh noise we need to update the cache
         if not isinstance(run_budget, ZeroCurve):
             cache_entry = CacheEntry(
@@ -201,6 +203,7 @@ class Executor:
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
         noisy_result, run_budget, run_op_metadata = pmw.run(query, true_result)
+        run_op_metadata["run_budget"] = run_budget.dump()
         run_op_metadata["cache_type"] = "ProbabilisticCache"
         noise = noisy_result - true_result
         rv = RunReturnValue(

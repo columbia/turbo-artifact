@@ -23,11 +23,11 @@ class TaskGenerator:
         self.config = config
         self.tasks = df_tasks
 
-    def sample_task_row(self):
+    def sample_task_row(self, config):
         raise NotImplementedError("Must override")
 
     def create_task(self, task_id, num_blocks):
-        task_row = self.sample_task_row(num_blocks).squeeze()
+        task_row = self.sample_task_row(num_blocks, self.config).squeeze()
 
         query_id = int(task_row["query_id"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
@@ -53,6 +53,9 @@ class PoissonTaskGenerator(TaskGenerator):
     def __init__(self, df_tasks, avg_num_tasks_per_block, config) -> None:
         super().__init__(df_tasks, config)
         self.avg_num_tasks_per_block = avg_num_tasks_per_block
+        self.tasks = self.tasks.sample(
+            frac=1, random_state=config.global_seed
+        ).reset_index()
 
         def zipf():
             query_pool_size = len(self.tasks["query_id"].unique())
@@ -64,10 +67,11 @@ class PoissonTaskGenerator(TaskGenerator):
 
         self.zipf_sampling = zipf()
 
-    def sample_task_row(self, num_blocks):
+    def sample_task_row(self, num_blocks, config):
         try:
+            next_sample_idx = int(next(self.zipf_sampling)) - 1
+            next_query_id = self.tasks.iloc[[next_sample_idx]]["query_id"].values[0]
             # Sample only from tasks that request no more than existing blocks
-            next_query_id = int(next(self.zipf_sampling)) - 1
             return self.tasks.query(
                 f"n_blocks <= {num_blocks} and query_id == {next_query_id}"
             ).sample(1)
@@ -87,7 +91,7 @@ class CSVTaskGenerator(TaskGenerator):
     def __init__(self, df_tasks, config) -> None:
         super().__init__(df_tasks, config)
 
-    def sample_task_row(self):
+    def sample_task_row(self, config):
         yield self.tasks.iterrows()
 
     def get_task_arrival_interval_time(self):

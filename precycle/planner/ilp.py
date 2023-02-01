@@ -462,7 +462,9 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
                 )
                 noise_std_per_chunk[(i, j)] = noise_std
                 run_budget_det = deterministic_cache.estimate_run_budget(
-                    ilp_args.task.query_id, blocks_ij, noise_std,
+                    ilp_args.task.query_id,
+                    blocks_ij,
+                    noise_std,
                 )
                 if not ba.can_run(blocks_ij, run_budget_det):
                     m.addConstr(x[i, j] == 0)
@@ -471,15 +473,15 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
                     sum(run_budget_det.epsilons) / len(run_budget_det.epsilons)
                 ) * (j - i + 1)
             else:
-                run_budget_per_det_chunk[(i, j)] = 10000 # Setting a very high value
-            
+                run_budget_per_det_chunk[(i, j)] = 10000  # Setting a very high value
+
             if k_prob > 0:
                 alpha, beta = probabilistic_compute_utility_curve(a, b, k_prob)
                 alpha_beta_per_chunk[(i, j)] = (alpha, beta)
                 # print("a", alpha, beta)
                 run_budget_prob = probabilistic_cache.estimate_run_budget(
-                        ilp_args.task.query, blocks_ij, alpha, beta
-                    )
+                    ilp_args.task.query, blocks_ij, alpha, beta
+                )
                 if not ba.can_run(blocks_ij, run_budget_prob):
                     m.addConstr(y[i, j] == 0)
                     break
@@ -487,12 +489,12 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
                     sum(run_budget_prob.epsilons) / len(run_budget_prob.epsilons)
                 ) * (j - i + 1)
             else:
-                run_budget_per_prob_chunk[(i, j)] = 10000 # Setting a very high value
+                run_budget_per_prob_chunk[(i, j)] = 10000  # Setting a very high value
 
         # Actual n_det must not be smaller than n_det_lower_bound
         # TODO: Assuming all blocks have equal size
         m.addConstr(
-            (gp.quicksum(x[i, j] * (j-i+1) * block_size for (i, j) in indices))
+            (gp.quicksum(x[i, j] * (j - i + 1) * block_size for (i, j) in indices))
             >= n_det_lower_bound
         )
         # No overlapping chunks constraint

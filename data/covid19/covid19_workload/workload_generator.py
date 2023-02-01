@@ -175,7 +175,7 @@ def main(
     queries: str = "covid19_queries/all_2way_marginals.queries.json",
     workload_dir: str = str(Path(__file__).resolve().parent.parent),
     blocks_metadata_path: str = REPO_ROOT.joinpath(
-        "data/covid19/covid19_data/metadata.json"
+        "data/covid19/covid19_data/blocks/metadata.json"
     ),
 ) -> None:
 

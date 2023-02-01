@@ -7,39 +7,72 @@ from precycle.utils.utils import REPO_ROOT
 app = typer.Typer()
 
 
-def caching():
-    tasks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_workload/")
-    blocks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_data/")
+tasks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_workload/")
+blocks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_data/")
+blocks_metadata = str(blocks_path_prefix.joinpath("blocks/metadata.json"))
+blocks_path = str(blocks_path_prefix.joinpath("blocks"))
 
+
+def caching_monoblock():
     task_paths = ["1:1blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
+        global_seed=64,
         logs_dir="experiment",
         tasks_path=task_paths,
-        blocks_path=str(blocks_path_prefix.joinpath("blocks")),
-        blocks_metadata=str(blocks_path_prefix.joinpath("blocks/metadata.json")),
-        planner=["ILP"],
-        # cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
-        cache=["DeterministicCache"],
+        blocks_path=blocks_path,
+        blocks_metadata=blocks_metadata,
+        planner=["min_cuts"],  # alternatives "max_cts", "optimal_cuts"
+        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[5e2],
-        max_tasks=[5e2],
+        avg_num_tasks_per_block=[15e3],
+        max_tasks=[15e3],
+        initial_tasks=[0],
+        alpha=[0.05],
+        beta=[0.0001],
+        zipf_k=[0, 0.5, 1, 1.5],
+        heuristic="total_updates_counts",
+        heuristic_value=[1000],  # [100, 250, 500, 750, 1000]
+        max_pmw_k=[1],
+    )
+
+
+def caching_multiblock():
+    task_paths = ["30:7blocks_34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+
+    grid_online(
+        global_seed=64,
+        logs_dir="experiment",
+        tasks_path=task_paths,
+        blocks_path=blocks_path,
+        blocks_metadata=blocks_metadata,
+        planner=["min_cuts"],  # alternatives "max_cts", "optimal_cuts"
+        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        # cache=["DeterministicCache"],
+        initial_blocks=[1],
+        max_blocks=[100],
+        avg_num_tasks_per_block=[15e1],
+        max_tasks=[15e2],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
         # zipf_k=[0, 0.5, 1, 1.5],
-        zipf_k=[0],
+        zipf_k=[0.5],
         heuristic="total_updates_counts",
-        heuristic_value=[100],  # [100, 250, 500, 750, 1000]
+        heuristic_value=[1000],  # [100, 250, 500, 750, 1000]
+        max_pmw_k=[8],
     )
 
 
 @app.command()
-def run(exp: str = "caching", loguru_level: str = "CRITICAL"):
+def run(exp: str = "caching_monoblock", loguru_level: str = "INFO"):
 
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"

@@ -10,7 +10,6 @@ from precycle.run_simulation import Simulator
 
 
 def run_and_report(config: dict, replace=False) -> None:
-
     logs = Simulator(config).run()
     tune.report(**logs)
 
@@ -28,31 +27,36 @@ def grid_online(
     avg_num_tasks_per_block: List[int] = [100],
     max_tasks: List[int] = [None],
     enable_random_seed: bool = False,
+    global_seed: int = 64,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
     heuristic: str = "total_updates_counts",
     heuristic_value: List[float] = [100],
     zipf_k: List[int] = [0.5],
+    max_pmw_k: List[int] = 10,
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
         "mock": True,
+        "global_seed": global_seed,
         "enable_random_seed": enable_random_seed,
         "cache": {
             "type": tune.grid_search(cache),
-            "pmw_cfg": {
+            "probabilistic_cfg": {
                 "alpha": tune.grid_search(alpha),
                 "beta": tune.grid_search(beta),
+                "max_pmw_k": tune.grid_search(max_pmw_k),
+            },
+            "pmw_cfg": {
                 "heuristic": heuristic,
                 "heuristic_value": tune.grid_search(heuristic_value),
             },
         },
         "planner": {
             "method": tune.grid_search(planner),
-            "branching_factor_constraint": 2,
         },
-        "budget_accountant": {"epsilon": 10, "delta": 1e-07},
+        "budget_accountant": {"epsilon": 5, "delta": 1e-07},
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),

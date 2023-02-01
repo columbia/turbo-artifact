@@ -35,6 +35,6 @@ def probabilistic_compute_utility_curve(a, b, k):
     n: total size of data requested by the user query
     k: number of computations/subqueries (aggregations: k-1)
     """
-    # Special case for K = 1 because the computation: 
+    # Special case for K = 1 because the computation:
     # 1-pow(1-b, 1) is not giving back precisely b (floating precision?)
     return a, 1 - math.pow(1 - b, 1 / k) if k > 1 else b
