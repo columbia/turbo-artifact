@@ -227,10 +227,13 @@ class RenyiBudget:
         return RenyiBudget(self.__orders.copy())
 
     def dump(self):
-        rounded_orders = {
-            alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
+        # rounded_orders = {
+        #     alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
+        # }
+        orders = {
+            alpha: self.epsilon(alpha) for alpha in self.alphas
         }
-        budget_info = {"orders": rounded_orders}
+        budget_info = {"orders": orders}
         # dp_budget = self.dp_budget()
         # budget_info.update(
         #     {

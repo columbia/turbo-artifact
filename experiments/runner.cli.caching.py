@@ -42,7 +42,7 @@ def caching_monoblock():
 
 
 def caching_multiblock():
-    task_paths = ["30:7blocks_34425queries.privacy_tasks.csv"]
+    task_paths = ["30:8blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -54,8 +54,8 @@ def caching_multiblock():
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["min_cuts"],  # alternatives "max_cts", "optimal_cuts"
-        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
-        # cache=["DeterministicCache"],
+        # cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        cache=["DeterministicCache"],
         initial_blocks=[1],
         max_blocks=[100],
         avg_num_tasks_per_block=[15e1],
