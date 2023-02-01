@@ -4,7 +4,7 @@
     "cache": {
         "host": "localhost",
         "port": 6378,
-        "type": "DeterministicCache",
+        "type": "CombinedCache",
         "probabilistic_cfg": {
             "alpha": 0.05,
             "beta": 0.0001,
@@ -45,8 +45,8 @@
     
     "tasks": {
         "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
-        "avg_num_tasks_per_block": 5e2,
-        "max_num": 5e2,
+        "avg_num_tasks_per_block": 1e2,
+        "max_num": 1e2,
         "initial_num": 0,
         "zipf_k": 0.5
     },

@@ -51,8 +51,8 @@ def test(
             config.cache.probabilistic_cfg.beta,
             config.cache.probabilistic_cfg.max_pmw_k,
         )
-        config.cache.pmw_cfg.update({"alpha": pmw_alpha, "beta": pmw_beta})
-        print(config.cache.pmw_cfg)
+        config.cache.update({"pmw_accuracy": {"alpha": pmw_alpha, "beta": pmw_beta}})
+        print(config.cache)
 
     query_vector = [
         [0, 0, 0, 0],
@@ -99,12 +99,12 @@ def test(
     block_data_path = config.blocks.block_data_path + "/block_0.csv"
     db.add_new_block(block_data_path)
     budget_accountant.add_new_block_budget()
-    block_data_path = config.blocks.block_data_path + "/block_1.csv"
-    db.add_new_block(block_data_path)
-    budget_accountant.add_new_block_budget()
+    # block_data_path = config.blocks.block_data_path + "/block_1.csv"
+    # db.add_new_block(block_data_path)
+    # budget_accountant.add_new_block_budget()
 
     # Initialize Task
-    num_requested_blocks = 2
+    num_requested_blocks = 1
     num_blocks = budget_accountant.get_blocks_count()
     assert num_blocks > 0
 

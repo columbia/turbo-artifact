@@ -42,7 +42,8 @@ RunReturnValue = namedtuple(
         "true_result",
         "run_budget",
         "run_metadata",
-        "noise_std" "noise",
+        "noise_std",
+        "noise",
     ],
 )
 
@@ -172,13 +173,18 @@ class Executor:
 
         noisy_result = true_result + noise
         rv = RunReturnValue(
-            noisy_result, true_result, run_budget, run_op_metadata, noise
+            noisy_result,
+            true_result,
+            run_budget,
+            run_op_metadata,
+            run_op.noise_std,
+            noise,
         )
         return rv
 
     def run_probabilistic(self, run_op, query):
         pmw = self.cache.probabilistic_cache.get_entry(run_op.blocks)
-        obj = pmw if pmw else self.config.cache.pmw_cfg
+        obj = pmw if pmw else self.config.cache.pmw_accuracy
 
         if run_op.alpha > obj.alpha or run_op.beta < obj.beta:
             pmw = self.cache.probabilistic_cache.add_entry(

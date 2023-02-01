@@ -35,15 +35,6 @@ def probabilistic_compute_utility_curve(a, b, k):
     n: total size of data requested by the user query
     k: number of computations/subqueries (aggregations: k-1)
     """
-
-    # $$\alpha, 1-\sqrt[K_{p}]{1-\beta}
-    a_p = a
-    b_p = 1 - math.power(1 - b, 1 / k)
-
-    # # Each PMW must be instantiated with a_p, b_p accuracy guarantee
-    # nu = n * a_p / math.log(2 / b_p)
-    # sensitivity = 1 / n_i
-    # laplace_scale = nu * sensitivity
-    # noise_std = math.sqrt(2) * laplace_scale
-    # return noise_std
-    return a_p, b_p
+    # Special case for K = 1 because the computation: 
+    # 1-pow(1-b, 1) is not giving back precisely b (floating precision?)
+    return a, 1 - math.pow(1 - b, 1 / k) if k > 1 else b

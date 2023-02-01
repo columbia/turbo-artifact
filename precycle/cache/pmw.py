@@ -18,7 +18,6 @@ class PMW:
     def __init__(
         self,
         blocks,
-        blocks_metadata,
         alpha,  # Max error guarantee, expressed as fraction.
         beta,  # Failure probability for the alpha error bound
         old_pmw=None,  # PMW to initialize from
@@ -29,6 +28,7 @@ class PMW:
         output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
         heuristic=None,
         heuristic_value=None,
+        blocks_metadata=None,
     ):
         # TODO: some optimizations
         # - a friendlier constructor computes nu based on a fraction of block budget (and alpha)
@@ -63,13 +63,9 @@ class PMW:
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
 
-        laplace_scale = self.nu * self.Delta
-        self.noise_std = laplace_scale * np.sqrt(
-            2
-        )  # noise std of noise added on queries. using it to check if an external update is eligible
-
         # Sparse Vector parameters
         self.alpha = alpha
+        self.beta = beta
         self.local_svt_queries_ran = 0
         self.local_svt_max_queries = k
         self.ro = ro if ro else nu
@@ -77,6 +73,10 @@ class PMW:
 
         # Always sensitivity 1/n, if we want counts we'll scale as post-processing
         self.Delta = 1 / self.n
+
+        laplace_scale = self.nu * self.Delta
+        # noise std of noise added on queries. using it to check if an external update is eligible
+        self.noise_std = laplace_scale * np.sqrt(2)
 
         # The initial threshold should be noisy too if we want to use Sparse Vector
         if self.standard_svt:

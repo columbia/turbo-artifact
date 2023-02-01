@@ -81,8 +81,10 @@ class Simulator:
                 self.config.cache.probabilistic_cfg.beta,
                 self.config.cache.probabilistic_cfg.max_pmw_k,
             )
-            self.config.cache.pmw_cfg.update({"alpha": pmw_alpha, "beta": pmw_beta})
-            print(self.config.cache.pmw_cfg)
+            self.config.cache.update(
+                {"pmw_accuracy": {"alpha": pmw_alpha, "beta": pmw_beta}}
+            )
+            print(self.config.cache)
 
         # Initialize all components
         if self.config.mock:
