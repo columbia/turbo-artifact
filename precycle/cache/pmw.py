@@ -1,17 +1,13 @@
-import torch
 import numpy as np
+import torch
 from loguru import logger
 
 from precycle.budget import Budget
+from precycle.budget.curves import (BoundedOneShotSVT, GaussianCurve,
+                                    LaplaceCurve, PureDPtoRDP, ZeroCurve)
 from precycle.budget.histogram import DenseHistogram
-from precycle.budget.curves import (
-    BoundedOneShotSVT,
-    GaussianCurve,
-    LaplaceCurve,
-    PureDPtoRDP,
-    ZeroCurve,
-)
-from precycle.utils.utils import mlflow_log, get_blocks_size
+from precycle.utils.utils import get_blocks_size, mlflow_log
+
 
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
 class PMW:
