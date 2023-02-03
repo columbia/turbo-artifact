@@ -28,9 +28,7 @@ class BudgetAccountant:
     def add_new_block_budget(self):
         block = self.get_blocks_count()
         # Initialize block's budget from epsilon and delta
-        budget = RenyiBudget.from_epsilon_delta(
-            epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
-        )
+        budget = RenyiBudget.from_epsilon_delta(epsilon=self.epsilon, delta=self.delta)
         self.update_block_budget(block, budget)
 
     def get_block_budget(self, block):
@@ -60,7 +58,7 @@ class BudgetAccountant:
         self.update_block_budget(block, budget)
 
     def consume_blocks_budget(self, blocks, run_budget):
-        for block in range(blocks[0], blocks[1]+1):
+        for block in range(blocks[0], blocks[1] + 1):
             self.consume_block_budget(block, run_budget)
 
 
@@ -84,9 +82,7 @@ class MockBudgetAccountant:
     def add_new_block_budget(self):
         block = self.get_blocks_count()
         # Initialize block's budget from epsilon and delta
-        budget = RenyiBudget.from_epsilon_delta(
-            epsilon=self.epsilon, delta=self.delta, alpha_list=self.alphas
-        )
+        budget = RenyiBudget.from_epsilon_delta(epsilon=self.epsilon, delta=self.delta)
         self.update_block_budget(block, budget)
 
     def get_block_budget(self, block):
@@ -116,7 +112,7 @@ class MockBudgetAccountant:
         self.update_block_budget(block, budget)
 
     def consume_blocks_budget(self, blocks, run_budget):
-        for block in range(blocks[0], blocks[1]+1):
+        for block in range(blocks[0], blocks[1] + 1):
             self.consume_block_budget(block, run_budget)
 
     def dump(self):

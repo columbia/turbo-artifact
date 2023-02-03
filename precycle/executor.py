@@ -65,8 +65,6 @@ class Executor:
 
         results = []
         for run_op in plan.l:
-            blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
-
             if isinstance(run_op, RDet):
                 run_return_value = self.run_deterministic(
                     run_op, task.query_id, task.query
@@ -77,7 +75,7 @@ class Executor:
                         task.query,
                         run_op.blocks,
                         run_return_value.true_result,
-                        run_op.noise_std,
+                        run_return_value.noise_std,
                         run_return_value.noise,
                     )
             elif isinstance(run_op, RProb):
@@ -97,7 +95,9 @@ class Executor:
 
             run_ops_metadata[str(run_op.blocks)] = run_return_value.run_metadata
             run_budget_per_block[run_op.blocks] = run_return_value.run_budget
+            # print(run_return_value.run_budget)
 
+            blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
             results += [run_return_value.noisy_result * blocks_size]
             total_size += blocks_size
 
@@ -108,7 +108,6 @@ class Executor:
     def run_deterministic(self, run_op, query_id, query):
         run_op_metadata = {}
         run_op_metadata["cache_type"] = "DeterministicCache"
-
         blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / blocks_size
 
@@ -172,7 +171,6 @@ class Executor:
             self.cache.deterministic_cache.add_entry(
                 query_id, run_op.blocks, cache_entry
             )
-
         noisy_result = true_result + noise
         rv = RunReturnValue(
             noisy_result,

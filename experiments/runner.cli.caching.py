@@ -20,13 +20,14 @@ def caching_monoblock():
     ]
 
     grid_online(
-        global_seed=64,
+        global_seed=4,
         logs_dir="experiment",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["min_cuts"],  # alternatives "max_cts", "optimal_cuts"
         cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        # cache=["DeterministicCache", "CombinedCache"],
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[15e3],
@@ -41,8 +42,8 @@ def caching_monoblock():
     )
 
 
-def caching_multiblock():
-    task_paths = ["30:8blocks_34425queries.privacy_tasks.csv"]
+def caching_multiblock_min_cuts():
+    task_paths = ["1:1:1:2:4:8:16:32blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -54,19 +55,49 @@ def caching_multiblock():
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["min_cuts"],  # alternatives "max_cts", "optimal_cuts"
+        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        # cache=["ProbabilisticCache", "DeterministicCache"],
+        initial_blocks=[1],
+        max_blocks=[100],
+        avg_num_tasks_per_block=[15e2],
+        max_tasks=[15e3],
+        initial_tasks=[0],
+        alpha=[0.05],
+        beta=[0.0001],
+        zipf_k=[0, 0.5, 1, 1.5],
+        # zipf_k=[1.5],
+        heuristic="total_updates_counts",
+        heuristic_value=[100],  # [100, 250, 500, 750, 1000]
+        max_pmw_k=[8],
+    )
+
+
+def caching_multiblock_optimal_cuts():
+    task_paths = ["1:1:1:2:4:8:16:32blocks_34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+
+    grid_online(
+        global_seed=64,
+        logs_dir="experiment",
+        tasks_path=task_paths,
+        blocks_path=blocks_path,
+        blocks_metadata=blocks_metadata,
+        planner=["optimal_cuts"],
         # cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
         cache=["DeterministicCache"],
         initial_blocks=[1],
         max_blocks=[100],
-        avg_num_tasks_per_block=[15e1],
-        max_tasks=[15e2],
+        avg_num_tasks_per_block=[15e0],
+        max_tasks=[15e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
         # zipf_k=[0, 0.5, 1, 1.5],
         zipf_k=[0.5],
         heuristic="total_updates_counts",
-        heuristic_value=[1000],  # [100, 250, 500, 750, 1000]
+        heuristic_value=[5],  # [100, 250, 500, 750, 1000]
         max_pmw_k=[8],
     )
 

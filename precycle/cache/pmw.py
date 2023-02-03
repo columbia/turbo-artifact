@@ -56,9 +56,9 @@ class PMW:
         # Heuristics
         self.heuristic = heuristic
         self.heuristic_value = heuristic_value
-        self.past_queries_difficulty = [0] * self.heuristic_value
+        # self.past_queries_difficulty = [0] * self.heuristic_value
         self.pmw_updates_count = 0
-        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        # self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
@@ -103,44 +103,49 @@ class PMW:
             )
         return svt_cost + query_cost
 
-    # Heuristic 1
-    def predict_hit_avg_bin_visits_heuristic(self, query):
-        """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
+    # # Heuristic 1
+    # def predict_hit_avg_bin_visits_heuristic(self, query):
+    #     """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
 
-        avg_bin_visits = 0
-        for i in query.indices()[1]:
-            avg_bin_visits += self.visits_count_histogram[0, i]
-        avg_bin_visits /= len(query.indices()[1])
-        # print("avg_bin_visits", avg_bin_visits)
-        if avg_bin_visits > self.heuristic_value:
-            return True
-        return False
+    #     avg_bin_visits = 0
+    #     for i in query.indices()[1]:
+    #         avg_bin_visits += self.visits_count_histogram[0, i]
+    #     avg_bin_visits /= len(query.indices()[1])
+    #     # print("avg_bin_visits", avg_bin_visits)
+    #     if avg_bin_visits > self.heuristic_value:
+    #         return True
+    #     return False
 
     # Heuristic 2
     def predict_hit_total_updates_heuristic(self, query):
         # print(self.pmw_updates_count, self.heuristic_value)
         return self.pmw_updates_count > self.heuristic_value
 
-    # Heuristic 3
-    def predict_hit_hard_queries_heuristic(self, query):
-        last_n_queries = self.past_queries_difficulty[-self.heuristic_value :]
-        # print(last_n_queries)
-        easy_queries = 1 - sum(last_n_queries) / self.heuristic_value
-        print(easy_queries)
-        if easy_queries >= 0.5:
-            return True
-        else:
-            # Give 20% chance for the PMW to run, otherwise we will never have queries
-            return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
+    # # Heuristic 3
+    # def predict_hit_hard_queries_heuristic(self, query):
+    #     last_n_queries = self.past_queries_difficulty[-self.heuristic_value :]
+    #     # print(last_n_queries)
+    #     easy_queries = 1 - sum(last_n_queries) / self.heuristic_value
+    #     print(easy_queries)
+    #     if easy_queries >= 0.5:
+    #         return True
+    #     else:
+    #         # Give 20% chance for the PMW to run, otherwise we will never have queries
+    #         return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
 
     def estimate_run_budget(self, query) -> Budget:
-        if self.heuristic == "n_past_queries":
-            hit = self.predict_hit_hard_queries_heuristic(query)
-        elif self.heuristic == "avg_bin_visits":
-            hit = self.predict_hit_avg_bin_visits_heuristic(query)
-        elif self.heuristic == "total_updates_counts":
+        # if self.heuristic == "n_past_queries":
+        #     hit = self.predict_hit_hard_queries_heuristic(query)
+        # elif self.heuristic == "avg_bin_visits":
+        #     hit = self.predict_hit_avg_bin_visits_heuristic(query)
+        if self.heuristic == "total_updates_counts":
             hit = self.predict_hit_total_updates_heuristic(query)
-        return ZeroCurve() if hit else self.worst_case_cost()
+
+        # Returns expected cost, worst cost
+        worst_case = self.worst_case_cost()
+        if hit:
+            return ZeroCurve(), worst_case
+        return worst_case, worst_case
 
     def run(self, query, true_output):
         assert isinstance(query, torch.Tensor)
@@ -197,7 +202,7 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             run_metadata["hard_query"] = False
-            self.past_queries_difficulty.append(0)
+            # self.past_queries_difficulty.append(0)
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -206,7 +211,7 @@ class PMW:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
-            self.past_queries_difficulty.append(1)
+            # self.past_queries_difficulty.append(1)
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -239,7 +244,7 @@ class PMW:
                 updates = torch.exp(-values * self.alpha / 8)
             for i, u in zip(query.indices()[1], updates):
                 self.histogram.tensor[0, i] *= u
-                self.visits_count_histogram[0, i] += 1
+                # self.visits_count_histogram[0, i] += 1
 
             self.histogram.normalize()
             self.pmw_updates_count += 1
@@ -266,7 +271,7 @@ class PMW:
             updates = torch.exp(-values * self.alpha / 8)
         for i, u in zip(query.indices()[1], updates):
             self.histogram.tensor[0, i] *= u
-            self.visits_count_histogram[0, i] += 1
+            # self.visits_count_histogram[0, i] += 1
         self.histogram.normalize()
         self.pmw_updates_count += 1
 

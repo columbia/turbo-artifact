@@ -56,7 +56,7 @@ def grid_online(
         "planner": {
             "method": tune.grid_search(planner),
         },
-        "budget_accountant": {"epsilon": 3, "delta": 1e-07},
+        "budget_accountant": {"epsilon": 10, "delta": 1e-07},
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
@@ -91,7 +91,7 @@ def grid_online(
         run_and_report,
         config=config,
         # resources_per_trial={"cpu": 1},
-        resources_per_trial={"cpu": 1},
+        resources_per_trial={"cpu": 2},
         local_dir=RAY_LOGS.joinpath(logs_dir),
         resume=False,
         verbose=1,

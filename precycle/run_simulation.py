@@ -76,6 +76,8 @@ class Simulator:
             if self.config.planner.method == "min_cuts":
                 self.config.cache.probabilistic_cfg.max_pmw_k = 1
 
+            # This is the local accuracy supported by each PMW given
+            # a global accuracy and a maximum number of PMW aggregations
             pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
                 self.config.cache.probabilistic_cfg.alpha,
                 self.config.cache.probabilistic_cfg.beta,

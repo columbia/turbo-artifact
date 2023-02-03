@@ -6,20 +6,19 @@ from opacus.accountants import RDPAccountant
 
 
 ALPHAS = [
-    1.5,
-    1.75,
-    2,
-    2.5,
-    3,
-    4,
+    # 1.5,
+    # 1.75,
+    # 2,
+    # 2.5,
+    # 3,
+    # 4,
     5,
-    6,
-    8,
-    16,
-    32,
-    64,
+    # 6,
+    # 8,
+    # 16,
+    # 32,
+    # 64,
 ]
-
 
 # Default values for some datasets
 DELTA_MNIST = 1e-5
@@ -230,9 +229,7 @@ class RenyiBudget:
         # rounded_orders = {
         #     alpha: round(self.epsilon(alpha), MAX_DUMP_DIGITS) for alpha in self.alphas
         # }
-        orders = {
-            alpha: self.epsilon(alpha) for alpha in self.alphas
-        }
+        orders = {alpha: self.epsilon(alpha) for alpha in self.alphas}
         budget_info = {"orders": orders}
         # dp_budget = self.dp_budget()
         # budget_info.update(

@@ -71,10 +71,11 @@ class PoissonTaskGenerator(TaskGenerator):
         try:
             next_sample_idx = int(next(self.zipf_sampling)) - 1
             next_query_id = self.tasks.iloc[[next_sample_idx]]["query_id"].values[0]
+            # next_query_id = next_sample_idx
             # Sample only from tasks that request no more than existing blocks
             return self.tasks.query(
                 f"n_blocks <= {num_blocks} and query_id == {next_query_id}"
-            ).sample(1)
+            ).sample(1, random_state=int(random.random() * 100))
 
         except:
             logger.error(

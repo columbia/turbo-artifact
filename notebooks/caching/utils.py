@@ -26,6 +26,7 @@ def get_tasks_information(df):
                         {
                             "id": task["id"],
                             "result": task["result"],
+                            "query_id": task["query_id"],
                             # "error": task["error"],
                             "planning_time": task["planning_time"],
                             "blocks": task["blocks"],
@@ -76,14 +77,15 @@ def get_budgets_information(df, blocks):
                 for bid in range(l, r + 1):
                     budget = orders[max_orders[str(bid)]]
                     max_initial_budget = initial_budget["orders"][max_orders[str(bid)]]
-                    total_budget_per_block[str(bid)] += budget    
+                    total_budget_per_block[str(bid)] += budget
                     dfs.append(
                         pd.DataFrame(
                             [
                                 {
                                     "id": task["id"],
                                     "block": bid,
-                                    "budget": total_budget_per_block[str(bid)] / max_initial_budget,
+                                    "budget": total_budget_per_block[str(bid)]
+                                    / max_initial_budget,
                                     "key": key,
                                     "zipf_k": zipf_k,
                                 }
@@ -198,7 +200,6 @@ def analyze_monoblock(experiment_path):
 
     def plot_budget_utilization_time(df, total_tasks):
         keys_order = ["CombinedCache", "ProbabilisticCache", "CombinedCache"]
-        # zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order}
 
         fig = px.line(
@@ -219,16 +220,82 @@ def analyze_monoblock(experiment_path):
 
     df = get_df(experiment_path)
     df["key"] = df["cache"]
-    df.sort_values(["key"], ascending=[True], inplace=True)
     df["zipf_k"] = df["zipf_k"].astype(float)
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
     total_tasks = df["total_tasks"].max()
     blocks = get_blocks_information(df)
+    # df = df.query("(cache == 'CombinedCache' or cache == 'DeterministicCache') and zipf_k == 0.0")
     time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
+
     iplot(plot_num_allocated_tasks(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
     iplot(plot_hard_run_ops(df, total_tasks))
     iplot(plot_budget_utilization_time(time_budgets, total_tasks))
+    analyze_cache_type_use(df)
+
+
+def analyze_query_types(experiment_path):
+    def plot_query_per_task(df):
+        fig = px.scatter(
+            df,
+            x="id",
+            y="query_id",
+            title="Query per task",
+            color="key",
+            width=3500,
+            height=800,
+            facet_row="zipf_k",
+            color_discrete_sequence=["red", "black"],
+            # color_discrete_map={
+            #     'DeterministicCache': 'red',
+            #     'ProbabilisticCache': 'black'
+            # }
+        )
+        return fig
+
+    df = get_df(experiment_path)
+    df["key"] = df["cache"]
+    df["zipf_k"] = df["zipf_k"].astype(float)
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
+    tasks = get_tasks_information(df)
+    tasks = tasks[["id", "key", "query_id", "zipf_k"]]
+    iplot(plot_query_per_task(tasks))
+
+
+def analyze_cache_type_use(df):
+    def plot_cache_type_use(df):
+        fig = px.bar(
+            df,
+            x="id",
+            y="count",
+            color="type",
+            title="Deterministic vs Probabilistic runs for Combined cache",
+            width=3500,
+            height=800,
+            facet_row="zipf_k",
+            color_discrete_sequence=["red", "black"],
+            # color_discrete_map={
+            #     'DeterministicCache': 'red',
+            #     'ProbabilisticCache': 'black'
+            # }
+        )
+        return fig
+
+    df = df.query("cache == 'CombinedCache'")
+    tasks = get_tasks_information(df)
+    tasks_deterministic = tasks[["id", "deterministic_runs", "zipf_k"]]
+    tasks_deterministic.insert(0, "type", "DeterministicCache")
+    tasks_deterministic = tasks_deterministic.rename(
+        columns={"deterministic_runs": "count"}
+    )
+    tasks_probabilistic = tasks[["id", "probabilistic_runs", "zipf_k"]]
+    tasks_probabilistic.insert(0, "type", "ProbabilisticCache")
+    tasks_probabilistic = tasks_probabilistic.rename(
+        columns={"probabilistic_runs": "count"}
+    )
+    tasks_new = pd.concat([tasks_deterministic, tasks_probabilistic])
+    iplot(plot_cache_type_use(tasks_new))
 
 
 def analyze_multiblock(experiment_path):
@@ -260,8 +327,8 @@ def analyze_multiblock(experiment_path):
             color="key",
             barmode="group",
             title=f"Budget Utilization - total tasks-{total_tasks}",
-            width=900,
-            height=500,
+            width=2500,
+            height=800,
             facet_row="zipf_k",
             category_orders=category_orders,
             range_y=[0, 1],
@@ -314,119 +381,13 @@ def analyze_multiblock(experiment_path):
 
     df = get_df(experiment_path)
     df["key"] = df["cache"]
-    df.sort_values(["key"], ascending=[True], inplace=True)
     df["zipf_k"] = df["zipf_k"].astype(float)
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
     total_tasks = df["total_tasks"].max()
     blocks = get_blocks_information(df)
-    time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
+    # time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
     iplot(plot_num_allocated_tasks(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
     # iplot(plot_hard_run_ops(df, total_tasks))
     # iplot(plot_budget_utilization_time(time_budgets, total_tasks))
-
-
-# def analyze_experiment2(experiment_path):
-#     def plot_num_allocated_tasks(df, total_tasks):
-#         total_tasks = df["total_tasks"].max()
-
-#         fig = px.bar(
-#             df,
-#             x="zipf_k",
-#             y="n_allocated_tasks",
-#             color="key",
-#             barmode="group",
-#             title=f"Num allocated tasks - total tasks={total_tasks}",
-#             width=900,
-#             height=500,
-#         )
-#         return fig
-
-#     def plot_budget_utilization(df, total_tasks):
-#         df["budget_utilization"] = (df["initial_budget"] - df["budget"]) / df[
-#             "initial_budget"
-#         ]
-
-#         fig = px.bar(
-#             df,
-#             x="zipf_k",
-#             y="budget_utilization",
-#             color="key",
-#             barmode="group",
-#             title=f"Budget Utilization - total tasks-{total_tasks}",
-#             width=900,
-#             height=500,
-#             range_y=[0, 1],
-#             # category_orders={"query_pool_size": query_pool_sizes_order},
-#         )
-#         return fig
-
-#     def plot_hard_run_ops(df, total_tasks):
-#         query_pool_sizes_order = [
-#             str(x) for x in sorted(df["query_pool_size"].astype(int).unique())
-#         ]
-#         fig = px.bar(
-#             df,
-#             x="zipf_k",
-#             y="avg_total_hard_run_ops",
-#             color="key",
-#             barmode="group",
-#             title=f"Hard Queries - total tasks={total_tasks}",
-#             width=900,
-#             height=500,
-#             range_y=[0, 1],
-#             category_orders={"query_pool_size": query_pool_sizes_order},
-#         )
-#         return fig
-
-#     df = get_df(experiment_path)
-#     df = df.drop(columns=["tasks_info"])  # Make it lighter
-#     total_tasks = df["total_tasks"].max()
-
-#     df.sort_values(["heuristic_value"], ascending=[True], inplace=True)
-#     df["heuristic_value"] = df["heuristic_value"].astype(str)
-#     heuristic = df["heuristic"].max()
-#     df["key"] = df["cache"] + "-" + "heuristic_" + df[f"{heuristic}"]
-
-#     blocks = get_blocks_information(df)
-
-#     iplot(plot_num_allocated_tasks(df, total_tasks))
-#     iplot(plot_budget_utilization(blocks, total_tasks))
-#     iplot(plot_hard_run_ops(df, total_tasks))
-#     # tasks = get_tasks_information(df)
-#     # analyze_cache_type_use(experiment_path)
-
-
-# def analyze_cache_type_use(experiment_path):
-#     def plot_cache_type_use(df):
-#         fig = px.bar(
-#             df,
-#             x="id",
-#             y="count",
-#             color="type",
-#             title="",
-#             width=900,
-#             height=500,
-#             facet_row="HT",
-#         )
-#         return fig
-
-#     df = get_df(experiment_path)
-#     df["heuristic_threshold"] = df["heuristic_threshold"].astype(str)
-#     df["key"] = df["heuristic_threshold"]
-
-#     tasks = get_tasks_information(df)
-#     tasks_deterministic = tasks[["id", "deterministic_runs", "heuristic_threshold"]]
-#     tasks_deterministic.insert(0, "type", "DeterministicCache")
-#     tasks_deterministic = tasks_deterministic.rename(
-#         columns={"deterministic_runs": "count"}
-#     )
-#     tasks_probabilistic = tasks[["id", "probabilistic_runs", "heuristic_threshold"]]
-#     tasks_probabilistic.insert(0, "type", "ProbabilisticCache")
-#     tasks_probabilistic = tasks_probabilistic.rename(
-#         columns={"probabilistic_runs": "count"}
-#     )
-#     tasks = pd.concat([tasks_deterministic, tasks_probabilistic])
-#     tasks = tasks.rename(columns={"heuristic_threshold": "HT"})
-
-#     iplot(plot_cache_type_use(tasks))

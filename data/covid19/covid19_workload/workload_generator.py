@@ -124,25 +124,24 @@ class PrivacyWorkload:
 
         logger.info(self.tasks.head())
 
-    def generate_nblocks(
-        self, n_queries, nblocks_max, nblocks_step, utility, utility_beta
-    ):
+    def generate_nblocks(self, n_queries, rangelist, utility, utility_beta):
         # Simply lists all the queries, the sampling will happen in the simulator
         self.tasks = []
 
-        # Every workload has monoblocks
-        for query_id in range(n_queries):
-            self.tasks.append(
-                Task(
-                    n_blocks=1,
-                    query_id=query_id,
-                    utility=utility,
-                    utility_beta=utility_beta,
-                    query_type="linear",
-                    query=self.query_pool.get_query(query_id),
-                )
-            )
-        for b in range(nblocks_step, nblocks_max, nblocks_step):
+        # # Every workload has monoblocks
+        # for query_id in range(n_queries):
+        #     self.tasks.append(
+        #         Task(
+        #             n_blocks=1,
+        #             query_id=query_id,
+        #             utility=utility,
+        #             utility_beta=utility_beta,
+        #             query_type="linear",
+        #             query=self.query_pool.get_query(query_id),
+        #         )
+        #     )
+        # for b in range(nblocks_step, nblocks_max, nblocks_step):
+        for b in rangelist:
             for query_id in range(n_queries):
                 self.tasks.append(
                     Task(
@@ -192,9 +191,7 @@ def main(
         n_different_queries = len(json.load(open(queries, "r")))
         privacy_workload.generate_nblocks(
             n_different_queries,
-            nblocks_min=1,
-            nblocks_max=1,
-            nblocks_step=1,
+            rangelist=[1],
             utility=utility,
             utility_beta=utility_beta,
         )
@@ -202,15 +199,12 @@ def main(
             f"covid19_workload/{requests_type}.privacy_tasks.csv"
         )
 
-    else:  # 100:7 - max_blocks:nblocks_step (time-granularity)
-        # nblocks_step=7,   week granularity
-        # nblocks_step=1,   day granularity
-        r = list(requests_type.split(":"))
-        nblocks_max = int(r[0])
-        nblocks_step = int(r[1])
+    else:  # 1:1:1:2:4:8:16:32  # 3/8 to select 1 block
+
+        rangelist = list(requests_type.split(":"))
         n_different_queries = len(json.load(open(queries, "r")))
         privacy_workload.generate_nblocks(
-            n_different_queries, nblocks_max, nblocks_step, utility, utility_beta
+            n_different_queries, rangelist, utility, utility_beta
         )
         path = workload_dir.joinpath(
             f"covid19_workload/{requests_type}blocks_{n_different_queries}queries.privacy_tasks.csv"
