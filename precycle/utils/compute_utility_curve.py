@@ -16,7 +16,10 @@ def deterministic_compute_utility_curve(a, b, n, n_i, k):
     k: number of computations/subqueries (aggregations: k-1)
     """
 
-    if k >= math.log(2 / b):
+    if k == 1:
+        epsilon = math.log(1 / b) / (n * a)
+    
+    elif k >= math.log(2 / b):
         epsilon = math.sqrt(k * 8 * math.log(2 / b)) / (n * a)
     else:
         epsilon = (math.log(2 / b) * math.sqrt(8)) / (n * a)

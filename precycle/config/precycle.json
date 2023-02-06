@@ -1,5 +1,6 @@
 {   
     "mock": true,
+    "variance_reduction": true,
 
     "cache": {
         "host": "localhost",

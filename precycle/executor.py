@@ -131,15 +131,28 @@ class Executor:
                 run_budget = ZeroCurve()
                 noise = cache_entry.noise
             else:
-                variance_reduction = False  # No VR for now
 
                 # We need to improve on the cache
-                if not variance_reduction:
+                if not self.config.variance_reduction:
                     # Just compute from scratch and pay for it
                     laplace_scale = run_op.noise_std / np.sqrt(2)
                     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                     noise = np.random.laplace(scale=laplace_scale)
-                # else:
+                else:
+                    # TODO a temporary hack to enable VR. 
+                    cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
+                    cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+                    target_laplace_scale = run_op.noise_std / np.sqrt(2)
+                    target_pure_epsilon = sensitivity / target_laplace_scale
+
+                    run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+                    run_laplace_scale = sensitivity / run_pure_epsilon
+
+                    run_budget = LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+                    # TODO: Temporary hack is that I don't compute the noise by aggregating
+                    noise = np.random.laplace(scale=target_laplace_scale)
+
                 #     # TODO: re-enable variance reduction
                 #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
                 #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c

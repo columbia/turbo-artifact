@@ -39,6 +39,7 @@ def caching_monoblock():
         heuristic="total_updates_counts",
         heuristic_value=[1000],  # [100, 250, 500, 750, 1000]
         max_pmw_k=[1],
+        variance_reduction = [True]
     )
 
 
@@ -67,8 +68,9 @@ def caching_multiblock_min_cuts():
         zipf_k=[0, 0.5, 1, 1.5],
         # zipf_k=[1.5],
         heuristic="total_updates_counts",
-        heuristic_value=[100],  # [100, 250, 500, 750, 1000]
+        heuristic_value=[200],  # [100, 250, 500, 750, 1000]
         max_pmw_k=[8],
+        variance_reduction = [True]
     )
 
 
@@ -81,7 +83,7 @@ def caching_multiblock_optimal_cuts():
     grid_online(
         global_seed=64,
         logs_dir="experiment",
-        tasks_path=task_paths,
+        tasks_path=task_paths,  
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["optimal_cuts"],
@@ -90,7 +92,7 @@ def caching_multiblock_optimal_cuts():
         initial_blocks=[1],
         max_blocks=[100],
         avg_num_tasks_per_block=[15e0],
-        max_tasks=[15e3],
+        max_tasks=[15e2],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
@@ -99,6 +101,7 @@ def caching_multiblock_optimal_cuts():
         heuristic="total_updates_counts",
         heuristic_value=[5],  # [100, 250, 500, 750, 1000]
         max_pmw_k=[8],
+        variance_reduction = [True]
     )
 
 

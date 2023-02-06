@@ -34,11 +34,13 @@ def grid_online(
     heuristic_value: List[float] = [100],
     zipf_k: List[int] = [0.5],
     max_pmw_k: List[int] = 10,
+    variance_reduction: List[bool] = True
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
         "mock": True,
+        "variance_reduction": variance_reduction,
         "global_seed": global_seed,
         "enable_random_seed": enable_random_seed,
         "cache": {
