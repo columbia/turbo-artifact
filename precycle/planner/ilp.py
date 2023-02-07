@@ -23,7 +23,7 @@ from precycle.utils.compute_utility_curve import (
 
 
 DeterministicChunk = namedtuple("DeterministicChunk", ["index", "noise_std"])
-ProbabilisticChunk = namedtuple("ChunkProbabilisticChunk", ["index", "alpha_beta"])
+ProbabilisticChunk = namedtuple("ProbabilisticChunk", ["index", "alpha_beta"])
 ILPArgs = namedtuple(
     "ILPArgs", ["task", "indices", "cache", "budget_accountant", "chunk_sizes"]
 )
@@ -355,11 +355,11 @@ def probabilistic_optimize(k, ilp_args):
             # we need to spend across the blocks of the (i,j) chunk.
             alpha, beta = probabilistic_compute_utility_curve(a, b, k)
             alpha_beta_per_chunk[(i, j)] = (alpha, beta)
-            print("a, b", alpha, beta)
+            # print("a, b", alpha, beta)
             run_budget, worst_run_budget = probabilistic_cache.estimate_run_budget(
                 ilp_args.task.query, (blocks[i], blocks[j]), alpha, beta
             )
-            print("run budget", run_budget)
+            # print("run budget", run_budget)
 
             # Enough budget in blocks constraint to accommodate "run_budget" and "worst_budget"
             if (
