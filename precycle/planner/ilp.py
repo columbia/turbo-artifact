@@ -23,7 +23,7 @@ from precycle.utils.compute_utility_curve import (
 
 
 DeterministicChunk = namedtuple("DeterministicChunk", ["index", "noise_std"])
-ProbabilisticChunk = namedtuple("ChunProbabilisticChunkk", ["index", "alpha_beta"])
+ProbabilisticChunk = namedtuple("ChunkProbabilisticChunk", ["index", "alpha_beta"])
 ILPArgs = namedtuple(
     "ILPArgs", ["task", "indices", "cache", "budget_accountant", "chunk_sizes"]
 )
@@ -276,6 +276,8 @@ def deterministic_optimize(k, ilp_args):
                 (blocks[i], blocks[j]),
                 noise_std,
             )
+            # print("K", k, "noise-std", noise_std, run_budget.epsilons)
+
             # print(run_budget)
             # Enough budget in blocks constraint to accommodate "run_budget"
             if not ba.can_run((blocks[i], blocks[j]), run_budget):
@@ -353,10 +355,11 @@ def probabilistic_optimize(k, ilp_args):
             # we need to spend across the blocks of the (i,j) chunk.
             alpha, beta = probabilistic_compute_utility_curve(a, b, k)
             alpha_beta_per_chunk[(i, j)] = (alpha, beta)
-
+            print("a, b", alpha, beta)
             run_budget, worst_run_budget = probabilistic_cache.estimate_run_budget(
                 ilp_args.task.query, (blocks[i], blocks[j]), alpha, beta
             )
+            print("run budget", run_budget)
 
             # Enough budget in blocks constraint to accommodate "run_budget" and "worst_budget"
             if (
@@ -400,6 +403,7 @@ def probabilistic_optimize(k, ilp_args):
                     chunks.append(
                         ProbabilisticChunk((i, j), alpha_beta_per_chunk[(i, j)])
                     )
+            print("chunks", chunks)
             return chunks, m.ObjVal
         return [], math.inf
 
