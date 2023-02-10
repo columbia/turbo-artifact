@@ -9,7 +9,7 @@
         "probabilistic_cfg": {
             "alpha": 0.05,
             "beta": 0.0001,
-            "max_pmw_k": 10
+            "max_pmw_k": 5
         },
         "pmw_cfg": {
             "heuristic": "total_updates_counts",
@@ -18,7 +18,7 @@
     },
 
     "planner": {
-        "method": "min_cuts"
+        "method": "MinCuts"
     },
 
     "budget_accountant": {

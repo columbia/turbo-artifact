@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import math
 import typer
 import simpy
 import random
@@ -18,6 +19,7 @@ from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
 from precycle.cache.combined_cache import MockCombinedCache
 from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.planner.ilp import ILP
+from precycle.planner.min_cuts import MinCuts
 
 from precycle.utils.utils import (
     get_logs,
@@ -72,9 +74,11 @@ class Simulator:
             assert self.config.cache.probabilistic_cfg.alpha is not None
             assert self.config.cache.probabilistic_cfg.beta is not None
 
-            # No aggregations in min_cuts, no need for more powerful PMWs than needed
-            if self.config.planner.method == "min_cuts":
-                self.config.cache.probabilistic_cfg.max_pmw_k = 1
+            if self.config.cache.type == "CombinedCache":
+                # Mixing Up Deterministic With Probabilistic runs - union bound over the two
+                # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
+                b = self.config.cache.probabilistic_cfg.beta
+                self.config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
 
             # This is the local accuracy supported by each PMW given
             # a global accuracy and a maximum number of PMW aggregations
@@ -98,7 +102,9 @@ class Simulator:
         #     budget_accountant = BudgetAccountant(self.config)
         #     cache = globals()[self.config.cache.type](self.config)
 
-        planner = ILP(cache, budget_accountant, self.config)
+        planner = globals()[self.config.planner.method](
+            cache, budget_accountant, self.config
+        )
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config

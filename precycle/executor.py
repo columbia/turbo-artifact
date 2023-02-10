@@ -139,7 +139,7 @@ class Executor:
                     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                     noise = np.random.laplace(scale=laplace_scale)
                 else:
-                    # TODO a temporary hack to enable VR. 
+                    # TODO a temporary hack to enable VR.
                     cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
                     cached_pure_epsilon = sensitivity / cached_laplace_scale
 
@@ -149,7 +149,9 @@ class Executor:
                     run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
                     run_laplace_scale = sensitivity / run_pure_epsilon
 
-                    run_budget = LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+                    run_budget = LaplaceCurve(
+                        laplace_noise=run_laplace_scale / sensitivity
+                    )
                     # TODO: Temporary hack is that I don't compute the noise by aggregating
                     noise = np.random.laplace(scale=target_laplace_scale)
 

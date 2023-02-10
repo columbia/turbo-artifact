@@ -100,11 +100,11 @@ class MockDeterministicCache(Cache):
                     )
                     self.add_entry(query_id, blocks, new_cache_entry)
             else:
-            #     # If VR update no matter what - we can use whatever is in the cache to get even better
-                # TODO a temporary hack to enable VR. 
+                #     # If VR update no matter what - we can use whatever is in the cache to get even better
+                # TODO a temporary hack to enable VR.
                 cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
                 cached_pure_epsilon = sensitivity / cached_laplace_scale
-                
+
                 incoming_laplace_scale = noise_std / np.sqrt(2)
                 incoming_pure_epsilon = sensitivity / incoming_laplace_scale
 
@@ -117,7 +117,6 @@ class MockDeterministicCache(Cache):
                     result=true_result, noise_std=new_noise_std, noise=new_noise
                 )
                 self.add_entry(query_id, blocks, new_cache_entry)
-            
 
     def estimate_run_budget(self, query_id, blocks, noise_std):
         """
@@ -151,7 +150,9 @@ class MockDeterministicCache(Cache):
                     run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
                     run_laplace_scale = sensitivity / run_pure_epsilon
 
-                    run_budget = LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+                    run_budget = LaplaceCurve(
+                        laplace_noise=run_laplace_scale / sensitivity
+                    )
 
         return run_budget
 

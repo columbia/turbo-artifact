@@ -18,7 +18,7 @@ def deterministic_compute_utility_curve(a, b, n, n_i, k):
 
     if k == 1:
         epsilon = math.log(1 / b) / (n * a)
-    
+
     elif k >= math.log(2 / b):
         epsilon = math.sqrt(k * 8 * math.log(2 / b)) / (n * a)
     else:

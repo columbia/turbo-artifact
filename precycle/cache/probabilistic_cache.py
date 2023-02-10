@@ -52,6 +52,7 @@ class MockProbabilisticCache(Cache):
             logger.error(
                 "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
             )
+            exit(1)
         elif not pmw:
             pmw = PMW(blocks, obj.alpha, obj.beta, **self.pmw_args)
             run_budget, worst_run_budget = pmw.estimate_run_budget(query)
@@ -60,3 +61,14 @@ class MockProbabilisticCache(Cache):
 
         # TODO: This is leaking privacy, assume we have a good estimate already.
         return run_budget, worst_run_budget
+
+    def is_query_hard_on_pmw(self, query, blocks):
+        """
+        Checks the cache and returns whether the query will be hard for a PMW on <blocks>
+        """
+        pmw = self.get_entry(blocks)
+        if not pmw:
+            pmw = PMW(
+                blocks, self.pmw_accuracy.alpha, self.pmw_accuracy.beta, **self.pmw_args
+            )
+        return pmw.is_query_hard(query)

@@ -133,6 +133,9 @@ class PMW:
     #         # Give 20% chance for the PMW to run, otherwise we will never have queries
     #         return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
 
+    def is_query_hard(self, query) -> bool:
+        return not self.predict_hit_total_updates_heuristic(query)
+
     def estimate_run_budget(self, query) -> Budget:
         # if self.heuristic == "n_past_queries":
         #     hit = self.predict_hit_hard_queries_heuristic(query)

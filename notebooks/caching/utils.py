@@ -16,33 +16,35 @@ def get_tasks_information(df):
     for (tasks, key, zipf_k) in df[["tasks_info", "key", "zipf_k"]].values:
 
         for task in tasks:
+            if task["status"] == "finished":
+                deterministic_runs = task["deterministic_runs"]
+                probabilistic_runs = task["probabilistic_runs"]
+                computations_aggregated = len(task["run_metadata"].keys())
 
-            deterministic_runs = task["deterministic_runs"]
-            probabilistic_runs = task["probabilistic_runs"]
-
-            dfs.append(
-                pd.DataFrame(
-                    [
-                        {
-                            "id": task["id"],
-                            "result": task["result"],
-                            "query_id": task["query_id"],
-                            # "error": task["error"],
-                            "planning_time": task["planning_time"],
-                            "blocks": task["blocks"],
-                            "n_blocks": task["n_blocks"],
-                            # "hard_run_ops": task["run_metadata"]["hard_run_ops"],
-                            "utility": task["utility"],
-                            "utility_beta": task["utility_beta"],
-                            "status": task["status"],
-                            "key": key,
-                            "zipf_k": zipf_k,
-                            "deterministic_runs": deterministic_runs,
-                            "probabilistic_runs": probabilistic_runs,
-                        }
-                    ]
+                dfs.append(
+                    pd.DataFrame(
+                        [
+                            {
+                                "id": task["id"],
+                                "result": task["result"],
+                                "query_id": task["query_id"],
+                                # "error": task["error"],
+                                "planning_time": task["planning_time"],
+                                "blocks": task["blocks"],
+                                "n_blocks": task["n_blocks"],
+                                # "hard_run_ops": task["run_metadata"]["hard_run_ops"],
+                                "utility": task["utility"],
+                                "utility_beta": task["utility_beta"],
+                                "status": task["status"],
+                                "computations_aggregated": computations_aggregated,
+                                "key": key,
+                                "zipf_k": zipf_k,
+                                "deterministic_runs": deterministic_runs,
+                                "probabilistic_runs": probabilistic_runs,
+                            }
+                        ]
+                    )
                 )
-            )
     if dfs:
         tasks = pd.concat(dfs)
         tasks["result"] = tasks["result"].astype(float)
@@ -335,26 +337,50 @@ def analyze_multiblock(experiment_path):
         )
         return fig
 
-    def plot_hard_run_ops(df, total_tasks):
+    # def plot_hard_run_ops(df, total_tasks):
+    #     keys_order = ["CombinedCache", "ProbabilisticCache", "CombinedCache"]
+    #     zipf_orders = ["1.5", "1.0", "0.5", "0"]
+    #     category_orders = {"key": keys_order, "zipf_k": zipf_orders}
+
+    #     fig = px.bar(
+    #         df,
+    #         x="zipf_k",
+    #         y="avg_total_hard_run_ops",
+    #         color="key",
+    #         barmode="group",
+    #         title=f"Hard Queries - total tasks={total_tasks}",
+    #         width=900,
+    #         height=500,
+    #         category_orders=category_orders,
+    #         # color_discrete_map={
+    #         # "DeterministicCache": "blue",
+    #         # "ProbabilisticCache": "green",
+    #         # },
+    #         range_y=[0, 1],
+    #     )
+    #     return fig
+
+    def plot_num_cuts(df, total_tasks):
         keys_order = ["CombinedCache", "ProbabilisticCache", "CombinedCache"]
-        zipf_orders = ["1.5", "1.0", "0.5", "0"]
-        category_orders = {"key": keys_order, "zipf_k": zipf_orders}
+        # zipf_orders = ["1.5", "1.0", "0.5", "0"]
+        category_orders = {"key": keys_order}
 
         fig = px.bar(
             df,
-            x="zipf_k",
-            y="avg_total_hard_run_ops",
+            x="id",
+            y="computations_aggregated",
             color="key",
             barmode="group",
-            title=f"Hard Queries - total tasks={total_tasks}",
-            width=900,
-            height=500,
+            title=f"Computations aggregated - total tasks={total_tasks}",
+            width=2500,
+            height=800,
             category_orders=category_orders,
             # color_discrete_map={
             # "DeterministicCache": "blue",
             # "ProbabilisticCache": "green",
             # },
-            range_y=[0, 1],
+            range_y=[0, 50],
+            facet_row="zipf_k",
         )
         return fig
 
@@ -389,5 +415,7 @@ def analyze_multiblock(experiment_path):
     # time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
     iplot(plot_num_allocated_tasks(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
+    # tasks = get_tasks_information(df)
+    # iplot(plot_num_cuts(tasks, total_tasks))
     # iplot(plot_hard_run_ops(df, total_tasks))
     # iplot(plot_budget_utilization_time(time_budgets, total_tasks))

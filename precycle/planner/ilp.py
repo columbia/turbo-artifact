@@ -52,6 +52,17 @@ def get_chunk_indices(blocks):
     return indices
 
 
+def get_min_cuts_plan_indices(blocks):
+    offset = blocks[0]
+    n = blocks[1] - blocks[0] + 1
+    indices = OrderedSet()
+
+    # for k in range(n):  # For all possible k
+    # Stop when you find the first plan that satisfies the binary constraint
+
+    return indices
+
+
 def satisfies_constraint(blocks, branching_factor=2):
     n = blocks[1] - blocks[0] + 1
     if not math.log(n, branching_factor).is_integer():
@@ -61,14 +72,12 @@ def satisfies_constraint(blocks, branching_factor=2):
     return True
 
 
-def get_chunk_sizes(blocks, blocks_metadata):
+def get_chunk_sizes(indices, blocks_metadata):
     # TODO: Assuming all blocks have equal size
-    n = blocks[1] - blocks[0] + 1
     block_size = blocks_metadata["block_size"]
     chunk_sizes = {}
-    for i in range(n):
-        for j in range(i, n):
-            chunk_sizes[(i, j)] = block_size * (j - i + 1)
+    for (i, j) in indices:
+        chunk_sizes[(i, j)] = block_size * (j - i + 1)
     return chunk_sizes
 
 
@@ -91,25 +100,37 @@ class ILP(Planner):
 
         # Choose a planning method
         if self.config.planner.method == "min_cuts":
+            """Picks a plan with minimal number of cuts that satisfies the binary constraint.
+            If that plan can't be executed we don't look for another one
+            """
+            # We don't really need an ILP solution for this one but the ILP
+            # infrastructure will return if the plan is eligible or not
             return_dict = {}
-            indices = OrderedSet()
-            indices.add(((0, num_blocks - 1)))
-            # TODO: Assuming all blocks have equal size
-            block_size = self.blocks_metadata["block_size"]
-            chunk_sizes = {(0, num_blocks - 1): block_size * num_blocks}
-            solve(1, 1, indices, chunk_sizes, return_dict, solve_args)
+            indices = get_min_cuts_plan_indices(task.blocks)
+            chunk_sizes = get_chunk_sizes(indices, self.blocks_metadata)
+            k = len(indices)
+            solve(k, k, indices, chunk_sizes, return_dict, solve_args)
 
         elif self.config.planner.method == "max_cuts":
+            """Picks a plan with the maximum number of cuts.
+            If that plan can't be executed we don't look for another one
+            """
+            # We don't really need an ILP solution for this one but the ILP
+            # infrastructure will return if the plan is eligible or not
             return_dict = {}
             indices = OrderedSet()
             for i in range(num_blocks):
                 indices.add(((i, i)))
-            # TODO: Assuming all blocks have equal size
-            block_size = self.blocks_metadata["block_size"]
-            chunk_sizes = {index: block_size for index in indices}
-            solve(num_blocks, num_blocks, indices, chunk_sizes, return_dict, solve_args)
+            chunk_sizes = get_chunk_sizes(indices, self.blocks_metadata)
+            k = len(indices)
+            solve(k, k, indices, chunk_sizes, return_dict, solve_args)
 
         elif self.config.planner.method == "optimal_cuts":
+            """Uses ILP to select a plan that satisfies the binary constraint and at the same time tries to
+            minimize budget consumption for the given query.
+            If no plan is returned it means that there is not enough budget and enough content in the cache
+            to accommodate the request.
+            """
             manager = Manager()
             return_dict = manager.dict()
             indices = get_chunk_indices(task.blocks)
@@ -182,6 +203,8 @@ def solve(kmin, kmax, indices, chunk_sizes, return_dict, solve_args):
 
     elif solve_args.cache_type == "ProbabilisticCache":
         for k in range(kmin, kmax + 1):
+            # print("K", k)
+
             # Don't allow more than max_pmw_k PMW aggregations
             if k > solve_args.probabilistic_cfg.max_pmw_k:
                 break
@@ -192,7 +215,11 @@ def solve(kmin, kmax, indices, chunk_sizes, return_dict, solve_args):
     elif solve_args.cache_type == "CombinedCache":
         best_objvalue = math.inf
         for k in range(kmin, kmax + 1):
+            # print("K", k)
+
             for k_prob in range(k + 1):
+                # print("K prob", k_prob)
+
                 # Don't allow more than max_pmw_k PMW aggregations
                 if k_prob > solve_args.probabilistic_cfg.max_pmw_k:
                     break
@@ -354,6 +381,7 @@ def probabilistic_optimize(k, ilp_args):
             # Using the contents of the probabilistic cache, estimate how much fresh budget
             # we need to spend across the blocks of the (i,j) chunk.
             alpha, beta = probabilistic_compute_utility_curve(a, b, k)
+            # print("alpha", alpha, "beta", beta)
             alpha_beta_per_chunk[(i, j)] = (alpha, beta)
             # print("a, b", alpha, beta)
             run_budget, worst_run_budget = probabilistic_cache.estimate_run_budget(
@@ -403,7 +431,6 @@ def probabilistic_optimize(k, ilp_args):
                     chunks.append(
                         ProbabilisticChunk((i, j), alpha_beta_per_chunk[(i, j)])
                     )
-            print("chunks", chunks)
             return chunks, m.ObjVal
         return [], math.inf
 
@@ -432,6 +459,8 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
         # Same b for deterministic and probabilistic
         if k_det > 0 and k_prob > 0:
             b = 1 - math.sqrt(1 - b)
+        # aa, bb = probabilistic_compute_utility_curve(a, b, k_prob)
+        # print("alpha", aa, "beta", bb)
         run_budget_per_det_chunk = {}
         run_budget_per_prob_chunk = {}
         noise_std_per_chunk = {}

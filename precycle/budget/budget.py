@@ -1,19 +1,3 @@
-# ALPHAS = [
-#     1.5,
-#     1.75,
-#     2,
-#     2.5,
-#     3,
-#     4,
-#     5,
-#     6,
-#     8,
-#     16,
-#     32,
-#     64,
-# ]
-
-
 # Default values for some datasets
 DELTA_MNIST = 1e-5
 DELTA_CIFAR10 = 1e-5
