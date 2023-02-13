@@ -30,8 +30,7 @@ def grid_online(
     global_seed: int = 64,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
-    heuristic: str = "total_updates_counts",
-    heuristic_value: List[float] = [100],
+    heuristic: str = "total_updates_counts:100",
     zipf_k: List[int] = [0.5],
     max_pmw_k: List[int] = 10,
     variance_reduction: List[bool] = True,
@@ -51,8 +50,8 @@ def grid_online(
                 "max_pmw_k": tune.grid_search(max_pmw_k),
             },
             "pmw_cfg": {
-                "heuristic": heuristic,
-                "heuristic_value": tune.grid_search(heuristic_value),
+                "heuristic": tune.grid_search(heuristic),
+                # "heuristic_value": tune.grid_search(heuristic_value),
             },
         },
         "planner": {
@@ -93,7 +92,7 @@ def grid_online(
         run_and_report,
         config=config,
         # resources_per_trial={"cpu": 1},
-        resources_per_trial={"cpu": 2},
+        resources_per_trial={"cpu": 1},
         local_dir=RAY_LOGS.joinpath(logs_dir),
         resume=False,
         verbose=1,
@@ -110,6 +109,7 @@ def grid_online(
                 "planner/method": "planner",
                 "cache/type": "cache",
                 "tasks/zipf_k": "zipf_k",
+                "pmw_cfg/heuristic": "heuristic"
             },
             max_report_frequency=60,
         ),

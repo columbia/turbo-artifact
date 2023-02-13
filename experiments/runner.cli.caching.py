@@ -26,19 +26,33 @@ def caching_monoblock():
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
+        # cache=["ProbabilisticCache"],
         cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
-        # cache=["DeterministicCache", "CombinedCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[15e3],
-        max_tasks=[15e3],
+        avg_num_tasks_per_block=[1e5],
+        max_tasks=[1e5],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
-        zipf_k=[0, 0.5, 1, 1.5],
-        heuristic="total_updates_counts",
-        heuristic_value=[1000],  # [100, 250, 500, 750, 1000]
-        max_pmw_k=[1],
+        # zipf_k=[0, 0.5, 1, 1.5],
+        zipf_k=[0],
+        heuristic=[
+            # "bin_visits:1-5",
+            "bin_visits:1-10",
+            # "bin_visits:1-15",
+            # "bin_visits:1-20",
+            # "bin_visits:1-30",
+            # "bin_visits:1-40",
+            # "bin_visits:1-50",
+            # "bin_visits:1-100",
+            # "bin_visits:100-5",
+            # "bin_visits:100-10",
+            # "bin_visits:100-15",
+            # "bin_visits:100-20",
+            # "total_updates_counts:100",
+        ],
+        max_pmw_k=[1],  # It's important to be 1 in the monoblock case
         variance_reduction=[True],
     )
 
@@ -68,14 +82,14 @@ def caching_multiblock():
         # zipf_k=[0, 0.5, 1, 1.5],
         zipf_k=[0.5],
         heuristic="total_updates_counts",
-        heuristic_value=[100],  # [100, 250, 500, 750, 1000]
+        heuristic_value=[0, 100, 10000000],  # [100, 250, 500, 750, 1000]
         max_pmw_k=[5],
         variance_reduction=[True],
     )
 
 
 @app.command()
-def run(exp: str = "caching_monoblock", loguru_level: str = "INFO"):
+def run(exp: str = "caching_monoblock", loguru_level: str = "CRITICAL"):
 
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"

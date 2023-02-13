@@ -88,8 +88,8 @@ def get_logs(
 
             task_info.update(
                 {
-                    "deterministic_runs": deterministic_runs,
-                    "probabilistic_runs": probabilistic_runs,
+                    "laplace_runs": deterministic_runs,
+                    "pmw_runs": probabilistic_runs,
                 }
             )
 
@@ -104,12 +104,23 @@ def get_logs(
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
+
+    if config_dict["cache"]["type"] == "DeterministicCache":
+        cache_type = "LaplaceRuns"
+        heuristic = ""
+    elif config_dict["cache"]["type"] == "ProbabilisticCache":
+        cache_type = "PMWRuns"
+        heuristic = ""
+    else:
+        cache_type = "MixedRuns"
+        heuristic = config_dict["cache"]["pmw_cfg"]["heuristic"]
+
     config.update(
         {
             "n_allocated_tasks": n_allocated_tasks,
             "total_tasks": len(tasks_info),
             "avg_total_hard_run_ops": avg_total_hard_run_ops,
-            "cache": config_dict["cache"]["type"],
+            "cache": cache_type,
             "planner": config_dict["planner"]["method"],
             "workload_path": config_dict["tasks"]["path"],
             "query_pool_size": query_pool_size,
@@ -117,8 +128,7 @@ def get_logs(
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],
-            "heuristic": config_dict["cache"]["pmw_cfg"]["heuristic"],
-            "heuristic_value": config_dict["cache"]["pmw_cfg"]["heuristic_value"],
+            "heuristic": heuristic,
             "config": config_dict,
         }
     )

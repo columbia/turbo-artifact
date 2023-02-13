@@ -53,11 +53,10 @@ class QueryProcessor:
 
             logger.info(
                 colored(
-                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}, RunBudgets: {run_budget_per_block}. ",
                     "green",
                 )
             )
-            # RunBudgets: {run_budget_per_block}
 
             # for key, value in run_metadata.items():
             # mlflow_log(f"{key}", value, task.id)

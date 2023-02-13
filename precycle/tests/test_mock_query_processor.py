@@ -43,7 +43,7 @@ def test(
         assert config.cache.probabilistic_cfg.alpha is not None
         assert config.cache.probabilistic_cfg.beta is not None
 
-        if config.cache.type == "CombinedCache":
+        if config.cache.type == "CombinedCache" and config.blocks.max_num > 1:
             # Mixing Up Deterministic With Probabilistic runs - union bound over the two
             # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
             b = config.cache.probabilistic_cfg.beta

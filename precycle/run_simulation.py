@@ -61,12 +61,6 @@ class Simulator:
             random.seed(self.config.global_seed)
             np.random.seed(self.config.global_seed)
 
-        # # Initialize max pmw k from alpha, beta of PMW
-        # b = task.utility_beta
-        # b_p = self.config.cache.pmw_cfg.beta
-        # max_pmw_k = int(math.log(1-b) / math.log(1-b_p))
-        # print("max_pmw_k", max_pmw_k)
-
         if not self.config.cache.type == "DeterministicCache":
             # This is the global accuracy supported by the probabilistic cache.
             # If a query comes requesting more accuracy than that it won't be able to serve it.
@@ -74,7 +68,10 @@ class Simulator:
             assert self.config.cache.probabilistic_cfg.alpha is not None
             assert self.config.cache.probabilistic_cfg.beta is not None
 
-            if self.config.cache.type == "CombinedCache":
+            if (
+                self.config.cache.type == "CombinedCache"
+                and self.config.blocks.max_num > 1
+            ):
                 # Mixing Up Deterministic With Probabilistic runs - union bound over the two
                 # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
                 b = self.config.cache.probabilistic_cfg.beta

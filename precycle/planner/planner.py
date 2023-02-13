@@ -8,7 +8,5 @@ class Planner:
         self.config = config
         self.probabilistic_cfg = self.config.cache.probabilistic_cfg
 
-        # self.variance_reduction = variance_reduction
-
     def get_execution_plan(sself, task):
         pass

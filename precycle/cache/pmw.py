@@ -11,6 +11,8 @@ from precycle.budget.curves import (
     PureDPtoRDP,
     ZeroCurve,
 )
+from termcolor import colored
+import time
 from precycle.utils.utils import mlflow_log, get_blocks_size
 
 # TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
@@ -27,7 +29,6 @@ class PMW:
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
         heuristic=None,
-        heuristic_value=None,
         blocks_metadata=None,
     ):
         # TODO: some optimizations
@@ -54,11 +55,16 @@ class PMW:
         self.output_counts = output_counts
 
         # Heuristics
-        self.heuristic = heuristic
-        self.heuristic_value = heuristic_value
-        # self.past_queries_difficulty = [0] * self.heuristic_value
+        self.heuristic_method, self.heuristic_value = heuristic.split(":")
+        if self.heuristic_method == "bin_visits":
+            (
+                self.heuristic_value,
+                self.heuristic_value_increase,
+            ) = self.heuristic_value.split("-")
+            self.heuristic_value_increase = int(self.heuristic_value_increase)
+        self.heuristic_value = int(self.heuristic_value)
         self.pmw_updates_count = 0
-        # self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
 
         # From my maths. It's cheap to be accurate when n is large.
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
@@ -103,45 +109,31 @@ class PMW:
             )
         return svt_cost + query_cost
 
-    # # Heuristic 1
-    # def predict_hit_avg_bin_visits_heuristic(self, query):
-    #     """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
-
-    #     avg_bin_visits = 0
-    #     for i in query.indices()[1]:
-    #         avg_bin_visits += self.visits_count_histogram[0, i]
-    #     avg_bin_visits /= len(query.indices()[1])
-    #     # print("avg_bin_visits", avg_bin_visits)
-    #     if avg_bin_visits > self.heuristic_value:
-    #         return True
-    #     return False
+    # Heuristic 1
+    def predict_hit_bin_visits_heuristic(self, query):
+        # print(colored(f"{self.visits_count_histogram[0, :]}", "blue"))
+        for i in query.indices()[1]:
+            if self.visits_count_histogram[0, i] < self.heuristic_value:
+                return False
+        return True
 
     # Heuristic 2
     def predict_hit_total_updates_heuristic(self, query):
         # print(self.pmw_updates_count, self.heuristic_value)
         return self.pmw_updates_count > self.heuristic_value
 
-    # # Heuristic 3
-    # def predict_hit_hard_queries_heuristic(self, query):
-    #     last_n_queries = self.past_queries_difficulty[-self.heuristic_value :]
-    #     # print(last_n_queries)
-    #     easy_queries = 1 - sum(last_n_queries) / self.heuristic_value
-    #     print(easy_queries)
-    #     if easy_queries >= 0.5:
-    #         return True
-    #     else:
-    #         # Give 20% chance for the PMW to run, otherwise we will never have queries
-    #         return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
-
     def is_query_hard(self, query) -> bool:
-        return not self.predict_hit_total_updates_heuristic(query)
+        if self.heuristic_method == "bin_visits":
+            return not self.predict_hit_bin_visits_heuristic(query)
+        elif self.heuristic_method == "total_updates_counts":
+            return not self.predict_hit_total_updates_heuristic(query)
 
     def estimate_run_budget(self, query) -> Budget:
-        # if self.heuristic == "n_past_queries":
+        # if self.heuristic_method == "n_past_queries":
         #     hit = self.predict_hit_hard_queries_heuristic(query)
-        # elif self.heuristic == "avg_bin_visits":
-        #     hit = self.predict_hit_avg_bin_visits_heuristic(query)
-        if self.heuristic == "total_updates_counts":
+        if self.heuristic_method == "bin_visits":
+            hit = self.predict_hit_bin_visits_heuristic(query)
+        elif self.heuristic_method == "total_updates_counts":
             hit = self.predict_hit_total_updates_heuristic(query)
 
         # Returns expected cost, worst cost
@@ -205,7 +197,6 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             run_metadata["hard_query"] = False
-            # self.past_queries_difficulty.append(0)
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -214,7 +205,8 @@ class PMW:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
-            # self.past_queries_difficulty.append(1)
+            if self.heuristic_method == "bin_visits":
+                self.heuristic_value += self.heuristic_value_increase
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -247,7 +239,7 @@ class PMW:
                 updates = torch.exp(-values * self.alpha / 8)
             for i, u in zip(query.indices()[1], updates):
                 self.histogram.tensor[0, i] *= u
-                # self.visits_count_histogram[0, i] += 1
+                self.visits_count_histogram[0, i] += 1
 
             self.histogram.normalize()
             self.pmw_updates_count += 1
@@ -262,7 +254,7 @@ class PMW:
         return output, run_budget, run_metadata
 
     def external_update(self, query, noisy_result):
-        # Important: External updates probably break proofs
+        # Important: External updates might break convergence proofs
         predicted_output = self.histogram.run(query)
 
         # Multiplicative weights update for the relevant bins
@@ -274,7 +266,7 @@ class PMW:
             updates = torch.exp(-values * self.alpha / 8)
         for i, u in zip(query.indices()[1], updates):
             self.histogram.tensor[0, i] *= u
-            # self.visits_count_histogram[0, i] += 1
+            self.visits_count_histogram[0, i] += 1
         self.histogram.normalize()
         self.pmw_updates_count += 1
 

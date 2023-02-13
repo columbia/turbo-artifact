@@ -36,8 +36,19 @@ class MockProbabilisticCache(Cache):
                 blocks, self.pmw_accuracy.alpha, self.pmw_accuracy.beta
             )
         # If the new entry is good enough for the PMW
-        if pmw.noise_std >= noise_std and pmw.pmw_updates_count <= pmw.heuristic_value:
+        # TODO: Enabled External Updates here.
+        # update if the entry's noise std is at most bigger by 0.001
+        if (
+            pmw.noise_std >= noise_std - 0.001
+        ):  # and pmw.pmw_updates_count <= pmw.heuristic_value:
             pmw.external_update(query=query, noisy_result=true_result + noise)
+        else:
+            print(f"External update Failed. Not accurate enough result. {noise_std} > {pmw.noise_std}")
+
+            logger.error(
+                f"External update Failed. Not accurate enough result. {noise_std} > {pmw.noise_std}"
+            )
+            exit(1)
 
     def estimate_run_budget(self, query, blocks, alpha, beta):
         """

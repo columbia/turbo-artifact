@@ -58,53 +58,84 @@ class MinCuts(Planner):
         a = task.utility
         b = task.utility_beta
 
-        # Assign a Mechanism to each subquery
-        pmw_nodes = []
-        laplace_nodes = []
-        for subquery in subqueries:
-            # Don't use PMW if query is hard for it, run using a simple Laplace mechanism instead
-            obj = (
-                laplace_nodes
-                if self.cache.probabilistic_cache.is_query_hard_on_pmw(
-                    task.query, task.blocks
+        if self.cache_type == "DeterministicCache":
+            block_size = self.config.blocks_metadata["block_size"]
+            num_blocks = task.blocks[1] - task.blocks[0] + 1
+            n = num_blocks * block_size
+            run_ops = []
+            for (i, j) in subqueries:
+                noise_std = deterministic_compute_utility_curve(
+                    a, b, n, (j - i + 1) * block_size, len(subqueries)
                 )
-                else pmw_nodes
-            )
-            obj.append(subquery)
+                run_ops += [RDet((i, j), noise_std)]
+            plan = A(l=run_ops, cost=0)
 
-        pmw_nodes_len = len(pmw_nodes)
-        laplace_nodes_len = len(laplace_nodes)
+        elif self.cache_type == "ProbabilisticCache":
+            # PMW computations must not exceed threshold otherwise we will break accuracy
+            if len(subqueries) > self.config.cache.probabilistic_cfg.max_pmw_k:
+                return None
 
-        # PMW computations must not exceed threshold otherwise we will break accuracy
-        if pmw_nodes_len > self.config.cache.probabilistic_cfg.max_pmw_k:
-            return None
+            block_size = self.config.blocks_metadata["block_size"]
+            num_blocks = task.blocks[1] - task.blocks[0] + 1
+            n = num_blocks * block_size
 
-        # Now that each subquery is assigned to a mechanism determine
-        # the run budgets using the utility theorems
-        if pmw_nodes_len > 0 and laplace_nodes_len > 0:
-            # Union bound -> decrease b
-            b = 1 - math.sqrt(1 - b)
+            # Compute alpha, beta for the pmw runs
+            alpha, beta = probabilistic_compute_utility_curve(a, b, len(subqueries))
 
-        # Compute noise scale for the laplace runs
-        block_size = self.config.blocks_metadata["block_size"]
-        n_laplace = 0
-        for (i, j) in laplace_nodes:
-            n_laplace += (j - i + 1) * block_size
+            run_ops = []
+            for (i, j) in subqueries:
+                run_ops += [RProb((i, j), alpha, beta)]
+            plan = A(l=run_ops, cost=0)
 
-        # Compute alpha, beta for the pmw runs
-        alpha, beta = probabilistic_compute_utility_curve(a, b, pmw_nodes_len)
+        else:
+            # Assign a Mechanism to each subquery
+            pmw_nodes = []
+            laplace_nodes = []
+            for subquery in subqueries:
+                # Don't use PMW if query is hard for it, run using a simple Laplace mechanism instead
+                obj = (
+                    laplace_nodes
+                    if self.cache.probabilistic_cache.is_query_hard_on_pmw(
+                        task.query, task.blocks
+                    )
+                    else pmw_nodes
+                )
+                obj.append(subquery)
 
-        # Create the plan
-        run_ops = []
-        for (i, j) in laplace_nodes:
-            noise_std = deterministic_compute_utility_curve(
-                a, b, n_laplace, (j - i + 1) * block_size, laplace_nodes_len
-            )
-            run_ops += [RDet((i, j), noise_std)]
-        for (i, j) in pmw_nodes:
-            run_ops += [RProb((i, j), alpha, beta)]
+            pmw_nodes_len = len(pmw_nodes)
+            laplace_nodes_len = len(laplace_nodes)
 
-        # TODO: before running the query check if there is enough budget
-        # for it because we do not do the check here any more
-        plan = A(l=run_ops, cost=0)
+            # PMW computations must not exceed threshold otherwise we will break accuracy
+            if pmw_nodes_len > self.config.cache.probabilistic_cfg.max_pmw_k:
+                return None
+
+            # Now that each subquery is assigned to a mechanism determine
+            # the run budgets using the utility theorems
+            if pmw_nodes_len > 0 and laplace_nodes_len > 0:
+                # Union bound -> decrease b
+                b = 1 - math.sqrt(1 - b)
+
+            # Compute noise scale for the laplace runs
+            block_size = self.config.blocks_metadata["block_size"]
+            n_laplace = 0
+            for (i, j) in laplace_nodes:
+                n_laplace += (j - i + 1) * block_size
+
+            # Compute alpha, beta for the pmw runs
+            alpha, beta = probabilistic_compute_utility_curve(a, b, pmw_nodes_len)
+
+            # Create the plan
+            run_ops = []
+            for (i, j) in laplace_nodes:
+                noise_std = deterministic_compute_utility_curve(
+                    a, b, n_laplace, (j - i + 1) * block_size, laplace_nodes_len
+                )
+                run_ops += [RDet((i, j), noise_std)]
+            for (i, j) in pmw_nodes:
+                run_ops += [RProb((i, j), alpha, beta)]
+
+            # TODO: before running the query check if there is enough budget
+            # for it because we do not do the check here any more
+            plan = A(l=run_ops, cost=0)
+
         return plan
