@@ -25,6 +25,7 @@ def grid_online(
     planner: List[str],
     cache: List[str],
     avg_num_tasks_per_block: List[int] = [100],
+    block_selection_policy: List[str] = ["RandomBlocks"],
     max_tasks: List[int] = [None],
     enable_random_seed: bool = False,
     global_seed: int = 64,
@@ -68,6 +69,7 @@ def grid_online(
         "tasks": {
             "path": tune.grid_search(tasks_path),
             "avg_num_tasks_per_block": tune.grid_search(avg_num_tasks_per_block),
+            "block_selection_policy": tune.grid_search(block_selection_policy),
             "max_num": tune.grid_search(max_tasks),
             "initial_num": tune.grid_search(initial_tasks),
             "zipf_k": tune.grid_search(zipf_k),
@@ -109,7 +111,7 @@ def grid_online(
                 "planner/method": "planner",
                 "cache/type": "cache",
                 "tasks/zipf_k": "zipf_k",
-                "pmw_cfg/heuristic": "heuristic"
+                "cache/pmw_cfg/heuristic": "heuristic",
             },
             max_report_frequency=60,
         ),

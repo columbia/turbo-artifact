@@ -3,6 +3,7 @@ import math
 from sortedcollections import OrderedSet
 from precycle.executor import A, RDet, RProb
 from precycle.planner.planner import Planner
+import time
 
 # from precycle.utils.utils import get_blocks_size
 from precycle.utils.compute_utility_curve import (
@@ -79,12 +80,13 @@ class MinCuts(Planner):
             num_blocks = task.blocks[1] - task.blocks[0] + 1
             n = num_blocks * block_size
 
-            # Compute alpha, beta for the pmw runs
-            alpha, beta = probabilistic_compute_utility_curve(a, b, len(subqueries))
-
             run_ops = []
             for (i, j) in subqueries:
-                run_ops += [RProb((i, j), alpha, beta)]
+                # Compute alpha, nu for each pmw run
+                alpha, nu = probabilistic_compute_utility_curve(
+                    a, b, (j - i + 1) * block_size, len(subqueries)
+                )
+                run_ops += [RProb((i, j), alpha, nu)]
             plan = A(l=run_ops, cost=0)
 
         else:
@@ -115,27 +117,33 @@ class MinCuts(Planner):
                 # Union bound -> decrease b
                 b = 1 - math.sqrt(1 - b)
 
-            # Compute noise scale for the laplace runs
             block_size = self.config.blocks_metadata["block_size"]
+
             n_laplace = 0
             for (i, j) in laplace_nodes:
                 n_laplace += (j - i + 1) * block_size
 
-            # Compute alpha, beta for the pmw runs
-            alpha, beta = probabilistic_compute_utility_curve(a, b, pmw_nodes_len)
-
             # Create the plan
             run_ops = []
             for (i, j) in laplace_nodes:
+                # Compute noise scale for the laplace runs
                 noise_std = deterministic_compute_utility_curve(
                     a, b, n_laplace, (j - i + 1) * block_size, laplace_nodes_len
                 )
                 run_ops += [RDet((i, j), noise_std)]
+
             for (i, j) in pmw_nodes:
-                run_ops += [RProb((i, j), alpha, beta)]
+                # Compute alpha, nu for each pmw run
+                alpha, nu = probabilistic_compute_utility_curve(
+                    a, b, (j - i + 1) * block_size, pmw_nodes_len
+                )
+                run_ops += [RProb((i, j), alpha, nu)]
 
             # TODO: before running the query check if there is enough budget
             # for it because we do not do the check here any more
             plan = A(l=run_ops, cost=0)
+
+            # if pmw_nodes_len > 0 and laplace_nodes_len > 0:
+            # time.sleep(4)
 
         return plan

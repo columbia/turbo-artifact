@@ -5,6 +5,7 @@ from collections import namedtuple
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
+import time
 
 
 class RDet:
@@ -17,13 +18,13 @@ class RDet:
 
 
 class RProb:
-    def __init__(self, blocks, alpha, beta) -> None:
+    def __init__(self, blocks, alpha, nu) -> None:
         self.blocks = blocks
         self.alpha = alpha
-        self.beta = beta
+        self.nu = nu
 
     def __str__(self):
-        return f"RunProb({self.blocks}, {self.alpha}, {self.beta})"
+        return f"RunProb({self.blocks}, {self.alpha}, {self.nu})"
 
 
 class A:
@@ -76,6 +77,8 @@ class Executor:
                         run_op.blocks,
                         run_return_value.true_result,
                         run_return_value.noise_std,
+                        task.utility,
+                        task.utility_beta,
                         run_return_value.noise,
                     )
             elif isinstance(run_op, RProb):
@@ -199,22 +202,16 @@ class Executor:
 
     def run_probabilistic(self, run_op, query):
         pmw = self.cache.probabilistic_cache.get_entry(run_op.blocks)
-        obj = pmw if pmw else self.config.cache.pmw_accuracy
-
-        if run_op.alpha > obj.alpha or run_op.beta < obj.beta:
-            pmw = self.cache.probabilistic_cache.add_entry(
-                run_op.blocks, run_op.alpha, run_op.beta, pmw
-            )
-            logger.error(
-                "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
-            )
-        elif not pmw:
-            pmw = self.cache.probabilistic_cache.add_entry(
-                run_op.blocks, obj.alpha, obj.beta
-            )
+        if not pmw:
+            pmw = self.cache.probabilistic_cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
+
+        # TODO: right now we can't run a powerful query using a weaker PMW
+        assert run_op.alpha <= pmw.alpha
+        assert run_op.nu >= pmw.nu
+
         noisy_result, run_budget, run_op_metadata = pmw.run(query, true_result)
         run_op_metadata["run_budget"] = run_budget.dump()
         run_op_metadata["cache_type"] = "ProbabilisticCache"

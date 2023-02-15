@@ -27,6 +27,7 @@ simpy = "^4.0.1"
 ray = "^2.2.0"
 jupyter = "^1.0.0"
 nb-clean = "^2.4.0"
+modin = "^0.18.1"
 
 
 [build-system]

@@ -77,17 +77,15 @@ class Simulator:
                 b = self.config.cache.probabilistic_cfg.beta
                 self.config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
 
-            # This is the local accuracy supported by each PMW given
-            # a global accuracy and a maximum number of PMW aggregations
-            pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
-                self.config.cache.probabilistic_cfg.alpha,
-                self.config.cache.probabilistic_cfg.beta,
-                self.config.cache.probabilistic_cfg.max_pmw_k,
-            )
             self.config.cache.update(
-                {"pmw_accuracy": {"alpha": pmw_alpha, "beta": pmw_beta}}
+                {
+                    "pmw_accuracy": {
+                        "alpha": self.config.cache.probabilistic_cfg.alpha,
+                        "beta": self.config.cache.probabilistic_cfg.beta,
+                        "max_pmw_k": self.config.cache.probabilistic_cfg.max_pmw_k,
+                    }
+                }
             )
-            print(self.config.cache)
 
         # Initialize all components
         if self.config.mock:
