@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import math
 import typer
 import simpy
 import random
@@ -18,6 +19,7 @@ from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
 from precycle.cache.combined_cache import MockCombinedCache
 from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.planner.ilp import ILP
+from precycle.planner.min_cuts import MinCuts
 
 from precycle.utils.utils import (
     get_logs,
@@ -59,12 +61,6 @@ class Simulator:
             random.seed(self.config.global_seed)
             np.random.seed(self.config.global_seed)
 
-        # # Initialize max pmw k from alpha, beta of PMW
-        # b = task.utility_beta
-        # b_p = self.config.cache.pmw_cfg.beta
-        # max_pmw_k = int(math.log(1-b) / math.log(1-b_p))
-        # print("max_pmw_k", max_pmw_k)
-
         if not self.config.cache.type == "DeterministicCache":
             # This is the global accuracy supported by the probabilistic cache.
             # If a query comes requesting more accuracy than that it won't be able to serve it.
@@ -72,19 +68,24 @@ class Simulator:
             assert self.config.cache.probabilistic_cfg.alpha is not None
             assert self.config.cache.probabilistic_cfg.beta is not None
 
-            # No aggregations in min_cuts, no need for more powerful PMWs than needed
-            if self.config.planner.method == "min_cuts":
-                self.config.cache.probabilistic_cfg.max_pmw_k = 1
+            if (
+                self.config.cache.type == "CombinedCache"
+                and self.config.blocks.max_num > 1
+            ):
+                # Mixing Up Deterministic With Probabilistic runs - union bound over the two
+                # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
+                b = self.config.cache.probabilistic_cfg.beta
+                self.config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
 
-            pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
-                self.config.cache.probabilistic_cfg.alpha,
-                self.config.cache.probabilistic_cfg.beta,
-                self.config.cache.probabilistic_cfg.max_pmw_k,
-            )
             self.config.cache.update(
-                {"pmw_accuracy": {"alpha": pmw_alpha, "beta": pmw_beta}}
+                {
+                    "pmw_accuracy": {
+                        "alpha": self.config.cache.probabilistic_cfg.alpha,
+                        "beta": self.config.cache.probabilistic_cfg.beta,
+                        "max_pmw_k": self.config.cache.probabilistic_cfg.max_pmw_k,
+                    }
+                }
             )
-            print(self.config.cache)
 
         # Initialize all components
         if self.config.mock:
@@ -96,7 +97,9 @@ class Simulator:
         #     budget_accountant = BudgetAccountant(self.config)
         #     cache = globals()[self.config.cache.type](self.config)
 
-        planner = ILP(cache, budget_accountant, self.config)
+        planner = globals()[self.config.planner.method](
+            cache, budget_accountant, self.config
+        )
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config

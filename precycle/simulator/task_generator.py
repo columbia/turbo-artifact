@@ -32,7 +32,13 @@ class TaskGenerator:
         query_id = int(task_row["query_id"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
         num_requested_blocks = int(task_row["n_blocks"])
-        requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
+
+        if self.config.tasks.block_selection_policy == "LatestBlocks":
+            requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
+        elif self.config.tasks.block_selection_policy == "RandomBlocks":
+            start = np.random.randint(0, num_blocks - num_requested_blocks)
+            requested_blocks = (start, start + num_requested_blocks - 1)
+            # print(requested_blocks)
 
         task = Task(
             id=task_id,
@@ -71,10 +77,11 @@ class PoissonTaskGenerator(TaskGenerator):
         try:
             next_sample_idx = int(next(self.zipf_sampling)) - 1
             next_query_id = self.tasks.iloc[[next_sample_idx]]["query_id"].values[0]
+            # next_query_id = next_sample_idx
             # Sample only from tasks that request no more than existing blocks
             return self.tasks.query(
                 f"n_blocks <= {num_blocks} and query_id == {next_query_id}"
-            ).sample(1)
+            ).sample(1, random_state=int(random.random() * 100))
 
         except:
             logger.error(

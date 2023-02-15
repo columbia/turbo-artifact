@@ -1,6 +1,7 @@
 import yaml
 import math
 import redis
+import numpy as np
 from precycle.cache.cache import Cache
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 from precycle.utils.utils import get_blocks_size
@@ -82,6 +83,7 @@ class MockDeterministicCache(Cache):
 
     def update_entry(self, query_id, blocks, true_result, noise_std, noise):
         cache_entry = self.get_entry(query_id, blocks)
+        sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
 
         if not cache_entry:
             # If not Cached then update
@@ -90,18 +92,31 @@ class MockDeterministicCache(Cache):
             )
             self.add_entry(query_id, blocks, new_cache_entry)
         else:  # Cached
-            variance_reduction = False  # No VR for now
-            if not variance_reduction:
+            if not self.config.variance_reduction:
                 if cache_entry.noise_std > noise_std:
                     # If not VR then update only if the entry cached is worse than the new one
                     new_cache_entry = CacheEntry(
                         result=true_result, noise_std=noise_std, noise=noise
                     )
                     self.add_entry(query_id, blocks, new_cache_entry)
-            # else:
-            #     # If VR update no matter what - we can use whatever is in the cache to get even better
-            #     # TODO: variance reduction here too
-            #     pass
+            else:
+                #     # If VR update no matter what - we can use whatever is in the cache to get even better
+                # TODO a temporary hack to enable VR.
+                cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
+                cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+                incoming_laplace_scale = noise_std / np.sqrt(2)
+                incoming_pure_epsilon = sensitivity / incoming_laplace_scale
+
+                new_pure_epsilon = cached_pure_epsilon + incoming_pure_epsilon
+                new_laplace_scale = sensitivity / new_pure_epsilon
+                new_noise_std = new_laplace_scale * np.sqrt(2)
+                # TODO: Temporary hack is that I don't compute the new noise by aggregating but resampling
+                new_noise = np.random.laplace(scale=new_laplace_scale)
+                new_cache_entry = CacheEntry(
+                    result=true_result, noise_std=new_noise_std, noise=new_noise
+                )
+                self.add_entry(query_id, blocks, new_cache_entry)
 
     def estimate_run_budget(self, query_id, blocks, noise_std):
         """
@@ -109,25 +124,36 @@ class MockDeterministicCache(Cache):
         """
         # variance_reduction = False  # No VR for now
         cache_entry = self.get_entry(query_id, blocks)
+        sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
 
         if not cache_entry:
             laplace_scale = noise_std / math.sqrt(2)
-            sensitivity = 1 / get_blocks_size(blocks, self.config.blocks_metadata)
             run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
         else:
             if noise_std >= cache_entry.noise_std:
                 # Good enough estimate
                 run_budget = ZeroCurve()
             else:
-                variance_reduction = False  # No VR for now
-                if not variance_reduction:
+                if not self.config.variance_reduction:
                     laplace_scale = noise_std / math.sqrt(2)
                     sensitivity = 1 / get_blocks_size(
                         blocks, self.config.blocks_metadata
                     )
                     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-                # else:
-                # TODO: re-enable variance reduction
+                else:
+                    cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
+                    cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+                    target_laplace_scale = noise_std / np.sqrt(2)
+                    target_pure_epsilon = sensitivity / target_laplace_scale
+
+                    run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+                    run_laplace_scale = sensitivity / run_pure_epsilon
+
+                    run_budget = LaplaceCurve(
+                        laplace_noise=run_laplace_scale / sensitivity
+                    )
+
         return run_budget
 
     def dump(self):

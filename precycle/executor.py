@@ -5,6 +5,7 @@ from collections import namedtuple
 from precycle.budget.curves import LaplaceCurve, ZeroCurve
 from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
+import time
 
 
 class RDet:
@@ -17,13 +18,13 @@ class RDet:
 
 
 class RProb:
-    def __init__(self, blocks, alpha, beta) -> None:
+    def __init__(self, blocks, alpha, nu) -> None:
         self.blocks = blocks
         self.alpha = alpha
-        self.beta = beta
+        self.nu = nu
 
     def __str__(self):
-        return f"RunProb({self.blocks}, {self.alpha}, {self.beta})"
+        return f"RunProb({self.blocks}, {self.alpha}, {self.nu})"
 
 
 class A:
@@ -65,8 +66,6 @@ class Executor:
 
         results = []
         for run_op in plan.l:
-            blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
-
             if isinstance(run_op, RDet):
                 run_return_value = self.run_deterministic(
                     run_op, task.query_id, task.query
@@ -77,7 +76,9 @@ class Executor:
                         task.query,
                         run_op.blocks,
                         run_return_value.true_result,
-                        run_op.noise_std,
+                        run_return_value.noise_std,
+                        task.utility,
+                        task.utility_beta,
                         run_return_value.noise,
                     )
             elif isinstance(run_op, RProb):
@@ -97,7 +98,9 @@ class Executor:
 
             run_ops_metadata[str(run_op.blocks)] = run_return_value.run_metadata
             run_budget_per_block[run_op.blocks] = run_return_value.run_budget
+            # print(run_return_value.run_budget)
 
+            blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
             results += [run_return_value.noisy_result * blocks_size]
             total_size += blocks_size
 
@@ -108,7 +111,6 @@ class Executor:
     def run_deterministic(self, run_op, query_id, query):
         run_op_metadata = {}
         run_op_metadata["cache_type"] = "DeterministicCache"
-
         blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / blocks_size
 
@@ -132,15 +134,30 @@ class Executor:
                 run_budget = ZeroCurve()
                 noise = cache_entry.noise
             else:
-                variance_reduction = False  # No VR for now
 
                 # We need to improve on the cache
-                if not variance_reduction:
+                if not self.config.variance_reduction:
                     # Just compute from scratch and pay for it
                     laplace_scale = run_op.noise_std / np.sqrt(2)
                     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                     noise = np.random.laplace(scale=laplace_scale)
-                # else:
+                else:
+                    # TODO a temporary hack to enable VR.
+                    cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
+                    cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+                    target_laplace_scale = run_op.noise_std / np.sqrt(2)
+                    target_pure_epsilon = sensitivity / target_laplace_scale
+
+                    run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+                    run_laplace_scale = sensitivity / run_pure_epsilon
+
+                    run_budget = LaplaceCurve(
+                        laplace_noise=run_laplace_scale / sensitivity
+                    )
+                    # TODO: Temporary hack is that I don't compute the noise by aggregating
+                    noise = np.random.laplace(scale=target_laplace_scale)
+
                 #     # TODO: re-enable variance reduction
                 #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
                 #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
@@ -172,7 +189,6 @@ class Executor:
             self.cache.deterministic_cache.add_entry(
                 query_id, run_op.blocks, cache_entry
             )
-
         noisy_result = true_result + noise
         rv = RunReturnValue(
             noisy_result,
@@ -186,22 +202,16 @@ class Executor:
 
     def run_probabilistic(self, run_op, query):
         pmw = self.cache.probabilistic_cache.get_entry(run_op.blocks)
-        obj = pmw if pmw else self.config.cache.pmw_accuracy
-
-        if run_op.alpha > obj.alpha or run_op.beta < obj.beta:
-            pmw = self.cache.probabilistic_cache.add_entry(
-                run_op.blocks, run_op.alpha, run_op.beta, pmw
-            )
-            logger.error(
-                "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
-            )
-        elif not pmw:
-            pmw = self.cache.probabilistic_cache.add_entry(
-                run_op.blocks, obj.alpha, obj.beta
-            )
+        if not pmw:
+            pmw = self.cache.probabilistic_cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
+
+        # TODO: right now we can't run a powerful query using a weaker PMW
+        assert run_op.alpha <= pmw.alpha
+        assert run_op.nu >= pmw.nu
+
         noisy_result, run_budget, run_op_metadata = pmw.run(query, true_result)
         run_op_metadata["run_budget"] = run_budget.dump()
         run_op_metadata["cache_type"] = "ProbabilisticCache"

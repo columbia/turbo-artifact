@@ -16,7 +16,10 @@ def deterministic_compute_utility_curve(a, b, n, n_i, k):
     k: number of computations/subqueries (aggregations: k-1)
     """
 
-    if k >= math.log(2 / b):
+    if k == 1:
+        epsilon = math.log(1 / b) / (n * a)
+
+    elif k >= math.log(2 / b):
         epsilon = math.sqrt(k * 8 * math.log(2 / b)) / (n * a)
     else:
         epsilon = (math.log(2 / b) * math.sqrt(8)) / (n * a)
@@ -27,7 +30,7 @@ def deterministic_compute_utility_curve(a, b, n, n_i, k):
     return noise_std
 
 
-def probabilistic_compute_utility_curve(a, b, k):
+def probabilistic_compute_utility_curve(a, b, n_i, k):
 
     """
     a: error-rate
@@ -35,6 +38,9 @@ def probabilistic_compute_utility_curve(a, b, k):
     n: total size of data requested by the user query
     k: number of computations/subqueries (aggregations: k-1)
     """
-    # Special case for K = 1 because the computation:
-    # 1-pow(1-b, 1) is not giving back precisely b (floating precision?)
-    return a, 1 - math.pow(1 - b, 1 / k) if k > 1 else b
+    if k == 1:
+        epsilon = math.log(2 / b) / (a * n_i)
+    else:
+        epsilon = (math.log((3 * k) / b) * 8) / (a * (n_i / k))
+
+    return a, 1 / epsilon

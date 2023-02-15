@@ -13,6 +13,8 @@ from gurobipy import GRB
 from precycle.executor import A, RDet, RProb
 from precycle.planner.planner import Planner
 
+from precycle.budget.curves import ZeroCurve
+
 # from precycle.utils.utils import get_blocks_size
 from precycle.utils.compute_utility_curve import (
     deterministic_compute_utility_curve,
@@ -21,7 +23,7 @@ from precycle.utils.compute_utility_curve import (
 
 
 DeterministicChunk = namedtuple("DeterministicChunk", ["index", "noise_std"])
-ProbabilisticChunk = namedtuple("ChunProbabilisticChunkk", ["index", "alpha_beta"])
+ProbabilisticChunk = namedtuple("ProbabilisticChunk", ["index", "alpha_beta"])
 ILPArgs = namedtuple(
     "ILPArgs", ["task", "indices", "cache", "budget_accountant", "chunk_sizes"]
 )
@@ -30,7 +32,6 @@ SolveArgs = namedtuple(
     "SolveArgs",
     [
         "task",
-        "return_dict",
         "cache",
         "cache_type",
         "budget_accountant",
@@ -51,6 +52,17 @@ def get_chunk_indices(blocks):
     return indices
 
 
+def get_min_cuts_plan_indices(blocks):
+    offset = blocks[0]
+    n = blocks[1] - blocks[0] + 1
+    indices = OrderedSet()
+
+    # for k in range(n):  # For all possible k
+    # Stop when you find the first plan that satisfies the binary constraint
+
+    return indices
+
+
 def satisfies_constraint(blocks, branching_factor=2):
     n = blocks[1] - blocks[0] + 1
     if not math.log(n, branching_factor).is_integer():
@@ -60,14 +72,12 @@ def satisfies_constraint(blocks, branching_factor=2):
     return True
 
 
-def get_chunk_sizes(blocks, blocks_metadata):
+def get_chunk_sizes(indices, blocks_metadata):
     # TODO: Assuming all blocks have equal size
-    n = blocks[1] - blocks[0] + 1
     block_size = blocks_metadata["block_size"]
     chunk_sizes = {}
-    for i in range(n):
-        for j in range(i, n):
-            chunk_sizes[(i, j)] = block_size * (j - i + 1)
+    for (i, j) in indices:
+        chunk_sizes[(i, j)] = block_size * (j - i + 1)
     return chunk_sizes
 
 
@@ -78,11 +88,9 @@ class ILP(Planner):
     def get_execution_plan(self, task):
 
         num_blocks = task.blocks[1] - task.blocks[0] + 1
-        return_dict = dict()
 
         solve_args = SolveArgs(
             task,
-            return_dict,
             self.cache,
             self.cache_type,
             self.budget_accountant,
@@ -90,37 +98,48 @@ class ILP(Planner):
             self.blocks_metadata,
         )
 
-        def min_cuts():
-            indices = OrderedSet()
-            indices.add(((0, num_blocks - 1)))
-            # TODO: Assuming all blocks have equal size
-            block_size = self.blocks_metadata["block_size"]
-            chunk_sizes = {(0, num_blocks - 1): block_size * num_blocks}
+        # Choose a planning method
+        if self.config.planner.method == "min_cuts":
+            """Picks a plan with minimal number of cuts that satisfies the binary constraint.
+            If that plan can't be executed we don't look for another one
+            """
+            # We don't really need an ILP solution for this one but the ILP
+            # infrastructure will return if the plan is eligible or not
+            return_dict = {}
+            indices = get_min_cuts_plan_indices(task.blocks)
+            chunk_sizes = get_chunk_sizes(indices, self.blocks_metadata)
+            k = len(indices)
+            solve(k, k, indices, chunk_sizes, return_dict, solve_args)
 
-            solve(1, 1, indices, chunk_sizes, solve_args)
-            return return_dict
-
-        def max_cuts():
+        elif self.config.planner.method == "max_cuts":
+            """Picks a plan with the maximum number of cuts.
+            If that plan can't be executed we don't look for another one
+            """
+            # We don't really need an ILP solution for this one but the ILP
+            # infrastructure will return if the plan is eligible or not
+            return_dict = {}
             indices = OrderedSet()
             for i in range(num_blocks):
                 indices.add(((i, i)))
-            # TODO: Assuming all blocks have equal size
-            block_size = self.blocks_metadata["block_size"]
-            chunk_sizes = {index: block_size for index in indices}
+            chunk_sizes = get_chunk_sizes(indices, self.blocks_metadata)
+            k = len(indices)
+            solve(k, k, indices, chunk_sizes, return_dict, solve_args)
 
-            solve(num_blocks, num_blocks, indices, chunk_sizes, solve_args)
-            return return_dict
-
-        def optimal_cuts():
+        elif self.config.planner.method == "optimal_cuts":
+            """Uses ILP to select a plan that satisfies the binary constraint and at the same time tries to
+            minimize budget consumption for the given query.
+            If no plan is returned it means that there is not enough budget and enough content in the cache
+            to accommodate the request.
+            """
+            manager = Manager()
+            return_dict = manager.dict()
             indices = get_chunk_indices(task.blocks)
             chunk_sizes = get_chunk_sizes(task.blocks, self.blocks_metadata)
             max_chunks = num_blocks
 
             # Running in Parallel
             processes = []
-            manager = Manager()
-            return_dict = manager.dict()
-            num_processes = min(os.cpu_count(), max_chunks)
+            num_processes = 1  # min(os.cpu_count(), max_chunks)
 
             k = max_chunks // num_processes
             for i in range(num_processes):
@@ -129,21 +148,19 @@ class ILP(Planner):
                 processes.append(
                     Process(
                         target=solve,
-                        args=(k_start, k_end, indices, chunk_sizes, solve_args),
+                        args=(
+                            k_start,
+                            k_end,
+                            indices,
+                            chunk_sizes,
+                            return_dict,
+                            solve_args,
+                        ),
                     )
                 )
                 processes[i].start()
             for i in range(num_processes):
                 processes[i].join()
-                return return_dict
-
-        # Choose a planning method
-        if self.config.planner.method == "min_cuts":
-            return_dict = min_cuts()
-        elif self.config.planner.method == "max_cuts":
-            return_dict = max_cuts()
-        elif self.config.planner.method == "optimal":
-            return_dict = optimal_cuts()
 
         # Find the best solution
         plan = None
@@ -167,7 +184,7 @@ class ILP(Planner):
         return plan
 
 
-def solve(kmin, kmax, indices, chunk_sizes, solve_args):
+def solve(kmin, kmax, indices, chunk_sizes, return_dict, solve_args):
     t = time.time()
 
     ilp_args = ILPArgs(
@@ -177,26 +194,32 @@ def solve(kmin, kmax, indices, chunk_sizes, solve_args):
         solve_args.budget_accountant,
         chunk_sizes,
     )
-
+    # print("Kmin - Kmax", kmin, kmax, indices)
     if solve_args.cache_type == "DeterministicCache":
         for k in range(kmin, kmax + 1):
             chunks, objval = deterministic_optimize(k, ilp_args)
             if chunks:
-                solve_args.return_dict[k] = (chunks, objval)
+                return_dict[k] = (chunks, objval)
 
     elif solve_args.cache_type == "ProbabilisticCache":
         for k in range(kmin, kmax + 1):
+            # print("K", k)
+
             # Don't allow more than max_pmw_k PMW aggregations
             if k > solve_args.probabilistic_cfg.max_pmw_k:
                 break
             chunks, objval = probabilistic_optimize(k, ilp_args)
             if chunks:
-                solve_args.return_dict[k] = (chunks, objval)
+                return_dict[k] = (chunks, objval)
 
     elif solve_args.cache_type == "CombinedCache":
         best_objvalue = math.inf
         for k in range(kmin, kmax + 1):
+            # print("K", k)
+
             for k_prob in range(k + 1):
+                # print("K prob", k_prob)
+
                 # Don't allow more than max_pmw_k PMW aggregations
                 if k_prob > solve_args.probabilistic_cfg.max_pmw_k:
                     break
@@ -228,7 +251,7 @@ def solve(kmin, kmax, indices, chunk_sizes, solve_args):
                     )
                     if chunks and best_objvalue > objval:
                         # Return only one solution from this batch
-                        solve_args.return_dict[k] = (chunks, objval)
+                        return_dict[k] = (chunks, objval)
                         best_objvalue = objval
 
     t = (time.time() - t) / (kmax + 1 - kmin)
@@ -280,7 +303,9 @@ def deterministic_optimize(k, ilp_args):
                 (blocks[i], blocks[j]),
                 noise_std,
             )
+            # print("K", k, "noise-std", noise_std, run_budget.epsilons)
 
+            # print(run_budget)
             # Enough budget in blocks constraint to accommodate "run_budget"
             if not ba.can_run((blocks[i], blocks[j]), run_budget):
                 m.addConstr(x[i, j] == 0)
@@ -356,14 +381,19 @@ def probabilistic_optimize(k, ilp_args):
             # Using the contents of the probabilistic cache, estimate how much fresh budget
             # we need to spend across the blocks of the (i,j) chunk.
             alpha, beta = probabilistic_compute_utility_curve(a, b, k)
+            # print("alpha", alpha, "beta", beta)
             alpha_beta_per_chunk[(i, j)] = (alpha, beta)
-
-            run_budget = probabilistic_cache.estimate_run_budget(
+            # print("a, b", alpha, beta)
+            run_budget, worst_run_budget = probabilistic_cache.estimate_run_budget(
                 ilp_args.task.query, (blocks[i], blocks[j]), alpha, beta
             )
+            # print("run budget", run_budget)
 
-            # Enough budget in blocks constraint to accommodate "run_budget"
-            if not ba.can_run((blocks[i], blocks[j]), run_budget):
+            # Enough budget in blocks constraint to accommodate "run_budget" and "worst_budget"
+            if (
+                run_budget == ZeroCurve()
+                and not ba.can_run((blocks[i], blocks[j]), worst_run_budget)
+            ) or not ba.can_run((blocks[i], blocks[j]), run_budget):
                 m.addConstr(x[i, j] == 0)
                 break
 
@@ -429,7 +459,8 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
         # Same b for deterministic and probabilistic
         if k_det > 0 and k_prob > 0:
             b = 1 - math.sqrt(1 - b)
-            print(b)
+        # aa, bb = probabilistic_compute_utility_curve(a, b, k_prob)
+        # print("alpha", aa, "beta", bb)
         run_budget_per_det_chunk = {}
         run_budget_per_prob_chunk = {}
         noise_std_per_chunk = {}
@@ -472,19 +503,30 @@ def combined_optimize(n_det_lower_bound, block_size, k_det, k_prob, ilp_args):
                 run_budget_per_det_chunk[(i, j)] = (
                     sum(run_budget_det.epsilons) / len(run_budget_det.epsilons)
                 ) * (j - i + 1)
+
+                if run_budget_per_det_chunk[(i, j)] == 0:
+                    # In this case we should prefer the deterministic cache for this chunk no matter what.
+                    m.addConstr(y[i, j] == 0)
             else:
                 run_budget_per_det_chunk[(i, j)] = 10000  # Setting a very high value
 
             if k_prob > 0:
                 alpha, beta = probabilistic_compute_utility_curve(a, b, k_prob)
                 alpha_beta_per_chunk[(i, j)] = (alpha, beta)
-                # print("a", alpha, beta)
-                run_budget_prob = probabilistic_cache.estimate_run_budget(
+                (
+                    run_budget_prob,
+                    worst_run_budget,
+                ) = probabilistic_cache.estimate_run_budget(
                     ilp_args.task.query, blocks_ij, alpha, beta
                 )
-                if not ba.can_run(blocks_ij, run_budget_prob):
+                # Enough budget in blocks constraint to accommodate "run_budget"
+                if (
+                    run_budget_prob == ZeroCurve()
+                    and not ba.can_run((blocks[i], blocks[j]), worst_run_budget)
+                ) or not ba.can_run((blocks[i], blocks[j]), run_budget_prob):
                     m.addConstr(y[i, j] == 0)
                     break
+
                 run_budget_per_prob_chunk[(i, j)] = (
                     sum(run_budget_prob.epsilons) / len(run_budget_prob.epsilons)
                 ) * (j - i + 1)

@@ -16,12 +16,6 @@ class ZeroCurve(RenyiBudget):
         super().__init__(orders)
 
 
-class InfinityCurve(RenyiBudget):
-    def __init__(self, alpha_list: List[float] = ALPHAS) -> None:
-        orders = {alpha: math.inf for alpha in alpha_list}
-        super().__init__(orders)
-
-
 class SyntheticPolynomialCurve(RenyiBudget):
     def __init__(
         self,

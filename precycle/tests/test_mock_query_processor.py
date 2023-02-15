@@ -1,14 +1,15 @@
 import json
 import typer
+import math
 from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
-
 from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
 from precycle.budget_accountant import MockBudgetAccountant
 
 from precycle.planner.ilp import ILP
+from precycle.planner.min_cuts import MinCuts
 from precycle.cache.combined_cache import MockCombinedCache
 
 from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
@@ -42,9 +43,11 @@ def test(
         assert config.cache.probabilistic_cfg.alpha is not None
         assert config.cache.probabilistic_cfg.beta is not None
 
-        # No aggregations in min_cuts, no need for more powerful PMWs than needed
-        if config.planner.method == "min_cuts":
-            config.cache.probabilistic_cfg.max_pmw_k = 1
+        if config.cache.type == "CombinedCache" and config.blocks.max_num > 1:
+            # Mixing Up Deterministic With Probabilistic runs - union bound over the two
+            # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
+            b = config.cache.probabilistic_cfg.beta
+            config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
 
         pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
             config.cache.probabilistic_cfg.alpha,
@@ -92,7 +95,7 @@ def test(
     db = MockPSQL(config)
     budget_accountant = MockBudgetAccountant(config)
     cache = MockCombinedCache(config)
-    planner = ILP(cache, budget_accountant, config)
+    planner = MinCuts(cache, budget_accountant, config)
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Insert two blocks

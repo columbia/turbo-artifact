@@ -9,21 +9,20 @@ from precycle.budget.histogram import DenseHistogram
 from precycle.utils.utils import get_blocks_size, mlflow_log
 
 
-# TODO: what is the minimum info that has to be stored in Redis so that I can restore the PMW?
+
 class PMW:
     def __init__(
         self,
         blocks,
         alpha,  # Max error guarantee, expressed as fraction.
-        beta,  # Failure probability for the alpha error bound
+        nu,  # Scale of noise added on queries. Should be computed from alpha.
+        beta=None,  # Failure probability for the alpha error bound
         old_pmw=None,  # PMW to initialize from
-        nu=None,  # Scale of noise added on queries. Should be computed from alpha.
         ro=None,  # Scale of noise added on the threshold. Will be nu if left empty. Unused for Laplace SVT.
         k=None,  # Max number of queries for each OneShot SVT instance. Unused for Laplace SVT
         standard_svt=True,  # Laplace SVT by default. Gaussian RDP SVT otherwise
         output_counts=False,  # False to output fractions (like PMW), True to output raw counts (like MWEM)
         heuristic=None,
-        heuristic_value=None,
         blocks_metadata=None,
     ):
         # TODO: some optimizations
@@ -32,9 +31,6 @@ class PMW:
         # - cheap version of the previous point: dynamic k, increase over time
         # - MWEM makes bigger steps when the error is higher, we could try that too
         # - Is it better to use Laplace after hard queries, for composition? By how much?
-
-        # PMW will always be initialized by alpha, beta
-        assert alpha is not None and beta is not None
 
         self.blocks_metadata = blocks_metadata
 
@@ -50,13 +46,22 @@ class PMW:
         self.output_counts = output_counts
 
         # Heuristics
-        self.heuristic = heuristic
-        self.heuristic_value = heuristic_value
-        self.past_queries_difficulty = [0] * self.heuristic_value
+        self.heuristic_method, self.heuristic_value = heuristic.split(":")
+        if self.heuristic_method == "bin_visits":
+            (
+                self.heuristic_value,
+                self.heuristic_value_increase,
+            ) = self.heuristic_value.split("-")
+            self.heuristic_value_increase = int(self.heuristic_value_increase)
+        self.heuristic_value = int(self.heuristic_value)
         self.pmw_updates_count = 0
         self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        self.heuristic_threshold_histogram = (
+            torch.ones(size=(1, self.M), dtype=torch.float64) * self.heuristic_value
+        )
 
         # From my maths. It's cheap to be accurate when n is large.
+        assert nu is not None  # for now
         self.nu = nu if nu else self.n * alpha / np.log(2 / beta)
 
         # Sparse Vector parameters
@@ -85,58 +90,55 @@ class PMW:
                 0, self.Delta * self.ro
             )
 
-    def worst_case_cost(self) -> Budget:
-        # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
-        # and we still do a cache miss, so we pay for a true query on top of that
-        # query_cost = GaussianCurve(sigma=nu)
-        query_cost = LaplaceCurve(laplace_noise=self.nu)
-        if self.standard_svt:
-            # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
-            svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
-        else:
-            svt_cost = BoundedOneShotSVT(
-                ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
-            )
-        return svt_cost + query_cost
+    # def worst_case_cost(self) -> Budget:
+    #     # Worst case: we need to pay for a new sparse vector (e.g. first query, or first query after cache miss)
+    #     # and we still do a cache miss, so we pay for a true query on top of that
+    #     # query_cost = GaussianCurve(sigma=nu)
+    #     query_cost = LaplaceCurve(laplace_noise=self.nu)
+    #     if self.standard_svt:
+    #         # We add only noise 1/nu before comparing to the threshold, so it costs 2/nu (see Salil)
+    #         svt_cost = PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
+    #     else:
+    #         svt_cost = BoundedOneShotSVT(
+    #             ro=self.ro, nu=self.nu, kmax=self.local_svt_max_queries
+    #         )
+    #     return svt_cost + query_cost
 
     # Heuristic 1
-    def predict_hit_avg_bin_visits_heuristic(self, query):
-        """A heuristic that tries to predict whether we will have a miss or hit based on the past number of hits"""
-
-        avg_bin_visits = 0
+    def predict_hit_bin_visits_heuristic(self, query):
+        # print(colored(f"{self.visits_count_histogram[0, :]}", "blue"))
         for i in query.indices()[1]:
-            avg_bin_visits += self.visits_count_histogram[0, i]
-        avg_bin_visits /= len(query.indices()[1])
-        # print("avg_bin_visits", avg_bin_visits)
-        if avg_bin_visits > self.heuristic_value:
-            return True
-        return False
+            if (
+                self.visits_count_histogram[0, i]
+                < self.heuristic_threshold_histogram[0, i]
+            ):
+                return False
+        return True
 
     # Heuristic 2
     def predict_hit_total_updates_heuristic(self, query):
         # print(self.pmw_updates_count, self.heuristic_value)
         return self.pmw_updates_count > self.heuristic_value
 
-    # Heuristic 3
-    def predict_hit_hard_queries_heuristic(self, query):
-        last_n_queries = self.past_queries_difficulty[-self.heuristic_value :]
-        # print(last_n_queries)
-        easy_queries = 1 - sum(last_n_queries) / self.heuristic_value
-        print(easy_queries)
-        if easy_queries >= 0.5:
-            return True
-        else:
-            # Give 20% chance for the PMW to run, otherwise we will never have queries
-            return np.random.choice([True, False], 1, p=[0.4, 0.6])[0]
+    def is_query_hard(self, query) -> bool:
+        if self.heuristic_method == "bin_visits":
+            return not self.predict_hit_bin_visits_heuristic(query)
+        elif self.heuristic_method == "total_updates_counts":
+            return not self.predict_hit_total_updates_heuristic(query)
 
-    def estimate_run_budget(self, query) -> Budget:
-        if self.heuristic == "n_past_queries":
-            hit = self.predict_hit_hard_queries_heuristic(query)
-        elif self.heuristic == "avg_bin_visits":
-            hit = self.predict_hit_avg_bin_visits_heuristic(query)
-        elif self.heuristic == "total_updates_counts":
-            hit = self.predict_hit_total_updates_heuristic(query)
-        return ZeroCurve() if hit else self.worst_case_cost()
+    # def estimate_run_budget(self, query) -> Budget:
+    #     # if self.heuristic_method == "n_past_queries":
+    #     #     hit = self.predict_hit_hard_queries_heuristic(query)
+    #     if self.heuristic_method == "bin_visits":
+    #         hit = self.predict_hit_bin_visits_heuristic(query)
+    #     elif self.heuristic_method == "total_updates_counts":
+    #         hit = self.predict_hit_total_updates_heuristic(query)
+
+    #     # Returns expected cost, worst cost
+    #     worst_case = self.worst_case_cost()
+    #     if hit:
+    #         return ZeroCurve(), worst_case
+    #     return worst_case, worst_case
 
     def run(self, query, true_output):
         assert isinstance(query, torch.Tensor)
@@ -193,7 +195,6 @@ class PMW:
         if noisy_error < self.noisy_threshold:
             # Easy query, i.e. "Output bot" in SVT
             run_metadata["hard_query"] = False
-            self.past_queries_difficulty.append(0)
             logger.info(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, noise std: {2 * self.Delta * self.nu}"
             )
@@ -202,7 +203,8 @@ class PMW:
             # Hard query, i.e. "Output top" in SVT
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
-            self.past_queries_difficulty.append(1)
+            # if self.heuristic_method == "bin_visits":
+            # self.heuristic_value += self.heuristic_value_increase
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
 
@@ -236,12 +238,16 @@ class PMW:
             for i, u in zip(query.indices()[1], updates):
                 self.histogram.tensor[0, i] *= u
                 self.visits_count_histogram[0, i] += 1
+                if self.heuristic_method == "bin_visits":
+                    self.heuristic_threshold_histogram[
+                        0, i
+                    ] += self.heuristic_value_increase
 
             self.histogram.normalize()
             self.pmw_updates_count += 1
             output = noisy_output
 
-        self.mlflow_log_run(output, true_output)
+        # self.mlflow_log_run(output, true_output)
         run_metadata["true_error_fraction"] = abs(output - true_output)
 
         if self.output_counts:
@@ -250,7 +256,7 @@ class PMW:
         return output, run_budget, run_metadata
 
     def external_update(self, query, noisy_result):
-        # Important: External updates probably break proofs
+        # Important: External updates might break convergence proofs
         predicted_output = self.histogram.run(query)
 
         # Multiplicative weights update for the relevant bins
