@@ -30,6 +30,15 @@ def create_all_queries(attributes_domain_sizes):
     return query_tensors
 
 
+def create_all_point_queries(attributes_domain_sizes):
+    attribute_values = [list(range(attribute_size)) for attribute_size in attributes_domain_sizes]
+    query_tensors = []
+    # Take the cartesian product
+    for query_tuple in product(*attribute_values):
+        # (0,0,1) -> [0,0,1]
+        query_tensors.append(list(query_tuple))
+    return query_tensors
+
 def create_all_2way_marginals(attributes_domain_sizes):
     query_tensors = []
     dicts = []
@@ -140,6 +149,9 @@ def main(
     # Create all types
     query_tensors = create_8_queries()
     write_queries(queries_dir, "8", query_tensors)
+    
+    query_tensors = create_all_point_queries(attributes_domain_sizes)
+    write_queries(queries_dir, "all_point_queries", query_tensors)
 
     query_tensors = create_all_2way_marginals(attributes_domain_sizes)
     write_queries(queries_dir, "all_2way_marginals", query_tensors)
