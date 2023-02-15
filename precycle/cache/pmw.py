@@ -21,25 +21,28 @@ Trimmed-down implementation of PMW, following Salil's pseudocode
 class PMW:
     def __init__(
         self,
-        blocks,
         alpha,  # Max error guarantee, expressed as fraction.
         epsilon,  # Not the global budget - internal Laplace will be Lap(1/(epsilon*n))
-        blocks_metadata=None,  # Useful if all blocks have the same size
+        n,  # Number of samples
+        domain_size,  # From blocks_metadata
         old_pmw=None,  # PMW to initialize from
         heuristic=None,  # Defaults to threshold?
+        id="",  # Name to log results
     ):
 
         # Core PMW parameters
-        self.n = get_blocks_size(blocks, blocks_metadata)
-        self.M = blocks_metadata["domain_size"]
-        self.histogram = DenseHistogram(self.M) if not old_pmw else old_pmw.histogram
+        self.n = n
+        self.domain_size = domain_size
+        self.histogram = (
+            DenseHistogram(self.domain_size) if not old_pmw else old_pmw.histogram
+        )
         self.epsilon = epsilon
         self.b = 1 / (self.n * self.epsilon)
 
         # Logging
         self.queries_ran = 0
         self.hard_queries_ran = 0
-        self.id = str(blocks)[1:-1].replace(", ", "-")
+        self.id = id
 
         # Heuristics
         self.heuristic_method, self.heuristic_value = heuristic.split(":")
@@ -51,9 +54,12 @@ class PMW:
             self.heuristic_value_increase = int(self.heuristic_value_increase)
         self.heuristic_value = int(self.heuristic_value)
         self.pmw_updates_count = 0
-        self.visits_count_histogram = torch.zeros(size=(1, self.M), dtype=torch.float64)
+        self.visits_count_histogram = torch.zeros(
+            size=(1, self.domain_size), dtype=torch.float64
+        )
         self.heuristic_threshold_histogram = (
-            torch.ones(size=(1, self.M), dtype=torch.float64) * self.heuristic_value
+            torch.ones(size=(1, self.domain_size), dtype=torch.float64)
+            * self.heuristic_value
         )
 
         # Initialize the first sparse vector

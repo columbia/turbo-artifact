@@ -1,8 +1,11 @@
-from loguru import logger
-from precycle.cache.pmw import PMW
-from precycle.cache.cache import Cache
 from copy import copy
+
+from loguru import logger
+
+from precycle.cache.cache import Cache
+from precycle.cache.pmw import PMW
 from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
+from precycle.utils.utils import get_blocks_size
 
 
 class ProbabilisticCache(Cache):
@@ -17,7 +20,7 @@ class MockProbabilisticCache(Cache):
         self.pmw_args = copy(config.cache.pmw_cfg)
         self.pmw_args.update({"blocks_metadata": self.config.blocks_metadata})
         self.pmw_accuracy = self.config.cache.pmw_accuracy
-        self.block_size = self.config.blocks_metadata["block_size"]
+        self.block_metadata = self.config.blocks_metadata
 
     # def warmup(self, blocks):
     # Given a new pmw on <blocks>
@@ -27,9 +30,22 @@ class MockProbabilisticCache(Cache):
         beta = self.pmw_accuracy.beta
         max_pmw_k = self.pmw_accuracy.max_pmw_k
 
-        n = (blocks[1] - blocks[0] + 1) * self.block_size
-        alpha, nu = probabilistic_compute_utility_curve(alpha, beta, n, max_pmw_k)
-        pmw = PMW(blocks, alpha, nu, **self.pmw_args)
+        # n = (blocks[1] - blocks[0] + 1) * self.block_size
+        # alpha, nu = probabilistic_compute_utility_curve(alpha, beta, n, max_pmw_k)
+        # pmw = PMW(blocks, alpha, nu, **self.pmw_args)
+
+        n = get_blocks_size(blocks, self.blocks_metadata)
+        epsilon = 1
+        # TODO: implement utility
+
+        pmw = PMW(
+            alpha=alpha,
+            epsilon=epsilon,
+            n=n,
+            id=str(blocks)[1:-1].replace(", ", "-"),
+            domain_size=self.blocks_metadata["domain_size"],
+        )
+
         self.key_values[blocks] = pmw
         return pmw
 
