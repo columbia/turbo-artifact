@@ -11,7 +11,7 @@
             "max_pmw_k": 1
         },
         "pmw_cfg": {
-            "heuristic": "bin_visits:100"
+            "heuristic": "bin_visits:100-1"
         }
     },
     "planner": {

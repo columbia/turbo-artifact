@@ -18,9 +18,9 @@ class MockProbabilisticCache(Cache):
         self.key_values = {}
         self.config = config
         self.pmw_args = copy(config.cache.pmw_cfg)
-        self.pmw_args.update({"blocks_metadata": self.config.blocks_metadata})
+        # self.pmw_args.update({"blocks_metadata": self.config.blocks_metadata})
         self.pmw_accuracy = self.config.cache.pmw_accuracy
-        self.block_metadata = self.config.blocks_metadata
+        self.blocks_metadata = self.config.blocks_metadata
 
     # def warmup(self, blocks):
     # Given a new pmw on <blocks>
@@ -44,6 +44,7 @@ class MockProbabilisticCache(Cache):
             n=n,
             id=str(blocks)[1:-1].replace(", ", "-"),
             domain_size=self.blocks_metadata["domain_size"],
+            **self.pmw_args,
         )
 
         self.key_values[blocks] = pmw
