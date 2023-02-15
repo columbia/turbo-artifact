@@ -1,34 +1,31 @@
-import os
-import sys
 import json
 import math
-import typer
-import simpy
+import os
 import random
-import numpy as np
+import sys
+
 import mlflow
+import numpy as np
+import simpy
+import typer
 from loguru import logger
 from omegaconf import OmegaConf
 
-from precycle.simulator import Blocks, ResourceManager, Tasks
-
-from precycle.query_processor import QueryProcessor
-from precycle.psql import MockPSQL, PSQL
-from precycle.budget_accountant import MockBudgetAccountant, BudgetAccountant
-
+from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.combined_cache import MockCombinedCache
-from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.planner.ilp import ILP
 from precycle.planner.min_cuts import MinCuts
-
+from precycle.psql import PSQL, MockPSQL
+from precycle.query_processor import QueryProcessor
+from precycle.simulator import Blocks, ResourceManager, Tasks
+from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.utils.utils import (
+    DEFAULT_CONFIG_FILE,
+    LOGS_PATH,
     get_logs,
     save_logs,
-    LOGS_PATH,
-    DEFAULT_CONFIG_FILE,
     save_mlflow_artifacts,
 )
-
 
 app = typer.Typer()
 
@@ -44,7 +41,16 @@ class Simulator:
 
         if self.config.logs.mlflow:
             os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
-            mlflow.set_experiment(experiment_id="768944864734992566")
+            try:
+                mlflow.set_experiment(experiment_id="768944864734992566")
+            except Exception:
+                try:
+                    mlflow.set_experiment(
+                        experiment_id=self.config.logs.mlflow_experiment_id
+                    )
+                except Exception:
+                    experiment_id = mlflow.create_experiment(name="precycle")
+                    print(f"New MLflow experiment created: {experiment_id}")
 
         try:
             with open(self.config.blocks.block_metadata_path) as f:

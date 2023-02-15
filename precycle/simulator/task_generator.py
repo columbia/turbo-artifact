@@ -1,6 +1,8 @@
 import random
+
 import numpy as np
 from loguru import logger
+
 from precycle.task import Task
 
 
@@ -36,7 +38,11 @@ class TaskGenerator:
         if self.config.tasks.block_selection_policy == "LatestBlocks":
             requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
         elif self.config.tasks.block_selection_policy == "RandomBlocks":
-            start = np.random.randint(0, num_blocks - num_requested_blocks)
+            start = (
+                np.random.randint(0, num_blocks - num_requested_blocks)
+                if num_blocks > num_requested_blocks
+                else 0
+            )
             requested_blocks = (start, start + num_requested_blocks - 1)
             # print(requested_blocks)
 
