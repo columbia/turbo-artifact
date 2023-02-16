@@ -87,7 +87,7 @@ class PMW:
             self.noisy_threshold = self.alpha / 2 + np.random.laplace(
                 loc=0, scale=self.b
             )
-            run_budget += PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
+            run_budget += PureDPtoRDP(epsilon=3 * self.epsilon)
 
         # Check the public histogram for free. Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
