@@ -107,7 +107,7 @@ class PMW:
         else:
             # Hard query, run a fresh Laplace estimate
             output = true_output + np.random.laplace(loc=0, scale=self.b)
-            run_budget += LaplaceCurve(laplace_noise=self.nu)
+            run_budget += LaplaceCurve(laplace_noise=1 / self.epsilon)
 
             # Increase weights iff predicted_output is too small
             lr = self.alpha / 8
