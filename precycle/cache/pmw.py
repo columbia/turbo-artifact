@@ -72,11 +72,9 @@ class PMW:
             * self.heuristic_value
         )
 
-        # Initialize the first sparse vector
-        self.noisy_threshold = self.alpha / 2 + np.random.laplace(loc=0, scale=self.b)
-        self.local_svt_queries_ran = (
-            0  # We will pay the initialization fee right before we use it
-        )
+        # We'll initialize the noisy threshold and pay right before we use the SV
+        self.noisy_threshold = None
+        self.local_svt_queries_ran = 0
 
     def run(self, query, true_output):
         assert isinstance(query, torch.Tensor)
@@ -87,7 +85,7 @@ class PMW:
         # Pay the initialization budget if it's the first call
         if self.local_svt_queries_ran == 0:
             self.noisy_threshold = self.alpha / 2 + np.random.laplace(
-                0, self.Delta * self.nu
+                loc=0, scale=self.b
             )
             run_budget += PureDPtoRDP(epsilon=1 / self.nu + 2 / self.nu)
 
