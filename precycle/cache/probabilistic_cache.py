@@ -4,7 +4,10 @@ from loguru import logger
 
 from precycle.cache.cache import Cache
 from precycle.cache.pmw import PMW
-from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
+from precycle.utils.compute_utility_curve import (
+    get_pmw_epsilon,
+    probabilistic_compute_utility_curve,
+)
 from precycle.utils.utils import get_blocks_size
 
 
@@ -35,8 +38,7 @@ class MockProbabilisticCache(Cache):
         # pmw = PMW(blocks, alpha, nu, **self.pmw_args)
 
         n = get_blocks_size(blocks, self.blocks_metadata)
-        epsilon = 1
-        # TODO: implement utility
+        epsilon = get_pmw_epsilon(alpha, beta, n, max_pmw_k)
 
         pmw = PMW(
             alpha=alpha,
