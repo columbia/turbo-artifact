@@ -28,6 +28,7 @@ ray = "^2.2.0"
 jupyter = "^1.0.0"
 nb-clean = "^2.4.0"
 modin = "^0.18.1"
+setuptools = "^67.1.0"
 
 
 [build-system]

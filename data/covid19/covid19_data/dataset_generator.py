@@ -3,7 +3,7 @@ import math
 import os
 from multiprocessing import Manager, Process
 from pathlib import Path
-import math
+
 import numpy as np
 import pandas as pd
 import typer
@@ -13,7 +13,7 @@ from loguru import logger
 def load_and_preprocess_datasets(metadata):
 
     # --- Covid dataset --- #
-    covid = pd.read_csv("covid19cases_test.csv")
+    covid = pd.read_csv("./covid19cases_test.csv")
     covid = covid.loc[covid["area"] == "California"]
     covid = covid[covid["date"].notna()]
     covid = covid[covid["total_tests"].notna()]
@@ -23,7 +23,7 @@ def load_and_preprocess_datasets(metadata):
     covid = covid.reset_index(drop=True)
 
     # --- Covid ages dataset --- #
-    age = pd.read_csv("covidage.csv")
+    age = pd.read_csv("./covidage.csv")
     age.rename(columns={"Age Group": "age_group"}, inplace=True)
     age.replace(metadata["age_mapping"], inplace=True)
 
@@ -44,7 +44,7 @@ def load_and_preprocess_datasets(metadata):
     age["age_based_case_rate"] /= ageGroup["age_based_case_rate"].values
 
     # --- Covid genders dataset --- #
-    gender = pd.read_csv("covidgender.csv")
+    gender = pd.read_csv("./covidgender.csv")
     gender.replace(metadata["gender_mapping"], inplace=True)
     gender.drop(
         columns=[
@@ -68,7 +68,7 @@ def load_and_preprocess_datasets(metadata):
     gender["gender_based_case_rate"] /= genderGroup["gender_based_case_rate"].values
 
     # --- Covid ethnicities dataset --- #
-    ethnicity = pd.read_csv("covidethnicity.csv")
+    ethnicity = pd.read_csv("./covidethnicity.csv")
     ethnicity.replace(metadata["ethnicity_mapping"], inplace=True)
 
     ethnicity.drop(

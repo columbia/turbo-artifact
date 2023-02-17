@@ -9,6 +9,10 @@
 
 If you run without using the mock modules you need to setup Postgres, TimeScaleDB and two Redis instances following the steps below:
 
+- Install Postgres:
+    - `sudo apt install libpq-dev` (required by the Python bindings)
+    - Other steps...
+
 - Follow these instructions to install Redis https://redis.io/docs/getting-started/installation/install-redis-on-linux/
     Some more help: https://www.tutorialspoint.com/redis/redis_environment.htm
 

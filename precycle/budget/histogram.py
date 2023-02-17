@@ -94,6 +94,13 @@ def flat_items(sparse_tensor):
         yield index, value
 
 
+def flat_indices(sparse_tensor):
+    # Iterates through bin_indices
+    for index in sparse_tensor.indices()[1]:
+        # indices()[0] is always 0 (row tensor)
+        yield (0, index)
+
+
 def get_domain_size(attribute_sizes: List[int]) -> int:
     return math.prod(attribute_sizes)
 

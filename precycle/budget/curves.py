@@ -1,9 +1,10 @@
 import math
-import numpy as np
+import warnings
 from typing import List
+
+import numpy as np
 from autodp.mechanism_zoo import LaplaceMechanism
 from autodp.transformer_zoo import AmplificationBySampling
-
 from opacus.accountants.analysis.rdp import compute_rdp
 
 from precycle.budget import ALPHAS, RenyiBudget
@@ -129,14 +130,18 @@ class PureDPtoRDP(RenyiBudget):
     # https://papers.nips.cc/paper/2020/file/e9bf14a419d77534105016f5ec122d62-Paper.pdf
     # Originally from the CDP paper by Bun and Steinke 2016
     def __init__(self, epsilon: float, alpha_list: List[float] = ALPHAS) -> None:
-        orders = {
-            alpha: (1 / (alpha - 1))
-            * np.log(
-                (np.sinh(alpha * epsilon) - np.sinh((alpha - 1) * epsilon))
-                / (np.sinh(epsilon))
-            )
-            for alpha in alpha_list
-        }
+       
+        orders = {}
+        for alpha in alpha_list:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+                try:
+                    eps = (np.log(np.sinh(alpha * epsilon) - np.sinh((alpha - 1) * epsilon))
+                    - np.log(np.sinh(epsilon))) / (alpha - 1)
+                except Warning as e:
+                    # Something went wrong. To be on the safe side, use a coarser upper bound.
+                    eps = alpha * (epsilon ** 2) / 2
+            orders[alpha] = eps
         self.pure_epsilon = epsilon
         super().__init__(orders)
 

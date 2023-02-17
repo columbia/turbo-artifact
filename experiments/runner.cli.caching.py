@@ -1,4 +1,5 @@
 import os
+
 import typer
 
 from experiments.ray_runner import grid_online
@@ -31,13 +32,14 @@ def caching_monoblock():
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[1e5],
-        max_tasks=[1e5],
+        # max_tasks=[1e5],
+        max_tasks=[1e3],
         block_selection_policy=["RandomBlocks"],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.0001],
-        zipf_k=[0, 0.5, 1, 1.5],
-        # zipf_k=[0],
+        # zipf_k=[0, 0.5, 1, 1.5],
+        zipf_k=[0],
         heuristic=[
             # "bin_visits:1-5",
             "bin_visits:1-10",
