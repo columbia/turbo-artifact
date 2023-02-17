@@ -40,7 +40,7 @@ class PMW:
         self.domain_size = domain_size
         self.histogram = (
             DenseHistogram(domain_size) if not old_pmw else old_pmw.histogram
-        )
+        )  # TODO: Use lambda to reweight before warm-starting
         self.b = 1 / (self.n * self.epsilon)
 
         # Logging
@@ -117,6 +117,8 @@ class PMW:
             # Multiplicative weights update for the relevant bins
             for i in flat_indices(query):
                 self.histogram.tensor[i] *= torch.exp(query[i] * lr)
+                self.visits_count_histogram[i] += 1
+                self.heuristic_threshold_histogram[i] += self.heuristic_value_increase
             self.histogram.normalize()
 
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
@@ -150,6 +152,7 @@ class PMW:
             lr *= -1
         for i in flat_indices(query):
             self.histogram.tensor[i] *= torch.exp(query[i] * lr)
+            self.visits_count_histogram[i] += 1
         self.histogram.normalize()
 
         self.external_updates_count += 1
@@ -163,8 +166,9 @@ class PMW:
 
     # Heuristic 2
     def predict_hit_total_updates_heuristic(self, query):
-        # print(self.pmw_updates_count, self.heuristic_value)
-        return self.pmw_updates_count > self.heuristic_value
+        return (
+            self.pmw_updates_count + self.external_updates_count > self.heuristic_value
+        )
 
     # Call the heuristic
     def is_query_hard(self, query) -> bool:
