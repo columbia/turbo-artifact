@@ -3,8 +3,13 @@ import torch
 from loguru import logger
 
 from precycle.budget import Budget
-from precycle.budget.curves import (BoundedOneShotSVT, GaussianCurve,
-                                    LaplaceCurve, PureDPtoRDP, ZeroCurve)
+from precycle.budget.curves import (
+    BoundedOneShotSVT,
+    GaussianCurve,
+    LaplaceCurve,
+    PureDPtoRDP,
+    ZeroCurve,
+)
 from precycle.budget.histogram import DenseHistogram
 from precycle.utils.utils import get_blocks_size, mlflow_log
 

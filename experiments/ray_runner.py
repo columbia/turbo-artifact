@@ -33,7 +33,6 @@ def grid_online(
     beta: List[int] = [0.0001],
     heuristic: str = "total_updates_counts:100",
     zipf_k: List[int] = [0.5],
-    max_pmw_k: List[int] = 10,
     variance_reduction: List[bool] = True,
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -41,18 +40,15 @@ def grid_online(
     config = {
         "mock": True,
         "variance_reduction": variance_reduction,
+        "alpha": tune.grid_search(alpha),
+        "beta": tune.grid_search(beta),
         "global_seed": global_seed,
         "enable_random_seed": enable_random_seed,
         "cache": {
             "type": tune.grid_search(cache),
             "probabilistic_cfg": {
-                "alpha": tune.grid_search(alpha),
-                "beta": tune.grid_search(beta),
-                "max_pmw_k": tune.grid_search(max_pmw_k),
-            },
-            "pmw_cfg": {
+                "learning_rate": tune.grid_search(alpha),
                 "heuristic": tune.grid_search(heuristic),
-                # "heuristic_value": tune.grid_search(heuristic_value),
             },
         },
         "planner": {

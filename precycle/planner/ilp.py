@@ -16,7 +16,7 @@ from precycle.planner.planner import Planner
 from precycle.budget.curves import ZeroCurve
 
 # from precycle.utils.utils import get_blocks_size
-from precycle.utils.compute_utility_curve import (
+from precycle.utils.utility_theorems import (
     deterministic_compute_utility_curve,
     probabilistic_compute_utility_curve,
 )

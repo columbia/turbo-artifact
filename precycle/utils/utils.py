@@ -1,10 +1,12 @@
 import json
 import uuid
+import math
 import mlflow
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
-from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
+
+# from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
 from precycle.budget.renyi_budget import RenyiBudget
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
@@ -26,6 +28,18 @@ def mlflow_log(key, value, step):
             value,
             step=step,
         )
+
+
+def satisfies_constraint(blocks, branching_factor=2):
+    """
+    Checks if <blocks> satisfies the binary structure constraint
+    """
+    n = blocks[1] - blocks[0] + 1
+    if not math.log(n, branching_factor).is_integer():
+        return False
+    if (blocks[0] % n) != 0:
+        return False
+    return True
 
 
 def get_blocks_size(blocks, blocks_metadata):
@@ -71,25 +85,18 @@ def get_logs(
             n_allocated_tasks += 1
 
             run_metadata = task_info["run_metadata"]
-            avg_task_hard_run_ops = 0
-            for run_op_metadata in run_metadata.values():
-                if run_op_metadata["hard_query"]:
-                    avg_task_hard_run_ops += 1
-            avg_task_hard_run_ops /= len(run_metadata)
-
-            avg_total_hard_run_ops += avg_task_hard_run_ops
-
-            probabilistic_runs = deterministic_runs = 0
-            for run_op_metadata in run_metadata.values():
-                if run_op_metadata["cache_type"] == "DeterministicCache":
-                    deterministic_runs += 1
-                elif run_op_metadata["cache_type"] == "ProbabilisticCache":
-                    probabilistic_runs += 1
+            histogram_runs = laplace_runs = 0
+            run_types = run_metadata["run_types"]
+            for run_type in run_types.values():
+                if run_type == "Laplace":
+                    laplace_runs += 1
+                elif run_type == "Histogram":
+                    histogram_runs += 1
 
             task_info.update(
                 {
-                    "laplace_runs": deterministic_runs,
-                    "pmw_runs": probabilistic_runs,
+                    "laplace_runs": laplace_runs,
+                    "histogram_runs": histogram_runs,
                 }
             )
 
@@ -106,14 +113,14 @@ def get_logs(
     config = {}
 
     if config_dict["cache"]["type"] == "DeterministicCache":
-        cache_type = "LaplaceRuns"
+        cache_type = "DeterministicCache"
         heuristic = ""
     elif config_dict["cache"]["type"] == "ProbabilisticCache":
-        cache_type = "PMWRuns"
+        cache_type = "ProbabilisticCache"
         heuristic = ""
     else:
-        cache_type = "MixedRuns"
-        heuristic = config_dict["cache"]["pmw_cfg"]["heuristic"]
+        cache_type = "MixedCache"
+        heuristic = config_dict["cache"]["probabilistic_cfg"]["heuristic"]
 
     config.update(
         {

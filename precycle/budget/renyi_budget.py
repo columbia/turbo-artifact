@@ -12,12 +12,13 @@ ALPHAS = [
     # 2.5,
     # 3,
     # 4,
-    5,
+    # 5,
     # 6,
     # 8,
     # 16,
     # 32,
     # 64,
+    10000,
 ]
 
 # Default values for some datasets

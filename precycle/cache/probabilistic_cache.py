@@ -1,113 +1,103 @@
-from copy import copy
-
-from loguru import logger
-
-from precycle.cache.cache import Cache
-from precycle.cache.pmw import PMW
-from precycle.utils.compute_utility_curve import (
-    get_pmw_epsilon,
-    probabilistic_compute_utility_curve,
-)
-from precycle.utils.utils import get_blocks_size
+import torch
+from precycle.budget.histogram import DenseHistogram
+from precycle.budget.histogram import DenseHistogram, flat_indices
 
 
-class ProbabilisticCache(Cache):
+class ProbabilisticCache:
     def __init__(self, config):
         raise NotImplementedError
 
 
-class MockProbabilisticCache(Cache):
+class CacheKey:
+    def __init__(self, blocks):
+        self.key = blocks
+
+
+class CacheEntry:
+    def __init__(self, histogram, bin_updates, bin_thresholds) -> None:
+        self.histogram = histogram
+        self.bin_updates = bin_updates
+        self.bin_thresholds = bin_thresholds
+
+
+class MockProbabilisticCache:
     def __init__(self, config):
-        self.key_values = {}
+        self.kv_store = {}
         self.config = config
-        self.pmw_args = copy(config.cache.pmw_cfg)
-        # self.pmw_args.update({"blocks_metadata": self.config.blocks_metadata})
-        self.pmw_accuracy = self.config.cache.pmw_accuracy
         self.blocks_metadata = self.config.blocks_metadata
+        self.learning_rate = config.cache.probabilistic_cfg.learning_rate
+        self.domain_size = self.blocks_metadata["domain_size"]
+        heuristic = config.cache.probabilistic_cfg.heuristic
+        _, heuristic_params = heuristic.split(":")
 
-    # def warmup(self, blocks):
-    # Given a new pmw on <blocks>
+        threshold, step = heuristic_params.split("-")
+        self.bin_thershold = int(threshold)
+        self.bin_thershold_step = int(step)
 
-    def add_entry(self, blocks):
-        alpha = self.pmw_accuracy.alpha
-        beta = self.pmw_accuracy.beta
-        max_pmw_k = self.pmw_accuracy.max_pmw_k
+    def write_entry(self, blocks, cache_entry):
+        key = CacheKey(blocks).key
+        self.kv_store[key] = {
+            "histogram": cache_entry.histogram,
+            "bin_updates": cache_entry.bin_updates,
+            "bin_thresholds": cache_entry.bin_thresholds,
+        }
 
-        # n = (blocks[1] - blocks[0] + 1) * self.block_size
-        # alpha, nu = probabilistic_compute_utility_curve(alpha, beta, n, max_pmw_k)
-        # pmw = PMW(blocks, alpha, nu, **self.pmw_args)
-
-        n = get_blocks_size(blocks, self.blocks_metadata)
-        epsilon = get_pmw_epsilon(alpha, beta, n, max_pmw_k)
-
-        pmw = PMW(
-            alpha=alpha,
-            epsilon=epsilon,
-            n=n,
-            id=str(blocks)[1:-1].replace(", ", "-"),
-            domain_size=self.blocks_metadata["domain_size"],
-            **self.pmw_args,
-        )
-
-        self.key_values[blocks] = pmw
-        return pmw
-
-    def get_entry(self, blocks):
-        if blocks in self.key_values:
-            return self.key_values[blocks]
+    def read_entry(self, blocks):
+        key = CacheKey(blocks).key
+        if key in self.kv_store:
+            entry = self.kv_store[key]
+            return CacheEntry(
+                entry["histogram"], entry["bin_updates"], entry["bin_thresholds"]
+            )
         return None
 
-    def update_entry(self, query, blocks, true_result, noise_std, alpha, beta, noise):
-        pmw = self.get_entry(blocks)
-        if not pmw:
-            pmw = self.add_entry(blocks)
-        # Relaxed condition for External Update - if I was to compare the noise_std I would rarely update in the multiblock case
-        if pmw.alpha >= alpha:
-            pmw.external_update(query=query, noisy_result=true_result + noise)
+    def create_new_entry(self):
+        return CacheEntry(
+            histogram=DenseHistogram(self.domain_size),
+            bin_updates=torch.zeros(size=(1, self.domain_size), dtype=torch.float64),
+            bin_thresholds=torch.ones(size=(1, self.domain_size), dtype=torch.float64)
+            * self.bin_thershold,
+        )
+
+    def update_entry_histogram(self, query, blocks, noisy_result):
+        cache_entry = self.read_entry(blocks)
+        if not cache_entry:
+            cache_entry = self.create_new_entry()
+
+        # Do External Update on the histogram - update bin counts too
+        predicted_output = cache_entry.histogram.run(query)
+
+        # Multiplicative weights update for the relevant bins
+        values = query.values()
+        if noisy_result > predicted_output:
+            # We need to make the estimated count higher to be closer to reality
+            updates = torch.exp(values * self.learning_rate / 8)
         else:
-            logger.error(
-                f"External update Failed. Not accurate enough result. {alpha} > {pmw.alpha}"
-            )
-            exit(1)
+            updates = torch.exp(-values * self.learning_rate / 8)
+        for i, u in zip(query.indices()[1], updates):
+            cache_entry.histogram.tensor[0, i] *= u
+            cache_entry.bin_updates[0, i] += 1
+        cache_entry.histogram.normalize()
 
-        # if (
-        #     pmw.noise_std >= noise_std
-        # ):  # and pmw.pmw_updates_count <= pmw.heuristic_value:
-        #     pmw.external_update(query=query, noisy_result=true_result + noise)
-        # else:
-        #     logger.error(
-        #         f"External update Failed. Not accurate enough result. {noise_std} > {pmw.noise_std}"
-        #     )
-        #     exit(1)
+        # Write updated entry
+        self.write_entry(blocks, cache_entry)
 
-    def is_query_hard_on_pmw(self, query, blocks):
-        """
-        Checks the cache and returns whether the query will be hard for a PMW on <blocks>
-        """
-        # if blocks[1]-blocks[0]+1 < 4:
-        # return True
-        pmw = self.get_entry(blocks)
-        return True if not pmw else pmw.is_query_hard(query)
+    def update_entry_threshold(self, blocks, query):
+        cache_entry = self.read_entry(blocks)
+        assert cache_entry is not None
+        for i in flat_indices(query):
+            cache_entry.bin_thresholds[i] += self.bin_thershold_step
+        # Write updated entry
+        self.write_entry(blocks, cache_entry)
 
-    # def estimate_run_budget(self, query, blocks, alpha, beta):
-    #     """
-    #     Checks the cache and returns the budget we need to spend if we want to run this query with given accuracy guarantees.
-    #     """
-    #     pmw = self.get_entry(blocks)
-    #     obj = pmw if pmw else self.pmw_accuracy
+    def is_query_hard(self, query, blocks):
+        cache_entry = self.read_entry(blocks)
+        if not cache_entry:
+            return True
 
-    #     if alpha > obj.alpha or beta < obj.beta:
-    #         pmw = PMW(blocks, alpha, beta, **self.pmw_args)
-    #         run_budget, worst_run_budget = pmw.estimate_run_budget(query)
-    #         logger.error(
-    #             "Plan requires more powerful PMW than the one cached. We decided this wouldn't happen."
-    #         )
-    #         exit(1)
-    #     elif not pmw:
-    #         pmw = PMW(blocks, obj.alpha, obj.beta, **self.pmw_args)
-    #         run_budget, worst_run_budget = pmw.estimate_run_budget(query)
-    #     else:
-    #         run_budget, worst_run_budget = pmw.estimate_run_budget(query)
+        # If each bin has been upated at least <bin-threshold> times the query is easy
+        for i in flat_indices(query):
+            if cache_entry.bin_updates[i] < cache_entry.bin_thresholds[i]:
+                return True
 
-    #     # TODO: This is leaking privacy, assume we have a good estimate already.
-    #     return run_budget, worst_run_budget
+        return False

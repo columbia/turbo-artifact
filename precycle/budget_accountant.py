@@ -57,10 +57,6 @@ class BudgetAccountant:
         # Re-write the budget in the KV store
         self.update_block_budget(block, budget)
 
-    def consume_blocks_budget(self, blocks, run_budget):
-        for block in range(blocks[0], blocks[1] + 1):
-            self.consume_block_budget(block, run_budget)
-
 
 class MockBudgetAccountant:
     def __init__(self, config) -> None:
@@ -110,10 +106,6 @@ class MockBudgetAccountant:
         budget -= run_budget
         # Re-write the budget in the KV store
         self.update_block_budget(block, budget)
-
-    def consume_blocks_budget(self, blocks, run_budget):
-        for block in range(blocks[0], blocks[1] + 1):
-            self.consume_block_budget(block, run_budget)
 
     def dump(self):
         budgets = [

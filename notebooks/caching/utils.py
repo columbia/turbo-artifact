@@ -1,12 +1,10 @@
 import pandas as pd
 import json
 
-# import modin.pandas as pd
 import plotly.express as px
 from plotly.offline import iplot
 from precycle.utils.utils import LOGS_PATH
 from experiments.ray.analysis import load_ray_experiment
-import matplotlib.pyplot as plt
 
 
 def get_df(path):
@@ -83,35 +81,29 @@ def get_budgets_information(df, blocks):
 
         for task in tasks:
             run_metadata = task["run_metadata"]
-            for run_op, run_op_metadata in run_metadata.items():
-                s = run_op.split(",")
-                l = int(s[0].split("(")[1])
-                r = int(s[1].split(")")[0])
-                orders = run_op_metadata["run_budget"]["orders"]
-                for bid in range(l, r + 1):
-                    budget = orders[max_orders[str(bid)]]
-                    max_initial_budget = initial_budget["orders"][max_orders[str(bid)]]
-                    total_budget_per_block[str(bid)] += budget
-                    global_budget += budget
-                    dfs.append(
-                        pd.DataFrame(
-                            [
-                                {
-                                    "id": task["id"],
-                                    "block": bid,
-                                    "total_budget": total_budget_per_block[str(bid)]
-                                    / max_initial_budget,
-                                    "total_absolute_budget": total_budget_per_block[
-                                        str(bid)
-                                    ],
-                                    "budget": budget,
-                                    "key": key,
-                                    "global_budget": global_budget,
-                                    "zipf_k": zipf_k,
-                                }
-                            ]
-                        )
+            if run_metadata is None:
+                continue
+            budget_per_block = run_metadata["budget_per_block"]
+            for block, budget in budget_per_block.items():
+                budget = budget["orders"][max_orders[str(block)]]
+                total_budget_per_block[str(block)] += budget
+                global_budget += budget
+
+                dfs.append(
+                    pd.DataFrame(
+                        [
+                            {
+                                "id": task["id"],
+                                "block": block,
+                                "total_budget": total_budget_per_block[str(block)],
+                                "budget": budget,
+                                "key": key,
+                                "global_budget": global_budget,
+                                "zipf_k": zipf_k,
+                            }
+                        ]
                     )
+                )
 
     if dfs:
         time_budgets = pd.concat(dfs)
@@ -218,9 +210,10 @@ def analyze_monoblock(experiment_path):
         return fig
 
     def plot_budget_utilization(df, total_tasks):
-        df["budget_utilization"] = (df["initial_budget"] - df["budget"]) / df[
-            "initial_budget"
-        ]
+        df["budget_utilization"] = df["initial_budget"] - df["budget"]
+        # / df[
+        # "initial_budget"
+        # ]
         keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
         zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order, "zipf_k": zipf_orders}
@@ -239,38 +232,35 @@ def analyze_monoblock(experiment_path):
                 "DeterministicCache": "blue",
                 "ProbabilisticCache": "green",
             },
-            range_y=[0, 1],
+            # range_y=[0, 1],
         )
         return fig
 
-    def plot_hard_run_ops(df, total_tasks):
+    def plot_cumulative_budget_utilization_time(df, total_tasks):
         keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
-        zipf_orders = ["1.5", "1.0", "0.5", "0"]
-        category_orders = {"key": keys_order, "zipf_k": zipf_orders}
+        category_orders = {"key": keys_order}
 
-        fig = px.bar(
+        fig = px.line(
             df,
-            x="zipf_k",
-            y="avg_total_hard_run_ops",
+            x="id",
+            y="global_budget",
             color="key",
-            barmode="group",
-            title=f"Hard Queries - total tasks={total_tasks}",
-            width=900,
-            height=500,
+            title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
+            width=2500,
+            height=800,
             category_orders=category_orders,
-            # color_discrete_map={
-            # "DeterministicCache": "blue",
-            # "ProbabilisticCache": "green",
-            # },
-            range_y=[0, 1],
+            facet_row="zipf_k",
+            # range_y=[0, 1],
         )
+
+        fig.write_html("plot.html")
         return fig
 
     def plot_budget_utilization_time(df, total_tasks):
         keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
         category_orders = {"key": keys_order}
 
-        fig = px.line(
+        fig = px.scatter(
             df,
             x="id",
             y="budget",
@@ -280,7 +270,7 @@ def analyze_monoblock(experiment_path):
             height=800,
             category_orders=category_orders,
             facet_row="zipf_k",
-            range_y=[0, 1],
+            # range_y=[0, 1],
         )
 
         fig.write_html("plot.html")
@@ -288,19 +278,20 @@ def analyze_monoblock(experiment_path):
 
     df = get_df(experiment_path)
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + df["heuristic"]
+    df["key"] = df["cache"] + ":" + df["heuristic"]
     df["zipf_k"] = df["zipf_k"].astype(float)
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
     total_tasks = df["total_tasks"].max()
     blocks = get_blocks_information(df)
 
-    # iplot(plot_num_allocated_tasks(df, total_tasks))
+    iplot(plot_num_allocated_tasks(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
-    # iplot(plot_hard_run_ops(df, total_tasks))
     time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
+    iplot(plot_cumulative_budget_utilization_time(time_budgets, total_tasks))
     iplot(plot_budget_utilization_time(time_budgets, total_tasks))
-    analyze_cache_type_use(df)
+
+    # analyze_cache_type_use(df)
     # analyze_cache_type_use_bar(df)
 
 

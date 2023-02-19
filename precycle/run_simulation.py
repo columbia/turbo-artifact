@@ -12,13 +12,13 @@ from loguru import logger
 from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
-from precycle.cache.combined_cache import MockCombinedCache
-from precycle.planner.ilp import ILP
+from precycle.cache.cache import MockCache
+
+# from precycle.planner.ilp import ILP
 from precycle.planner.min_cuts import MinCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.utils.utils import (
     DEFAULT_CONFIG_FILE,
     LOGS_PATH,
@@ -67,45 +67,17 @@ class Simulator:
             random.seed(self.config.global_seed)
             np.random.seed(self.config.global_seed)
 
-        if not self.config.cache.type == "DeterministicCache":
-            # This is the global accuracy supported by the probabilistic cache.
-            # If a query comes requesting more accuracy than that it won't be able to serve it.
-            assert self.config.cache.probabilistic_cfg.max_pmw_k is not None
-            assert self.config.cache.probabilistic_cfg.alpha is not None
-            assert self.config.cache.probabilistic_cfg.beta is not None
-
-            if (
-                self.config.cache.type == "CombinedCache"
-                and self.config.blocks.max_num > 1
-            ):
-                # Mixing Up Deterministic With Probabilistic runs - union bound over the two
-                # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
-                b = self.config.cache.probabilistic_cfg.beta
-                self.config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
-
-            self.config.cache.update(
-                {
-                    "pmw_accuracy": {
-                        "alpha": self.config.cache.probabilistic_cfg.alpha,
-                        "beta": self.config.cache.probabilistic_cfg.beta,
-                        "max_pmw_k": self.config.cache.probabilistic_cfg.max_pmw_k,
-                    }
-                }
-            )
-
         # Initialize all components
         if self.config.mock:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
-            cache = MockCombinedCache(self.config)
+            cache = MockCache(self.config)
         # else:
         #     db = PSQL(self.config)
         #     budget_accountant = BudgetAccountant(self.config)
         #     cache = globals()[self.config.cache.type](self.config)
 
-        planner = globals()[self.config.planner.method](
-            cache, budget_accountant, self.config
-        )
+        planner = MinCuts(cache, budget_accountant, self.config)
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config

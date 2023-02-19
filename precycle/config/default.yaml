@@ -2,7 +2,7 @@ global_seed: 64
 enable_random_seed: False
 
 budget_accountant:
-  epsilon: 10
+  epsilon: 50
   delta: 1e-7
   alphas:
   # - 1.5
@@ -11,12 +11,13 @@ budget_accountant:
   # - 2.5
   # - 3
   # - 4
-  - 5
+  # - 5
   # - 6
   # - 8
   # - 16
   # - 32
   # - 64
+  - 10000
 
 logs:
   verbose: False

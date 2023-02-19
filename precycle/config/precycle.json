@@ -1,17 +1,15 @@
 {
     "mock": true,
     "variance_reduction": true,
+    "alpha": 0.05,
+    "beta": 0.001,
     "cache": {
         "host": "localhost",
         "port": 6378,
         "type": "CombinedCache",
         "probabilistic_cfg": {
-            "alpha": 0.05,
-            "beta": 0.0001,
-            "max_pmw_k": 1
-        },
-        "pmw_cfg": {
-            "heuristic": "bin_visits:100-1"
+            "learning_rate": 0.05,
+            "heuristic": "bin_visits:500-10"
         }
     },
     "planner": {
@@ -20,7 +18,7 @@
     "budget_accountant": {
         "host": "localhost",
         "port": 6379,
-        "epsilon": 5,
+        "epsilon":50,
         "delta": 1e-07
     },
     "postgres": {
@@ -38,12 +36,12 @@
         "block_metadata_path": "data/covid19/covid19_data/blocks/metadata.json"
     },
     "tasks": {
-        "path": "data/covid19/covid19_workload/1:2:4blocks_34425queries.privacy_tasks.csv",
+        "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 1e3,
-        "max_num": 1e3,
+        "avg_num_tasks_per_block": 1e4,
+        "max_num": 1e4,
         "initial_num": 0,
-        "zipf_k": 1.5
+        "zipf_k": 1
     },
     "blocks_server": {
         "host": "localhost",

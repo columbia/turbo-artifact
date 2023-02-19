@@ -20,7 +20,7 @@ class QueryProcessor:
         self.cache = cache
         self.planner = planner
         self.budget_accountant = budget_accountant
-        self.executor = Executor(self.cache, self.db, config)
+        self.executor = Executor(self.cache, self.db, self.budget_accountant, config)
 
         self.query_converter = QueryConverter(self.config.blocks_metadata)
         self.tasks_info = []  # TODO: make this persistent
@@ -39,32 +39,22 @@ class QueryProcessor:
         plan = self.planner.get_execution_plan(task)
         planning_time = time.time() - start_planning
 
-        if plan:
+        assert plan is not None
+
+        # Execute the plan to run the query
+        result, run_metadata = self.executor.execute_plan(plan, task)
+        if result:
             status = FINISHED
-            # Execute the plan to run the query
-            result, run_budget_per_block, run_metadata = self.executor.execute_plan(
-                plan, task
-            )
-
-            # Consume budget from blocks if necessary
-            for blocks, run_budget in run_budget_per_block.items():
-                # logger.info(run_budget)
-                self.budget_accountant.consume_blocks_budget(blocks, run_budget)
-
             logger.info(
                 colored(
-                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}, RunBudgets: {run_budget_per_block}. ",
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
                     "green",
                 )
             )
 
-            # for key, value in run_metadata.items():
-            # mlflow_log(f"{key}", value, task.id)
-
         else:
             status = FAILED
-            run_metadata = None
-            result = None
+            # run_metadata = None
 
             logger.info(
                 colored(
@@ -73,13 +63,7 @@ class QueryProcessor:
                 )
             )
 
-        # for block in range(task.blocks[0], task.blocks[1] + 1):
-        #     budget = self.budget_accountant.get_block_budget(block)
-        #     mlflow_log(f"{block}", max(budget.epsilons), task.id)
-
         self.tasks_info.append(
             TaskInfo(task, status, planning_time, run_metadata, result).dump()
         )
-
-        # time.sleep(5)
         return run_metadata
