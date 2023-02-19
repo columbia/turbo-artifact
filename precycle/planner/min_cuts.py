@@ -53,13 +53,15 @@ class MinCuts(Planner):
                 node_size = (j - i + 1) * block_size
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
-
                 noise_std = math.sqrt(2) * laplace_scale
                 run_ops += [RDet((i, j), noise_std)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.cache_type == "ProbabilisticCache":
-            pass
+            run_ops = []
+            for (i, j) in subqueries:
+                run_ops += [RProb((i, j))]
+            plan = A(l=run_ops, sv_check=True, cost=0)
 
         else:
             # Assign a Mechanism to each subquery

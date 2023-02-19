@@ -58,13 +58,13 @@ class Executor:
         total_size = 0
         true_result = None
         noisy_result = None
+        run_types = {}
         run_metadata = {}
         budget_per_block = {}
         true_partial_results = []
         noisy_partial_results = []
 
         for run_op in plan.l:
-            run_types = {}
             if isinstance(run_op, RDet):
                 run_return_value = self.run_deterministic(
                     run_op, task.query_id, task.query
@@ -183,7 +183,7 @@ class Executor:
             return False
         print(colored("\nFREE LUNCH - yum yum\n", "yellow"))
         # TODO: I am not updating the histogram nodes right now to keep things simple.
-        # Histogram nodes will get updated only using external updates
+        # Histogram nodes get updated only using external updates
         return True
 
     def run_deterministic(self, run_op, query_id, query):

@@ -1,7 +1,5 @@
 import os
-
 import typer
-
 from experiments.ray_runner import grid_online
 from precycle.utils.utils import REPO_ROOT
 
@@ -28,7 +26,7 @@ def caching_monoblock():
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
         # cache=["CombinedCache"],
-        cache=["CombinedCache", "DeterministicCache"],  # , "ProbabilisticCache"],
+        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[5e4],
@@ -39,7 +37,7 @@ def caching_monoblock():
         zipf_k=[0, 0.5, 1, 1.5],
         # zipf_k=[1],
         heuristic=[
-            "bin_visits:500-10",
+            "bin_visits:500-20",
         ],
         variance_reduction=[True],
     )

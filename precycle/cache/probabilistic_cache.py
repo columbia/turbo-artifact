@@ -1,5 +1,4 @@
 import torch
-from precycle.budget.histogram import DenseHistogram
 from precycle.budget.histogram import DenseHistogram, flat_indices
 
 

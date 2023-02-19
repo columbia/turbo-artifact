@@ -23,7 +23,7 @@ class QueryProcessor:
         self.executor = Executor(self.cache, self.db, self.budget_accountant, config)
 
         self.query_converter = QueryConverter(self.config.blocks_metadata)
-        self.tasks_info = []  # TODO: make this persistent
+        self.tasks_info = []
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -34,14 +34,13 @@ class QueryProcessor:
         task.query = self.query_converter.convert_to_tensor(task.query)
 
         # Get a DP execution plan for query.
-        # The plan returned here if not None is eligible for execution
         start_planning = time.time()
         plan = self.planner.get_execution_plan(task)
         planning_time = time.time() - start_planning
 
         assert plan is not None
 
-        # Execute the plan to run the query
+        # Execute the plan to run the query # TODO: check if there is enough budget before running
         result, run_metadata = self.executor.execute_plan(plan, task)
         if result:
             status = FINISHED
@@ -51,11 +50,8 @@ class QueryProcessor:
                     "green",
                 )
             )
-
         else:
             status = FAILED
-            # run_metadata = None
-
             logger.info(
                 colored(
                     f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
