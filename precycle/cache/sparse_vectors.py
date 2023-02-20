@@ -27,7 +27,7 @@ class SparseVector:
         # print("true_error", true_error)
         error_noise = np.random.laplace(loc=0, scale=self.b)
         noisy_error = true_error + error_noise
-        print("noisy_error", noisy_error, "noisy_threshold", self.noisy_threshold)
+        # print("noisy_error", noisy_error, "noisy_threshold", self.noisy_threshold)
         # time.sleep(2)
 
         if noisy_error < self.noisy_threshold:

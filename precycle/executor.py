@@ -112,6 +112,7 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
+                run_metadata["sv_check_status"] = status
 
             run_metadata["run_types"] = run_types
             run_metadata["budget_per_block"] = {}
@@ -121,7 +122,8 @@ class Executor:
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
-                self.budget_accountant.consume_block_budget(block, run_budget)
+                if not isinstance(run_budget, ZeroCurve):
+                    self.budget_accountant.consume_block_budget(block, run_budget)
 
         return noisy_result, run_metadata, status_message
 
@@ -172,7 +174,9 @@ class Executor:
                     and self.budget_accountant.get_block_budget(block) is not None
                 ):
                     # Make block pay for all outstanding payments
-                    budget_per_block[block] = initialization_budget * sv.outstanding_payment_blocks[block]
+                    budget_per_block[block] = (
+                        initialization_budget * sv.outstanding_payment_blocks[block]
+                    )
                     del sv.outstanding_payment_blocks[block]
 
         # Now check whether we pass or fail the SV check
@@ -187,8 +191,7 @@ class Executor:
                     )
             return False
         print(colored("\nFREE LUNCH - yum yum\n", "yellow"))
-        # TODO: I am not updating the histogram nodes right now to keep things simple.
-        # Histogram nodes get updated only using external updates
+        # NOTE: Histogram nodes get updated only using external updates
         return True
 
     def run_deterministic(self, run_op, query_id, query):
@@ -274,7 +277,6 @@ class Executor:
         if not cache_entry:
             cache_entry = self.cache.probabilistic_cache.create_new_entry()
             self.cache.probabilistic_cache.write_entry(run_op.blocks, cache_entry)
-
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)

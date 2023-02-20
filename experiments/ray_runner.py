@@ -5,8 +5,8 @@ import datetime
 from ray import tune
 from loguru import logger
 from typing import List, Any, Dict
-from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 from precycle.run_simulation import Simulator
+from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 
 
 def run_and_report(config: dict, replace=False) -> None:
@@ -34,6 +34,7 @@ def grid_online(
     heuristic: str = "total_updates_counts:100",
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
+    log_every_n_tasks: int = 100
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -75,6 +76,7 @@ def grid_online(
             "save": True,
             "mlflow": True,
             "loguru_level": "INFO",
+            "log_every_n_tasks": log_every_n_tasks
         },
     }
 
@@ -107,7 +109,7 @@ def grid_online(
                 "planner/method": "planner",
                 "cache/type": "cache",
                 "tasks/zipf_k": "zipf_k",
-                "cache/pmw_cfg/heuristic": "heuristic",
+                "cache/probabilistic_cfg/heuristic": "heuristic",
             },
             max_report_frequency=60,
         ),

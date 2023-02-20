@@ -58,6 +58,7 @@ class MinCuts(Planner):
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.cache_type == "ProbabilisticCache":
+            # NOTE: Probabilistic cache implemented as such is meaningless. Do not use this.
             run_ops = []
             for (i, j) in subqueries:
                 run_ops += [RProb((i, j))]

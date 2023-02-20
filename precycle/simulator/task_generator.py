@@ -33,16 +33,13 @@ class TaskGenerator:
 
         query_id = int(task_row["query_id"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
+        # We sample only tasks whose n_blocks is <= num_blocks
         num_requested_blocks = int(task_row["n_blocks"])
 
         if self.config.tasks.block_selection_policy == "LatestBlocks":
             requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
         elif self.config.tasks.block_selection_policy == "RandomBlocks":
-            start = (
-                np.random.randint(0, num_blocks - num_requested_blocks)
-                if num_blocks > num_requested_blocks
-                else 0
-            )
+            start = np.random.randint(0, num_blocks - num_requested_blocks + 1)
             requested_blocks = (start, start + num_requested_blocks - 1)
             # print(requested_blocks)
 

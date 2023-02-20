@@ -77,7 +77,13 @@ def get_logs(
 ) -> dict:
 
     n_allocated_tasks = 0
-    avg_total_hard_run_ops = 0
+    total_histogram_runs = 0
+    total_laplace_runs = 0
+    total_sv_misses = 0
+    total_sv_checks = 0
+
+    # Finally logging only a small number of tasks for faster analysis
+    tasks_to_log = []
 
     for task_info in tasks_info:
 
@@ -92,7 +98,15 @@ def get_logs(
                     laplace_runs += 1
                 elif run_type == "Histogram":
                     histogram_runs += 1
+            
+            if "sv_check_status" in run_metadata:
+                total_sv_checks += 1
+                if run_metadata["sv_check_status"] == False:
+                    total_sv_misses += 1
 
+            total_laplace_runs += laplace_runs
+            total_histogram_runs += histogram_runs
+            
             task_info.update(
                 {
                     "laplace_runs": laplace_runs,
@@ -100,7 +114,9 @@ def get_logs(
                 }
             )
 
-    avg_total_hard_run_ops /= len(tasks_info)
+            if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
+                tasks_to_log.append(task_info)
+
 
     blocks_initial_budget = RenyiBudget.from_epsilon_delta(
         epsilon=config_dict["budget_accountant"]["epsilon"],
@@ -126,12 +142,14 @@ def get_logs(
         {
             "n_allocated_tasks": n_allocated_tasks,
             "total_tasks": len(tasks_info),
-            "avg_total_hard_run_ops": avg_total_hard_run_ops,
+            "total_sv_misses": total_sv_misses,
+            "total_histogram_runs": total_histogram_runs,
+            "total_laplace_runs": total_laplace_runs,
             "cache": cache_type,
             "planner": config_dict["planner"]["method"],
             "workload_path": config_dict["tasks"]["path"],
             "query_pool_size": query_pool_size,
-            "tasks_info": tasks_info,
+            "tasks_info": tasks_to_log,
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],

@@ -20,13 +20,14 @@ def caching_monoblock():
 
     grid_online(
         global_seed=4,
-        logs_dir="experiment",
+        logs_dir="monoblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        # cache=["CombinedCache"],
-        cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
+        cache=["CombinedCache"],
+        # cache=["DeterministicCache"],
+        # cache=["CombinedCache", "DeterministicCache"],  # , "ProbabilisticCache"],
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[5e4],
@@ -37,9 +38,16 @@ def caching_monoblock():
         zipf_k=[0, 0.5, 1, 1.5],
         # zipf_k=[1],
         heuristic=[
+            # ""
+            "bin_visits:1-20",
             "bin_visits:500-20",
+            "bin_visits:1000-20",
+            "bin_visits:1-100",
+            "bin_visits:500-100",
+            "bin_visits:1000-100",
         ],
         variance_reduction=[True],
+        log_every_n_tasks=100,
     )
 
 
@@ -59,22 +67,29 @@ def caching_static_multiblock():
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        # cache=["CombinedCache", "DeterministicCache", "ProbabilisticCache"],
-        cache=["CombinedCache", "DeterministicCache"],
+        cache=["CombinedCache"],
+        # cache=["CombinedCache", "DeterministicCache"],
         initial_blocks=[5],
         max_blocks=[5],
         block_selection_policy=["RandomBlocks"],
-        avg_num_tasks_per_block=[20000],
-        max_tasks=[100000],
+        avg_num_tasks_per_block=[3e4],
+        max_tasks=[15e4],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[0.5],
+        # zipf_k=[0, 0.5, 1, 1.5],
         heuristic=[
+            # "bin_visits:500-20",
+            # "bin_visits:1000-20",
+            "bin_visits:500-50",
+            "bin_visits:500-100",
             "bin_visits:1000-50",
+            "bin_visits:1000-100",
             # "total_updates_counts:100",
         ],
         variance_reduction=[True],
+        log_every_n_tasks=100,
     )
 
 

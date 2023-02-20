@@ -56,6 +56,7 @@
         "save": true,
         "mlflow": true,
         "mlflow_experiment_id": "750002076581022676",
-        "loguru_level": "INFO"
+        "loguru_level": "INFO",
+        "log_every_n_tasks": 100
     }
 }

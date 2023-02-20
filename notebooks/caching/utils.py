@@ -65,6 +65,7 @@ def get_tasks_information(df):
 
 def get_budgets_information(df, blocks):
     dfs = []
+    global_dfs = []
 
     for (tasks, blocks, initial_budget, key, zipf_k) in df[
         ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
@@ -94,7 +95,7 @@ def get_budgets_information(df, blocks):
                         [
                             {
                                 "id": task["id"],
-                                "block": block,
+                                "block": str(block),
                                 "total_budget": total_budget_per_block[str(block)],
                                 "budget": budget,
                                 "key": key,
@@ -104,51 +105,11 @@ def get_budgets_information(df, blocks):
                         ]
                     )
                 )
-
-    if dfs:
-        time_budgets = pd.concat(dfs)
-        return time_budgets
-    return None
-
-
-def get_global_budgets_information(df, blocks):
-    dfs = []
-
-    for (tasks, blocks, initial_budget, key, zipf_k) in df[
-        ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
-    ].values:
-        # total_budget_per_block = {}
-        global_budget = 0
-
-        max_orders = {}
-        for block_id, budget in blocks:
-            orders = budget["orders"]
-            order = max(orders, key=orders.get)
-            max_orders[block_id] = order
-            # total_budget_per_block[block_id] = 0
-
-        for task in tasks:
-            run_metadata = task["run_metadata"]
-            for run_op, run_op_metadata in run_metadata.items():
-                s = run_op.split(",")
-                l = int(s[0].split("(")[1])
-                r = int(s[1].split(")")[0])
-                orders = run_op_metadata["run_budget"]["orders"]
-                for bid in range(l, r + 1):
-                    budget = orders[max_orders[str(bid)]]
-                    # max_initial_budget = initial_budget["orders"][max_orders[str(bid)]]
-                    # total_budget_per_block[str(bid)] += budget
-                    global_budget += budget
-            dfs.append(
+            global_dfs.append(
                 pd.DataFrame(
                     [
                         {
                             "id": task["id"],
-                            # "block": bid,
-                            # "total_budget": total_budget_per_block[str(bid)]
-                            # / max_initial_budget,
-                            # "total_absolute_budget": total_budget_per_block[str(bid)],
-                            # "budget": budget,
                             "key": key,
                             "global_budget": global_budget,
                             "zipf_k": zipf_k,
@@ -158,8 +119,9 @@ def get_global_budgets_information(df, blocks):
             )
 
     if dfs:
-        time_budgets = pd.concat(dfs)
-        return time_budgets
+        time_budgets = pd.concat(dfs).reset_index()
+        global_time_budgets = pd.concat(global_dfs).reset_index()
+        return time_budgets, global_time_budgets
     return None
 
 
@@ -438,7 +400,7 @@ def analyze_multiblock(experiment_path):
             height=800,
             facet_row="zipf_k",
             # category_orders=category_orders,
-            range_y=[0, 1],
+            # range_y=[0, 1],
         )
         return fig
 
@@ -477,32 +439,35 @@ def analyze_multiblock(experiment_path):
         except Exception:
             pass
     df = pd.DataFrame(results)
-    # print(df)
-
-    # print(df)
-    # df = df[["cache", "heuristic", "zipf_k", "block_budgets_info", "total_tasks", "blocks_initial_budget", "n_allocated_tasks"]]
     total_tasks = df["total_tasks"].max()
     df["heuristic"] = df["heuristic"].astype(str)
     df["key"] = df["cache"] + df["heuristic"]
     df["zipf_k"] = df["zipf_k"].astype(float)
-    # df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
-    print("3")
-
     iplot(plot_num_allocated_tasks(df, total_tasks))
     blocks = get_blocks_information(df)
     iplot(plot_budget_utilization(blocks, total_tasks))
 
-    # tasks = get_tasks_information(df)
-    # iplot(plot_num_cuts(tasks, total_tasks))
-    # iplot(plot_hard_run_ops(df, total_tasks))
-    # iplot(plot_budget_utilization_time(time_budgets, total_tasks))
-
 
 def budget_utilization_time(experiment_path):
-    def plot_budget_utilization_time_accum(df, total_tasks):
-        keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
-        category_orders = {"key": keys_order}
+    def plot_global_budget_utilization_time(df, total_tasks):
+        # keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
+        # category_orders = {"key": keys_order}
+        fig = px.line(
+            df,
+            x="id",
+            y="global_budget",
+            color="key",
+            title=f"Global Budget Utilization per task/time - total tasks-{total_tasks}",
+            width=2500,
+            height=800,
+            # category_orders=category_orders,
+            facet_row="zipf_k",
+            # range_y=[0, 1],
+        )
+        # fig.write_html("plot.html")
+        return fig
 
+    def plot_budget_utilization_time_accum(df, total_tasks):
         fig = px.line(
             df,
             x="id",
@@ -511,95 +476,64 @@ def budget_utilization_time(experiment_path):
             title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
             width=2500,
             height=800,
-            category_orders=category_orders,
             facet_row="zipf_k",
-            range_y=[0, 1],
         )
-
-        fig.write_html("plot.html")
         return fig
 
-    def plot_budget_utilization_time(df, total_tasks):
-        keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
-        category_orders = {"key": keys_order}
+    # def plot_budget_utilization_time(df, total_tasks):
+    #     # keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
+    #     # category_orders = {"key": keys_order}
 
-        fig = px.scatter(
-            df,
-            x="id",
-            y="budget",
-            color="key",
-            title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
-            width=2500,
-            height=800,
-            category_orders=category_orders,
-            facet_row="zipf_k",
-            range_y=[0, 1],
-        )
+    #     fig = px.scatter(
+    #         df,
+    #         x="id",
+    #         y="budget",
+    #         color="key",
+    #         title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
+    #         width=2500,
+    #         height=800,
+    #         # category_orders=category_orders,
+    #         facet_row="zipf_k",
+    #         range_y=[0, 1],
+    #     )
 
-        fig.write_html("plot.html")
-        return fig
-
-    def plot_global_budget_utilization_time(df, total_tasks):
-        keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
-        category_orders = {"key": keys_order}
-
-        fig = px.line(
-            df,
-            x="id",
-            y="global_budget",
-            color="key",
-            title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
-            width=2500,
-            height=800,
-            category_orders=category_orders,
-            facet_row="zipf_k",
-            range_y=[0, 1],
-        )
-
-        fig.write_html("plot.html")
-        return fig
+    #     fig.write_html("plot.html")
+    #     return fig
 
     df = get_df(experiment_path)
     total_tasks = df["total_tasks"].max()
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + df["heuristic"]
+    df["key"] = df["cache"] + ":" + df["heuristic"]
     df["zipf_k"] = df["zipf_k"].astype(float)
 
-    df = df.query("cache != 'PMWRuns'")
-    # time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
-    time_budgets = get_global_budgets_information(
+    time_budgets, global_time_budgets = get_budgets_information(
         df, df["block_budgets_info"]
-    ).reset_index()
+    )
+    # print(time_budgets)
+    iplot(plot_global_budget_utilization_time(global_time_budgets, total_tasks))
 
-    iplot(plot_global_budget_utilization_time(time_budgets, total_tasks))
-
-    # # Plot for block 0
-    # d = time_budgets.query("block == 0")
+    # Plot for block 0
+    # d = time_budgets.query("block == '0'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
     # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # # Plot for block 1
-    # d = time_budgets.query("block == 1")
+    # Plot for block 1
+    # d = time_budgets.query("block == '1'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
     # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # # Plot for block 2
-    # d = time_budgets.query("block == 2")
+    # Plot for block 2
+    # d = time_budgets.query("block == '2'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
     # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # # Plot for block 3
-    # d = time_budgets.query("block == 3")
+    # Plot for block 3
+    # d = time_budgets.query("block == '3'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
     # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # # Plot for block 3
-    # d = time_budgets.query("block == 4")
-    # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
-
-    # # Plot for block 3
-    # d = time_budgets.query("block == 5")
+    # Plot for block 4
+    # d = time_budgets.query("block == '4'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
     # iplot(plot_budget_utilization_time(d, total_tasks))
 
