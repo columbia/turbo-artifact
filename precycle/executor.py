@@ -159,18 +159,21 @@ class Executor:
                         budget_per_block[block] += initialization_budget
                         # print(budget_per_block)
                 else:
-                    sv.outstanding_payment_blocks.add(block)
+                    # Set future block's outstanding payment
+                    if block not in sv.outstanding_payment_blocks:
+                        sv.outstanding_payment_blocks[block] = 0
+                    sv.outstanding_payment_blocks[block] += 1
         else:
-            # If it has been initialized but not all the blocks it covers had the opportunity to pay because they didn't exist yet
-            # let them pay now. TODO: I don't know if this is correct. but the alternative is to re-initialize every time a new block comes...
+            # If it has been initialized but not all the blocks it covers had the opportunity to pay because they didn't exist yet let them pay now
             for block in blocks_to_pay:
                 # If block hasn't paid yet and it now exists in the system make it pay now
                 if (
                     block in sv.outstanding_payment_blocks
                     and self.budget_accountant.get_block_budget(block) is not None
                 ):
-                    budget_per_block[block] = initialization_budget
-                    sv.outstanding_payment_blocks.remove(block)
+                    # Make block pay for all outstanding payments
+                    budget_per_block[block] = initialization_budget * sv.outstanding_payment_blocks[block]
+                    del sv.outstanding_payment_blocks[block]
 
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:

@@ -15,7 +15,7 @@ class SparseVector:
         self.b = 1 / (self.n * self.epsilon)
         self.noisy_threshold = None
         self.initialized = False
-        self.outstanding_payment_blocks = set()
+        self.outstanding_payment_blocks = {}
 
     def initialize(self):
         self.noisy_threshold = self.alpha / 2 + np.random.laplace(loc=0, scale=self.b)
