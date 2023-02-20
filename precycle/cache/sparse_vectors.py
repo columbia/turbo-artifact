@@ -63,12 +63,18 @@ class MockSparseVectors:
         return node
 
     def create_new_entry(self, node_id):
-        # NOTE: Set n = block size to be safe for the worst case where your request spans only 1 block
+
+        # Find the smallest request that will be handled by this sparse vector.
+        node_size = node_id[1] - node_id[0] + 1
+        smallest_request_size = (node_size / 2) + 1
+        n = smallest_request_size * self.block_size
+
+        # NOTE: n = smallest_SV_request * block_size
         sparse_vector = SparseVector(
             id=node_id,
             alpha=self.config.alpha,
             beta=self.config.beta,
-            n=self.block_size,
+            n=n,
         )
         return sparse_vector
 
