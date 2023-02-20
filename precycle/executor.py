@@ -267,7 +267,9 @@ class Executor:
     def run_probabilistic(self, run_op, query):
         cache_entry = self.cache.probabilistic_cache.read_entry(run_op.blocks)
         if not cache_entry:
-            cache_entry = self.create_new_entry()
+            cache_entry = self.cache.probabilistic_cache.create_new_entry()
+            self.cache.probabilistic_cache.write_entry(run_op.blocks, cache_entry)
+
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
