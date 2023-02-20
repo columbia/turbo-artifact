@@ -75,7 +75,7 @@ class MockProbabilisticCache:
         for i in flat_indices(query):
             cache_entry.histogram.tensor[i] *= torch.exp(query[i] * lr)
             cache_entry.bin_updates[i] += 1
-        cache_entry.histogram.normalize()            
+        cache_entry.histogram.normalize()
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)
