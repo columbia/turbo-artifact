@@ -39,9 +39,13 @@ class QueryProcessor:
         planning_time = time.time() - start_planning
 
         assert plan is not None
+        result = status = None
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
-        result, run_metadata = self.executor.execute_plan(plan, task)
+        while not result and (not status or status == "sv_failed"):
+            # TODO: if status is sth else like "out-of-budget" then stop
+            result, run_metadata, status = self.executor.execute_plan(plan, task)
+
         if result:
             status = FINISHED
             logger.info(

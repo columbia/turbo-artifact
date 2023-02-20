@@ -58,6 +58,7 @@ class Executor:
         total_size = 0
         true_result = None
         noisy_result = None
+        status_message = None
         run_types = {}
         run_metadata = {}
         budget_per_block = {}
@@ -108,8 +109,9 @@ class Executor:
                     task.query,
                 )
                 if status == False:
-                    # In case of failure we don't return a result
+                    # In case of failure we will try to run again the task
                     noisy_result = None
+                    status_message = "sv_failed"
 
             run_metadata["run_types"] = run_types
             run_metadata["budget_per_block"] = {}
@@ -121,7 +123,7 @@ class Executor:
             for block, run_budget in budget_per_block.items():
                 self.budget_accountant.consume_block_budget(block, run_budget)
 
-        return noisy_result, run_metadata
+        return noisy_result, run_metadata, status_message
 
     def run_sv_check(
         self, noisy_result, true_result, blocks, plan, budget_per_block, query
