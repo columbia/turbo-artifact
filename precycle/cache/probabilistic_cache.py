@@ -66,17 +66,16 @@ class MockProbabilisticCache:
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
 
+        # Increase weights iff predicted_output is too small
+        lr = self.learning_rate / 8
+        if noisy_result < predicted_output:
+            lr *= -1
+
         # Multiplicative weights update for the relevant bins
-        values = query.values()
-        if noisy_result > predicted_output:
-            # We need to make the estimated count higher to be closer to reality
-            updates = torch.exp(values * self.learning_rate / 8)
-        else:
-            updates = torch.exp(-values * self.learning_rate / 8)
-        for i, u in zip(query.indices()[1], updates):
-            cache_entry.histogram.tensor[0, i] *= u
-            cache_entry.bin_updates[0, i] += 1
-        cache_entry.histogram.normalize()
+        for i in flat_indices(query):
+            cache_entry.histogram.tensor[i] *= torch.exp(query[i] * lr)
+            cache_entry.bin_updates[i] += 1
+        cache_entry.histogram.normalize()            
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)
