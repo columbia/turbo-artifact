@@ -31,19 +31,27 @@ class QueryProcessor:
         If it can run, returns a metadata dict. Otherwise, returns None.
         """
 
+        round = 0
+        result = status = None
+        run_metadata = {"sv_check_status": [], "run_types": [], "budget_per_block": []}
         task.query = self.query_converter.convert_to_tensor(task.query)
 
-        result = status = None
-        
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while not result and (not status or status == "sv_failed"):
-            # Get a DP execution plan for query.
             start_planning = time.time()
-            plan = self.planner.get_execution_plan(task)
+            plan = self.planner.get_execution_plan(task)  # Get a DP execution plan for query.
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops
-            result, run_metadata, status = self.executor.execute_plan(plan, task)
+            result, status = self.executor.execute_plan(plan, task, run_metadata)
+
+            # Sanity checks
+            # Second try must always use Laplaces so we can't reach third trial
+            assert round < 2
+            if round == 1:
+                for run_type in run_metadata["run_types"][round].values():
+                    assert run_type != "Histogram"
+            round += 1
 
         if result:
             status = FINISHED

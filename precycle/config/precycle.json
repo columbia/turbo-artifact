@@ -9,7 +9,7 @@
         "type": "CombinedCache",
         "probabilistic_cfg": {
             "learning_rate": 0.05,
-            "heuristic": "bin_visits:500-10"
+            "heuristic": "bin_visits:1000-20"
         }
     },
     "planner": {
@@ -38,8 +38,8 @@
     "tasks": {
         "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 1e4,
-        "max_num": 1e4,
+        "avg_num_tasks_per_block": 5e4,
+        "max_num": 5e4,
         "initial_num": 0,
         "zipf_k": 1
     },

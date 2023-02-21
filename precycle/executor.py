@@ -8,7 +8,7 @@ from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 from precycle.budget.curves import PureDPtoRDP
 from termcolor import colored
-
+import time
 
 class RDet:
     def __init__(self, blocks, noise_std) -> None:
@@ -54,13 +54,12 @@ class Executor:
         self.config = config
         self.budget_accountant = budget_accountant
 
-    def execute_plan(self, plan, task) -> Tuple[float, Dict]:
+    def execute_plan(self, plan, task, run_metadata) -> Tuple[float, Dict]:
         total_size = 0
         true_result = None
         noisy_result = None
         status_message = None
         run_types = {}
-        run_metadata = {}
         budget_per_block = {}
         true_partial_results = []
         noisy_partial_results = []
@@ -112,20 +111,21 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
-                run_metadata["sv_check_status"] = status
+                    print("\nsv failed, task: ", task.id)
+                    # time.sleep(2)
 
-            run_metadata["run_types"] = run_types
-            run_metadata["budget_per_block"] = {}
-            for block, budget in budget_per_block.items():
-                # print(colored(f"Block: {block} - Budget: {budget.dump()}", "blue"))
-                run_metadata["budget_per_block"][block] = budget.dump()
+                run_metadata["sv_check_status"].append(status)
+
+            run_metadata["run_types"].append(run_types)
+            run_metadata["budget_per_block"].append(budget_per_block)
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
+                # print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
                 if not isinstance(run_budget, ZeroCurve):
                     self.budget_accountant.consume_block_budget(block, run_budget)
 
-        return noisy_result, run_metadata, status_message
+        return noisy_result, status_message
 
     def run_sv_check(
         self, noisy_result, true_result, blocks, plan, budget_per_block, query

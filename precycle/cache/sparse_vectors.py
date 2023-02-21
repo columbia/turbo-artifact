@@ -66,7 +66,10 @@ class MockSparseVectors:
 
         # Find the smallest request that will be handled by this sparse vector.
         node_size = node_id[1] - node_id[0] + 1
-        smallest_request_size = (node_size / 2) + 1
+        if node_size == 1:
+            smallest_request_size = 1
+        else:
+            smallest_request_size = (node_size / 2) + 1
         n = smallest_request_size * self.block_size
 
         # NOTE: n = smallest_SV_request * block_size

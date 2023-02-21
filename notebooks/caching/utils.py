@@ -70,24 +70,31 @@ def get_budgets_information(df, blocks):
     for (tasks, blocks, initial_budget, key, zipf_k) in df[
         ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
     ].values:
-        total_budget_per_block = {}
-        global_budget = 0
 
         max_orders = {}
         for block_id, budget in blocks:
             orders = budget["orders"]
             order = max(orders, key=orders.get)
             max_orders[block_id] = order
-            total_budget_per_block[block_id] = 0
 
         for task in tasks:
+
+            if task['id'] % 500 != 0:
+                continue
+
+            accummulated_budget_per_block = {}
+            global_budget = 0
+            
             run_metadata = task["run_metadata"]
             if run_metadata is None:
                 continue
             budget_per_block = run_metadata["budget_per_block"]
             for block, budget in budget_per_block.items():
+                task_budget = budget["orders"][max_orders[str(block)]]
+            budget_per_block = run_metadata["accummulated_budget_per_block"]
+            for block, budget in budget_per_block.items():
                 budget = budget["orders"][max_orders[str(block)]]
-                total_budget_per_block[str(block)] += budget
+                accummulated_budget_per_block[str(block)] = budget
                 global_budget += budget
 
                 dfs.append(
@@ -96,10 +103,9 @@ def get_budgets_information(df, blocks):
                             {
                                 "id": task["id"],
                                 "block": str(block),
-                                "total_budget": total_budget_per_block[str(block)],
-                                "budget": budget,
+                                "accummulated_budget": accummulated_budget_per_block[str(block)],
+                                "budget": task_budget,
                                 "key": key,
-                                "global_budget": global_budget,
                                 "zipf_k": zipf_k,
                             }
                         ]
@@ -171,8 +177,43 @@ def analyze_monoblock(experiment_path):
         )
         return fig
 
+    def plot_total_sv_checks(df, total_tasks):
+
+        fig = px.bar(
+            df,
+            x="zipf_k",
+            y="total_sv_checks",
+            color="key",
+            barmode="group",
+            title=f"Total SV checks - total tasks={total_tasks}",
+            width=900,
+            height=500,
+        )
+        return fig
+
+    def plot_total_sv_misses(df, total_tasks):
+
+        fig = px.bar(
+            df,
+            x="zipf_k",
+            y="total_sv_misses",
+            color="key",
+            barmode="group",
+            title=f"Total SV failures - total tasks={total_tasks}",
+            width=900,
+            height=500,
+        )
+        # fig.add_bar(
+        #     x=df['zipf_k'],
+        #     y=df['total_sv_misses'],
+        #     # barmode="group",
+        #     # width=900,
+        #     # height=500,
+        #     )
+        return fig
+
     def plot_budget_utilization(df, total_tasks):
-        df["budget_utilization"] = df["initial_budget"] - df["budget"]
+        df["budget_consumption"] = df["initial_budget"] - df["budget"]
         # / df[
         # "initial_budget"
         # ]
@@ -183,10 +224,10 @@ def analyze_monoblock(experiment_path):
         fig = px.bar(
             df,
             x="zipf_k",
-            y="budget_utilization",
+            y="budget_consumption",
             color="key",
             barmode="group",
-            title=f"Budget Utilization - total tasks-{total_tasks}",
+            title=f"Budget Consumption - total tasks-{total_tasks}",
             width=900,
             height=500,
             category_orders=category_orders,
@@ -205,9 +246,9 @@ def analyze_monoblock(experiment_path):
         fig = px.line(
             df,
             x="id",
-            y="global_budget",
+            y="accummulated_budget",
             color="key",
-            title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
+            title=f"Cumulative Budget Consumption per task/time - total tasks-{total_tasks}",
             width=2500,
             height=800,
             category_orders=category_orders,
@@ -215,7 +256,7 @@ def analyze_monoblock(experiment_path):
             # range_y=[0, 1],
         )
 
-        fig.write_html("plot.html")
+        # fig.write_html("plot.html")
         return fig
 
     def plot_budget_utilization_time(df, total_tasks):
@@ -227,7 +268,7 @@ def analyze_monoblock(experiment_path):
             x="id",
             y="budget",
             color="key",
-            title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
+            title=f"Budget Consumption per task/time - total tasks-{total_tasks}",
             width=2500,
             height=800,
             category_orders=category_orders,
@@ -235,10 +276,11 @@ def analyze_monoblock(experiment_path):
             # range_y=[0, 1],
         )
 
-        fig.write_html("plot.html")
+        # fig.write_html("plot.html")
         return fig
 
     df = get_df(experiment_path)
+    # print(df['total_sv_misses'])
     df["heuristic"] = df["heuristic"].astype(str)
     df["key"] = df["cache"] + ":" + df["heuristic"]
     df["zipf_k"] = df["zipf_k"].astype(float)
@@ -248,8 +290,10 @@ def analyze_monoblock(experiment_path):
     blocks = get_blocks_information(df)
 
     iplot(plot_num_allocated_tasks(df, total_tasks))
+    iplot(plot_total_sv_checks(df, total_tasks))
+    iplot(plot_total_sv_misses(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
-    time_budgets = get_budgets_information(df, df["block_budgets_info"]).reset_index()
+    time_budgets, global_budgets = get_budgets_information(df, df["block_budgets_info"])
     iplot(plot_cumulative_budget_utilization_time(time_budgets, total_tasks))
     iplot(plot_budget_utilization_time(time_budgets, total_tasks))
 

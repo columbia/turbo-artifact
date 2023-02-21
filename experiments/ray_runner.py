@@ -34,7 +34,7 @@ def grid_online(
     heuristic: str = "total_updates_counts:100",
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
-    log_every_n_tasks: int = 100
+    log_every_n_tasks: int = 100,
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -76,7 +76,7 @@ def grid_online(
             "save": True,
             "mlflow": True,
             "loguru_level": "INFO",
-            "log_every_n_tasks": log_every_n_tasks
+            "log_every_n_tasks": log_every_n_tasks,
         },
     }
 

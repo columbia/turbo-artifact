@@ -84,6 +84,7 @@ def get_logs(
 
     # Finally logging only a small number of tasks for faster analysis
     tasks_to_log = []
+    accummulated_budget_per_block = {}
 
     for task_info in tasks_info:
 
@@ -92,21 +93,54 @@ def get_logs(
 
             run_metadata = task_info["run_metadata"]
             histogram_runs = laplace_runs = 0
-            run_types = run_metadata["run_types"]
-            for run_type in run_types.values():
-                if run_type == "Laplace":
-                    laplace_runs += 1
-                elif run_type == "Histogram":
-                    histogram_runs += 1
-            
-            if "sv_check_status" in run_metadata:
-                total_sv_checks += 1
-                if run_metadata["sv_check_status"] == False:
-                    total_sv_misses += 1
+            run_types_list = run_metadata["run_types"]
+            for run_types in run_types_list:
+                for run_type in run_types.values():
+                    if run_type == "Laplace":
+                        laplace_runs += 1
+                    elif run_type == "Histogram":
+                        histogram_runs += 1
 
             total_laplace_runs += laplace_runs
             total_histogram_runs += histogram_runs
-            
+
+            # TODO: clean this part - it's terrible
+            sv_check_status_list = run_metadata["sv_check_status"]
+            for sv_check_status in sv_check_status_list:
+                if sv_check_status == False:
+                    total_sv_misses += 1
+                total_sv_checks += 1
+
+            total_budget_per_block = {}
+            # total budget per block keeps the budget spent for a task across all of its trials
+            budget_per_block_list = run_metadata["budget_per_block"]
+            for budget_per_block in budget_per_block_list:
+                for block, budget in budget_per_block.items():
+                    if block not in total_budget_per_block:
+                        total_budget_per_block[block] = budget
+                    else:
+                        total_budget_per_block[block] += budget
+
+            # Global budget per block holds the accumulated budget per block up to this point
+            for block, budget in total_budget_per_block.items():
+                if block not in accummulated_budget_per_block:
+                    accummulated_budget_per_block[block] = budget
+                else:
+                    accummulated_budget_per_block[block] += budget
+
+            accummulated_budget_per_block_dump = {}
+            for block in accummulated_budget_per_block:
+                accummulated_budget_per_block_dump[block] = accummulated_budget_per_block[
+                    block
+                ].dump()
+
+            for block in total_budget_per_block:
+                total_budget_per_block[block] = total_budget_per_block[block].dump()
+
+            task_info["run_metadata"]["budget_per_block"] = total_budget_per_block
+            task_info["run_metadata"].update(
+                {"accummulated_budget_per_block": accummulated_budget_per_block_dump}
+            )
             task_info.update(
                 {
                     "laplace_runs": laplace_runs,
@@ -114,9 +148,8 @@ def get_logs(
                 }
             )
 
-            if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
-                tasks_to_log.append(task_info)
-
+            # if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
+            tasks_to_log.append(task_info)
 
     blocks_initial_budget = RenyiBudget.from_epsilon_delta(
         epsilon=config_dict["budget_accountant"]["epsilon"],
@@ -143,6 +176,7 @@ def get_logs(
             "n_allocated_tasks": n_allocated_tasks,
             "total_tasks": len(tasks_info),
             "total_sv_misses": total_sv_misses,
+            "total_sv_checks": total_sv_checks,
             "total_histogram_runs": total_histogram_runs,
             "total_laplace_runs": total_laplace_runs,
             "cache": cache_type,

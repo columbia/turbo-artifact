@@ -83,8 +83,11 @@ class MockProbabilisticCache:
     def update_entry_threshold(self, blocks, query):
         cache_entry = self.read_entry(blocks)
         assert cache_entry is not None
+        
         for i in flat_indices(query):
-            cache_entry.bin_thresholds[i] += self.bin_thershold_step
+            # Add 'bin_threshold_step' more update rounds to the bins
+            cache_entry.bin_thresholds[i] = cache_entry.bin_updates[i] + self.bin_thershold_step
+        
         # Write updated entry
         self.write_entry(blocks, cache_entry)
 
