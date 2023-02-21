@@ -10,6 +10,7 @@ from precycle.budget.curves import PureDPtoRDP
 from termcolor import colored
 import time
 
+
 class RDet:
     def __init__(self, blocks, noise_std) -> None:
         self.blocks = blocks
@@ -111,7 +112,7 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
-                    print("\nsv failed, task: ", task.id)
+                    print("sv failed, task: ", task.id)
                     # time.sleep(2)
 
                 run_metadata["sv_check_status"].append(status)
@@ -190,7 +191,7 @@ class Executor:
                         run_op.blocks, query
                     )
             return False
-        print(colored("\nFREE LUNCH - yum yum\n", "yellow"))
+        print(colored("FREE LUNCH - yum yum\n", "yellow"))
         # NOTE: Histogram nodes get updated only using external updates
         return True
 
@@ -275,7 +276,7 @@ class Executor:
     def run_probabilistic(self, run_op, query):
         cache_entry = self.cache.probabilistic_cache.read_entry(run_op.blocks)
         if not cache_entry:
-            cache_entry = self.cache.probabilistic_cache.create_new_entry()
+            cache_entry = self.cache.probabilistic_cache.create_new_entry(run_op.blocks)
             self.cache.probabilistic_cache.write_entry(run_op.blocks, cache_entry)
 
         # True output never released except in debugging logs

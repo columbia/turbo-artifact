@@ -81,12 +81,13 @@ def get_logs(
     total_laplace_runs = 0
     total_sv_misses = 0
     total_sv_checks = 0
+    global_budget = 0
 
     # Finally logging only a small number of tasks for faster analysis
     tasks_to_log = []
     accummulated_budget_per_block = {}
 
-    for task_info in tasks_info:
+    for i, task_info in enumerate(tasks_info):
 
         if task_info["status"] == FINISHED:
             n_allocated_tasks += 1
@@ -121,18 +122,16 @@ def get_logs(
                     else:
                         total_budget_per_block[block] += budget
 
-            # Global budget per block holds the accumulated budget per block up to this point
             for block, budget in total_budget_per_block.items():
                 if block not in accummulated_budget_per_block:
                     accummulated_budget_per_block[block] = budget
                 else:
                     accummulated_budget_per_block[block] += budget
-
             accummulated_budget_per_block_dump = {}
             for block in accummulated_budget_per_block:
-                accummulated_budget_per_block_dump[block] = accummulated_budget_per_block[
+                accummulated_budget_per_block_dump[
                     block
-                ].dump()
+                ] = accummulated_budget_per_block[block].dump()
 
             for block in total_budget_per_block:
                 total_budget_per_block[block] = total_budget_per_block[block].dump()
@@ -141,6 +140,11 @@ def get_logs(
             task_info["run_metadata"].update(
                 {"accummulated_budget_per_block": accummulated_budget_per_block_dump}
             )
+
+            if i == len(tasks_info) - 1:
+                for block, budget in accummulated_budget_per_block.items():
+                    global_budget += min(budget.epsilons)
+
             task_info.update(
                 {
                     "laplace_runs": laplace_runs,
@@ -148,8 +152,8 @@ def get_logs(
                 }
             )
 
-            # if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
-            tasks_to_log.append(task_info)
+            if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
+                tasks_to_log.append(task_info)
 
     blocks_initial_budget = RenyiBudget.from_epsilon_delta(
         epsilon=config_dict["budget_accountant"]["epsilon"],
@@ -189,6 +193,8 @@ def get_logs(
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
             "config": config_dict,
+            "learning_rate": config_dict["cache"]["probabilistic_cfg"]["learning_rate"],
+            "global_budget": global_budget,
         }
     )
 

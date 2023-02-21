@@ -6,19 +6,19 @@ from opacus.accountants import RDPAccountant
 
 
 ALPHAS = [
-    # 1.5,
-    # 1.75,
-    # 2,
-    # 2.5,
-    # 3,
-    # 4,
-    # 5,
-    # 6,
-    # 8,
-    # 16,
-    # 32,
-    # 64,
-    10000,
+    1.5,
+    1.75,
+    2,
+    2.5,
+    3,
+    4,
+    5,
+    6,
+    8,
+    16,
+    32,
+    64,
+    # 10000,
 ]
 
 # Default values for some datasets

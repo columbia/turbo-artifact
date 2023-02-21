@@ -66,6 +66,7 @@ def get_tasks_information(df):
 def get_budgets_information(df, blocks):
     dfs = []
     global_dfs = []
+    # gbudget_dfs = []
 
     for (tasks, blocks, initial_budget, key, zipf_k) in df[
         ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
@@ -79,12 +80,12 @@ def get_budgets_information(df, blocks):
 
         for task in tasks:
 
-            if task['id'] % 500 != 0:
-                continue
+            # if task["id"] % 500 != 0:
+            #     continue
 
             accummulated_budget_per_block = {}
             global_budget = 0
-            
+
             run_metadata = task["run_metadata"]
             if run_metadata is None:
                 continue
@@ -103,7 +104,9 @@ def get_budgets_information(df, blocks):
                             {
                                 "id": task["id"],
                                 "block": str(block),
-                                "accummulated_budget": accummulated_budget_per_block[str(block)],
+                                "accummulated_budget": accummulated_budget_per_block[
+                                    str(block)
+                                ],
                                 "budget": task_budget,
                                 "key": key,
                                 "zipf_k": zipf_k,
@@ -282,7 +285,8 @@ def analyze_monoblock(experiment_path):
     df = get_df(experiment_path)
     # print(df['total_sv_misses'])
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + ":" + df["heuristic"]
+    df["learning_rate"] = df["learning_rate"].astype(str)
+    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
     df["zipf_k"] = df["zipf_k"].astype(float)
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
@@ -484,8 +488,9 @@ def analyze_multiblock(experiment_path):
             pass
     df = pd.DataFrame(results)
     total_tasks = df["total_tasks"].max()
+    df["learning_rate"] = df["learning_rate"].astype(str)
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + df["heuristic"]
+    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
     df["zipf_k"] = df["zipf_k"].astype(float)
     iplot(plot_num_allocated_tasks(df, total_tasks))
     blocks = get_blocks_information(df)
@@ -493,6 +498,34 @@ def analyze_multiblock(experiment_path):
 
 
 def budget_utilization_time(experiment_path):
+    def plot_total_sv_checks(df, total_tasks):
+
+        fig = px.bar(
+            df,
+            x="zipf_k",
+            y="total_sv_checks",
+            color="key",
+            barmode="group",
+            title=f"Total SV checks - total tasks={total_tasks}",
+            width=900,
+            height=500,
+        )
+        return fig
+
+    def plot_total_sv_misses(df, total_tasks):
+
+        fig = px.bar(
+            df,
+            x="zipf_k",
+            y="total_sv_misses",
+            color="key",
+            barmode="group",
+            title=f"Total SV failures - total tasks={total_tasks}",
+            width=900,
+            height=500,
+        )
+        return fig
+
     def plot_global_budget_utilization_time(df, total_tasks):
         # keys_order = ["MixedRuns", "LaplaceRuns", "PMWRuns"]
         # category_orders = {"key": keys_order}
@@ -515,7 +548,7 @@ def budget_utilization_time(experiment_path):
         fig = px.line(
             df,
             x="id",
-            y="total_budget",
+            y="accummulated_budget",
             color="key",
             title=f"Budget Utilization per task/time - total tasks-{total_tasks}",
             width=2500,
@@ -547,39 +580,44 @@ def budget_utilization_time(experiment_path):
     df = get_df(experiment_path)
     total_tasks = df["total_tasks"].max()
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + ":" + df["heuristic"]
+    df["learning_rate"] = df["learning_rate"].astype(str)
+
+    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
     df["zipf_k"] = df["zipf_k"].astype(float)
+
+    iplot(plot_total_sv_checks(df, total_tasks))
+    iplot(plot_total_sv_misses(df, total_tasks))
 
     time_budgets, global_time_budgets = get_budgets_information(
         df, df["block_budgets_info"]
     )
-    # print(time_budgets)
+    # # print(time_budgets)
     iplot(plot_global_budget_utilization_time(global_time_budgets, total_tasks))
 
-    # Plot for block 0
+    # # Plot for block 0
     # d = time_budgets.query("block == '0'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
+    # # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # Plot for block 1
+    # # Plot for block 1
     # d = time_budgets.query("block == '1'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
+    # # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # Plot for block 2
+    # # Plot for block 2
     # d = time_budgets.query("block == '2'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
+    # # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # Plot for block 3
+    # # Plot for block 3
     # d = time_budgets.query("block == '3'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
+    # # iplot(plot_budget_utilization_time(d, total_tasks))
 
-    # Plot for block 4
+    # # Plot for block 4
     # d = time_budgets.query("block == '4'")
     # iplot(plot_budget_utilization_time_accum(d, total_tasks))
-    # iplot(plot_budget_utilization_time(d, total_tasks))
+    # # iplot(plot_budget_utilization_time(d, total_tasks))
 
 
 def analyze_num_cuts(experiment_path):
@@ -588,13 +626,13 @@ def analyze_num_cuts(experiment_path):
         # zipf_orders = ["1.5", "1.0", "0.5", "0"]
         # category_orders = {"key": keys_order}
 
-        fig = px.histogram(df, x="chunk", color="chunk_size", width=1500, height=800)
+        fig = px.histogram(df, x="chunk", color="chunk_size", width=750, height=400)
         return fig
 
     df = get_df(experiment_path)
     df["heuristic"] = df["heuristic"].astype(str)
-    df = df.query("cache == 'MixedRuns' and zipf_k == 0.5")
-    df["key"] = df["cache"] + df["heuristic"]
+    # df = df.query("cache == 'MixedRuns' and zipf_k == 0.5")
+    df["key"] = df["cache"] + ":" + df["heuristic"]
 
     # df["zipf_k"] = df["zipf_k"].astype(float)
     # df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
@@ -604,8 +642,8 @@ def analyze_num_cuts(experiment_path):
     for (tasks, key, zipf_k) in df[["tasks_info", "key", "zipf_k"]].values:
         for task in tasks:
             # print(list(task["run_metadata"].keys()))
-            chunks += list(task["run_metadata"].keys())
-            for chunk in list(task["run_metadata"].keys()):
+            chunks += list(task["run_metadata"]["run_types"][0].keys())
+            for chunk in list(task["run_metadata"]["run_types"][0].keys()):
                 chunk = chunk[1:-1]
                 b1, b2 = chunk.split(",")
                 # print(chunk)

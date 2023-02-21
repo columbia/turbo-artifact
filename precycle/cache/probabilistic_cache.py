@@ -1,4 +1,5 @@
 import torch
+from copy import deepcopy
 from precycle.budget.histogram import DenseHistogram, flat_indices
 
 
@@ -50,18 +51,41 @@ class MockProbabilisticCache:
             )
         return None
 
-    def create_new_entry(self):
-        return CacheEntry(
-            histogram=DenseHistogram(self.domain_size),
-            bin_updates=torch.zeros(size=(1, self.domain_size), dtype=torch.float64),
-            bin_thresholds=torch.ones(size=(1, self.domain_size), dtype=torch.float64)
-            * self.bin_thershold,
-        )
+    def create_new_entry(self, blocks):
+        # Bootstrapping: creating a histogram for a newly arrived block and
+        # initializing it with the histogram of the previous block
+        # Find the first previous block in cache to initialize from
+        (i, j) = blocks
+        cache_entry = None
+        if i == j and i > 0:
+            for x in reversed(range(i)):
+                cache_entry = self.read_entry((x, x))
+                if cache_entry is not None:
+                    break
+
+        if cache_entry:
+            new_cache_entry = CacheEntry(
+                histogram=deepcopy(cache_entry.histogram),
+                bin_updates=deepcopy(cache_entry.bin_updates),
+                bin_thresholds=deepcopy(cache_entry.bin_thresholds),
+            )
+        else:
+            new_cache_entry = CacheEntry(
+                histogram=DenseHistogram(self.domain_size),
+                bin_updates=torch.zeros(
+                    size=(1, self.domain_size), dtype=torch.float64
+                ),
+                bin_thresholds=torch.ones(
+                    size=(1, self.domain_size), dtype=torch.float64
+                )
+                * self.bin_thershold,
+            )
+        return new_cache_entry
 
     def update_entry_histogram(self, query, blocks, noisy_result):
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
-            cache_entry = self.create_new_entry()
+            cache_entry = self.create_new_entry(blocks)
 
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
@@ -83,11 +107,13 @@ class MockProbabilisticCache:
     def update_entry_threshold(self, blocks, query):
         cache_entry = self.read_entry(blocks)
         assert cache_entry is not None
-        
+
         for i in flat_indices(query):
             # Add 'bin_threshold_step' more update rounds to the bins
-            cache_entry.bin_thresholds[i] = cache_entry.bin_updates[i] + self.bin_thershold_step
-        
+            cache_entry.bin_thresholds[i] = (
+                cache_entry.bin_updates[i] + self.bin_thershold_step
+            )
+
         # Write updated entry
         self.write_entry(blocks, cache_entry)
 

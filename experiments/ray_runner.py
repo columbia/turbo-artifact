@@ -31,6 +31,7 @@ def grid_online(
     global_seed: int = 64,
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
+    learning_rate: List[int] = [0.01],
     heuristic: str = "total_updates_counts:100",
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
@@ -48,7 +49,7 @@ def grid_online(
         "cache": {
             "type": tune.grid_search(cache),
             "probabilistic_cfg": {
-                "learning_rate": tune.grid_search(alpha),
+                "learning_rate": tune.grid_search(learning_rate),
                 "heuristic": tune.grid_search(heuristic),
             },
         },
@@ -101,15 +102,13 @@ def grid_online(
             tune.logger.JsonLoggerCallback(),
         ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=[
-                "n_allocated_tasks",
-                "total_tasks",
-            ],
+            metric_columns=["n_allocated_tasks", "total_tasks", "global_budget"],
             parameter_columns={
                 "planner/method": "planner",
                 "cache/type": "cache",
                 "tasks/zipf_k": "zipf_k",
                 "cache/probabilistic_cfg/heuristic": "heuristic",
+                "cache/probabilistic_cfg/learning_rate": "learning_rate",
             },
             max_report_frequency=60,
         ),
