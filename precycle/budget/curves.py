@@ -74,6 +74,24 @@ class SyntheticPolynomialCurve(RenyiBudget):
         super().__init__(orders)
 
 
+def rdp_curve(α, λ):
+    """
+    See Table II of the RDP paper (https://arxiv.org/pdf/1702.07476.pdf)
+    lambda is the std of the mechanism for sensitivity 1 (the noise multiplier otherwise).
+    """
+    with np.errstate(over="raise", under="raise"):
+        try:
+            ε = (1 / (α - 1)) * np.log(
+                (α / (2 * α - 1)) * np.exp((α - 1) / λ)
+                + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
+            )
+        except FloatingPointError:
+            # It means that alpha/lambda is too large (under or overflow)
+            # We just drop the negative exponential (≃0) and simplify the log
+            ε = (1 / (α - 1)) * (np.log(α / (2 * α - 1)) + (α - 1) / λ)
+    return float(ε)
+
+
 class LaplaceCurve(RenyiBudget):
     """
     RDP curve for a Laplace mechanism with sensitivity 1.
@@ -81,7 +99,7 @@ class LaplaceCurve(RenyiBudget):
 
     def __init__(self, laplace_noise: float, alpha_list: List[float] = ALPHAS) -> None:
         """Computes the Laplace RDP curve.
-            See Table II of the RDP paper (https://arxiv.org/pdf/1702.07476.pdf)
+
 
         Args:
             laplace_noise (float): lambda, the std of the mechanism for sensitivity 1 (the noise multiplier otherwise).
@@ -92,18 +110,7 @@ class LaplaceCurve(RenyiBudget):
         orders = {}
         λ = laplace_noise
         for α in alpha_list:
-            with np.errstate(over="raise", under="raise"):
-                try:
-                    ε = (1 / (α - 1)) * np.log(
-                        (α / (2 * α - 1)) * np.exp((α - 1) / λ)
-                        + ((α - 1) / (2 * α - 1)) * np.exp(-α / λ)
-                    )
-                except FloatingPointError:
-                    # It means that alpha/lambda is too large (under or overflow)
-                    # We just drop the negative exponential (≃0) and simplify the log
-                    ε = (1 / (α - 1)) * (np.log(α / (2 * α - 1)) + (α - 1) / λ)
-
-                orders[α] = float(ε)
+            orders[α] = rdp_curve(α, λ)
         super().__init__(orders)
 
 
@@ -155,6 +162,23 @@ class PureDPtoRDP_loose(RenyiBudget):
     def __init__(self, epsilon: float, alpha_list: List[float] = ALPHAS) -> None:
         orders = {alpha: alpha * epsilon**2 / 2 for alpha in alpha_list}
         self.pure_epsilon = epsilon
+        super().__init__(orders)
+
+
+class LaplaceSVCurve(RenyiBudget):
+    def __init__(self, epsilon_1, epsilon_2=None, alpha_list=ALPHAS):
+        """
+        - Algorithm 2 with c = 1 from https://papers.nips.cc/paper/2020/file/e9bf14a419d77534105016f5ec122d62-Paper.pdf
+        - $M_\rho = Lap(\Delta/\epsilon_1)$ is $\epsilon_\rho(\alpha) = \epsilon_{\lambda_1}(\alpha)$-RDP for queries with sensitivity $\Delta$, with  $\epsilon_\lambda(\alpha)$ the Laplace RDP curve with $\lambda_1 = 1/\epsilon_1$.
+        - $M_\nu = Lap(2\Delta/\epsilon_2)$ is $\epsilon_\nu(\alpha) = \epsilon_{\lambda_2}(\alpha)$-RDP for queries with sensitivity $2\Delta$, with $\lambda_2 = 1/\epsilon_2$.
+        - If we set $\epsilon_2 = 2\epsilon_1$ like Salil, $\epsilon_\nu(\alpha) \neq \epsilon_\rho(\alpha)$.
+        - Since $\epsilon_\rho(\infty) = \epsilon_2 < \infty$ we can use Point 3 of Theorem 8, so SV is $\epsilon_\nu(\alpha) + \epsilon_\rho(\alpha)$-RDP
+        """
+        epsilon_2 = epsilon_2 if epsilon_2 else 2 * epsilon_1
+        orders = {
+            alpha: rdp_curve(alpha, 1 / epsilon_1) + rdp_curve(alpha, 1 / epsilon_2)
+            for alpha in alpha_list
+        }
         super().__init__(orders)
 
 

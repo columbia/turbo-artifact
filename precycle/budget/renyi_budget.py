@@ -1,24 +1,33 @@
-import numpy as np
-from precycle.budget.budget import Budget
 from collections import namedtuple
 from typing import Dict, List, Tuple
+
+import numpy as np
 from opacus.accountants import RDPAccountant
 
+from precycle.budget.budget import Budget
 
 ALPHAS = [
     1.5,
     1.75,
     2,
+    2.25,
     2.5,
+    2.75,
     3,
+    3.25,
+    3.5,
+    3.75,
     4,
+    4.5,
     5,
     6,
     8,
     16,
     32,
     64,
-    # 10000,
+    256,
+    1_000,
+    10_000,
 ]
 
 # Default values for some datasets
