@@ -1,14 +1,15 @@
 import math
+import time
+from collections import namedtuple
+from typing import Dict, Tuple
+
 import numpy as np
 from loguru import logger
-from typing import Dict, Tuple
-from collections import namedtuple
-from precycle.budget.curves import LaplaceCurve, ZeroCurve
+from termcolor import colored
+
+from precycle.budget.curves import LaplaceCurve, LaplaceSVCurve, PureDPtoRDP, ZeroCurve
 from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
-from precycle.budget.curves import PureDPtoRDP
-from termcolor import colored
-import time
 
 
 class RDet:
@@ -147,7 +148,11 @@ class Executor:
 
         # All blocks covered by the SV must pay
         blocks_to_pay = range(node_id[0], node_id[1] + 1)
-        initialization_budget = PureDPtoRDP(epsilon=3 * sv.epsilon)
+        # initialization_budget = PureDPtoRDP(epsilon=3 * sv.epsilon)
+
+        initialization_budget = LaplaceSVCurve(
+            epsilon_1=sv.epsilon, epsilon_2=2 * sv.epsilon
+        )
         # print(budget_per_block)
 
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
