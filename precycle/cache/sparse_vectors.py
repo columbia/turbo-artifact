@@ -1,6 +1,6 @@
 import numpy as np
 from precycle.utils.utils import satisfies_constraint
-from precycle.utils.utility_theorems import get_pmw_epsilon
+from precycle.utils.utility_theorems import get_sv_epsilon
 import time
 
 
@@ -11,7 +11,7 @@ class SparseVector:
         self.alpha = alpha
         self.beta = beta
 
-        self.epsilon = get_pmw_epsilon(self.alpha, self.beta, self.n, 1)
+        self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)
         self.b = 1 / (self.n * self.epsilon)
         self.noisy_threshold = None
         self.initialized = False
@@ -63,7 +63,6 @@ class MockSparseVectors:
         return node
 
     def create_new_entry(self, node_id):
-
         # Find the smallest request that will be handled by this sparse vector.
         node_size = node_id[1] - node_id[0] + 1
         if node_size == 1:
@@ -75,8 +74,8 @@ class MockSparseVectors:
         # NOTE: n = smallest_SV_request * block_size
         sparse_vector = SparseVector(
             id=node_id,
-            alpha=self.config.alpha,
             beta=self.config.beta,
+            alpha=self.config.alpha,
             n=n,
         )
         return sparse_vector

@@ -57,11 +57,12 @@ class MockProbabilisticCache:
         # Find the first previous block in cache to initialize from
         (i, j) = blocks
         cache_entry = None
-        if i == j and i > 0:
-            for x in reversed(range(i)):
-                cache_entry = self.read_entry((x, x))
-                if cache_entry is not None:
-                    break
+        if self.config.cache.probabilistic_cfg.bootstrapping == True:
+            if i == j and i > 0:
+                for x in reversed(range(i)):
+                    cache_entry = self.read_entry((x, x))
+                    if cache_entry is not None:
+                        break
 
         if cache_entry:
             new_cache_entry = CacheEntry(

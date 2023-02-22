@@ -72,6 +72,7 @@ def get_budgets_information(df, blocks):
         ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
     ].values:
 
+        # for each block find the order with the max remaining capacity
         max_orders = {}
         for block_id, budget in blocks:
             orders = budget["orders"]
@@ -92,6 +93,7 @@ def get_budgets_information(df, blocks):
             budget_per_block = run_metadata["budget_per_block"]
             for block, budget in budget_per_block.items():
                 task_budget = budget["orders"][max_orders[str(block)]]
+
             budget_per_block = run_metadata["accummulated_budget_per_block"]
             for block, budget in budget_per_block.items():
                 budget = budget["orders"][max_orders[str(block)]]
@@ -490,7 +492,8 @@ def analyze_multiblock(experiment_path):
     total_tasks = df["total_tasks"].max()
     df["learning_rate"] = df["learning_rate"].astype(str)
     df["heuristic"] = df["heuristic"].astype(str)
-    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
+    df["bootstrapping"] = df["bootstrapping"].astype(str)
+    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"] + ":" + df["bootstrapping"]
     df["zipf_k"] = df["zipf_k"].astype(float)
     iplot(plot_num_allocated_tasks(df, total_tasks))
     blocks = get_blocks_information(df)
@@ -581,8 +584,10 @@ def budget_utilization_time(experiment_path):
     total_tasks = df["total_tasks"].max()
     df["heuristic"] = df["heuristic"].astype(str)
     df["learning_rate"] = df["learning_rate"].astype(str)
+    df["bootstrapping"] = df["bootstrapping"].astype(str)
+    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"] + ":" + df["bootstrapping"]
 
-    df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
+    # df["key"] = df["cache"] + ":" + df["heuristic"] + ":" + df["learning_rate"]
     df["zipf_k"] = df["zipf_k"].astype(float)
 
     iplot(plot_total_sv_checks(df, total_tasks))
@@ -631,25 +636,23 @@ def analyze_num_cuts(experiment_path):
 
     df = get_df(experiment_path)
     df["heuristic"] = df["heuristic"].astype(str)
-    # df = df.query("cache == 'MixedRuns' and zipf_k == 0.5")
+    df = df.query("cache == 'MixedCache' and zipf_k == 0.5")
     df["key"] = df["cache"] + ":" + df["heuristic"]
 
     # df["zipf_k"] = df["zipf_k"].astype(float)
     # df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
-    chunks = []
+    chunks_list = []
     chunk_sizes = []
-    for (tasks, key, zipf_k) in df[["tasks_info", "key", "zipf_k"]].values:
-        for task in tasks:
-            # print(list(task["run_metadata"].keys()))
-            chunks += list(task["run_metadata"]["run_types"][0].keys())
-            for chunk in list(task["run_metadata"]["run_types"][0].keys()):
-                chunk = chunk[1:-1]
-                b1, b2 = chunk.split(",")
-                # print(chunk)
-                chunk_sizes.append(int(b2) - int(b1) + 1)
+    chunks = df['chunks'][0]
+    for chunk, occurences in chunks.items():
+        ch = chunk[1:-1]
+        b1, b2 = ch.split(",")
+        for _ in range(occurences):
+            chunks_list.append(ch)
+            chunk_sizes.append(int(b2) - int(b1) + 1)
 
-    df1 = pd.DataFrame(chunks, columns=["chunk"])
+    df1 = pd.DataFrame(chunks_list, columns=["chunk"])
     df2 = pd.DataFrame(chunk_sizes, columns=["chunk_size"])
     df = pd.concat([df1, df2], axis=1)
     df.sort_values(["chunk_size"], ascending=[False], inplace=True)

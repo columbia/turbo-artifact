@@ -84,13 +84,21 @@ def get_logs(
     global_budget = 0
 
     # Finally logging only a small number of tasks for faster analysis
+    chunks = {}
     tasks_to_log = []
     accummulated_budget_per_block = {}
+    sv_misses = {}
 
     for i, task_info in enumerate(tasks_info):
 
         if task_info["status"] == FINISHED:
             n_allocated_tasks += 1
+
+            chunk_keys = list(task_info["run_metadata"]["run_types"][0].keys())
+            for chunk_key in chunk_keys:
+                if chunk_key not in chunks:
+                    chunks[str(chunk_key)] = 0
+                chunks[str(chunk_key)] += 1
 
             run_metadata = task_info["run_metadata"]
             histogram_runs = laplace_runs = 0
@@ -107,9 +115,15 @@ def get_logs(
 
             # TODO: clean this part - it's terrible
             sv_check_status_list = run_metadata["sv_check_status"]
+            node_id_list = run_metadata["sv_node_id"]
+            assert len(sv_check_status_list) <= 1
             for sv_check_status in sv_check_status_list:
+                sv_node_id = node_id_list[0]
                 if sv_check_status == False:
                     total_sv_misses += 1
+                    if sv_node_id not in sv_misses:
+                        sv_misses[sv_node_id] = 0
+                    sv_misses[sv_node_id] += 1
                 total_sv_checks += 1
 
             total_budget_per_block = {}
@@ -141,10 +155,18 @@ def get_logs(
                 {"accummulated_budget_per_block": accummulated_budget_per_block_dump}
             )
 
+            # Final Global budget consumption across all blocks - to output in the terminal
             if i == len(tasks_info) - 1:
+                # For each block find the order with the max remaining capacity
+                max_orders = {}
+                for block_id, budget in block_budgets_info:
+                    orders = budget["orders"]
+                    order = max(orders, key=orders.get)
+                    max_orders[block_id] = order
                 for block, budget in accummulated_budget_per_block.items():
-                    global_budget += min(budget.epsilons)
+                    global_budget += budget.epsilon(max_orders[str(block)])
 
+    
             task_info.update(
                 {
                     "laplace_runs": laplace_runs,
@@ -194,7 +216,10 @@ def get_logs(
             "heuristic": heuristic,
             "config": config_dict,
             "learning_rate": config_dict["cache"]["probabilistic_cfg"]["learning_rate"],
+            "bootstrapping": config_dict["cache"]["probabilistic_cfg"]["bootstrapping"],
             "global_budget": global_budget,
+            "chunks": chunks,
+            "sv_misses": sv_misses
         }
     )
 

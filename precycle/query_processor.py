@@ -33,15 +33,14 @@ class QueryProcessor:
 
         round = 0
         result = status = None
-        run_metadata = {"sv_check_status": [], "run_types": [], "budget_per_block": []}
+        run_metadata = {"sv_check_status": [], "sv_node_id": [], "run_types": [], "budget_per_block": []}
         task.query = self.query_converter.convert_to_tensor(task.query)
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while not result and (not status or status == "sv_failed"):
             start_planning = time.time()
-            plan = self.planner.get_execution_plan(
-                task
-            )  # Get a DP execution plan for query.
+            # Get a DP execution plan for query.
+            plan = self.planner.get_execution_plan(task)
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops

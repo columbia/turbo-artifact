@@ -36,6 +36,7 @@ def grid_online(
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
     log_every_n_tasks: int = 100,
+    bootstrapping: bool = [True],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
@@ -51,6 +52,7 @@ def grid_online(
             "probabilistic_cfg": {
                 "learning_rate": tune.grid_search(learning_rate),
                 "heuristic": tune.grid_search(heuristic),
+                "bootstrapping": tune.grid_search(bootstrapping),
             },
         },
         "planner": {
@@ -109,6 +111,7 @@ def grid_online(
                 "tasks/zipf_k": "zipf_k",
                 "cache/probabilistic_cfg/heuristic": "heuristic",
                 "cache/probabilistic_cfg/learning_rate": "learning_rate",
+                "cache/probabilistic_cfg/bootstrapping": "bootstrapping",
             },
             max_report_frequency=60,
         ),

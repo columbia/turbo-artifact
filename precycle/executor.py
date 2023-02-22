@@ -116,7 +116,8 @@ class Executor:
                     # time.sleep(2)
 
                 run_metadata["sv_check_status"].append(status)
-
+                sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(task.blocks)
+                run_metadata["sv_node_id"].append(sv_id)
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
 
