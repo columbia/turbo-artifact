@@ -10,7 +10,7 @@ from precycle.server_blocks import BlocksServer
 from precycle.query_processor import QueryProcessor
 from precycle.psql import PSQL, MockPSQL
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
-from precycle.cache.deterministic_cache import (
+from precycle.cache.laplace_cache import (
     DeterministicCache,
     MockDeterministicCache,
 )

@@ -42,15 +42,12 @@ class Simulator:
         if self.config.logs.mlflow:
             os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
             try:
-                mlflow.set_experiment(experiment_id="768944864734992566")
+                mlflow.set_experiment(
+                    experiment_name=self.config.logs.mlflow_experiment_id
+                )
             except Exception:
-                try:
-                    mlflow.set_experiment(
-                        experiment_id=self.config.logs.mlflow_experiment_id
-                    )
-                except Exception:
-                    experiment_id = mlflow.create_experiment(name="precycle")
-                    print(f"New MLflow experiment created: {experiment_id}")
+                experiment_id = mlflow.create_experiment(name="precycle")
+                print(f"New MLflow experiment created: {experiment_id}")
 
         try:
             with open(self.config.blocks.block_metadata_path) as f:

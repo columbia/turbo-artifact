@@ -1,6 +1,6 @@
 import redis
 from loguru import logger
-from precycle.budget import RenyiBudget
+from precycle.budget import RenyiBudget, BasicBudget
 
 
 class BudgetAccountantKey:
@@ -60,12 +60,12 @@ class BudgetAccountant:
 
 class MockBudgetAccountant:
     def __init__(self, config) -> None:
-        self.config = config.budget_accountant
+        self.config = config
         # key-value store is just an in-memory dictionary
         self.kv_store = {}
-        self.epsilon = float(self.config.epsilon)
-        self.delta = float(self.config.delta)
-        self.alphas = self.config.alphas
+        self.epsilon = float(self.config.budget_accountant.epsilon)
+        self.delta = float(self.config.budget_accountant.delta)
+        self.alphas = self.config.budget_accountant.alphas
 
     def get_blocks_count(self):
         return len(self.kv_store.keys())
@@ -78,7 +78,11 @@ class MockBudgetAccountant:
     def add_new_block_budget(self):
         block = self.get_blocks_count()
         # Initialize block's budget from epsilon and delta
-        budget = RenyiBudget.from_epsilon_delta(epsilon=self.epsilon, delta=self.delta)
+        budget = (
+            BasicBudget(self.epsilon)
+            if self.config.puredp
+            else RenyiBudget.from_epsilon_delta(epsilon=self.epsilon, delta=self.delta)
+        )
         self.update_block_budget(block, budget)
 
     def get_block_budget(self, block):

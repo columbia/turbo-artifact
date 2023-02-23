@@ -10,6 +10,7 @@ from precycle.utils.utils import mlflow_log
 from precycle.utils.utils import FINISHED, FAILED
 
 from precycle.query_converter import QueryConverter
+from precycle.budget.curves import ZeroCurve
 
 
 class QueryProcessor:
@@ -33,15 +34,19 @@ class QueryProcessor:
 
         round = 0
         result = status = None
-        run_metadata = {"sv_check_status": [], "run_types": [], "budget_per_block": []}
+        run_metadata = {
+            "sv_check_status": [],
+            "sv_node_id": [],
+            "run_types": [],
+            "budget_per_block": [],
+        }
         task.query = self.query_converter.convert_to_tensor(task.query)
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while not result and (not status or status == "sv_failed"):
             start_planning = time.time()
-            plan = self.planner.get_execution_plan(
-                task
-            )  # Get a DP execution plan for query.
+            # Get a DP execution plan for query.
+            plan = self.planner.get_execution_plan(task)
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops
@@ -56,6 +61,27 @@ class QueryProcessor:
             round += 1
 
         if result:
+
+            if self.config.logs.mlflow:
+                # Log in MLFLOW to understand the bumps
+                budget_per_block_list = run_metadata["budget_per_block"]
+                total_budget_spent_all_blocks = ZeroCurve()
+                total_budget_spent_per_block = {}
+
+                for budget_per_block in budget_per_block_list:
+                    for block, budget in budget_per_block.items():
+                        total_budget_spent_all_blocks += budget
+                        if block not in total_budget_spent_per_block:
+                            total_budget_spent_per_block[block] = max(budget.epsilons)
+                        else:
+                            total_budget_spent_per_block[block] += max(budget.epsilons)
+
+                for block, budget in total_budget_spent_per_block.items():
+                    mlflow_log(f"Block{block}", budget, task.id)
+                mlflow_log(
+                    f"AllBlocks", max(total_budget_spent_all_blocks.epsilons), task.id
+                )
+
             status = FINISHED
             logger.info(
                 colored(
