@@ -148,11 +148,11 @@ class Executor:
 
         # All blocks covered by the SV must pay
         blocks_to_pay = range(node_id[0], node_id[1] + 1)
-        # initialization_budget = PureDPtoRDP(epsilon=3 * sv.epsilon)
+        initialization_budget = PureDPtoRDP(epsilon=3 * sv.epsilon)
 
-        initialization_budget = LaplaceSVCurve(
-            epsilon_1=sv.epsilon, epsilon_2=2 * sv.epsilon
-        )
+        # initialization_budget = LaplaceSVCurve(
+        #     epsilon_1=sv.epsilon, epsilon_2=2 * sv.epsilon
+        # )
         # print(budget_per_block)
 
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
