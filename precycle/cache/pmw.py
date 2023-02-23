@@ -11,7 +11,8 @@ from precycle.budget.curves import (
     ZeroCurve,
 )
 from precycle.budget.histogram import DenseHistogram, flat_indices
-from precycle.utils.utils import get_blocks_size, mlflow_log
+from precycle.utils.utils import mlflow_log
+from precycle.budget import BasicBudget
 
 """
 Trimmed-down implementation of PMW, following Salil's pseudocode
@@ -25,12 +26,8 @@ class PMW:
         epsilon,  # Not the global budget - internal Laplace will be Lap(1/(epsilon*n))
         n,  # Number of samples
         domain_size,  # From blocks_metadata
-        old_pmw=None,  # PMW to initialize from
-        heuristic="bin_visits:100-1",
+        config,
         id="",  # Name to log results
-        max_external_updates=0,  # Deactivated by default
-        external_updates_gamma=2,
-        warmup_lambda=100,
     ):
 
         # Core PMW parameters
@@ -38,39 +35,13 @@ class PMW:
         self.epsilon = epsilon
         self.n = n
         self.domain_size = domain_size
-        self.histogram = (
-            DenseHistogram(domain_size) if not old_pmw else old_pmw.histogram
-        )  # TODO: Use lambda to reweight before warm-starting
+        self.config = config
+        self.histogram = DenseHistogram(domain_size)
         self.b = 1 / (self.n * self.epsilon)
-
         # Logging
         self.queries_ran = 0
         self.hard_queries_ran = 0
         self.id = id
-
-        # Updates and warmup
-        self.external_updates_count = 0
-        self.max_external_updates = max_external_updates
-        self.external_updates_gamma = external_updates_gamma
-        self.warmup_lambda = warmup_lambda
-
-        # Heuristics
-        self.heuristic_method, self.heuristic_value = heuristic.split(":")
-        if self.heuristic_method == "bin_visits":
-            (
-                self.heuristic_value,
-                self.heuristic_value_increase,
-            ) = self.heuristic_value.split("-")
-            self.heuristic_value_increase = int(self.heuristic_value_increase)
-        self.heuristic_value = int(self.heuristic_value)
-        self.pmw_updates_count = 0
-        self.visits_count_histogram = torch.zeros(
-            size=(1, self.domain_size), dtype=torch.float64
-        )
-        self.heuristic_threshold_histogram = (
-            torch.ones(size=(1, self.domain_size), dtype=torch.float64)
-            * self.heuristic_value
-        )
 
         # We'll initialize the noisy threshold and pay right before we use the SV
         self.noisy_threshold = None
@@ -80,14 +51,18 @@ class PMW:
         assert isinstance(query, torch.Tensor)
 
         run_metadata = {}
-        run_budget = ZeroCurve()
+        run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 
         # Pay the initialization budget if it's the first call
         if self.local_svt_queries_ran == 0:
             self.noisy_threshold = self.alpha / 2 + np.random.laplace(
                 loc=0, scale=self.b
             )
-            run_budget += PureDPtoRDP(epsilon=3 * self.epsilon)
+            run_budget += (
+                BasicBudget(3 * self.epsilon)
+                if self.config.puredp
+                else PureDPtoRDP(epsilon=3 * self.epsilon)
+            )
 
         # Check the public histogram for free. Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
@@ -104,10 +79,17 @@ class PMW:
             # Easy query, just output the histogram prediction
             output = predicted_output
             run_metadata["hard_query"] = False
+            logger.info(
+                f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, epsilon: {self.epsilon}"
+            )
         else:
             # Hard query, run a fresh Laplace estimate
             output = true_output + np.random.laplace(loc=0, scale=self.b)
-            run_budget += LaplaceCurve(laplace_noise=1 / self.epsilon)
+            run_budget += (
+                BasicBudget(self.epsilon)
+                if self.config.puredp
+                else LaplaceCurve(laplace_noise=1 / self.epsilon)
+            )
 
             # Increase weights iff predicted_output is too small
             lr = self.alpha / 8
@@ -117,65 +99,18 @@ class PMW:
             # Multiplicative weights update for the relevant bins
             for i in flat_indices(query):
                 self.histogram.tensor[i] *= torch.exp(query[i] * lr)
-                self.visits_count_histogram[i] += 1
-                self.heuristic_threshold_histogram[i] += self.heuristic_value_increase
             self.histogram.normalize()
 
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
+            logger.info(
+                f"Hard query - Predicted: {predicted_output}, true: {true_output}"
+            )
             self.local_svt_queries_ran = 0
             self.hard_queries_ran += 1
-            self.pmw_updates_count += 1
 
         run_metadata["true_error_fraction"] = abs(output - true_output)
         return output, run_budget, run_metadata
-
-    def external_update(self, query, noisy_result):
-        if self.external_updates_count >= self.max_external_updates:
-            logger.debug("Too many external updates.")
-            return
-
-        predicted_output = self.histogram.run(query)
-        error = abs(predicted_output - noisy_result)
-        if (
-            error
-            < (self.external_updates_gamma / (self.n * self.epsilon)) + self.alpha / 2
-        ):
-            logger.debug(
-                "Skipping the external update because the histogram is accurate"
-            )
-            return
-
-        # Regular multiplicative weights update
-        lr = self.alpha / 8
-        if noisy_result < predicted_output:
-            lr *= -1
-        for i in flat_indices(query):
-            self.histogram.tensor[i] *= torch.exp(query[i] * lr)
-            self.visits_count_histogram[i] += 1
-        self.histogram.normalize()
-
-        self.external_updates_count += 1
-
-    # Heuristic 1
-    def predict_hit_bin_visits_heuristic(self, query):
-        for i in flat_indices(query):
-            if self.visits_count_histogram[i] < self.heuristic_threshold_histogram[i]:
-                return False
-        return True
-
-    # Heuristic 2
-    def predict_hit_total_updates_heuristic(self, query):
-        return (
-            self.pmw_updates_count + self.external_updates_count > self.heuristic_value
-        )
-
-    # Call the heuristic
-    def is_query_hard(self, query) -> bool:
-        if self.heuristic_method == "bin_visits":
-            return not self.predict_hit_bin_visits_heuristic(query)
-        elif self.heuristic_method == "total_updates_counts":
-            return not self.predict_hit_total_updates_heuristic(query)
 
     def mlflow_log_run(self, output, true_output):
         mlflow_log(f"{self.id}/queries_ran", self.queries_ran, self.queries_ran)

@@ -175,7 +175,7 @@ def get_logs(
                     global_budget += budget.epsilon
                     # max_order = max_orders[str(block)]
                     # global_budget += budget.epsilon(
-                        # max_order
+                    # max_order
                     # ) / blocks_initial_budget.epsilon(max_order)
                 # global_budget = global_budget / len(block_budgets_info)
 

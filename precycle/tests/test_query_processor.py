@@ -4,7 +4,7 @@ from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
 from precycle.query_processor import QueryProcessor
-from precycle.cache.deterministic_cache import DeterministicCache
+from precycle.cache.laplace_cache import DeterministicCache
 from precycle.budget_accountant import BudgetAccountant
 from precycle.psql import PSQL
 

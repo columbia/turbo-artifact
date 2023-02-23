@@ -10,25 +10,35 @@ from termcolor import colored
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 
-from precycle.cache.deterministic_cache import CacheEntry
+from precycle.cache.laplace_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 
 
-class RDet:
+class RunLaplace:
     def __init__(self, blocks, noise_std) -> None:
         self.blocks = blocks
         self.noise_std = noise_std
 
     def __str__(self):
-        return f"RunDet({self.blocks}, {self.noise_std})"
+        return f"RunLaplace({self.blocks}, {self.noise_std})"
 
 
-class RProb:
+class RunHistogram:
     def __init__(self, blocks) -> None:
         self.blocks = blocks
 
     def __str__(self):
-        return f"RunProb({self.blocks})"
+        return f"RunHistogram({self.blocks})"
+
+
+class RunPMW:
+    def __init__(self, blocks, alpha, epsilon) -> None:
+        self.blocks = blocks
+        self.alpha = alpha
+        self.epsilon = epsilon
+
+    def __str__(self):
+        return f"RunPMW({self.blocks}, {self.alpha}, {self.epsilon})"
 
 
 class A:
@@ -69,23 +79,25 @@ class Executor:
         noisy_partial_results = []
 
         for run_op in plan.l:
-            if isinstance(run_op, RDet):
-                run_return_value = self.run_deterministic(
-                    run_op, task.query_id, task.query
-                )
+            if isinstance(run_op, RunLaplace):
+                run_return_value = self.run_laplace(run_op, task.query_id, task.query)
                 run_types[str(run_op.blocks)] = "Laplace"
 
                 # External Update to the Histogram
-                if self.config.cache.type == "CombinedCache":
-                    self.cache.probabilistic_cache.update_entry_histogram(
+                if self.config.cache.type == "HybridCache":
+                    self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
 
-            elif isinstance(run_op, RProb):
-                run_return_value = self.run_probabilistic(run_op, task.query)
+            elif isinstance(run_op, RunHistogram):
+                run_return_value = self.run_histogram(run_op, task.query)
                 run_types[str(run_op.blocks)] = "Histogram"
+
+            elif isinstance(run_op, RunPMW):
+                run_return_value = self.run_pmw(run_op, task.query)
+                run_types[str(run_op.blocks)] = "PMW"
 
             # Set run budgets for participating blocks
             for block in range(run_op.blocks[0], run_op.blocks[1] + 1):
@@ -197,8 +209,8 @@ class Executor:
             sv.initialized = False
             # Increase the heuristic threshold in the Histograms that were used in this round
             for run_op in plan.l:
-                if isinstance(run_op, RProb):
-                    self.cache.probabilistic_cache.update_entry_threshold(
+                if isinstance(run_op, RunHistogram):
+                    self.cache.histogram_cache.update_entry_threshold(
                         run_op.blocks, query
                     )
             return False
@@ -206,11 +218,11 @@ class Executor:
         # NOTE: Histogram nodes get updated only using external updates
         return True
 
-    def run_deterministic(self, run_op, query_id, query):
+    def run_laplace(self, run_op, query_id, query):
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / node_size
         # Check for the entry inside the cache
-        cache_entry = self.cache.deterministic_cache.read_entry(query_id, run_op.blocks)
+        cache_entry = self.cache.laplace_cache.read_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
@@ -291,18 +303,16 @@ class Executor:
             cache_entry = CacheEntry(
                 result=true_result, noise_std=run_op.noise_std, noise=noise
             )
-            self.cache.deterministic_cache.write_entry(
-                query_id, run_op.blocks, cache_entry
-            )
+            self.cache.laplace_cache.write_entry(query_id, run_op.blocks, cache_entry)
         noisy_result = true_result + noise
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
 
-    def run_probabilistic(self, run_op, query):
-        cache_entry = self.cache.probabilistic_cache.read_entry(run_op.blocks)
+    def run_histogram(self, run_op, query):
+        cache_entry = self.cache.histogram_cache.read_entry(run_op.blocks)
         if not cache_entry:
-            cache_entry = self.cache.probabilistic_cache.create_new_entry(run_op.blocks)
-            self.cache.probabilistic_cache.write_entry(run_op.blocks, cache_entry)
+            cache_entry = self.cache.histogram_cache.create_new_entry(run_op.blocks)
+            self.cache.histogram_cache.write_entry(run_op.blocks, cache_entry)
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query, run_op.blocks)
@@ -312,5 +322,21 @@ class Executor:
         # Histogram prediction doesn't cost anything
         run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 
+        rv = RunReturnValue(true_result, noisy_result, run_budget)
+        return rv
+
+    def run_pmw(self, run_op, query):
+        pmw = self.cache.pmw_cache.get_entry(run_op.blocks)
+        if not pmw:
+            pmw = self.cache.pmw_cache.add_entry(run_op.blocks)
+
+        # True output never released except in debugging logs
+        true_result = self.db.run_query(query, run_op.blocks)
+
+        # We can't run a powerful query using a weaker PMW
+        assert run_op.alpha <= pmw.alpha
+        assert run_op.epsilon <= pmw.epsilon
+
+        noisy_result, run_budget, _ = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv

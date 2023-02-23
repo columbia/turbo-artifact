@@ -3,11 +3,6 @@ from copy import deepcopy
 from precycle.budget.histogram import DenseHistogram, flat_indices
 
 
-class ProbabilisticCache:
-    def __init__(self, config):
-        raise NotImplementedError
-
-
 class CacheKey:
     def __init__(self, blocks):
         self.key = blocks
@@ -20,7 +15,7 @@ class CacheEntry:
         self.bin_thresholds = bin_thresholds
 
 
-class MockProbabilisticCache:
+class MockHistogramCache:
     def __init__(self, config):
         self.kv_store = {}
         self.config = config

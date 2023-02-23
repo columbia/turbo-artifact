@@ -14,7 +14,7 @@ class CacheEntry:
         self.noise = noise  # The actual noise sampled from the distribution
 
 
-class DeterministicCache:
+class LaplaceCache:
     def __init__(self, config):
         self.kv_store = redis.Redis(
             host=config.cache.host, port=config.cache.port, db=0
@@ -38,7 +38,7 @@ class DeterministicCache:
         pass
 
 
-class MockDeterministicCache:
+class MockLaplaceCache:
     def __init__(self, config):
         # key-value store is just an in-memory dictionary
         self.config = config
