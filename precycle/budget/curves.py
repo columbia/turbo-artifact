@@ -169,15 +169,14 @@ class LaplaceSVCurve(RenyiBudget):
     def __init__(self, epsilon_1, epsilon_2=None, alpha_list=ALPHAS):
         """
         - Algorithm 2 with c = 1 from https://papers.nips.cc/paper/2020/file/e9bf14a419d77534105016f5ec122d62-Paper.pdf
+        - By default we set $\epsilon_2 = 2\epsilon_1$ like Salil
         - $M_\rho = Lap(\Delta/\epsilon_1)$ is $\epsilon_\rho(\alpha) = \epsilon_{\lambda_1}(\alpha)$-RDP for queries with sensitivity $\Delta$, with  $\epsilon_\lambda(\alpha)$ the Laplace RDP curve with $\lambda_1 = 1/\epsilon_1$.
         - $M_\nu = Lap(2\Delta/\epsilon_2)$ is $\epsilon_\nu(\alpha) = \epsilon_{\lambda_2}(\alpha)$-RDP for queries with sensitivity $2\Delta$, with $\lambda_2 = 1/\epsilon_2$.
-        - If we set $\epsilon_2 = 2\epsilon_1$ like Salil, $\epsilon_\nu(\alpha) \neq \epsilon_\rho(\alpha)$.
-        - Since $\epsilon_\rho(\infty) = \epsilon_2 < \infty$ we can use Point 3 of Theorem 8, so SV is $\epsilon_\nu(\alpha) + \epsilon_\rho(\alpha)$-RDP
+        - Since $\epsilon_\rho(\infty) = \epsilon_2 < \infty$ we can use Point 3 of Theorem 8, so SV is $\epsilon_\nu(\alpha) +  \epsilon_2$-RDP
         """
         epsilon_2 = epsilon_2 if epsilon_2 else 2 * epsilon_1
         orders = {
-            alpha: rdp_curve(alpha, 1 / epsilon_1) + rdp_curve(alpha, 1 / epsilon_2)
-            for alpha in alpha_list
+            alpha: rdp_curve(alpha, 1 / epsilon_1) + epsilon_2 for alpha in alpha_list
         }
         super().__init__(orders)
 
