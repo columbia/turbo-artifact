@@ -7,7 +7,9 @@ import numpy as np
 from loguru import logger
 from termcolor import colored
 
-from precycle.budget.curves import LaplaceCurve, LaplaceSVCurve, PureDPtoRDP, ZeroCurve
+from precycle.budget import BasicBudget
+from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
+
 from precycle.cache.deterministic_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 
@@ -117,15 +119,19 @@ class Executor:
                     # time.sleep(2)
 
                 run_metadata["sv_check_status"].append(status)
-                sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(task.blocks)
+                sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(
+                    task.blocks
+                )
                 run_metadata["sv_node_id"].append(sv_id)
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
-                # print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
-                if not isinstance(run_budget, ZeroCurve):
+                print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
+                if not isinstance(run_budget, ZeroCurve) or (
+                    isinstance(run_budget, BasicBudget) and run_budget.epsilon > 0
+                ):
                     self.budget_accountant.consume_block_budget(block, run_budget)
 
         return noisy_result, status_message
@@ -149,12 +155,11 @@ class Executor:
 
         # All blocks covered by the SV must pay
         blocks_to_pay = range(node_id[0], node_id[1] + 1)
-        # initialization_budget = PureDPtoRDP(epsilon=3 * sv.epsilon)
-
-        initialization_budget = LaplaceSVCurve(
-            epsilon_1=sv.epsilon, epsilon_2=2 * sv.epsilon
+        initialization_budget = (
+            BasicBudget(3 * sv.epsilon)
+            if self.config.puredp
+            else PureDPtoRDP(epsilon=3 * sv.epsilon)
         )
-        # print(budget_per_block)
 
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
         if not sv.initialized:
@@ -211,7 +216,12 @@ class Executor:
             # True output never released except in debugging logs
             true_result = self.db.run_query(query, run_op.blocks)
             laplace_scale = run_op.noise_std / math.sqrt(2)
-            run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+            epsilon = sensitivity / laplace_scale
+            run_budget = (
+                BasicBudget(epsilon)
+                if self.config.puredp
+                else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+            )
             noise = np.random.laplace(scale=laplace_scale)
 
         else:  # Cached
@@ -219,7 +229,7 @@ class Executor:
 
             if run_op.noise_std >= cache_entry.noise_std:
                 # We already have a good estimate in the cache
-                run_budget = ZeroCurve()
+                run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
             else:
 
@@ -227,7 +237,12 @@ class Executor:
                 if not self.config.variance_reduction:
                     # Just compute from scratch and pay for it
                     laplace_scale = run_op.noise_std / math.sqrt(2)
-                    run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+                    epsilon = sensitivity / laplace_scale
+                    run_budget = (
+                        BasicBudget(epsilon)
+                        if self.confi.puredp
+                        else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+                    )
                     noise = np.random.laplace(scale=laplace_scale)
                 else:
                     # TODO a temporary hack to enable VR.
@@ -240,8 +255,10 @@ class Executor:
                     run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
                     run_laplace_scale = sensitivity / run_pure_epsilon
 
-                    run_budget = LaplaceCurve(
-                        laplace_noise=run_laplace_scale / sensitivity
+                    run_budget = (
+                        BasicBudget(run_pure_epsilon)
+                        if self.confi.puredp
+                        else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
                     )
                     # TODO: Temporary hack is that I don't compute the noise by using the coefficients
                     noise = np.random.laplace(scale=target_laplace_scale)
@@ -268,7 +285,9 @@ class Executor:
                 #     noise = a * cache_entry.noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache
-        if not isinstance(run_budget, ZeroCurve):
+        if not isinstance(run_budget, ZeroCurve) or (
+            isinstance(run_budget, BasicBudget) and run_budget.epsilon > 0
+        ):
             cache_entry = CacheEntry(
                 result=true_result, noise_std=run_op.noise_std, noise=noise
             )
@@ -291,7 +310,7 @@ class Executor:
         # Run histogram to get the predicted output
         noisy_result = cache_entry.histogram.run(query)
         # Histogram prediction doesn't cost anything
-        run_budget = ZeroCurve()
+        run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv

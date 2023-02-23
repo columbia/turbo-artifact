@@ -108,7 +108,7 @@ def caching_dynamic_multiblock():
 
     grid_online(
         global_seed=64,
-        logs_dir="multiexps/dynamic_multiblock_no_bootstrap_renyi3",
+        logs_dir="multiexps/dynamic_multiblock_checking_new_renyi200",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -122,8 +122,10 @@ def caching_dynamic_multiblock():
         block_selection_policy=["LatestBlocks"],
         # avg_num_tasks_per_block=[5e4],
         avg_num_tasks_per_block=[10e3],
+        # avg_num_tasks_per_block=[25e2],
         # max_tasks=[75e5],
         max_tasks=[200e3],
+        # max_tasks=[50e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
@@ -131,14 +133,70 @@ def caching_dynamic_multiblock():
         # zipf_k=[0, 0.5, 1, 1.5],
         heuristic=[
             # "",
-            "bin_visits:500-10",
-            "bin_visits:500-20",
-            "bin_visits:500-50",
+            # "bin_visits:500-10",
+            "bin_visits:100-5",
+            # "bin_visits:200-5",
+            "bin_visits:200-5",
+            "bin_visits:500-5",
+            "bin_visits:1000-1",
+            # "bin_visits:500-50",
+            # "bin_visits:200-20",
+            # "bin_visits:200-10",
+            # "bin_visits:100-20",
+            # "bin_visits:200-50",
         ],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate = [0.05, 0.1, 0.15, 0.2],
-        bootstrapping = [True, False]
+        learning_rate=[0.05, 0.1, 0.15, 0.2],
+        # learning_rate = [0.1, 0.15, 0.2],
+        bootstrapping=[True, False],
+    )
+
+
+def caching_dynamic_multiblock500():
+    # task_paths = ["1:1:1:1:1:2:5:10:20:30:60:90blocks_34425queries.privacy_tasks.csv"]
+    task_paths = ["1:1:1:2:5:10blocks_34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+
+    grid_online(
+        global_seed=64,
+        logs_dir="multiexps/dynamic_multiblock_no_bootstrap_renyi500k",
+        tasks_path=task_paths,
+        blocks_path=blocks_path,
+        blocks_metadata=blocks_metadata,
+        planner=["MinCuts"],
+        # cache=["CombinedCache"],
+        cache=["DeterministicCache"],
+        # cache=["CombinedCache", "DeterministicCache"],
+        initial_blocks=[1],
+        # max_blocks=[150],
+        max_blocks=[20],
+        block_selection_policy=["LatestBlocks"],
+        # avg_num_tasks_per_block=[5e4],
+        avg_num_tasks_per_block=[25e3],
+        # max_tasks=[75e5],
+        max_tasks=[500e3],
+        initial_tasks=[0],
+        alpha=[0.05],
+        beta=[0.001],
+        zipf_k=[0.5],
+        # zipf_k=[0, 0.5, 1, 1.5],
+        heuristic=[
+            "",
+            # "bin_visits:500-10",
+            # "bin_visits:500-20",
+            # "bin_visits:500-50",
+            # "bin_visits:200-10",
+            # "bin_visits:200-20",
+            # "bin_visits:200-50",
+        ],
+        variance_reduction=[True],
+        log_every_n_tasks=500,
+        # learning_rate = [0.05, 0.1, 0.15, 0.2],
+        # learning_rate = [0.1, 0.15, 0.2],
+        # bootstrapping = [True, False]
     )
 
 

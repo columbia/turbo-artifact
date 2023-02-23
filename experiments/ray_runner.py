@@ -32,7 +32,7 @@ def grid_online(
     alpha: List[int] = [0.05],
     beta: List[int] = [0.0001],
     learning_rate: List[int] = [0.01],
-    heuristic: str = "total_updates_counts:100",
+    heuristic: str = "bin_updates:500:50",
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
     log_every_n_tasks: int = 100,
@@ -42,6 +42,7 @@ def grid_online(
     enable_mlflow = True
     config = {
         "mock": True,
+        "puredp": True,
         "variance_reduction": variance_reduction,
         "alpha": tune.grid_search(alpha),
         "beta": tune.grid_search(beta),
@@ -77,7 +78,7 @@ def grid_online(
         "logs": {
             "verbose": False,
             "save": True,
-            "mlflow": True,
+            "mlflow": False,
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
         },

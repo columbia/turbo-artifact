@@ -81,13 +81,18 @@ def get_logs(
     total_laplace_runs = 0
     total_sv_misses = 0
     total_sv_checks = 0
-    global_budget = 0
 
     # Finally logging only a small number of tasks for faster analysis
     chunks = {}
     tasks_to_log = []
     accummulated_budget_per_block = {}
     sv_misses = {}
+
+    blocks_initial_budget = RenyiBudget.from_epsilon_delta(
+        epsilon=config_dict["budget_accountant"]["epsilon"],
+        delta=config_dict["budget_accountant"]["delta"],
+        alpha_list=config_dict["budget_accountant"]["alphas"],
+    )
 
     for i, task_info in enumerate(tasks_info):
 
@@ -122,8 +127,8 @@ def get_logs(
                 if sv_check_status == False:
                     total_sv_misses += 1
                     if sv_node_id not in sv_misses:
-                        sv_misses[sv_node_id] = 0
-                    sv_misses[sv_node_id] += 1
+                        sv_misses[str(sv_node_id)] = 0
+                    sv_misses[str(sv_node_id)] += 1
                 total_sv_checks += 1
 
             total_budget_per_block = {}
@@ -158,15 +163,22 @@ def get_logs(
             # Final Global budget consumption across all blocks - to output in the terminal
             if i == len(tasks_info) - 1:
                 # For each block find the order with the max remaining capacity
-                max_orders = {}
-                for block_id, budget in block_budgets_info:
-                    orders = budget["orders"]
-                    order = max(orders, key=orders.get)
-                    max_orders[block_id] = order
-                for block, budget in accummulated_budget_per_block.items():
-                    global_budget += budget.epsilon(max_orders[str(block)])
+                # max_orders = {}
+                # for block_id, budget in block_budgets_info:
+                #     orders = budget["orders"]
+                #     max_order = max(orders, key=orders.get)
+                #     max_orders[block_id] = max_order
 
-    
+                # For each task and each block find the accumulated normalized total budget
+                global_budget = 0
+                for block, budget in accummulated_budget_per_block.items():
+                    global_budget += budget.epsilon
+                    # max_order = max_orders[str(block)]
+                    # global_budget += budget.epsilon(
+                        # max_order
+                    # ) / blocks_initial_budget.epsilon(max_order)
+                # global_budget = global_budget / len(block_budgets_info)
+
             task_info.update(
                 {
                     "laplace_runs": laplace_runs,
@@ -174,15 +186,13 @@ def get_logs(
                 }
             )
 
-            if task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0:
+            if (
+                task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0
+                or i == len(tasks_info) - 1
+            ):
                 tasks_to_log.append(task_info)
 
-    blocks_initial_budget = RenyiBudget.from_epsilon_delta(
-        epsilon=config_dict["budget_accountant"]["epsilon"],
-        delta=config_dict["budget_accountant"]["delta"],
-        alpha_list=config_dict["budget_accountant"]["alphas"],
-    ).dump()
-
+    blocks_initial_budget = blocks_initial_budget.dump()
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
@@ -219,7 +229,7 @@ def get_logs(
             "bootstrapping": config_dict["cache"]["probabilistic_cfg"]["bootstrapping"],
             "global_budget": global_budget,
             "chunks": chunks,
-            "sv_misses": sv_misses
+            "sv_misses": sv_misses,
         }
     )
 
