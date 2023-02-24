@@ -88,11 +88,15 @@ def get_logs(
     accummulated_budget_per_block = {}
     sv_misses = {}
 
-    blocks_initial_budget = RenyiBudget.from_epsilon_delta(
-        epsilon=config_dict["budget_accountant"]["epsilon"],
-        delta=config_dict["budget_accountant"]["delta"],
-        alpha_list=config_dict["budget_accountant"]["alphas"],
-    )
+    if not config_dict["puredp"]:
+        blocks_initial_budget = RenyiBudget.from_epsilon_delta(
+            epsilon=config_dict["budget_accountant"]["epsilon"],
+            delta=config_dict["budget_accountant"]["delta"],
+            alpha_list=config_dict["budget_accountant"]["alphas"],
+        )
+    else:
+        blocks_initial_budget = config_dict["budget_accountant"]["epsilon"]
+        
 
     for i, task_info in enumerate(tasks_info):
 
@@ -192,20 +196,30 @@ def get_logs(
             ):
                 tasks_to_log.append(task_info)
 
-    blocks_initial_budget = blocks_initial_budget.dump()
+    blocks_initial_budget = blocks_initial_budget #.dump()
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
 
-    if config_dict["cache"]["type"] == "DeterministicCache":
-        cache_type = "DeterministicCache"
+    if config_dict["cache"]["type"] == "LaplaceCache":
+        cache_type = "DirectLaplaceCache"
         heuristic = ""
-    elif config_dict["cache"]["type"] == "ProbabilisticCache":
-        cache_type = "ProbabilisticCache"
+        learning_rate = ""
+        bootstrapping = ""
+        key = cache_type
+    elif config_dict["cache"]["type"] == "PMWCache":
+        cache_type = "PMWCache"
         heuristic = ""
+        learning_rate = ""
+        bootstrapping = ""
+        key = cache_type
+        
     else:
-        cache_type = "MixedCache"
+        cache_type = "HybridCache"
         heuristic = config_dict["cache"]["probabilistic_cfg"]["heuristic"]
+        learning_rate = str(config_dict["cache"]["probabilistic_cfg"]["learning_rate"])
+        bootstrapping = str(config_dict["cache"]["probabilistic_cfg"]["bootstrapping"])
+        key = cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping 
 
     config.update(
         {
@@ -225,11 +239,12 @@ def get_logs(
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
             "config": config_dict,
-            "learning_rate": config_dict["cache"]["probabilistic_cfg"]["learning_rate"],
-            "bootstrapping": config_dict["cache"]["probabilistic_cfg"]["bootstrapping"],
+            "learning_rate": learning_rate,
+            "bootstrapping": bootstrapping,
             "global_budget": global_budget,
             "chunks": chunks,
             "sv_misses": sv_misses,
+            "key": key
         }
     )
 

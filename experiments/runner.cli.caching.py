@@ -20,56 +20,60 @@ def caching_monoblock():
 
     grid_online(
         global_seed=64,
-        logs_dir="monoblock-experiments",
+        logs_dir="monoblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        cache=["HybridCache"],
-        # cache=["LaplaceCache"],
-        # cache=["PMWCache"],
+        # cache=["HybridCache"],
+        cache=["HybridCache", "LaplaceCache", "PMWCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[1e2],
-        max_tasks=[1e2],
+        avg_num_tasks_per_block=[25e3],
+        max_tasks=[25e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[0, 0.5, 1, 1.5],
-        # zipf_k=[1],
+        # zipf_k=[1.5],
         heuristic=[
-            "",
-            # "bin_visits:1-1",
+            # "",
+            # # "bin_visits:1-1",
             # "bin_visits:1-20",
+            "bin_visits:100-10",        # Best
+            # "bin_visits:200-10",
+            # "bin_visits:300-20",
             # "bin_visits:500-20",
+            # "bin_visits:1000-5",
             # "bin_visits:1000-20",
-            # "bin_visits:1-100",
-            # "bin_visits:500-100",
-            # "bin_visits:1000-100",
+            # "bin_visits:1000-10",
         ],
         variance_reduction=[True],
         log_every_n_tasks=100,
+        learning_rate=[0.2], #[0.05, 0.1, 0.15, 0.2],
+        bootstrapping=[False],
+
     )
 
 
 def caching_static_multiblock():
     # task_paths = ["1:1:2:7:7:14:30:60:90:120:150:180:210:240:blocks_34425queries.privacy_tasks.csv"]
     # task_paths = ["1:2:7:14:21:30:60:90:120blocks_34425queries.privacy_tasks.csv"]
-    task_paths = ["1:2:4blocks_34425queries.privacy_tasks.csv"]
+    task_paths = ["1:2:3:4:5blocks_34425queries.privacy_tasks.csv"]
 
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
-        global_seed=128,
-        logs_dir="static_multiblock_renyi",
+        global_seed=64,
+        logs_dir="static_multiblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        # cache=["HybridCache"],
-        cache=["LaplaceCache"],
+        cache=["HybridCache"],
+        # cache=["LaplaceCache"],
         initial_blocks=[5],
         max_blocks=[5],
         block_selection_policy=["RandomBlocks"],
@@ -78,13 +82,17 @@ def caching_static_multiblock():
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[0.5],
+        zipf_k=[0.5, 1],
         # zipf_k=[0, 0.5, 1, 1.5],
         heuristic=[
-            "",
+            # "",
             # "bin_visits:500-50",
             # "bin_visits:500-10",
             # "bin_visits:200-10",
+            # "bin_visits:100-10",
+            "bin_visits:100-5",
+            "bin_visits:1-5",
+            "bin_visits:1-10",
             # "bin_visits:400-50",
             # "bin_visits:1000-50",
             # "bin_visits:1000-20",
@@ -94,7 +102,7 @@ def caching_static_multiblock():
         ],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        # learning_rate = [0.05, 0.1, 0.15, 0.2] #[0.05, 0.01, 0.1]
+        learning_rate = [0.05, 0.1, 0.15, 0.2] #[0.05, 0.01, 0.1]
     )
 
 
@@ -113,7 +121,7 @@ def caching_dynamic_multiblock():
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
         cache=["HybridCache"],
-        # cache=["LaplaceCache"],
+        # cache=["LaplaceCache", "HybridCache"],
         initial_blocks=[1],
         # max_blocks=[150],
         max_blocks=[20],
@@ -132,11 +140,11 @@ def caching_dynamic_multiblock():
         heuristic=[
             # "",
             # "bin_visits:500-10",
-            "bin_visits:100-5",
+            # "bin_visits:100-5",
             # "bin_visits:200-5",
-            "bin_visits:200-5",
-            "bin_visits:500-5",
-            "bin_visits:1000-1",
+            # "bin_visits:200-5",
+            "bin_visits:500-20",
+            # "bin_visits:1000-1",
             # "bin_visits:500-50",
             # "bin_visits:200-20",
             # "bin_visits:200-10",

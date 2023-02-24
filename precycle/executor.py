@@ -141,8 +141,8 @@ class Executor:
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
                 print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
-                if not isinstance(run_budget, ZeroCurve) or (
-                    isinstance(run_budget, BasicBudget) and run_budget.epsilon > 0
+                if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
+                  self.config.puredp and run_budget.epsilon > 0
                 ):
                     self.budget_accountant.consume_block_budget(block, run_budget)
 
@@ -269,7 +269,7 @@ class Executor:
 
                     run_budget = (
                         BasicBudget(run_pure_epsilon)
-                        if self.confi.puredp
+                        if self.config.puredp
                         else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
                     )
                     # TODO: Temporary hack is that I don't compute the noise by using the coefficients
@@ -297,8 +297,8 @@ class Executor:
                 #     noise = a * cache_entry.noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache
-        if not isinstance(run_budget, ZeroCurve) or (
-            isinstance(run_budget, BasicBudget) and run_budget.epsilon > 0
+        if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
+            self.config.puredp and run_budget.epsilon > 0
         ):
             cache_entry = CacheEntry(
                 result=true_result, noise_std=run_op.noise_std, noise=noise
