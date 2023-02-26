@@ -87,6 +87,7 @@ def get_logs(
     tasks_to_log = []
     accummulated_budget_per_block = {}
     sv_misses = {}
+    sv_checks = {}
 
     if not config_dict["puredp"]:
         blocks_initial_budget = RenyiBudget.from_epsilon_delta(
@@ -127,12 +128,15 @@ def get_logs(
             node_id_list = run_metadata["sv_node_id"]
             assert len(sv_check_status_list) <= 1
             for sv_check_status in sv_check_status_list:
-                sv_node_id = node_id_list[0]
+                sv_node_id = str(node_id_list[0])
                 if sv_check_status == False:
                     total_sv_misses += 1
                     if sv_node_id not in sv_misses:
-                        sv_misses[str(sv_node_id)] = 0
-                    sv_misses[str(sv_node_id)] += 1
+                        sv_misses[sv_node_id] = 0
+                    sv_misses[sv_node_id] += 1
+                if sv_node_id not in sv_checks:
+                    sv_checks[sv_node_id] = 0
+                sv_checks[sv_node_id] += 1
                 total_sv_checks += 1
 
             total_budget_per_block = {}

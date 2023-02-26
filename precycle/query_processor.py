@@ -25,6 +25,8 @@ class QueryProcessor:
 
         self.query_converter = QueryConverter(self.config.blocks_metadata)
         self.tasks_info = []
+        self.total_budget_spent_all_blocks = 0 #ZeroCurve()
+
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -50,6 +52,12 @@ class QueryProcessor:
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    "green",
+                )
+            )
             result, status = self.executor.execute_plan(plan, task, run_metadata)
 
             # Sanity checks
@@ -65,21 +73,21 @@ class QueryProcessor:
             if self.config.logs.mlflow:
                 # Log in MLFLOW to understand the bumps
                 budget_per_block_list = run_metadata["budget_per_block"]
-                total_budget_spent_all_blocks = ZeroCurve()
-                total_budget_spent_per_block = {}
+                # total_budget_spent_all_blocks = 0 #ZeroCurve()
+                # total_budget_spent_per_block = {}
 
                 for budget_per_block in budget_per_block_list:
                     for block, budget in budget_per_block.items():
-                        total_budget_spent_all_blocks += budget
-                        if block not in total_budget_spent_per_block:
-                            total_budget_spent_per_block[block] = max(budget.epsilons)
-                        else:
-                            total_budget_spent_per_block[block] += max(budget.epsilons)
+                        self.total_budget_spent_all_blocks += budget.epsilon
+                        # if block not in total_budget_spent_per_block:
+                            # total_budget_spent_per_block[block] = budget.epsilon #max(budget.epsilons)
+                        # else:
+                            # total_budget_spent_per_block[block] += budget.epsilon #max(budget.epsilons)
 
-                for block, budget in total_budget_spent_per_block.items():
-                    mlflow_log(f"Block{block}", budget, task.id)
+                # for block, budget in total_budget_spent_per_block.items():
+                    # mlflow_log(f"Block{block}", budget, task.id)
                 mlflow_log(
-                    f"AllBlocks", max(total_budget_spent_all_blocks.epsilons), task.id
+                    f"AllBlocks", self.total_budget_spent_all_blocks, task.id
                 )
 
             status = FINISHED

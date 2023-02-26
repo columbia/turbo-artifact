@@ -104,21 +104,38 @@ class MockHistogramCache:
         cache_entry = self.read_entry(blocks)
         assert cache_entry is not None
 
+        bin_updates = [cache_entry.bin_updates[i] for i in flat_indices(query)]
+        new_threshold = min(bin_updates) + self.bin_thershold_step
         for i in flat_indices(query):
             # Add 'bin_threshold_step' more update rounds to the bins
-            cache_entry.bin_thresholds[i] = (
-                cache_entry.bin_updates[i] + self.bin_thershold_step
-            )
-
-        # Write updated entry
+            cache_entry.bin_thresholds[i] = new_threshold
+ 
+        # for i in flat_indices(query):
+        #     # Add 'bin_threshold_step' more update rounds to the bins
+        #     cache_entry.bin_thresholds[i] = (
+        #         cache_entry.bin_updates[i] + step #bin_threshold_steps[i] #self.bin_thershold_step
+        #     )
+        # # Write updated entry
         self.write_entry(blocks, cache_entry)
+
+    def get_bin_updates(self, blocks, query):
+        cache_entry = self.read_entry(blocks)
+        assert cache_entry is not None
+        bin_updates = [cache_entry.bin_updates[i] for i in flat_indices(query)]
+        return bin_updates
+
+    def get_bin_thresholds(self, blocks, query):
+        cache_entry = self.read_entry(blocks)
+        assert cache_entry is not None
+        bin_thresholds = [cache_entry.bin_thresholds[i] for i in flat_indices(query)]
+        return bin_thresholds
 
     def is_query_hard(self, query, blocks):
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
             return True
 
-        # If each bin has been upated at least <bin-threshold> times the query is easy
+        # If each bin has been updated at least <bin-threshold> times the query is easy
         for i in flat_indices(query):
             if cache_entry.bin_updates[i] < cache_entry.bin_thresholds[i]:
                 return True

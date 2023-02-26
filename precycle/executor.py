@@ -129,7 +129,6 @@ class Executor:
                     status_message = "sv_failed"
                     print("sv failed, task: ", task.id)
                     # time.sleep(2)
-
                 run_metadata["sv_check_status"].append(status)
                 sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(
                     task.blocks
@@ -140,7 +139,7 @@ class Executor:
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
-                print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
+                # print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
                 if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
                   self.config.puredp and run_budget.epsilon > 0
                 ):
@@ -208,13 +207,26 @@ class Executor:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
             sv.initialized = False
             # Increase the heuristic threshold in the Histograms that were used in this round
+            # bin_updates = []
+            # bin_thresholds = []
+            # for run_op in plan.l:
+            #     if isinstance(run_op, RunHistogram):
+            #         bin_updates.append(self.cache.histogram_cache.get_bin_updates(
+            #             run_op.blocks, query
+            #         ))
+            #         bin_thresholds.append(self.cache.histogram_cache.get_bin_thresholds(
+            #             run_op.blocks, query
+            #         ))
+            # print("bin_updates", np.array(bin_updates))
+            # print("bin_thresholds", np.array(bin_thresholds))
+            
             for run_op in plan.l:
                 if isinstance(run_op, RunHistogram):
                     self.cache.histogram_cache.update_entry_threshold(
                         run_op.blocks, query
                     )
             return False
-        print(colored("FREE LUNCH - yum yum\n", "yellow"))
+        print(colored("FREE LUNCH - yum yum\n", "blue"))
         # NOTE: Histogram nodes get updated only using external updates
         return True
 

@@ -91,7 +91,7 @@ class MockBudgetAccountant:
         if key in self.kv_store:
             budget = self.kv_store[key]
             return budget
-        logger.info(f"Block {block} does not exist")
+        # logger.info(f"Block {block} does not exist")
         return None
 
     def get_all_block_budgets(self):

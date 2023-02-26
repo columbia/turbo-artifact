@@ -10,9 +10,9 @@
         "port": 6378,
         "type": "HybridCache",
         "probabilistic_cfg": {
-            "learning_rate": 0.1,
-            "heuristic": "bin_visits:200-5",
-            "bootstrapping": true
+            "learning_rate": 0.2,
+            "heuristic": "bin_visits:100-10",
+            "bootstrapping": false
 
         }
     },
@@ -33,17 +33,17 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 1,
-        "max_num": 1,
+        "initial_num": 5,
+        "max_num": 5,
         "arrival_interval": 1,
         "block_data_path": "data/covid19/covid19_data/blocks",
         "block_metadata_path": "data/covid19/covid19_data/blocks/metadata.json"
     },
     "tasks": {
-        "path": "data/covid19/covid19_workload/1:1blocks_34425queries.privacy_tasks.csv",
-        "block_selection_policy": "LatestBlocks",
-        "avg_num_tasks_per_block": 25e3,
-        "max_num": 25e3,
+        "path": "data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "block_selection_policy": "RandomBlocks",
+        "avg_num_tasks_per_block": 20e3,
+        "max_num": 100e3,
         "initial_num": 0,
         "zipf_k": 0.5
     },
@@ -58,7 +58,7 @@
     "logs": {
         "verbose": false,
         "save": true,
-        "mlflow": false,
+        "mlflow": true,
         "mlflow_experiment_id": "precycle",
         "loguru_level": "INFO",
         "log_every_n_tasks": 500

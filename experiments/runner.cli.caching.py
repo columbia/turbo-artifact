@@ -59,40 +59,45 @@ def caching_monoblock():
 def caching_static_multiblock():
     # task_paths = ["1:1:2:7:7:14:30:60:90:120:150:180:210:240:blocks_34425queries.privacy_tasks.csv"]
     # task_paths = ["1:2:7:14:21:30:60:90:120blocks_34425queries.privacy_tasks.csv"]
-    task_paths = ["1:2:3:4:5blocks_34425queries.privacy_tasks.csv"]
-
+    # task_paths = ["1:2:3:4:5blocks_34425queries.privacy_tasks.csv"]
+    task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="static_multiblock",
+        logs_dir="static-multiblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        cache=["HybridCache"],
-        # cache=["LaplaceCache"],
-        initial_blocks=[5],
-        max_blocks=[5],
+        # cache=["HybridCache"],
+        cache=["LaplaceCache"],
+        # cache=["LaplaceCache", "HybridCache"],
+        initial_blocks=[150],
+        max_blocks=[150],
         block_selection_policy=["RandomBlocks"],
-        avg_num_tasks_per_block=[20e3],
-        max_tasks=[100e3],
+        avg_num_tasks_per_block=[2e3],
+        max_tasks=[300e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[0.5, 1],
-        # zipf_k=[0, 0.5, 1, 1.5],
+        # zipf_k=[0.5],
+        zipf_k=[0, 1, 1.5],
         heuristic=[
             # "",
             # "bin_visits:500-50",
             # "bin_visits:500-10",
             # "bin_visits:200-10",
+            # "bin_visits:200-5",
             # "bin_visits:100-10",
             "bin_visits:100-5",
-            "bin_visits:1-5",
-            "bin_visits:1-10",
+            # "bin_visits:50-5",
+            # "bin_visits:100-10",
+            # "bin_visits:100-1",
+            # "bin_visits:1-5",
+            # "bin_visits:1-10",
             # "bin_visits:400-50",
             # "bin_visits:1000-50",
             # "bin_visits:1000-20",
@@ -102,7 +107,9 @@ def caching_static_multiblock():
         ],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate = [0.05, 0.1, 0.15, 0.2] #[0.05, 0.01, 0.1]
+        # learning_rate = [0.05, 0.1, 0.15, 0.2], #[0.05, 0.01, 0.1]
+        learning_rate = [0.2],
+        bootstrapping=[False]
     )
 
 
