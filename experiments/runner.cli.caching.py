@@ -25,7 +25,6 @@ def caching_monoblock():
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        # cache=["HybridCache"],
         cache=["HybridCache", "LaplaceCache", "PMWCache"],
         initial_blocks=[1],
         max_blocks=[1],
@@ -35,24 +34,11 @@ def caching_monoblock():
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[0, 0.5, 1, 1.5],
-        # zipf_k=[1.5],
-        heuristic=[
-            # "",
-            # # "bin_visits:1-1",
-            # "bin_visits:1-20",
-            "bin_visits:100-10",        # Best
-            # "bin_visits:200-10",
-            # "bin_visits:300-20",
-            # "bin_visits:500-20",
-            # "bin_visits:1000-5",
-            # "bin_visits:1000-20",
-            # "bin_visits:1000-10",
-        ],
+        heuristic=["bin_visits:100-10"],
         variance_reduction=[True],
         log_every_n_tasks=100,
-        learning_rate=[0.2], #[0.05, 0.1, 0.15, 0.2],
+        learning_rate=[0.2],
         bootstrapping=[False],
-
     )
 
 
@@ -79,14 +65,13 @@ def caching_static_multiblock_laplace_vs_hybrid():
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[0, 0.5, 1, 1.5],
-        heuristic=[
-            "bin_visits:100-5",
-        ],
+        heuristic=["bin_visits:100-5"],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate = [0.2],
-        bootstrapping=[False]
+        learning_rate=[0.2],
+        bootstrapping=[False],
     )
+
 
 def caching_static_multiblock_heuristics():
     task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
@@ -119,9 +104,10 @@ def caching_static_multiblock_heuristics():
         ],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate = [0.2],
-        bootstrapping=[False]
+        learning_rate=[0.2],
+        bootstrapping=[False],
     )
+
 
 def caching_static_multiblock_learning_rate():
     task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
@@ -146,72 +132,49 @@ def caching_static_multiblock_learning_rate():
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[1],
-        heuristic=[
-            "bin_visits:100-5",
-        ],
+        heuristic=["bin_visits:100-5"],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate = [0.05, 0.1, 0.15, 0.2],
-        bootstrapping=[False]
+        learning_rate=[0.05, 0.1, 0.15, 0.2],
+        bootstrapping=[False],
     )
 
 
-def caching_dynamic_multiblock():
-    # task_paths = ["1:1:1:1:1:2:5:10:20:30:60:90blocks_34425queries.privacy_tasks.csv"]
-    task_paths = ["1:1:1:2:5:10blocks_34425queries.privacy_tasks.csv"]
+def streaming_multiblock_laplace_vs_hybrid():
+    task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="multiexps/dynamic_multiblock_checking_new_renyi200",
+        logs_dir="streaming_multiblock_laplace_vs_hybrid",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
         cache=["HybridCache"],
+        # cache=["LaplaceCache"],
         # cache=["LaplaceCache", "HybridCache"],
         initial_blocks=[1],
-        # max_blocks=[150],
-        max_blocks=[20],
+        max_blocks=[150],
         block_selection_policy=["LatestBlocks"],
-        # avg_num_tasks_per_block=[5e4],
-        avg_num_tasks_per_block=[10e3],
-        # avg_num_tasks_per_block=[25e2],
-        # max_tasks=[75e5],
-        max_tasks=[200e3],
-        # max_tasks=[50e3],
+        avg_num_tasks_per_block=[2e3],
+        max_tasks=[300e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[0.5],
-        # zipf_k=[0, 0.5, 1, 1.5],
-        heuristic=[
-            # "",
-            # "bin_visits:500-10",
-            # "bin_visits:100-5",
-            # "bin_visits:200-5",
-            # "bin_visits:200-5",
-            "bin_visits:500-20",
-            # "bin_visits:1000-1",
-            # "bin_visits:500-50",
-            # "bin_visits:200-20",
-            # "bin_visits:200-10",
-            # "bin_visits:100-20",
-            # "bin_visits:200-50",
-        ],
+        zipf_k=[0, 0.5, 1, 1.5],
+        heuristic=["bin_visits:100-5"],
         variance_reduction=[True],
         log_every_n_tasks=500,
-        learning_rate=[0.05, 0.1, 0.15, 0.2],
-        # learning_rate = [0.1, 0.15, 0.2],
+        learning_rate=[0.2],
         bootstrapping=[True, False],
     )
 
 
 @app.command()
 def run(exp: str = "caching_monoblock", loguru_level: str = "INFO"):
-
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
     globals()[f"{exp}"]()

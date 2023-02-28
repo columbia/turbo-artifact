@@ -9,10 +9,12 @@ from experiments.ray.analysis import load_ray_experiment
 global_order = "64"
 pure_dp = True
 
+
 def get_df(path):
     logs = LOGS_PATH.joinpath("ray/" + path)
     df = load_ray_experiment(logs)
     return df
+
 
 def get_tasks_information(df):
     dfs = []
@@ -63,6 +65,7 @@ def get_tasks_information(df):
         return tasks
     return None
 
+
 def get_best_alphas(df):
     for (blocks, key) in df[["block_budgets_info", "key"]].values:
 
@@ -76,12 +79,31 @@ def get_best_alphas(df):
                 max_orders[block_id] = global_order
         print(key, max_orders)
 
+
 def get_budgets_information(df, blocks):
     dfs = []
     global_dfs = []
 
-    for (tasks, blocks, initial_budget, key, zipf_k) in df[
-        ["tasks_info", "block_budgets_info", "blocks_initial_budget", "key", "zipf_k"]
+    for (
+        tasks,
+        blocks,
+        initial_budget,
+        key,
+        zipf_k,
+        cache,
+        learning_rate,
+        bootstrapping,
+    ) in df[
+        [
+            "tasks_info",
+            "block_budgets_info",
+            "blocks_initial_budget",
+            "key",
+            "zipf_k",
+            "cache",
+            "learning_rate",
+            "bootstrapping",
+        ]
     ].values:
 
         # for each block find the order with the max remaining capacity
@@ -96,16 +118,16 @@ def get_budgets_information(df, blocks):
                     max_orders[block_id] = global_order
 
         for i, task in enumerate(tasks):
-            if not (i % 100 == 0 or i ==  len(tasks)-1):
+            if not (i % 100 == 0 or i == len(tasks) - 1):
                 continue
-            
+
             run_metadata = task["run_metadata"]
             budget_per_block = run_metadata["budget_per_block"]
             for block, budget in budget_per_block.items():
                 if not pure_dp:
                     task_budget = budget["orders"][max_orders[str(block)]]
                 else:
-                    task_budget = budget['epsilon']
+                    task_budget = budget["epsilon"]
 
             global_budget = 0
             budget_per_block = run_metadata["accummulated_budget_per_block"]
@@ -113,13 +135,12 @@ def get_budgets_information(df, blocks):
                 if not pure_dp:
                     accummulated_budget = budget["orders"][max_orders[str(block)]]
                     global_budget += (
-                    accummulated_budget
-                    / initial_budget["orders"][max_orders[str(block)]]
-                )
+                        accummulated_budget
+                        / initial_budget["orders"][max_orders[str(block)]]
+                    )
                 else:
-                    accummulated_budget = budget['epsilon']
+                    accummulated_budget = budget["epsilon"]
                     global_budget += accummulated_budget
-                
 
                 dfs.append(
                     pd.DataFrame(
@@ -131,6 +152,9 @@ def get_budgets_information(df, blocks):
                                 "budget": task_budget,
                                 "key": key,
                                 "zipf_k": zipf_k,
+                                "cache": cache,
+                                "learning_rate": learning_rate,
+                                "bootstrapping": bootstrapping,
                             }
                         ]
                     )
@@ -146,6 +170,9 @@ def get_budgets_information(df, blocks):
                             "key": key,
                             "global_budget": global_budget,
                             "zipf_k": zipf_k,
+                            "cache": cache,
+                            "learning_rate": learning_rate,
+                            "bootstrapping": bootstrapping,
                         }
                     ]
                 )
@@ -157,11 +184,30 @@ def get_budgets_information(df, blocks):
         return time_budgets, global_time_budgets
     return None
 
+
 def get_blocks_information(df):
     dfs = []
 
-    for (blocks, initial_budget, key, zipf_k, total_tasks) in df[
-        ["block_budgets_info", "blocks_initial_budget", "key", "zipf_k", "total_tasks"]
+    for (
+        blocks,
+        initial_budget,
+        key,
+        zipf_k,
+        total_tasks,
+        cache,
+        learning_rate,
+        bootstrapping,
+    ) in df[
+        [
+            "block_budgets_info",
+            "blocks_initial_budget",
+            "key",
+            "zipf_k",
+            "total_tasks",
+            "cache",
+            "learning_rate",
+            "bootstrapping",
+        ]
     ].values:
         for block_id, budget in blocks:
             if not pure_dp:
@@ -174,7 +220,7 @@ def get_blocks_information(df):
                 max_available_budget = orders[order]
                 max_initial_budget = initial_budget["orders"][order]
             else:
-                max_available_budget = budget['epsilon']
+                max_available_budget = budget["epsilon"]
                 max_initial_budget = initial_budget
 
             dfs.append(
@@ -187,6 +233,9 @@ def get_blocks_information(df):
                             "key": key,
                             "zipf_k": zipf_k,
                             "total_tasks": total_tasks,
+                            "cache": cache,
+                            "learning_rate": learning_rate,
+                            "bootstrapping": bootstrapping,
                         }
                     ]
                 )
@@ -196,11 +245,10 @@ def get_blocks_information(df):
         return blocks
     return None
 
+
 def get_sv_misses_information(df):
     dfs = []
-    for (sv_misses, key, zipf_k) in df[
-        ["sv_misses", "key", "zipf_k"]
-    ].values:
+    for (sv_misses, key, zipf_k) in df[["sv_misses", "key", "zipf_k"]].values:
         # print(sv_misses)
         for sv_node_id, misses in sv_misses.items():
             dfs.append(
@@ -265,17 +313,23 @@ def analyze_monoblock(experiment_path):
         return fig
 
     def plot_budget_utilization(df, total_tasks):
-        df["budget_consumption"] = df["initial_budget"] - df["budget"]
+        df["budget"] = df["initial_budget"] - df["budget"]
         # / df[
         # "initial_budget"
         # ]
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+
+        df.to_csv("monoblock/budget_utilization.csv", index=False)
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order, "zipf_k": zipf_orders}
         fig = px.bar(
             df,
             x="zipf_k",
-            y="budget_consumption",
+            y="budget",
             color="key",
             barmode="group",
             title=f"Budget Consumption - total tasks-{total_tasks}",
@@ -286,10 +340,15 @@ def analyze_monoblock(experiment_path):
         return fig
 
     def plot_cumulative_budget_utilization_time(df, total_tasks):
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         # zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order}
-
+        df = df.drop(columns="index")
+        df.to_csv("monoblock/cumulative_budget_utilization.csv", index=False)
         df["cumul_budget"] = df["accumulated_budget"].astype(float)
         fig = px.line(
             df,
@@ -350,17 +409,21 @@ def analyze_multiblock(experiment_path):
         return fig
 
     def plot_budget_utilization(df, total_tasks):
-        df["budget"] = (df["initial_budget"] - df["budget"]) 
+        df["budget"] = df["initial_budget"] - df["budget"]
         # / df[
         #     "initial_budget"
         # ]
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         category_orders = {"key": keys_order}
 
-        df["task"] = df["id"]
+        df["block"] = df["id"]
         fig = px.bar(
             df,
-            x="task",
+            x="block",
             y="budget",
             color="key",
             barmode="group",
@@ -373,7 +436,11 @@ def analyze_multiblock(experiment_path):
         return fig
 
     def plot_total_sv_checks(df, total_tasks):
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         category_orders = {"key": keys_order}
         fig = px.bar(
             df,
@@ -389,7 +456,11 @@ def analyze_multiblock(experiment_path):
         return fig
 
     def plot_total_sv_misses(df, total_tasks):
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         category_orders = {"key": keys_order}
         fig = px.bar(
             df,
@@ -407,7 +478,11 @@ def analyze_multiblock(experiment_path):
     def plot_global_budget_utilization_time(df, total_tasks):
         df["task"] = df["id"]
         df["cumul_budget"] = df["global_budget"]
-        keys_order = ["HybridCache:bin_visits:100-10:lr0.2:bsFalse", "DirectLaplaceCache", "PMWCache"]
+        keys_order = [
+            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplaceCache",
+            "PMWCache",
+        ]
         category_orders = {"key": keys_order}
         fig = px.line(
             df,
@@ -419,7 +494,6 @@ def analyze_multiblock(experiment_path):
             height=600,
             facet_row="zipf_k",
             category_orders=category_orders,
-
         )
         return fig
 
@@ -493,7 +567,6 @@ def analyze_multiblock(experiment_path):
 
 
 def analyze_sv_misses(experiment_path):
-    
     def plot_sv_misses_per_node(df, total_tasks):
         df["sparse_vector_node"] = df["sv_node_id"]
         df["number_of_misses"] = df["misses"]
@@ -575,11 +648,11 @@ def analyze_query_types(experiment_path):
             # facet_row="zipf_k",
         )
         return fig
+
     df = get_df(experiment_path)
     df["zipf_k"] = df["zipf_k"].astype(float)
     df = df.query("cache == 'DirectLaplaceCache'")
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
-
 
     tasks = get_tasks_information(df)
     tasks = tasks[["id", "key", "query_id", "zipf_k"]]

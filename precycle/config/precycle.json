@@ -13,7 +13,6 @@
             "learning_rate": 0.2,
             "heuristic": "bin_visits:100-10",
             "bootstrapping": false
-
         }
     },
     "planner": {

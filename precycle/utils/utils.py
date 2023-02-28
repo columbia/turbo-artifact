@@ -97,7 +97,6 @@ def get_logs(
         )
     else:
         blocks_initial_budget = config_dict["budget_accountant"]["epsilon"]
-        
 
     for i, task_info in enumerate(tasks_info):
 
@@ -200,7 +199,7 @@ def get_logs(
             ):
                 tasks_to_log.append(task_info)
 
-    blocks_initial_budget = blocks_initial_budget #.dump()
+    blocks_initial_budget = blocks_initial_budget  # .dump()
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
@@ -217,13 +216,15 @@ def get_logs(
         learning_rate = ""
         bootstrapping = ""
         key = cache_type
-        
+
     else:
         cache_type = "HybridCache"
         heuristic = config_dict["cache"]["probabilistic_cfg"]["heuristic"]
         learning_rate = str(config_dict["cache"]["probabilistic_cfg"]["learning_rate"])
         bootstrapping = str(config_dict["cache"]["probabilistic_cfg"]["bootstrapping"])
-        key = cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping 
+        key = (
+            cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping
+        )  # + ":warmupTrue"
 
     config.update(
         {
@@ -248,7 +249,7 @@ def get_logs(
             "global_budget": global_budget,
             "chunks": chunks,
             "sv_misses": sv_misses,
-            "key": key
+            "key": key,
         }
     )
 

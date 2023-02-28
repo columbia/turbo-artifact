@@ -47,17 +47,52 @@ class MockHistogramCache:
         return None
 
     def create_new_entry(self, blocks):
-        # Bootstrapping: creating a histogram for a newly arrived block and
-        # initializing it with the histogram of the previous block
-        # Find the first previous block in cache to initialize from
-        (i, j) = blocks
+
         cache_entry = None
         if self.config.cache.probabilistic_cfg.bootstrapping == True:
-            if i == j and i > 0:
+            # Bootstrapping: creating a histogram for a new block or node and
+            # initializing it with the histogram of the previous block or the children nodes
+            (i, j) = blocks
+            node_size = j - i + 1
+            if node_size == 1 and i > 0:  # leaf node
+                # Find the first previous block in cache to initialize from
                 for x in reversed(range(i)):
                     cache_entry = self.read_entry((x, x))
                     if cache_entry is not None:
                         break
+            else:  # not leaf node - aggregate children
+                # Get children nodes
+                left_child = (i, i + node_size / 2 - 1)
+                right_child = (i + node_size / 2, j)
+                left_child_entry = self.read_entry((left_child[0], left_child[1]))
+                right_child_entry = self.read_entry((right_child[0], right_child[1]))
+                if left_child_entry and right_child_entry:
+                    new_histogram = DenseHistogram(self.domain_size)
+                    new_histogram.tensor = torch.div(
+                        torch.add(
+                            left_child_entry.histogram.tensor,
+                            right_child_entry.histogram.tensor,
+                        ),
+                        2,
+                    )
+                    new_bin_updates = torch.div(
+                        torch.add(
+                            left_child_entry.bin_updates, right_child_entry.bin_updates
+                        ),
+                        2,
+                    )
+                    new_bin_thresholds = torch.div(
+                        torch.add(
+                            left_child_entry.bin_thresholds,
+                            right_child_entry.bin_thresholds,
+                        ),
+                        2,
+                    )
+                    cache_entry = CacheEntry(
+                        histogram=new_histogram,
+                        bin_updates=new_bin_updates,
+                        bin_thresholds=new_bin_thresholds,
+                    )
 
         if cache_entry:
             new_cache_entry = CacheEntry(
@@ -107,14 +142,7 @@ class MockHistogramCache:
         bin_updates = [cache_entry.bin_updates[i] for i in flat_indices(query)]
         new_threshold = min(bin_updates) + self.bin_thershold_step
         for i in flat_indices(query):
-            # Add 'bin_threshold_step' more update rounds to the bins
             cache_entry.bin_thresholds[i] = new_threshold
- 
-        # for i in flat_indices(query):
-        #     # Add 'bin_threshold_step' more update rounds to the bins
-        #     cache_entry.bin_thresholds[i] = (
-        #         cache_entry.bin_updates[i] + step #bin_threshold_steps[i] #self.bin_thershold_step
-        #     )
         # # Write updated entry
         self.write_entry(blocks, cache_entry)
 

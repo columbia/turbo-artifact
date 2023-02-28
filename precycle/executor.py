@@ -140,9 +140,9 @@ class Executor:
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
                 # print(colored(f"Block: {block} - Budget: {run_budget.dump()}", "blue"))
-                if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
-                  self.config.puredp and run_budget.epsilon > 0
-                ):
+                if (
+                    not self.config.puredp and not isinstance(run_budget, ZeroCurve)
+                ) or (self.config.puredp and run_budget.epsilon > 0):
                     self.budget_accountant.consume_block_budget(block, run_budget)
 
         return noisy_result, status_message
@@ -206,20 +206,6 @@ class Executor:
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
             sv.initialized = False
-            # Increase the heuristic threshold in the Histograms that were used in this round
-            # bin_updates = []
-            # bin_thresholds = []
-            # for run_op in plan.l:
-            #     if isinstance(run_op, RunHistogram):
-            #         bin_updates.append(self.cache.histogram_cache.get_bin_updates(
-            #             run_op.blocks, query
-            #         ))
-            #         bin_thresholds.append(self.cache.histogram_cache.get_bin_thresholds(
-            #             run_op.blocks, query
-            #         ))
-            # print("bin_updates", np.array(bin_updates))
-            # print("bin_thresholds", np.array(bin_thresholds))
-            
             for run_op in plan.l:
                 if isinstance(run_op, RunHistogram):
                     self.cache.histogram_cache.update_entry_threshold(
