@@ -10,7 +10,6 @@ from precycle.utils.utils import mlflow_log
 from precycle.utils.utils import FINISHED, FAILED
 
 from precycle.query_converter import QueryConverter
-from precycle.budget.curves import ZeroCurve
 
 
 class QueryProcessor:
@@ -41,7 +40,15 @@ class QueryProcessor:
             "run_types": [],
             "budget_per_block": [],
         }
-        task.query = self.query_converter.convert_to_tensor(task.query)
+
+        query_tensor = self.query_converter.convert_to_tensor(task.query)
+        task.query_db_format = (
+            query_tensor
+            if self.config.mock
+            else self.query_converter.convert_to_sql(task.query, task.blocks)
+        )
+        task.query = query_tensor
+        print(task.query_db_format)
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while not result and (not status or status == "sv_failed"):
@@ -51,6 +58,12 @@ class QueryProcessor:
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    "green",
+                )
+            )
             result, status = self.executor.execute_plan(plan, task, run_metadata)
 
             # Sanity checks
@@ -64,10 +77,9 @@ class QueryProcessor:
         if result:
 
             if self.config.logs.mlflow:
-                # Log in MLFLOW to understand the bumps
                 budget_per_block_list = run_metadata["budget_per_block"]
                 for budget_per_block in budget_per_block_list:
-                    for block, budget in budget_per_block.items():
+                    for _, budget in budget_per_block.items():
                         self.total_budget_spent_all_blocks += budget.epsilon
                 mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
 

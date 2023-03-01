@@ -80,7 +80,9 @@ class Executor:
 
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
-                run_return_value = self.run_laplace(run_op, task.query_id, task.query)
+                run_return_value = self.run_laplace(
+                    run_op, task.query_id, task.query_db_format
+                )
                 run_types[str(run_op.blocks)] = "Laplace"
 
                 # External Update to the Histogram
@@ -92,11 +94,15 @@ class Executor:
                     )
 
             elif isinstance(run_op, RunHistogram):
-                run_return_value = self.run_histogram(run_op, task.query)
+                run_return_value = self.run_histogram(
+                    run_op, task.query, task.query_db_format
+                )
                 run_types[str(run_op.blocks)] = "Histogram"
 
             elif isinstance(run_op, RunPMW):
-                run_return_value = self.run_pmw(run_op, task.query)
+                run_return_value = self.run_pmw(
+                    run_op, task.query, task.query_db_format
+                )
                 run_types[str(run_op.blocks)] = "PMW"
 
             # Set run budgets for participating blocks
@@ -128,7 +134,6 @@ class Executor:
                     noisy_result = None
                     status_message = "sv_failed"
                     print("sv failed, task: ", task.id)
-                    # time.sleep(2)
                 run_metadata["sv_check_status"].append(status)
                 sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(
                     task.blocks
@@ -216,7 +221,7 @@ class Executor:
         # NOTE: Histogram nodes get updated only using external updates
         return True
 
-    def run_laplace(self, run_op, query_id, query):
+    def run_laplace(self, run_op, query_id, query_db_format):
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / node_size
         # Check for the entry inside the cache
@@ -224,7 +229,7 @@ class Executor:
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
-            true_result = self.db.run_query(query, run_op.blocks)
+            true_result = self.db.run_query(query_db_format, run_op.blocks)
             laplace_scale = run_op.noise_std / math.sqrt(2)
             epsilon = sensitivity / laplace_scale
             run_budget = (
@@ -306,14 +311,14 @@ class Executor:
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
 
-    def run_histogram(self, run_op, query):
+    def run_histogram(self, run_op, query, query_db_format):
         cache_entry = self.cache.histogram_cache.read_entry(run_op.blocks)
         if not cache_entry:
             cache_entry = self.cache.histogram_cache.create_new_entry(run_op.blocks)
             self.cache.histogram_cache.write_entry(run_op.blocks, cache_entry)
 
         # True output never released except in debugging logs
-        true_result = self.db.run_query(query, run_op.blocks)
+        true_result = self.db.run_query(query_db_format, run_op.blocks)
 
         # Run histogram to get the predicted output
         noisy_result = cache_entry.histogram.run(query)
@@ -323,13 +328,13 @@ class Executor:
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
 
-    def run_pmw(self, run_op, query):
+    def run_pmw(self, run_op, query, query_db_format):
         pmw = self.cache.pmw_cache.get_entry(run_op.blocks)
         if not pmw:
             pmw = self.cache.pmw_cache.add_entry(run_op.blocks)
 
         # True output never released except in debugging logs
-        true_result = self.db.run_query(query, run_op.blocks)
+        true_result = self.db.run_query(query_db_format, run_op.blocks)
 
         # We can't run a powerful query using a weaker PMW
         assert run_op.alpha <= pmw.alpha
