@@ -29,6 +29,7 @@ jupyter = "^1.0.0"
 nb-clean = "^2.4.0"
 modin = "^0.18.1"
 setuptools = "^67.1.0"
+redisai = "^1.3.0"
 
 
 [build-system]

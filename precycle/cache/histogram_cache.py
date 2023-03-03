@@ -1,11 +1,12 @@
 import torch
+import redisai as rai
 from copy import deepcopy
 from precycle.budget.histogram import DenseHistogram, flat_indices
 
 
 class CacheKey:
     def __init__(self, blocks):
-        self.key = blocks
+        self.key = str(blocks)
 
 
 class CacheEntry:
@@ -15,36 +16,64 @@ class CacheEntry:
         self.bin_thresholds = bin_thresholds
 
 
-class MockHistogramCache:
+class HistogramCache:
     def __init__(self, config):
-        self.kv_store = {}
+        self.kv_store = self.get_kv_store(config)
         self.config = config
         self.blocks_metadata = self.config.blocks_metadata
         self.learning_rate = config.cache.probabilistic_cfg.learning_rate
         self.domain_size = self.blocks_metadata["domain_size"]
         heuristic = config.cache.probabilistic_cfg.heuristic
         _, heuristic_params = heuristic.split(":")
-
         threshold, step = heuristic_params.split("-")
         self.bin_thershold = int(threshold)
         self.bin_thershold_step = int(step)
 
+    def get_kv_store(self, config):
+        return rai.Client(host=config.cache.host, port=config.cache.port, db=0)
+
     def write_entry(self, blocks, cache_entry):
         key = CacheKey(blocks).key
-        self.kv_store[key] = {
-            "histogram": cache_entry.histogram,
-            "bin_updates": cache_entry.bin_updates,
-            "bin_thresholds": cache_entry.bin_thresholds,
-        }
+        self.kv_store.tensorset(
+            key + ":histogram",
+            cache_entry.histogram.tensor.numpy(),
+            self.domain_size,
+            torch.float64,
+        )
+        self.kv_store.tensorset(
+            key + ":bin_updates",
+            cache_entry.bin_updates.numpy(),
+            self.domain_size,
+            torch.float64,
+        )
+        self.kv_store.tensorset(
+            key + ":bin_thresholds",
+            cache_entry.bin_thresholds.numpy(),
+            self.domain_size,
+            torch.float64,
+        )
 
     def read_entry(self, blocks):
         key = CacheKey(blocks).key
-        if key in self.kv_store:
-            entry = self.kv_store[key]
-            return CacheEntry(
-                entry["histogram"], entry["bin_updates"], entry["bin_thresholds"]
-            )
-        return None
+        try:
+            entry_histogram_tensor = self.kv_store.tensorget(key + ":histogram")
+            entry_bin_updates = self.kv_store.tensorget(key + ":bin_updates")
+            entry_bin_thresholds = self.kv_store.tensorget(key + ":bin_thresholds")
+        except:
+            return None
+
+        entry_histogram_tensor = torch.tensor(entry_histogram_tensor)
+        entry_bin_updates = torch.tensor(entry_bin_updates)
+        entry_bin_thresholds = torch.tensor(entry_bin_thresholds)
+        entry_histogram = DenseHistogram(
+            domain_size=self.domain_size, tensor=entry_histogram_tensor
+        )
+
+        # print(entry_histogram_tensor)
+        # print(entry_bin_updates)
+        # print(entry_bin_thresholds)
+
+        return CacheEntry(entry_histogram, entry_bin_updates, entry_bin_thresholds)
 
     def create_new_entry(self, blocks):
 
@@ -162,10 +191,33 @@ class MockHistogramCache:
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
             return True
-
         # If each bin has been updated at least <bin-threshold> times the query is easy
         for i in flat_indices(query):
             if cache_entry.bin_updates[i] < cache_entry.bin_thresholds[i]:
                 return True
-
         return False
+
+
+class MockHistogramCache(HistogramCache):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_kv_store(self, config):
+        return {}
+
+    def write_entry(self, blocks, cache_entry):
+        key = CacheKey(blocks).key
+        self.kv_store[key] = {
+            "histogram": cache_entry.histogram,
+            "bin_updates": cache_entry.bin_updates,
+            "bin_thresholds": cache_entry.bin_thresholds,
+        }
+
+    def read_entry(self, blocks):
+        key = CacheKey(blocks).key
+        if key in self.kv_store:
+            entry = self.kv_store[key]
+            return CacheEntry(
+                entry["histogram"], entry["bin_updates"], entry["bin_thresholds"]
+            )
+        return None

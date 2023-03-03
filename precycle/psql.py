@@ -53,7 +53,7 @@ class PSQL:
 
         blocks_size = get_blocks_size(blocks, self.config.blocks_metadata)
         true_result /= blocks_size
-        print("result:", true_result, "total-size:", blocks_size)
+        # print("result:", true_result, "total-size:", blocks_size)
         return true_result
 
     def close(self):
