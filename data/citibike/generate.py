@@ -160,9 +160,12 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
         # This info lives in the block IDs now
         df = df.drop(columns=["year", "week"])
 
+        logger.info(f"Number of NaN per column: {df.isna().sum()}")
+
         df = df.dropna()
 
-        logger.info(f"Number of NaN per column: {df.isna().sum()}")
+        df = df.astype("int64")
+
         return df
 
     mapping_details["station_mapping"] = "original id - 72"
@@ -193,7 +196,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
 
     metadata_path = Path(REPO_ROOT).joinpath("data/citibike/metadata.json")
     metadata = {
-        "domain_sizes": get_domain_size(list(attributes_domains_sizes.values())),
+        "domain_size": get_domain_size(list(attributes_domains_sizes.values())),
         "attribute_names": ATTRIBUTES,
         "attributes_domain_sizes": attributes_domains_sizes,
         "mapping_details": mapping_details,
@@ -201,7 +204,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
     json.dump(metadata, metadata_path.open("w"))
 
 
-def main(re_preprocess_months=True):
+def main(re_preprocess_months=False):
 
     months_dir = Path(REPO_ROOT).joinpath("data/citibike/months")
     months_dir.mkdir(parents=True, exist_ok=True)
