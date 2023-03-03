@@ -69,9 +69,9 @@ class HistogramCache:
             domain_size=self.domain_size, tensor=entry_histogram_tensor
         )
 
-        print(entry_histogram_tensor)
-        print(entry_bin_updates)
-        print(entry_bin_thresholds)
+        # print(entry_histogram_tensor)
+        # print(entry_bin_updates)
+        # print(entry_bin_thresholds)
 
         return CacheEntry(entry_histogram, entry_bin_updates, entry_bin_thresholds)
 
@@ -188,25 +188,19 @@ class HistogramCache:
         return bin_thresholds
 
     def is_query_hard(self, query, blocks):
-
-        print("is query hard")
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
-            print("what", cache_entry)
-
             return True
-
         # If each bin has been updated at least <bin-threshold> times the query is easy
         for i in flat_indices(query):
             if cache_entry.bin_updates[i] < cache_entry.bin_thresholds[i]:
                 return True
-        print("is query hard no")
         return False
 
 
 class MockHistogramCache(HistogramCache):
     def __init__(self, config):
-        super.__init__(config)
+        super().__init__(config)
 
     def get_kv_store(self, config):
         return {}

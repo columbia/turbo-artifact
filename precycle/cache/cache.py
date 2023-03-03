@@ -1,5 +1,5 @@
 from precycle.cache.pmw_cache import MockPMWCache
-from precycle.cache.sparse_vectors import MockSparseVectors
+from precycle.cache.sparse_vectors import MockSparseVectors, SparseVectors
 from precycle.cache.laplace_cache import MockLaplaceCache, LaplaceCache
 from precycle.cache.histogram_cache import MockHistogramCache, HistogramCache
 
@@ -14,7 +14,7 @@ class Cache:
         elif self.cache_type == "HybridCache":
             self.laplace_cache = LaplaceCache(config)
             self.histogram_cache = HistogramCache(config)
-            self.sparse_vectors = MockSparseVectors(config)
+            self.sparse_vectors = SparseVectors(config)
 
 
 class MockCache:

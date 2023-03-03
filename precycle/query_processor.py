@@ -48,7 +48,7 @@ class QueryProcessor:
             else self.query_converter.convert_to_sql(task.query, task.blocks)
         )
         task.query = query_tensor
-        print(task.query_db_format)
+        # print(task.query_db_format)
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while not result and (not status or status == "sv_failed"):
@@ -58,12 +58,6 @@ class QueryProcessor:
             assert plan is not None
             planning_time = time.time() - start_planning
             # NOTE: if status is sth else like "out-of-budget" then it stops
-            print(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
-                    "green",
-                )
-            )
             result, status = self.executor.execute_plan(plan, task, run_metadata)
 
             # Sanity checks

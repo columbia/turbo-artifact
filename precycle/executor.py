@@ -162,12 +162,13 @@ class Executor:
         4) Increases the heuristic threshold of participating histograms if check failed.
         """
 
+        sv_check_status = True
+
         # Fetches the SV of the lowest common ancestor of <blocks>
         node_id = self.cache.sparse_vectors.get_lowest_common_ancestor(blocks)
         sv = self.cache.sparse_vectors.read_entry(node_id)
         if not sv:
             sv = self.cache.sparse_vectors.create_new_entry(node_id)
-            self.cache.sparse_vectors.write_entry(sv)
 
         # All blocks covered by the SV must pay
         blocks_to_pay = range(node_id[0], node_id[1] + 1)
@@ -216,10 +217,11 @@ class Executor:
                     self.cache.histogram_cache.update_entry_threshold(
                         run_op.blocks, query
                     )
-            return False
+            self.cache.sparse_vectors.write_entry(sv)
+            sv_check_status = False
         print(colored("FREE LUNCH - yum yum\n", "blue"))
-        # NOTE: Histogram nodes get updated only using external updates
-        return True
+        self.cache.sparse_vectors.write_entry(sv)
+        return sv_check_status
 
     def run_laplace(self, run_op, query_id, query_db_format):
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)

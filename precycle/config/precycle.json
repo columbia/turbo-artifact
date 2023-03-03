@@ -8,10 +8,10 @@
     "cache": {
         "host": "localhost",
         "port": 6379,
-        "type": "HybridCache",
+        "type": "LaplaceCache",
         "probabilistic_cfg": {
             "learning_rate": 0.2,
-            "heuristic": "bin_visits:0-1",
+            "heuristic": "bin_visits:10-5",
             "bootstrapping": true
         }
     },
@@ -41,8 +41,8 @@
     "tasks": {
         "path": "/home/kelly/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 20e3,
-        "max_num": 100e3,
+        "avg_num_tasks_per_block": 1e1,
+        "max_num": 5e1,
         "initial_num": 0,
         "zipf_k": 0.5
     },
