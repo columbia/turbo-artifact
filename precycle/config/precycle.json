@@ -1,5 +1,5 @@
 {
-    "mock": true,
+    "mock": false,
     "puredp": true,
     "global_seed": 64,
     "variance_reduction": true,
@@ -7,12 +7,12 @@
     "beta": 0.001,
     "cache": {
         "host": "localhost",
-        "port": 6378,
-        "type": "HybridCache",
+        "port": 6379,
+        "type": "LaplaceCache",
         "probabilistic_cfg": {
             "learning_rate": 0.2,
-            "heuristic": "bin_visits:100-10",
-            "bootstrapping": false
+            "heuristic": "bin_visits:10-5",
+            "bootstrapping": true
         }
     },
     "planner": {
@@ -20,7 +20,7 @@
     },
     "budget_accountant": {
         "host": "localhost",
-        "port": 6379,
+        "port": 6378,
         "epsilon":10,
         "delta": 1e-07
     },
@@ -35,14 +35,14 @@
         "initial_num": 5,
         "max_num": 5,
         "arrival_interval": 1,
-        "block_data_path": "data/covid19/covid19_data/blocks",
-        "block_metadata_path": "data/covid19/covid19_data/blocks/metadata.json"
+        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json"
     },
     "tasks": {
-        "path": "data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 20e3,
-        "max_num": 100e3,
+        "avg_num_tasks_per_block": 1e1,
+        "max_num": 5e1,
         "initial_num": 0,
         "zipf_k": 0.5
     },

@@ -16,9 +16,11 @@ class CacheEntry:
 
 class LaplaceCache:
     def __init__(self, config):
-        self.kv_store = redis.Redis(
-            host=config.cache.host, port=config.cache.port, db=0
-        )
+        self.config = config
+        self.kv_store = self.get_kv_store(config)
+
+    def get_kv_store(self, config):
+        return redis.Redis(host=config.cache.host, port=config.cache.port, db=0)
 
     def write_entry(self, query_id, blocks, cache_entry):
         key = CacheKey(query_id, blocks).key
@@ -29,20 +31,24 @@ class LaplaceCache:
     def read_entry(self, query_id, blocks):
         key = CacheKey(query_id, blocks).key
         entry = self.kv_store.hgetall(key)
-        entry_values = [float(value) for value in entry.values()]
         if entry:
-            return CacheEntry(entry_values[0], entry_values[1], entry_values[2])
+            return CacheEntry(
+                float(entry[b"result"]),
+                float(entry[b"noise_std"]),
+                float(entry[b"noise"]),
+            )
         return None
 
     def dump(self):
         pass
 
 
-class MockLaplaceCache:
+class MockLaplaceCache(LaplaceCache):
     def __init__(self, config):
-        # key-value store is just an in-memory dictionary
-        self.config = config
-        self.kv_store = {}
+        super().__init__(config)
+
+    def get_kv_store(self, config):
+        return {}
 
     def write_entry(self, query_id, blocks, cache_entry):
         key = CacheKey(query_id, blocks).key

@@ -1,6 +1,6 @@
 import math
 from itertools import product
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -11,13 +11,18 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
     def __init__(
         self,
         domain_size: Optional[int] = None,
+        tensor=None,
         attribute_sizes: Optional[List[int]] = None,
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
-        self.tensor = torch.ones(
-            size=(1, self.N),
-            dtype=torch.float64,
+        self.tensor = (
+            tensor
+            if tensor is not None
+            else torch.ones(
+                size=(1, self.N),
+                dtype=torch.float64,
+            )
         )
         self.normalize()
 

@@ -4,13 +4,11 @@ from loguru import logger
 from precycle.task import Task
 from omegaconf import OmegaConf
 from precycle.query_processor import QueryProcessor
-from precycle.cache.laplace_cache import DeterministicCache
+from precycle.cache.cache import Cache
 from precycle.budget_accountant import BudgetAccountant
 from precycle.psql import PSQL
 
-# from precycle.planner.ilp import ILP
-from precycle.planner.max_cuts_planner import MaxCutsPlanner
-from precycle.planner.min_cuts_planner import MinCutsPlanner
+from precycle.planner.min_cuts import MinCuts
 
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
@@ -70,10 +68,9 @@ def test(
     ]
 
     db = PSQL(config)
-    budget_accountant = BudgetAccountant(config=config.budget_accountant)
-    cache_type = f"Mock{config.cache.type}"
-    cache = globals()[cache_type](config)
-    planner = globals()[config.planner.method](cache, budget_accountant, config)
+    budget_accountant = BudgetAccountant(config=config)
+    cache = Cache(config)
+    planner = MinCuts(cache, budget_accountant, config)
     query_processor = QueryProcessor(db, cache, planner, budget_accountant, config)
 
     # Initialize Task
@@ -90,11 +87,25 @@ def test(
     print(requested_blocks)
 
     utility = 0.05
-    utility_beta = 0.00001
+    utility_beta = 0.001
 
     task = Task(
         id=0,
         query_id=0,
+        query_type="linear",
+        query=query_vector,
+        blocks=requested_blocks,
+        n_blocks=num_requested_blocks,
+        utility=utility,
+        utility_beta=utility_beta,
+        name=0,
+    )
+
+    run_metadata = query_processor.try_run_task(task)
+
+    task = Task(
+        id=0,
+        query_id=1,
         query_type="linear",
         query=query_vector,
         blocks=requested_blocks,
