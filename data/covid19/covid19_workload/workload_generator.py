@@ -1,14 +1,13 @@
 import json
+import math
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import typer
 from loguru import logger
-import typer
-import math
-from precycle.utils.utils import REPO_ROOT
 
+from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
@@ -200,7 +199,6 @@ def main(
         )
 
     else:  # 1:1:1:2:4:8:16:32  # 3/8 to select 1 block
-
         rangelist = list(requests_type.split(":"))
         n_different_queries = len(json.load(open(queries, "r")))
         privacy_workload.generate_nblocks(

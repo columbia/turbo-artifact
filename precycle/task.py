@@ -1,4 +1,6 @@
-from typing import Union, List
+from typing import List, Union
+
+from precycle.budget.histogram import k_way_marginal_query_list
 
 
 class Task:
@@ -13,11 +15,20 @@ class Task:
         utility: float,
         utility_beta: float,
         name: str = None,
+        attribute_sizes: List[int] = None,
     ):
         self.id = id
         self.query_id = query_id
         self.query_type = query_type
-        self.query = query
+
+        # Read compressed rectangle or PyTorch slice, output a query vector
+        if isinstance(query, dict):
+            # NOTE: we only support pure k-way marginals for now
+            self.query = k_way_marginal_query_list(
+                query, attribute_sizes=attribute_sizes
+            )
+        else:
+            self.query = query
         self.blocks = blocks
         self.n_blocks = n_blocks
         self.utility = utility
