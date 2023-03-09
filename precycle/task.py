@@ -14,6 +14,7 @@ class Task:
         n_blocks: Union[int, str],
         utility: float,
         utility_beta: float,
+        query_db_format=None,
         name: str = None,
         attribute_sizes: List[int] = None,
     ):
@@ -33,6 +34,7 @@ class Task:
         self.n_blocks = n_blocks
         self.utility = utility
         self.utility_beta = utility_beta
+        self.query_db_format = query_db_format
         self.name = name
 
     def dump(self):

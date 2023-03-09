@@ -169,22 +169,10 @@ def get_logs(
 
             # Final Global budget consumption across all blocks - to output in the terminal
             if i == len(tasks_info) - 1:
-                # For each block find the order with the max remaining capacity
-                # max_orders = {}
-                # for block_id, budget in block_budgets_info:
-                #     orders = budget["orders"]
-                #     max_order = max(orders, key=orders.get)
-                #     max_orders[block_id] = max_order
-
                 # For each task and each block find the accumulated normalized total budget
                 global_budget = 0
                 for block, budget in accummulated_budget_per_block.items():
                     global_budget += budget.epsilon
-                    # max_order = max_orders[str(block)]
-                    # global_budget += budget.epsilon(
-                    # max_order
-                    # ) / blocks_initial_budget.epsilon(max_order)
-                # global_budget = global_budget / len(block_budgets_info)
 
             task_info.update(
                 {
@@ -199,7 +187,6 @@ def get_logs(
             ):
                 tasks_to_log.append(task_info)
 
-    blocks_initial_budget = blocks_initial_budget  # .dump()
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
@@ -224,7 +211,7 @@ def get_logs(
         bootstrapping = str(config_dict["cache"]["probabilistic_cfg"]["bootstrapping"])
         key = (
             cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping
-        )  # + ":warmupTrue"
+        )
 
     config.update(
         {

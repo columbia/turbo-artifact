@@ -1,9 +1,6 @@
 import json
-import math
 import os
 import random
-import sys
-
 import mlflow
 import numpy as np
 import simpy
@@ -12,9 +9,7 @@ from loguru import logger
 from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
-from precycle.cache.cache import MockCache
-
-# from precycle.planner.ilp import ILP
+from precycle.cache.cache import MockCache, Cache
 from precycle.planner.min_cuts import MinCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
@@ -24,7 +19,6 @@ from precycle.utils.utils import (
     LOGS_PATH,
     get_logs,
     save_logs,
-    save_mlflow_artifacts,
 )
 
 app = typer.Typer()
@@ -69,10 +63,10 @@ class Simulator:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
             cache = MockCache(self.config)
-        # else:
-        #     db = PSQL(self.config)
-        #     budget_accountant = BudgetAccountant(self.config)
-        #     cache = globals()[self.config.cache.type](self.config)
+        else:
+            db = PSQL(self.config)
+            budget_accountant = BudgetAccountant(self.config)
+            cache = Cache(self.config)
 
         planner = MinCuts(cache, budget_accountant, self.config)
 
@@ -91,9 +85,7 @@ class Simulator:
         Tasks(self.env, self.rm)
 
     def run(self):
-
         logs = None
-
         with mlflow.start_run():
             self.env.run()
 
@@ -116,11 +108,6 @@ def run_simulation(
     omegaconf: str = "precycle/config/precycle.json",
     loguru_level: str = "INFO",
 ):
-    # Try environment variable first, CLI arg otherwise
-    # level = os.environ.get("LOGURU_LEVEL", loguru_level)
-    # logger.remove()
-    # logger.add(sys.stdout, level=loguru_level)
-
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
