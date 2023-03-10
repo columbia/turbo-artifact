@@ -15,6 +15,8 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
         attribute_sizes: Optional[List[int]] = None,
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
+        # TODO: keep a multidimensional tensor for efficient marginals
+        # TODO: store counts instead of probabilities (int). Potentially with a separate field for the sum
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
         self.tensor = (
             tensor
@@ -36,6 +38,13 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
     def run(self, query: torch.Tensor) -> float:
         # sparse (1,N) x dense (N,1)
         return torch.smm(query, self.tensor.t()).item()
+
+    # TODO: Extra optimization: don't even create the query vector
+    def run_rectangle(self, marginal_query: Dict[int, int]):
+        # Multiple values for a single attribute?
+        # attribute_ids, values = marginal_query.items()
+        # Torch sum over the histogram
+        pass
 
 
 class SparseHistogram:  # We use it to represent the block data and queries
