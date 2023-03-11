@@ -41,7 +41,7 @@ def grid_online(
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
-        "mock": True,
+        "mock": True,       # Never disable "mock" when running with ray 
         "puredp": True,
         "variance_reduction": variance_reduction,
         "alpha": tune.grid_search(alpha),

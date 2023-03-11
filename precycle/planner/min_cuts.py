@@ -62,15 +62,14 @@ class MinCuts(Planner):
             assert len(subqueries) == 1
             (i, j) = subqueries[0]
             epsilon = get_pmw_epsilon(alpha, beta, (j - i + 1) * block_size, 1)
-            print(block_size, epsilon)
             run_ops = [RunPMW((i, j), alpha, epsilon)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.cache_type == "HybridCache":
             # Assign a Mechanism to each subquery
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
-            # In case a subquery is assigned to a Histogram run instead of a Laplace run, then this epsilon
-            # might not have been enough and a final check must be done by a SV on the aggregated output to assess its quality.
+            # In case a subquery is assigned to a Histogram run instead of a Laplace run
+            # a final check must be done by a SV on the aggregated output to assess its quality.
             min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
             sv_check = False
             run_ops = []
