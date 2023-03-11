@@ -119,6 +119,15 @@ def create_8_queries():
     return query_tensors
 
 
+def create_compact_marginals(attributes_domain_sizes):
+    query_1 = {0: 1}
+    query_2 = {1: 0, 2: 1}
+
+    # TODO: Add support for OR queries
+    # query_2 = {0: [1,2]}
+    return [query_1, query_2]
+
+
 def write_queries(queries_dir, workload, query_tensors):
     queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
 
@@ -171,6 +180,9 @@ def main(
 
     query_tensors = create_all_queries(attributes_domain_sizes)
     write_queries(queries_dir, "all", query_tensors)
+
+    query_tuples = create_compact_marginals(attributes_domain_sizes)
+    write_queries(queries_dir, "compact_marginals", query_tuples)
 
     # Using the query tensors from the "all" workload  type to create various synthetic workloads
     # workload_sizes = [10, 100, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 34000]

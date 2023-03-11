@@ -43,16 +43,21 @@ class TaskGenerator:
             requested_blocks = (start, start + num_requested_blocks - 1)
             # print(requested_blocks)
 
+        attributes_domain_sizes = self.config.blocks_metadata["attributes_domain_sizes"]
+
         task = Task(
             id=task_id,
             query_id=query_id,
             query_type=task_row["query_type"],
-            query=eval(task_row["query"]),
+            query=eval(
+                task_row["query"]
+            ),  # Transform string to list of lists, or tuple (marginal)
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(task_row["utility"]),
             utility_beta=float(task_row["utility_beta"]),
             name=name,
+            attribute_sizes=attributes_domain_sizes,
         )
         # print("\nTask", task.dump())
         return task
