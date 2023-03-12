@@ -1,3 +1,4 @@
+import time
 import torch
 import redisai as rai
 from copy import deepcopy
@@ -156,9 +157,12 @@ class HistogramCache:
             lr *= -1
 
         # Multiplicative weights update for the relevant bins
+        t = time.time()
         for i in flat_indices(query):
             cache_entry.histogram.tensor[i] *= torch.exp(query[i] * lr)
             cache_entry.bin_updates[i] += 1
+        print("\tUpdate histogram For loop", time.time() - t)
+
         cache_entry.histogram.normalize()
 
         # Write updated entry

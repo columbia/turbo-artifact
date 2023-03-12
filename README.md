@@ -15,9 +15,10 @@ If you run without using the mock modules you need to setup Postgres, TimeScaleD
 
 - Follow these instructions to install Redis https://redis.io/docs/getting-started/installation/install-redis-on-linux/
     Some more help: https://www.tutorialspoint.com/redis/redis_environment.htm
+- Install the redisai module: https://oss.redis.com/redisai/quickstart/
 
 - Run a second Redis instance: https://gist.github.com/Paprikas/ef55f5b2401c4beec75f021590de6a67
-    ( We need twgit puo different Redis instances: one for the Cache and one for the BlockBudgets)
+    ( We need two different Redis instances: one for the Cache and one for the BlockBudgets)
 - Follow these instructions to install Timescaledb/postgres https://docs.timescale.com/install/latest/self-hosted/installation-debian/
 
 - Set up the  database and the hypertable to store covid data

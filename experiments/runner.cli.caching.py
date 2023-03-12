@@ -6,26 +6,33 @@ from precycle.utils.utils import REPO_ROOT
 app = typer.Typer()
 
 
-tasks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_workload/")
-blocks_path_prefix = REPO_ROOT.joinpath("data/covid19/covid19_data/")
-blocks_metadata = str(blocks_path_prefix.joinpath("blocks/metadata.json"))
-blocks_path = str(blocks_path_prefix.joinpath("blocks"))
+def get_paths(dataset):
+    tasks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_workload/")
+    blocks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_data/")
+    blocks_metadata = str(blocks_path_prefix.joinpath("blocks/metadata.json"))
+    blocks_path = str(blocks_path_prefix.joinpath("blocks"))
+    return blocks_path, blocks_metadata, tasks_path_prefix
 
 
-def caching_monoblock():
-    task_paths = ["1:1blocks_34425queries.privacy_tasks.csv"]
+def caching_monoblock(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    if dataset == "covid19":
+        task_paths = ["1blocks_34425queries.privacy_tasks.csv"]
+    elif dataset == "citibike":
+        task_paths = ["1blocks_492queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="monoblock",
+        logs_dir=f"{dataset}/monoblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        cache=["HybridCache", "LaplaceCache", "PMWCache"],
+        # cache=["HybridCache", "LaplaceCache", "PMWCache"],
+        cache=["HybridCache"],
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[25e3],
@@ -33,7 +40,8 @@ def caching_monoblock():
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[0, 0.5, 1, 1.5],
+        # zipf_k=[0, 0.5, 1, 1.5],
+        zipf_k=[0],
         heuristic=["bin_visits:100-10"],
         variance_reduction=[True],
         log_every_n_tasks=100,
@@ -42,15 +50,19 @@ def caching_monoblock():
     )
 
 
-def caching_static_multiblock_laplace_vs_hybrid():
-    task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+def caching_static_multiblock_laplace_vs_hybrid(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    if dataset == "covid19":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+    elif dataset == "citibike":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_492queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="static-multiblock_laplace_vs_hybrid",
+        logs_dir="{dataset}/static-multiblock_laplace_vs_hybrid",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -73,15 +85,19 @@ def caching_static_multiblock_laplace_vs_hybrid():
     )
 
 
-def caching_static_multiblock_heuristics():
-    task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+def caching_static_multiblock_heuristics(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    if dataset == "covid19":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+    elif dataset == "citibike":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_492queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="static-multiblock_heuristics",
+        logs_dir="{dataset}/static-multiblock_heuristics",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -109,15 +125,19 @@ def caching_static_multiblock_heuristics():
     )
 
 
-def caching_static_multiblock_learning_rate():
-    task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+def caching_static_multiblock_learning_rate(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    if dataset == "covid19":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+    elif dataset == "citibike":
+        task_paths = ["1:2:4:8:16:32:64:128blocks_492queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="static-multiblock_learning_rate",
+        logs_dir="{dataset}/static-multiblock_learning_rate",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -140,15 +160,19 @@ def caching_static_multiblock_learning_rate():
     )
 
 
-def streaming_multiblock_laplace_vs_hybrid():
-    task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+def streaming_multiblock_laplace_vs_hybrid(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    if dataset == "covid19":
+        task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
+    elif dataset == "citibike":
+        task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_492queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir="streaming_multiblock_laplace_vs_hybrid",
+        logs_dir="{dataset}/streaming_multiblock_laplace_vs_hybrid",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -174,10 +198,12 @@ def streaming_multiblock_laplace_vs_hybrid():
 
 
 @app.command()
-def run(exp: str = "caching_monoblock", loguru_level: str = "INFO"):
+def run(
+    exp: str = "caching_monoblock", dataset: str = "covid19", loguru_level: str = "INFO"
+):
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
-    globals()[f"{exp}"]()
+    globals()[f"{exp}"](dataset)
 
 
 if __name__ == "__main__":

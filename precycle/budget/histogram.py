@@ -58,7 +58,6 @@ class SparseHistogram:  # We use it to represent the block data and queries
             attribute_sizes=attribute_sizes,
         )
         self.domain_size = self.tensor.shape[1]  # N
-
     @classmethod
     def from_dataframe(
         cls,
@@ -168,9 +167,9 @@ def k_way_marginal_query_list(
     # List of domains. E.g. positive = [1], gender = [0,1], ethnicity = [1,2,3]
     domain_per_attribute = []
     for attribute, size in enumerate(attribute_sizes):
-        if attribute in attribute_to_value:
+        if str(attribute) in attribute_to_value:
             # This attribute is a marginal, we force one value
-            domain_per_attribute.append([attribute_to_value[attribute]])
+            domain_per_attribute.append([attribute_to_value[str(attribute)]])
         else:
             # This attribute can take any value
             domain_per_attribute.append(list(range(size)))

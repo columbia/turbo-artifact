@@ -41,7 +41,12 @@ class QueryProcessor:
             "budget_per_block": [],
         }
 
+        print("converting to tensor")
+        t = time.time()
         query_tensor = self.query_converter.convert_to_tensor(task.query)
+        print("converted to tensor", query_tensor)
+        print("Conversion", time.time() - t)
+
         task.query_db_format = (
             query_tensor
             if self.config.mock
@@ -55,10 +60,21 @@ class QueryProcessor:
             start_planning = time.time()
             # Get a DP execution plan for query.
             plan = self.planner.get_execution_plan(task)
+
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    "green",
+                )
+            )
             assert plan is not None
             planning_time = time.time() - start_planning
+            print("Planning", planning_time)
+
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            t = time.time()
             result, status = self.executor.execute_plan(plan, task, run_metadata)
+            print("Execution", time.time() - t)
 
             # Sanity checks
             # Second try must always use Laplaces so we can't reach third trial

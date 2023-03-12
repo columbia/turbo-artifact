@@ -10,6 +10,7 @@ class SparseVector:
         self.id = id
         self.alpha = alpha
         self.beta = beta
+        print(alpha, beta, n)
 
         if not sv_state:
             self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)
@@ -51,7 +52,7 @@ class SparseVectors:
         self.config = config
         self.kv_store = self.get_kv_store(config)
         self.blocks_metadata = self.config.blocks_metadata
-        self.block_size = self.config.blocks_metadata["block_size"]
+        # self.block_size = self.config.blocks_metadata["block_size"]
 
     def get_kv_store(self, config):
         return redis.Redis(host=config.cache.host, port=config.cache.port, db=0)
@@ -77,7 +78,7 @@ class SparseVectors:
             smallest_request_size = 1
         else:
             smallest_request_size = (node_size / 2) + 1
-        n = smallest_request_size * self.block_size
+        n = smallest_request_size * 65318
 
         # NOTE: n = smallest_SV_request * block_size
         sparse_vector = SparseVector(
@@ -129,9 +130,9 @@ class SparseVectors:
         return None
 
 
-class MockSparseVectors:
+class MockSparseVectors(SparseVectors):
     def __init__(self, config):
-        super.__init__(config)
+        super().__init__(config)
 
     def get_kv_store(self, config):
         return {}
