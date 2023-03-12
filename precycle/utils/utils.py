@@ -1,10 +1,12 @@
 import json
 import uuid
+import math
 import mlflow
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
-from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
+
+# from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
 from precycle.budget.renyi_budget import RenyiBudget
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
@@ -28,11 +30,23 @@ def mlflow_log(key, value, step):
         )
 
 
+def satisfies_constraint(blocks, branching_factor=2):
+    """
+    Checks if <blocks> satisfies the binary structure constraint
+    """
+    n = blocks[1] - blocks[0] + 1
+    if not math.log(n, branching_factor).is_integer():
+        return False
+    if (blocks[0] % n) != 0:
+        return False
+    return True
+
+
 def get_blocks_size(blocks, blocks_metadata):
     if isinstance(blocks, tuple):
-        num_blocks = blocks[1] - blocks[0] + 1
         if "block_size" in blocks_metadata:
             # All blocks have the same size
+            num_blocks = blocks[1] - blocks[0] + 1
             n = num_blocks * blocks_metadata["block_size"]
         else:
             n = sum(
@@ -63,73 +77,166 @@ def get_logs(
 ) -> dict:
 
     n_allocated_tasks = 0
-    avg_total_hard_run_ops = 0
+    total_histogram_runs = 0
+    total_laplace_runs = 0
+    total_sv_misses = 0
+    total_sv_checks = 0
 
-    for task_info in tasks_info:
+    # Finally logging only a small number of tasks for faster analysis
+    chunks = {}
+    tasks_to_log = []
+    accummulated_budget_per_block = {}
+    sv_misses = {}
+    sv_checks = {}
+
+    if not config_dict["puredp"]:
+        blocks_initial_budget = RenyiBudget.from_epsilon_delta(
+            epsilon=config_dict["budget_accountant"]["epsilon"],
+            delta=config_dict["budget_accountant"]["delta"],
+            alpha_list=config_dict["budget_accountant"]["alphas"],
+        )
+    else:
+        blocks_initial_budget = config_dict["budget_accountant"]["epsilon"]
+
+    for i, task_info in enumerate(tasks_info):
 
         if task_info["status"] == FINISHED:
             n_allocated_tasks += 1
 
+            chunk_keys = list(task_info["run_metadata"]["run_types"][0].keys())
+            for chunk_key in chunk_keys:
+                if chunk_key not in chunks:
+                    chunks[str(chunk_key)] = 0
+                chunks[str(chunk_key)] += 1
+
             run_metadata = task_info["run_metadata"]
-            avg_task_hard_run_ops = 0
-            for run_op_metadata in run_metadata.values():
-                if run_op_metadata["hard_query"]:
-                    avg_task_hard_run_ops += 1
-            avg_task_hard_run_ops /= len(run_metadata)
+            histogram_runs = laplace_runs = 0
+            run_types_list = run_metadata["run_types"]
+            for run_types in run_types_list:
+                for run_type in run_types.values():
+                    if run_type == "Laplace":
+                        laplace_runs += 1
+                    elif run_type == "Histogram":
+                        histogram_runs += 1
 
-            avg_total_hard_run_ops += avg_task_hard_run_ops
+            total_laplace_runs += laplace_runs
+            total_histogram_runs += histogram_runs
 
-            probabilistic_runs = deterministic_runs = 0
-            for run_op_metadata in run_metadata.values():
-                if run_op_metadata["cache_type"] == "DeterministicCache":
-                    deterministic_runs += 1
-                elif run_op_metadata["cache_type"] == "ProbabilisticCache":
-                    probabilistic_runs += 1
+            # TODO: clean this part - it's terrible
+            sv_check_status_list = run_metadata["sv_check_status"]
+            node_id_list = run_metadata["sv_node_id"]
+            assert len(sv_check_status_list) <= 1
+            for sv_check_status in sv_check_status_list:
+                sv_node_id = str(node_id_list[0])
+                if sv_check_status == False:
+                    total_sv_misses += 1
+                    if sv_node_id not in sv_misses:
+                        sv_misses[sv_node_id] = 0
+                    sv_misses[sv_node_id] += 1
+                if sv_node_id not in sv_checks:
+                    sv_checks[sv_node_id] = 0
+                sv_checks[sv_node_id] += 1
+                total_sv_checks += 1
+
+            total_budget_per_block = {}
+            # total budget per block keeps the budget spent for a task across all of its trials
+            budget_per_block_list = run_metadata["budget_per_block"]
+            for budget_per_block in budget_per_block_list:
+                for block, budget in budget_per_block.items():
+                    if block not in total_budget_per_block:
+                        total_budget_per_block[block] = budget
+                    else:
+                        total_budget_per_block[block] += budget
+
+            for block, budget in total_budget_per_block.items():
+                if block not in accummulated_budget_per_block:
+                    accummulated_budget_per_block[block] = budget
+                else:
+                    accummulated_budget_per_block[block] += budget
+            accummulated_budget_per_block_dump = {}
+            for block in accummulated_budget_per_block:
+                accummulated_budget_per_block_dump[
+                    block
+                ] = accummulated_budget_per_block[block].dump()
+
+            for block in total_budget_per_block:
+                total_budget_per_block[block] = total_budget_per_block[block].dump()
+
+            task_info["run_metadata"]["budget_per_block"] = total_budget_per_block
+            task_info["run_metadata"].update(
+                {"accummulated_budget_per_block": accummulated_budget_per_block_dump}
+            )
+
+            # Final Global budget consumption across all blocks - to output in the terminal
+            if i == len(tasks_info) - 1:
+                # For each task and each block find the accumulated normalized total budget
+                global_budget = 0
+                for block, budget in accummulated_budget_per_block.items():
+                    global_budget += budget.epsilon
 
             task_info.update(
                 {
-                    "laplace_runs": deterministic_runs,
-                    "pmw_runs": probabilistic_runs,
+                    "laplace_runs": laplace_runs,
+                    "histogram_runs": histogram_runs,
                 }
             )
 
-    avg_total_hard_run_ops /= len(tasks_info)
-
-    blocks_initial_budget = RenyiBudget.from_epsilon_delta(
-        epsilon=config_dict["budget_accountant"]["epsilon"],
-        delta=config_dict["budget_accountant"]["delta"],
-        alpha_list=config_dict["budget_accountant"]["alphas"],
-    ).dump()
+            if (
+                task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0
+                or i == len(tasks_info) - 1
+            ):
+                tasks_to_log.append(task_info)
 
     workload = pd.read_csv(config_dict["tasks"]["path"])
     query_pool_size = len(workload["query_id"].unique())
     config = {}
 
-    if config_dict["cache"]["type"] == "DeterministicCache":
-        cache_type = "LaplaceRuns"
+    if config_dict["cache"]["type"] == "LaplaceCache":
+        cache_type = "DirectLaplaceCache"
         heuristic = ""
-    elif config_dict["cache"]["type"] == "ProbabilisticCache":
-        cache_type = "PMWRuns"
+        learning_rate = ""
+        bootstrapping = ""
+        key = cache_type
+    elif config_dict["cache"]["type"] == "PMWCache":
+        cache_type = "PMWCache"
         heuristic = ""
+        learning_rate = ""
+        bootstrapping = ""
+        key = cache_type
+
     else:
-        cache_type = "MixedRuns"
-        heuristic = config_dict["cache"]["pmw_cfg"]["heuristic"]
+        cache_type = "HybridCache"
+        heuristic = config_dict["cache"]["probabilistic_cfg"]["heuristic"]
+        learning_rate = str(config_dict["cache"]["probabilistic_cfg"]["learning_rate"])
+        bootstrapping = str(config_dict["cache"]["probabilistic_cfg"]["bootstrapping"])
+        key = (
+            cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping
+        )
 
     config.update(
         {
             "n_allocated_tasks": n_allocated_tasks,
             "total_tasks": len(tasks_info),
-            "avg_total_hard_run_ops": avg_total_hard_run_ops,
+            "total_sv_misses": total_sv_misses,
+            "total_sv_checks": total_sv_checks,
+            "total_histogram_runs": total_histogram_runs,
+            "total_laplace_runs": total_laplace_runs,
             "cache": cache_type,
             "planner": config_dict["planner"]["method"],
             "workload_path": config_dict["tasks"]["path"],
             "query_pool_size": query_pool_size,
-            "tasks_info": tasks_info,
+            "tasks_info": tasks_to_log,
             "block_budgets_info": block_budgets_info,
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
             "config": config_dict,
+            "learning_rate": learning_rate,
+            "bootstrapping": bootstrapping,
+            "global_budget": global_budget,
+            "chunks": chunks,
+            "sv_misses": sv_misses,
+            "key": key,
         }
     )
 

@@ -13,18 +13,17 @@ class QueryConverter:
             for i, val in enumerate(entry):
                 p[i].add(val)
 
-        where_clause = ""
+        in_clauses = []
         for i, s in enumerate(p):
             domain_size = self.attribute_domain_sizes[i]
             if len(s) != domain_size:
-                for x in range(len(s)):
-                    where_clause += f"{self.attribute_names[i]}={x}"
-                    if x != len(s) - 1:
-                        where_clause += " OR "
-
-                if i != len(p) - 1:
-                    where_clause += " AND "
-
+                if len(s) == 1:
+                    in_clauses += [f"{self.attribute_names[i]} = {tuple(s)[0]} "]
+                else:
+                    in_clauses += [f"{self.attribute_names[i]} IN {tuple(s)} "]
+        where_clause = "AND ".join(in_clauses)
+        if where_clause:
+            where_clause += "AND "
         time_window_clause = f"time>={blocks[0]} AND time<={blocks[1]}"
         sql = (
             f"SELECT COUNT(*) FROM covid_data WHERE {where_clause}{time_window_clause};"
@@ -32,6 +31,7 @@ class QueryConverter:
         return sql
 
     def convert_to_tensor(self, query_vector):
+        print("length query", len(query_vector))
         tensor = build_sparse_tensor(
             bin_indices=query_vector,
             values=[1.0] * len(query_vector),

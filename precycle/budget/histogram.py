@@ -1,6 +1,6 @@
 import math
 from itertools import product
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import numpy as np
 import torch
@@ -11,13 +11,20 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
     def __init__(
         self,
         domain_size: Optional[int] = None,
+        tensor=None,
         attribute_sizes: Optional[List[int]] = None,
     ) -> None:
         # TODO: optimize this later, maybe we only need to store the "diff", which is sparse
+        # TODO: keep a multidimensional tensor for efficient marginals
+        # TODO: store counts instead of probabilities (int). Potentially with a separate field for the sum
         self.N = domain_size if domain_size else get_domain_size(attribute_sizes)
-        self.tensor = torch.ones(
-            size=(1, self.N),
-            dtype=torch.float64,
+        self.tensor = (
+            tensor
+            if tensor is not None
+            else torch.ones(
+                size=(1, self.N),
+                dtype=torch.float64,
+            )
         )
         self.normalize()
 
@@ -32,6 +39,13 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
         # sparse (1,N) x dense (N,1)
         return torch.smm(query, self.tensor.t()).item()
 
+    # TODO: Extra optimization: don't even create the query vector
+    def run_rectangle(self, marginal_query: Dict[int, int]):
+        # Multiple values for a single attribute?
+        # attribute_ids, values = marginal_query.items()
+        # Torch sum over the histogram
+        pass
+
 
 class SparseHistogram:  # We use it to represent the block data and queries
     def __init__(
@@ -44,7 +58,6 @@ class SparseHistogram:  # We use it to represent the block data and queries
             attribute_sizes=attribute_sizes,
         )
         self.domain_size = self.tensor.shape[1]  # N
-
     @classmethod
     def from_dataframe(
         cls,
@@ -154,9 +167,9 @@ def k_way_marginal_query_list(
     # List of domains. E.g. positive = [1], gender = [0,1], ethnicity = [1,2,3]
     domain_per_attribute = []
     for attribute, size in enumerate(attribute_sizes):
-        if attribute in attribute_to_value:
+        if str(attribute) in attribute_to_value:
             # This attribute is a marginal, we force one value
-            domain_per_attribute.append([attribute_to_value[attribute]])
+            domain_per_attribute.append([attribute_to_value[str(attribute)]])
         else:
             # This attribute can take any value
             domain_per_attribute.append(list(range(size)))

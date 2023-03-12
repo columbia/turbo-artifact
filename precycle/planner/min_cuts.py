@@ -1,31 +1,14 @@
-import os
 import math
 from sortedcollections import OrderedSet
-from precycle.executor import A, RDet, RProb
 from precycle.planner.planner import Planner
-import time
-
-# from precycle.utils.utils import get_blocks_size
-from precycle.utils.compute_utility_curve import (
-    deterministic_compute_utility_curve,
-    probabilistic_compute_utility_curve,
-)
-
+from precycle.utils.utils import satisfies_constraint
+from precycle.executor import A, RunLaplace, RunHistogram, RunPMW
+from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
+from precycle.utils.utils import get_blocks_size
 
 class MinCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
-
-    def satisfies_constraint(self, blocks, branching_factor=2):
-        """
-        Checks if <blocks> satisfies the binary structure constraint
-        """
-        n = blocks[1] - blocks[0] + 1
-        if not math.log(n, branching_factor).is_integer():
-            return False
-        if (blocks[0] % n) != 0:
-            return False
-        return True
 
     def get_min_cuts(self, blocks):
         """
@@ -33,7 +16,6 @@ class MinCuts(Planner):
         """
         indices = OrderedSet()
         start, end = blocks
-        n = end - start + 1
         chunk_end = start
         while chunk_end <= end:
             i = 1
@@ -41,7 +23,7 @@ class MinCuts(Planner):
             while chunk_end <= end:
                 x = chunk_start + 2**i - 1
                 i += 1
-                if x <= end and self.satisfies_constraint((chunk_start, x)):
+                if x <= end and satisfies_constraint((chunk_start, x)):
                     chunk_end = x
                 else:
                     indices.add((chunk_start, chunk_end))
@@ -56,94 +38,65 @@ class MinCuts(Planner):
         """
 
         subqueries = self.get_min_cuts(task.blocks)
-        a = task.utility
-        b = task.utility_beta
+        # block_size = self.config.blocks_metadata["block_size"]
+        # num_blocks = task.blocks[1] - task.blocks[0] + 1
+        # n = num_blocks * block_size
+        n = get_blocks_size(task.blocks, self.config.blocks_metadata)
 
-        if self.cache_type == "DeterministicCache":
-            block_size = self.config.blocks_metadata["block_size"]
-            num_blocks = task.blocks[1] - task.blocks[0] + 1
-            n = num_blocks * block_size
+        # NOTE: System wide accuracy for now
+        alpha = self.config.alpha  # task.utility
+        beta = self.config.beta  # task.utility_beta
+
+        if self.cache_type == "LaplaceCache":
             run_ops = []
+            min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
             for (i, j) in subqueries:
-                noise_std = deterministic_compute_utility_curve(
-                    a, b, n, (j - i + 1) * block_size, len(subqueries)
-                )
-                run_ops += [RDet((i, j), noise_std)]
-            plan = A(l=run_ops, cost=0)
+                # node_size = (j - i + 1) * block_size
+                node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+                sensitivity = 1 / node_size
+                laplace_scale = sensitivity / min_epsilon
+                noise_std = math.sqrt(2) * laplace_scale
+                run_ops += [RunLaplace((i, j), noise_std)]
+            plan = A(l=run_ops, sv_check=False, cost=0)
 
-        elif self.cache_type == "ProbabilisticCache":
-            # PMW computations must not exceed threshold otherwise we will break accuracy
-            if len(subqueries) > self.config.cache.probabilistic_cfg.max_pmw_k:
-                return None
+        elif self.cache_type == "PMWCache":
+            # NOTE: This is PMW.To be used only in the Monoblock case
+            assert len(subqueries) == 1
+            (i, j) = subqueries[0]
+            node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+            epsilon = get_pmw_epsilon(alpha, beta, node_size, 1)
+            run_ops = [RunPMW((i, j), alpha, epsilon)]
+            plan = A(l=run_ops, sv_check=False, cost=0)
 
-            block_size = self.config.blocks_metadata["block_size"]
-            num_blocks = task.blocks[1] - task.blocks[0] + 1
-            n = num_blocks * block_size
-
-            run_ops = []
-            for (i, j) in subqueries:
-                # Compute alpha, nu for each pmw run
-                alpha, nu = probabilistic_compute_utility_curve(
-                    a, b, (j - i + 1) * block_size, len(subqueries)
-                )
-                run_ops += [RProb((i, j), alpha, nu)]
-            plan = A(l=run_ops, cost=0)
-
-        else:
+        elif self.cache_type == "HybridCache":
             # Assign a Mechanism to each subquery
-            pmw_nodes = []
-            laplace_nodes = []
-            for subquery in subqueries:
-                # Don't use PMW if query is hard for it, run using a simple Laplace mechanism instead
-                obj = (
-                    laplace_nodes
-                    if self.cache.probabilistic_cache.is_query_hard_on_pmw(
-                        task.query, task.blocks
-                    )
-                    else pmw_nodes
-                )
-                obj.append(subquery)
-
-            pmw_nodes_len = len(pmw_nodes)
-            laplace_nodes_len = len(laplace_nodes)
-
-            # PMW computations must not exceed threshold otherwise we will break accuracy
-            if pmw_nodes_len > self.config.cache.probabilistic_cfg.max_pmw_k:
-                return None
-
-            # Now that each subquery is assigned to a mechanism determine
-            # the run budgets using the utility theorems
-            if pmw_nodes_len > 0 and laplace_nodes_len > 0:
-                # Union bound -> decrease b
-                b = 1 - math.sqrt(1 - b)
-
-            block_size = self.config.blocks_metadata["block_size"]
-
-            n_laplace = 0
-            for (i, j) in laplace_nodes:
-                n_laplace += (j - i + 1) * block_size
-
-            # Create the plan
+            # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
+            # In case a subquery is assigned to a Histogram run instead of a Laplace run
+            # a final check must be done by a SV on the aggregated output to assess its quality.
+            min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
+            sv_check = False
             run_ops = []
-            for (i, j) in laplace_nodes:
-                # Compute noise scale for the laplace runs
-                noise_std = deterministic_compute_utility_curve(
-                    a, b, n_laplace, (j - i + 1) * block_size, laplace_nodes_len
-                )
-                run_ops += [RDet((i, j), noise_std)]
+            for (i, j) in subqueries:
+                # Measure the expected additional budget needed for a Laplace run.
+                cache_entry = self.cache.laplace_cache.read_entry(task.query_id, (i, j))
+                # node_size = (j - i + 1) * block_size
+                node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+                sensitivity = 1 / node_size
+                laplace_scale = sensitivity / min_epsilon
+                noise_std = math.sqrt(2) * laplace_scale
 
-            for (i, j) in pmw_nodes:
-                # Compute alpha, nu for each pmw run
-                alpha, nu = probabilistic_compute_utility_curve(
-                    a, b, (j - i + 1) * block_size, pmw_nodes_len
-                )
-                run_ops += [RProb((i, j), alpha, nu)]
+                if (
+                    (cache_entry and noise_std >= cache_entry.noise_std)
+                ) or self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
+                    # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
+                    # Also choose the Laplace if the histogram is not well trained according to our heuristic
+                    run_ops += [RunLaplace((i, j), noise_std)]
+                else:
+                    sv_check = True
+                    run_ops += [RunHistogram((i, j))]
 
             # TODO: before running the query check if there is enough budget
             # for it because we do not do the check here any more
-            plan = A(l=run_ops, cost=0)
-
-            # if pmw_nodes_len > 0 and laplace_nodes_len > 0:
-            # time.sleep(4)
+            plan = A(l=run_ops, sv_check=sv_check, cost=0)
 
         return plan

@@ -5,8 +5,8 @@ import datetime
 from ray import tune
 from loguru import logger
 from typing import List, Any, Dict
-from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 from precycle.run_simulation import Simulator
+from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 
 
 def run_and_report(config: dict, replace=False) -> None:
@@ -30,35 +30,36 @@ def grid_online(
     enable_random_seed: bool = False,
     global_seed: int = 64,
     alpha: List[int] = [0.05],
-    beta: List[int] = [0.0001],
-    heuristic: str = "total_updates_counts:100",
+    beta: List[int] = [0.001],
+    learning_rate: List[int] = [0.1],
+    heuristic: str = "bin_updates:500:50",
     zipf_k: List[int] = [0.5],
-    max_pmw_k: List[int] = 10,
     variance_reduction: List[bool] = True,
+    log_every_n_tasks: int = 100,
+    bootstrapping: bool = [True],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
-        "mock": True,
+        "mock": True,  # Never disable "mock" when running with ray
+        "puredp": True,
         "variance_reduction": variance_reduction,
+        "alpha": tune.grid_search(alpha),
+        "beta": tune.grid_search(beta),
         "global_seed": global_seed,
         "enable_random_seed": enable_random_seed,
         "cache": {
             "type": tune.grid_search(cache),
             "probabilistic_cfg": {
-                "alpha": tune.grid_search(alpha),
-                "beta": tune.grid_search(beta),
-                "max_pmw_k": tune.grid_search(max_pmw_k),
-            },
-            "pmw_cfg": {
+                "learning_rate": tune.grid_search(learning_rate),
                 "heuristic": tune.grid_search(heuristic),
-                # "heuristic_value": tune.grid_search(heuristic_value),
+                "bootstrapping": tune.grid_search(bootstrapping),
             },
         },
         "planner": {
             "method": tune.grid_search(planner),
         },
-        "budget_accountant": {"epsilon": 10, "delta": 1e-07},
+        "budget_accountant": {"epsilon": 100, "delta": 1e-07},
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
@@ -77,8 +78,9 @@ def grid_online(
         "logs": {
             "verbose": False,
             "save": True,
-            "mlflow": True,
+            "mlflow": False,
             "loguru_level": "INFO",
+            "log_every_n_tasks": log_every_n_tasks,
         },
     }
 
@@ -103,15 +105,14 @@ def grid_online(
             tune.logger.JsonLoggerCallback(),
         ],
         progress_reporter=ray.tune.CLIReporter(
-            metric_columns=[
-                "n_allocated_tasks",
-                "total_tasks",
-            ],
+            metric_columns=["n_allocated_tasks", "total_tasks", "global_budget"],
             parameter_columns={
                 "planner/method": "planner",
                 "cache/type": "cache",
                 "tasks/zipf_k": "zipf_k",
-                "cache/pmw_cfg/heuristic": "heuristic",
+                "cache/probabilistic_cfg/heuristic": "heuristic",
+                "cache/probabilistic_cfg/learning_rate": "learning_rate",
+                "cache/probabilistic_cfg/bootstrapping": "bootstrapping",
             },
             max_report_frequency=60,
         ),

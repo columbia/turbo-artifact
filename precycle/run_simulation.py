@@ -1,9 +1,6 @@
 import json
-import math
 import os
 import random
-import sys
-
 import mlflow
 import numpy as np
 import simpy
@@ -12,19 +9,16 @@ from loguru import logger
 from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
-from precycle.cache.combined_cache import MockCombinedCache
-from precycle.planner.ilp import ILP
+from precycle.cache.cache import MockCache, Cache
 from precycle.planner.min_cuts import MinCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
 from precycle.utils.utils import (
     DEFAULT_CONFIG_FILE,
     LOGS_PATH,
     get_logs,
     save_logs,
-    save_mlflow_artifacts,
 )
 
 app = typer.Typer()
@@ -42,15 +36,12 @@ class Simulator:
         if self.config.logs.mlflow:
             os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))
             try:
-                mlflow.set_experiment(experiment_id="768944864734992566")
+                mlflow.set_experiment(
+                    experiment_name=self.config.logs.mlflow_experiment_id
+                )
             except Exception:
-                try:
-                    mlflow.set_experiment(
-                        experiment_id=self.config.logs.mlflow_experiment_id
-                    )
-                except Exception:
-                    experiment_id = mlflow.create_experiment(name="precycle")
-                    print(f"New MLflow experiment created: {experiment_id}")
+                experiment_id = mlflow.create_experiment(name="precycle")
+                print(f"New MLflow experiment created: {experiment_id}")
 
         try:
             with open(self.config.blocks.block_metadata_path) as f:
@@ -67,45 +58,17 @@ class Simulator:
             random.seed(self.config.global_seed)
             np.random.seed(self.config.global_seed)
 
-        if not self.config.cache.type == "DeterministicCache":
-            # This is the global accuracy supported by the probabilistic cache.
-            # If a query comes requesting more accuracy than that it won't be able to serve it.
-            assert self.config.cache.probabilistic_cfg.max_pmw_k is not None
-            assert self.config.cache.probabilistic_cfg.alpha is not None
-            assert self.config.cache.probabilistic_cfg.beta is not None
-
-            if (
-                self.config.cache.type == "CombinedCache"
-                and self.config.blocks.max_num > 1
-            ):
-                # Mixing Up Deterministic With Probabilistic runs - union bound over the two
-                # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
-                b = self.config.cache.probabilistic_cfg.beta
-                self.config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
-
-            self.config.cache.update(
-                {
-                    "pmw_accuracy": {
-                        "alpha": self.config.cache.probabilistic_cfg.alpha,
-                        "beta": self.config.cache.probabilistic_cfg.beta,
-                        "max_pmw_k": self.config.cache.probabilistic_cfg.max_pmw_k,
-                    }
-                }
-            )
-
         # Initialize all components
         if self.config.mock:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
-            cache = MockCombinedCache(self.config)
-        # else:
-        #     db = PSQL(self.config)
-        #     budget_accountant = BudgetAccountant(self.config)
-        #     cache = globals()[self.config.cache.type](self.config)
+            cache = MockCache(self.config)
+        else:
+            db = PSQL(self.config)
+            budget_accountant = BudgetAccountant(self.config)
+            cache = Cache(self.config)
 
-        planner = globals()[self.config.planner.method](
-            cache, budget_accountant, self.config
-        )
+        planner = MinCuts(cache, budget_accountant, self.config)
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config
@@ -122,9 +85,7 @@ class Simulator:
         Tasks(self.env, self.rm)
 
     def run(self):
-
         logs = None
-
         with mlflow.start_run():
             self.env.run()
 
@@ -147,11 +108,6 @@ def run_simulation(
     omegaconf: str = "precycle/config/precycle.json",
     loguru_level: str = "INFO",
 ):
-    # Try environment variable first, CLI arg otherwise
-    # level = os.environ.get("LOGURU_LEVEL", loguru_level)
-    # logger.remove()
-    # logger.add(sys.stdout, level=loguru_level)
-
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 

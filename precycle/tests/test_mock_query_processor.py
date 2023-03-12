@@ -12,7 +12,7 @@ from precycle.planner.ilp import ILP
 from precycle.planner.min_cuts import MinCuts
 from precycle.cache.combined_cache import MockCombinedCache
 
-from precycle.utils.compute_utility_curve import probabilistic_compute_utility_curve
+from precycle.utils.utility_theorems import probabilistic_compute_utility_curve
 
 from precycle.utils.utils import DEFAULT_CONFIG_FILE
 
@@ -35,27 +35,6 @@ def test(
         logger.error("Dataset metadata must have be created first..")
     assert blocks_metadata is not None
     config.update({"blocks_metadata": blocks_metadata})
-
-    if not config.cache.type == "DeterministicCache":
-        # This is the global accuracy supported by the probabilistic cache.
-        # If a query comes requesting more accuracy than that it won't be able to serve it.
-        assert config.cache.probabilistic_cfg.max_pmw_k is not None
-        assert config.cache.probabilistic_cfg.alpha is not None
-        assert config.cache.probabilistic_cfg.beta is not None
-
-        if config.cache.type == "CombinedCache" and config.blocks.max_num > 1:
-            # Mixing Up Deterministic With Probabilistic runs - union bound over the two
-            # We need to change the beta of the probabilistic cache to: b = 1 - math.sqrt(1 - b)
-            b = config.cache.probabilistic_cfg.beta
-            config.cache.probabilistic_cfg.beta = 1 - math.sqrt(1 - b)
-
-        pmw_alpha, pmw_beta = probabilistic_compute_utility_curve(
-            config.cache.probabilistic_cfg.alpha,
-            config.cache.probabilistic_cfg.beta,
-            config.cache.probabilistic_cfg.max_pmw_k,
-        )
-        config.cache.update({"pmw_accuracy": {"alpha": pmw_alpha, "beta": pmw_beta}})
-        print(config.cache)
 
     query_vector = [
         [0, 0, 0, 0],
