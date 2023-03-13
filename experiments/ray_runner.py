@@ -22,8 +22,8 @@ def grid_online(
     tasks_path: List[str],
     blocks_path: str,
     blocks_metadata: str,
-    planner: List[str],
     cache: List[str],
+    planner: List[str] = ["MinCuts"],
     avg_num_tasks_per_block: List[int] = [100],
     block_selection_policy: List[str] = ["RandomBlocks"],
     max_tasks: List[int] = [None],
@@ -41,7 +41,7 @@ def grid_online(
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
-        "mock": True,
+        "mock": True,  # Never disable "mock" when running with ray
         "puredp": True,
         "variance_reduction": variance_reduction,
         "alpha": tune.grid_search(alpha),

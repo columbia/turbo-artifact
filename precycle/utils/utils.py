@@ -44,9 +44,9 @@ def satisfies_constraint(blocks, branching_factor=2):
 
 def get_blocks_size(blocks, blocks_metadata):
     if isinstance(blocks, tuple):
-        num_blocks = blocks[1] - blocks[0] + 1
         if "block_size" in blocks_metadata:
             # All blocks have the same size
+            num_blocks = blocks[1] - blocks[0] + 1
             n = num_blocks * blocks_metadata["block_size"]
         else:
             n = sum(

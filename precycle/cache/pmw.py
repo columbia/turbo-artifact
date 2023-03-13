@@ -97,8 +97,17 @@ class PMW:
                 lr *= -1
 
             # Multiplicative weights update for the relevant bins
-            for i in flat_indices(query):
-                self.histogram.tensor[i] *= torch.exp(query[i] * lr)
+            # for i in flat_indices(query):
+            #     self.histogram.tensor[i] *= torch.exp(query[i] * lr)
+
+            query_tensor_dense = query.to_dense()
+            update_tensor = torch.mul(
+                self.histogram.tensor, torch.exp(query_tensor_dense * lr)
+            )
+            bins_mask = query_tensor_dense == 0
+            self.histogram.tensor = torch.add(
+                torch.mul(self.histogram.tensor, bins_mask), update_tensor
+            )
             self.histogram.normalize()
 
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)

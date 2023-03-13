@@ -5,7 +5,7 @@ from sortedcollections import OrderedSet
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
-from precycle.utils.utils import satisfies_constraint
+from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
 
 class MinCuts(Planner):
@@ -40,9 +40,7 @@ class MinCuts(Planner):
         """
 
         subqueries = self.get_min_cuts(task.blocks)
-        block_size = self.config.blocks_metadata["block_size"]
-        num_blocks = task.blocks[1] - task.blocks[0] + 1
-        n = num_blocks * block_size
+        n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         k = len(subqueries)
 
         # NOTE: System wide accuracy for now
@@ -53,7 +51,8 @@ class MinCuts(Planner):
             run_ops = []
             min_epsilon = get_laplace_epsilon(alpha, beta, n, k)
             for (i, j) in subqueries:
-                node_size = (j - i + 1) * block_size
+                # node_size = (j - i + 1) * block_size
+                node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
@@ -64,23 +63,24 @@ class MinCuts(Planner):
             # NOTE: This is PMW.To be used only in the Monoblock case
             assert len(subqueries) == 1
             (i, j) = subqueries[0]
-            epsilon = get_pmw_epsilon(alpha, beta, (j - i + 1) * block_size, 1)
-            print(block_size, epsilon)
+            node_size = get_blocks_size((i, j), self.config.blocks_metadata)
+            epsilon = get_pmw_epsilon(alpha, beta, node_size, 1)
             run_ops = [RunPMW((i, j), alpha, epsilon)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.cache_type == "HybridCache":
             # Assign a Mechanism to each subquery
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
-            # In case a subquery is assigned to a Histogram run instead of a Laplace run, then this epsilon
-            # might not have been enough and a final check must be done by a SV on the aggregated output to assess its quality.
+            # In case a subquery is assigned to a Histogram run instead of a Laplace run
+            # a final check must be done by a SV on the aggregated output to assess its quality.
             min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
             sv_check = False
             run_ops = []
             for (i, j) in subqueries:
                 # Measure the expected additional budget needed for a Laplace run.
                 cache_entry = self.cache.laplace_cache.read_entry(task.query_id, (i, j))
-                node_size = (j - i + 1) * block_size
+                # node_size = (j - i + 1) * block_size
+                node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
@@ -90,6 +90,8 @@ class MinCuts(Planner):
                 ) or self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
                     # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
                     # Also choose the Laplace if the histogram is not well trained according to our heuristic
+                    # if cache_entry and noise_std >= cache_entry.noise_std:
+                    # print("ALREADY STORED ...")
                     run_ops += [RunLaplace((i, j), noise_std)]
                 else:
                     sv_check = True

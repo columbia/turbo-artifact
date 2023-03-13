@@ -96,6 +96,7 @@ class MockPSQL:
             block = self.blocks[block_id]
             true_result += block.size * block.histogram.run(query)
             blocks_size += block.size
+        # print("true result abs", true_result, "block size", blocks_size)
         true_result /= blocks_size
         # print("true result:", true_result, "total-size:", blocks_size)
         return true_result

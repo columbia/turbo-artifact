@@ -1,7 +1,8 @@
 import numpy as np
-from precycle.utils.utils import satisfies_constraint
+from precycle.utils.utils import satisfies_constraint, get_blocks_size
 from precycle.utils.utility_theorems import get_sv_epsilon
 import redis
+import time
 
 
 class SparseVector:
@@ -10,6 +11,7 @@ class SparseVector:
         self.id = id
         self.alpha = alpha
         self.beta = beta
+        print(alpha, beta, n)
 
         if not sv_state:
             self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)
@@ -51,7 +53,7 @@ class SparseVectors:
         self.config = config
         self.kv_store = self.get_kv_store(config)
         self.blocks_metadata = self.config.blocks_metadata
-        self.block_size = self.config.blocks_metadata["block_size"]
+        # self.block_size = self.config.blocks_metadata["block_size"]
 
     def get_kv_store(self, config):
         return redis.Redis(host=config.cache.host, port=config.cache.port, db=0)
@@ -70,16 +72,35 @@ class SparseVectors:
             node = p2 if satisfies_constraint(p2) else p1
         return node
 
+    def min_sum_subarray(self, blocks, k):
+
+        arr = [get_blocks_size((i, i), self.blocks_metadata) for i in blocks]
+        assert not len(arr) < k
+
+        start = 0
+        end = k - 1
+        window_sum = sum(arr[start : end + 1])
+        min_sum = window_sum
+
+        for i in range(k, len(arr)):
+            window_sum += arr[i] - arr[i - k]
+            if window_sum < min_sum:
+                min_sum = window_sum
+                start = i - k + 1
+                end = i
+
+        return min_sum
+
     def create_new_entry(self, node_id):
         # Find the smallest request that will be handled by this sparse vector.
-        node_size = node_id[1] - node_id[0] + 1
-        if node_size == 1:
-            smallest_request_size = 1
-        else:
-            smallest_request_size = (node_size / 2) + 1
-        n = smallest_request_size * self.block_size
+        covered_blocks = range(node_id[0], node_id[1] + 1)
+        node_size = len(covered_blocks)
+        smallest_request_size = 1 if node_size == 1 else (node_size / 2) + 1
+        # Find the <smallest-request-size> number of continuous blocks with smallest possible population n
+        n = self.min_sum_subarray(covered_blocks, smallest_request_size)
+        # print("smallest size request", n)
+        # n = smallest_request_size * 65318
 
-        # NOTE: n = smallest_SV_request * block_size
         sparse_vector = SparseVector(
             id=node_id,
             beta=self.config.beta,
@@ -129,9 +150,9 @@ class SparseVectors:
         return None
 
 
-class MockSparseVectors:
+class MockSparseVectors(SparseVectors):
     def __init__(self, config):
-        super.__init__(config)
+        super().__init__(config)
 
     def get_kv_store(self, config):
         return {}

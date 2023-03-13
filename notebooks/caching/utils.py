@@ -118,8 +118,8 @@ def get_budgets_information(df, blocks):
                     max_orders[block_id] = global_order
 
         for i, task in enumerate(tasks):
-            if not (i % 100 == 0 or i == len(tasks) - 1):
-                continue
+            # if not (i % 100 == 0 or i == len(tasks) - 1):
+            # continue
 
             run_metadata = task["run_metadata"]
             budget_per_block = run_metadata["budget_per_block"]

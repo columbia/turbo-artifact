@@ -1,5 +1,5 @@
 {
-    "mock": false,
+    "mock": true,
     "puredp": true,
     "global_seed": 64,
     "variance_reduction": true,
@@ -8,11 +8,11 @@
     "cache": {
         "host": "localhost",
         "port": 6379,
-        "type": "LaplaceCache",
+        "type": "HybridCache",
         "probabilistic_cfg": {
             "learning_rate": 0.2,
-            "heuristic": "bin_visits:10-5",
-            "bootstrapping": true
+            "heuristic": "bin_visits:100-10",
+            "bootstrapping": false
         }
     },
     "planner": {
@@ -32,19 +32,19 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 5,
-        "max_num": 5,
+        "initial_num": 1,
+        "max_num": 1,
         "arrival_interval": 1,
         "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
         "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json"
     },
     "tasks": {
-        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 1e1,
-        "max_num": 5e1,
+        "avg_num_tasks_per_block": 25e3,
+        "max_num": 25e3,
         "initial_num": 0,
-        "zipf_k": 0.5
+        "zipf_k": 1.5
     },
     "blocks_server": {
         "host": "localhost",
@@ -60,6 +60,6 @@
         "mlflow": true,
         "mlflow_experiment_id": "precycle",
         "loguru_level": "INFO",
-        "log_every_n_tasks": 500
+        "log_every_n_tasks": 100
     }
 }

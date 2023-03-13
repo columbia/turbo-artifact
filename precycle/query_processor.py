@@ -9,20 +9,16 @@ from precycle.task import Task, TaskInfo
 from precycle.utils.utils import mlflow_log
 from precycle.utils.utils import FINISHED, FAILED
 
-from precycle.query_converter import QueryConverter
-
 
 class QueryProcessor:
     def __init__(self, db, cache, planner, budget_accountant, config):
         self.config = config
-
         self.db = db
         self.cache = cache
         self.planner = planner
         self.budget_accountant = budget_accountant
         self.executor = Executor(self.cache, self.db, self.budget_accountant, config)
 
-        self.query_converter = QueryConverter(self.config.blocks_metadata)
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
 
@@ -33,7 +29,8 @@ class QueryProcessor:
         """
 
         round = 0
-        result = status = None
+        result = None
+        status = None
         run_metadata = {
             "sv_check_status": [],
             "sv_node_id": [],
@@ -41,24 +38,26 @@ class QueryProcessor:
             "budget_per_block": [],
         }
 
-        query_tensor = self.query_converter.convert_to_tensor(task.query)
-        task.query_db_format = (
-            query_tensor
-            if self.config.mock
-            else self.query_converter.convert_to_sql(task.query, task.blocks)
-        )
-        task.query = query_tensor
-        # print(task.query_db_format)
-
         # Execute the plan to run the query # TODO: check if there is enough budget before running
-        while not result and (not status or status == "sv_failed"):
+        while result is None and (not status or status == "sv_failed"):
             start_planning = time.time()
             # Get a DP execution plan for query.
             plan = self.planner.get_execution_plan(task)
+
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    "green",
+                )
+            )
             assert plan is not None
             planning_time = time.time() - start_planning
+            # print("Planning", planning_time)
+
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            # t = time.time()
             result, status = self.executor.execute_plan(plan, task, run_metadata)
+            # print("Execution", time.time() - t)
 
             # Sanity checks
             # Second try must always use Laplaces so we can't reach third trial

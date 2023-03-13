@@ -1,9 +1,11 @@
+import time
+import pickle
 import random
-
 import numpy as np
 from loguru import logger
-
 from precycle.task import Task
+from precycle.budget.histogram import k_way_marginal_query_list
+from precycle.query_converter import QueryConverter
 
 
 def Zipf(a: np.float64, min: np.uint64, max: np.uint64, size=None):
@@ -24,6 +26,7 @@ class TaskGenerator:
     def __init__(self, df_tasks, config) -> None:
         self.config = config
         self.tasks = df_tasks
+        self.query_converter = QueryConverter(self.config.blocks_metadata)
 
     def sample_task_row(self, config):
         raise NotImplementedError("Must override")
@@ -41,23 +44,54 @@ class TaskGenerator:
         elif self.config.tasks.block_selection_policy == "RandomBlocks":
             start = np.random.randint(0, num_blocks - num_requested_blocks + 1)
             requested_blocks = (start, start + num_requested_blocks - 1)
-            # print(requested_blocks)
 
-        attributes_domain_sizes = self.config.blocks_metadata["attributes_domain_sizes"]
+        # t = time.time()
+        # Query may be either a query_vector (covid19) or a dict format (citibike)
+        query = eval(task_row["query"])
+        # Read compressed rectangle or PyTorch slice, output a query vector
+        if isinstance(query, dict):
+            # NOTE: we only support pure k-way marginals for now
+            attribute_sizes = self.config.blocks_metadata["attributes_domain_sizes"]
+            query_vector = k_way_marginal_query_list(
+                query, attribute_sizes=attribute_sizes
+            )
+            # print("kmarginal", query)
+        else:
+            query_vector = query
+
+        # Load tensor /query from disk if stored
+        if "query_path" in task_row:
+            with open(task_row["query_path"], "rb") as f:
+                query_tensor = pickle.load(f)
+        else:
+            query_tensor = self.query_converter.convert_to_tensor(query)
+
+        # Converting to dense tensor to facilitate future tensor operations
+        # TODO: Maybe this is unecessary? I'm not very familiar with PyTorch.
+        query_tensor = query_tensor.to_dense()
+
+        query_db_format = (
+            query_tensor
+            if self.config.mock
+            else self.query_converter.convert_to_sql(query_vector, task.blocks)
+        )
+        # print(query_id, "query", query)
+        # print(query_id, "query tensor", query_tensor)
+        # print(query_id, "query path", task_row["query_path"])
+
+        # print("Query Prep Time", time.time() - t)
 
         task = Task(
             id=task_id,
             query_id=query_id,
             query_type=task_row["query_type"],
-            query=eval(
-                task_row["query"]
-            ),  # Transform string to list of lists, or tuple (marginal)
+            query=query_tensor,
+            query_db_format=query_db_format,
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
             utility=float(task_row["utility"]),
             utility_beta=float(task_row["utility_beta"]),
             name=name,
-            attribute_sizes=attributes_domain_sizes,
         )
         # print("\nTask", task.dump())
         return task
