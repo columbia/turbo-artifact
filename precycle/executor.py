@@ -14,9 +14,15 @@ from precycle.utils.utils import get_blocks_size
 
 
 class RunLaplace:
-    def __init__(self, blocks, noise_std) -> None:
+    def __init__(
+        self, blocks, noise_std, alpha=None, beta=None, n=None, k=None
+    ) -> None:
         self.blocks = blocks
         self.noise_std = noise_std
+        self.alpha = alpha
+        self.beta = beta
+        self.n = n
+        self.k = k
 
     def __str__(self):
         return f"RunLaplace({self.blocks}, {self.noise_std})"
@@ -240,9 +246,13 @@ class Executor:
                 else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
             )
             noise = np.random.laplace(scale=laplace_scale)
+            epsilons = [epsilon]
+            noises = [noise]
 
         else:  # Cached
             true_result = cache_entry.result
+            epsilons = cache_entry.epsilons
+            noises = cache_entry.noises
 
             if run_op.noise_std >= cache_entry.noise_std:
                 # We already have a good estimate in the cache
@@ -257,56 +267,138 @@ class Executor:
                     epsilon = sensitivity / laplace_scale
                     run_budget = (
                         BasicBudget(epsilon)
-                        if self.confi.puredp
+                        if self.config.puredp
                         else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                     )
                     noise = np.random.laplace(scale=laplace_scale)
-                else:
-                    # TODO a temporary hack to enable VR.
-                    cached_laplace_scale = cache_entry.noise_std / math.sqrt(2)
-                    cached_pure_epsilon = sensitivity / cached_laplace_scale
 
+                    epsilons.append(epsilon)
+                    noises.append(noise)
+
+                else:
+
+                    # noise_std = sqrt(2) / (node_size * epsilon)
                     target_laplace_scale = run_op.noise_std / math.sqrt(2)
+                    k = run_op.k if run_op.k else 1  # Number of aggregations
                     target_pure_epsilon = sensitivity / target_laplace_scale
 
-                    run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+                    # print(
+                    #     f"Starting VR with desired std {run_op.noise_std}, cache {cache_entry.noise_std}. epsilons={epsilons}, target pure epsilon={target_pure_epsilon}"
+                    # )
+
+                    # We want \sum \epsilon_i^2 = target_pure_epsilon^2
+                    # The aggregation step will multiply by n_i/n
+
+                    run_pure_epsilon = math.sqrt(
+                        target_pure_epsilon**2 - sum([e**2 for e in epsilons])
+                    )
                     run_laplace_scale = sensitivity / run_pure_epsilon
 
+                    fresh_noise = np.random.laplace(scale=run_laplace_scale)
                     run_budget = (
                         BasicBudget(run_pure_epsilon)
                         if self.config.puredp
                         else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
                     )
-                    # TODO: Temporary hack is that I don't compute the noise by using the coefficients
-                    noise = np.random.laplace(scale=target_laplace_scale)
 
-                #     # TODO: re-enable variance reduction
-                #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
-                #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
-                #     # We set a ∈ [0,1] and b = 1-a
-                #     # Then, we maximize y^2 = f(a) = (c - 2(ax)^2)/2(1-a)^2
-                #     # We have (1-a)^3 f'(a) = c - 2ax^2
-                #     # So we take a = c/(2x^2)
-                #     x = cache_entry.noise_std / np.sqrt(2)
-                #     c = run_op.noise_std**2
-                #     a = c / (2 * (x**2))
-                #     b = 1 - a
-                #     y = np.sqrt((c - 2 * (a * x) ** 2) / (2 * b**2))
+                    epsilons.append(run_pure_epsilon)
+                    noises.append(fresh_noise)
 
-                #     assert np.isclose(2 * (a * x) ** 2 + 2 * (b * y) ** 2, c)
+                    noise = sum(
+                        n * (e**2 / target_pure_epsilon**2)
+                        for n, e in zip(noises, epsilons)
+                    )
 
-                #     # Get some fresh noise with optimal variance and take a linear combination with the old noise
-                #     laplace_scale = y / np.sqrt(2)
-                #     fresh_noise = np.random.laplace(scale=laplace_scale)
-                #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-                #     noise = a * cache_entry.noise + b * fresh_noise
+                    # NOTE: the variance reduction lemma holds if max_ij b_ij is small enough over all the blocks.
+                    # Conservative check: upper bound block by block, we lose a factor sqrt(k) but it's easier
+                    # More general solution: do this check at the query level (not subqueries)
+                    # We can optimize that if/when we implement Monte Carlo
+
+                    beta = self.config.beta
+                    if (
+                        max(epsilons) * math.sqrt(math.log(2 / beta))
+                        > math.sqrt(k) * target_pure_epsilon
+                    ):
+                        logger.warning("Conservative utility: compute from scratch")
+                        # raise ValueError(
+                        #     f"The utility theorem for multi-block VR breaks here (see Overleaf). \n\
+                        #     espilons: {epsilons} target_pure_epsilon: {target_pure_epsilon} \n\
+                        #     { max(epsilons) * math.sqrt(math.log(2 / beta))} > { math.sqrt(k) * target_pure_epsilon}\n\
+                        #     Solution: drop the largest epsilon and repeat, or adjust the coefficients.
+                        #       Or increase the target_pure_epsilon, or pay again for the same noise.
+                        #       But let's see if this error ever happens in practice."
+                        # Edit: it does happen often at the beginning.
+                        # )
+
+                        # TODO: just use Monte Carlo instead of this weird conditional bound
+                        # Conservative solution: ignore the cache and compute from scratch
+
+                        epsilons.pop(-1)
+                        noises.pop(-1)
+
+                        laplace_scale = run_op.noise_std / math.sqrt(2)
+                        epsilon = sensitivity / laplace_scale
+                        run_budget = (
+                            BasicBudget(epsilon)
+                            if self.config.puredp
+                            else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+                        )
+                        noise = np.random.laplace(scale=laplace_scale)
+
+                        epsilons.append(epsilon)
+                        noises.append(noise)
+
+        # else:
+        #     # TODO a temporary hack to enable VR.
+        #     cached_laplace_scale = cache_entry.noise_std / math.sqrt(2)
+        #     cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+        #     target_laplace_scale = run_op.noise_std / math.sqrt(2)
+        #     target_pure_epsilon = sensitivity / target_laplace_scale
+
+        #     run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+        #     run_laplace_scale = sensitivity / run_pure_epsilon
+
+        #     run_budget = (
+        #         BasicBudget(run_pure_epsilon)
+        #         if self.config.puredp
+        #         else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+        #     )
+        #     # TODO: Temporary hack is that I don't compute the noise by using the coefficients
+        #     noise = np.random.laplace(scale=target_laplace_scale)
+
+        #     # TODO: re-enable variance reduction
+        #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
+        #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
+        #     # We set a ∈ [0,1] and b = 1-a
+        #     # Then, we maximize y^2 = f(a) = (c - 2(ax)^2)/2(1-a)^2
+        #     # We have (1-a)^3 f'(a) = c - 2ax^2
+        #     # So we take a = c/(2x^2)
+        #     x = cache_entry.noise_std / np.sqrt(2)
+        #     c = run_op.noise_std**2
+        #     a = c / (2 * (x**2))
+        #     b = 1 - a
+        #     y = np.sqrt((c - 2 * (a * x) ** 2) / (2 * b**2))
+
+        #     assert np.isclose(2 * (a * x) ** 2 + 2 * (b * y) ** 2, c)
+
+        #     # Get some fresh noise with optimal variance and take a linear combination with the old noise
+        #     laplace_scale = y / np.sqrt(2)
+        #     fresh_noise = np.random.laplace(scale=laplace_scale)
+        #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+        #     noise = a * cache_entry.noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
             self.config.puredp and run_budget.epsilon > 0
         ):
+
             cache_entry = CacheEntry(
-                result=true_result, noise_std=run_op.noise_std, noise=noise
+                result=true_result,
+                noise_std=run_op.noise_std,  # It's the true std of our new linear combination
+                noise=noise,
+                epsilons=epsilons,
+                noises=noises,
             )
             self.cache.laplace_cache.write_entry(query_id, run_op.blocks, cache_entry)
         noisy_result = true_result + noise
