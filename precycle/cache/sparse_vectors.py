@@ -2,6 +2,7 @@ import numpy as np
 from precycle.utils.utils import satisfies_constraint, get_blocks_size
 from precycle.utils.utility_theorems import get_sv_epsilon
 import redis
+import time
 
 
 class SparseVector:
@@ -73,7 +74,7 @@ class SparseVectors:
 
     def min_sum_subarray(self, blocks, k):
 
-        arr = [get_blocks_size((i,i)) for i in blocks]
+        arr = [get_blocks_size((i,i), self.blocks_metadata) for i in blocks]
         assert not len(arr) < k
 
         start = 0
@@ -97,7 +98,7 @@ class SparseVectors:
         smallest_request_size = 1 if node_size == 1 else (node_size / 2) + 1
         # Find the <smallest-request-size> number of continuous blocks with smallest possible population n
         n = self.min_sum_subarray(covered_blocks, smallest_request_size)
-        print("smallest size request", n)
+        # print("smallest size request", n)
         # n = smallest_request_size * 65318
 
         sparse_vector = SparseVector(

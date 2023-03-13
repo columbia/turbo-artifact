@@ -41,9 +41,11 @@ class QueryPool:
     def get_query(self, query_id: int):
         query_id_str = str(query_id)
         if query_id_str in self.queries:
-            query_vector = self.queries[query_id_str]
-        assert query_vector is not None
-        return query_vector
+            q = self.queries[query_id_str]
+            query = q['query']            
+            query_path = q["query_path"] if "query_path" in q else None
+        assert query is not None
+        return query, query_path
 
 
 class PrivacyWorkload:
@@ -52,18 +54,18 @@ class PrivacyWorkload:
     """
 
     def __init__(self, blocks_metadata_path, queries):
-        # try:
-        #     with open(blocks_metadata_path) as f:
-        #         blocks_metadata = json.load(f)
-        # except NameError:
-        #     logger.error("Dataset metadata must have be created first..")
-        #     exit(1)
-        # attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
-        attribute_domain_sizes = [7, 24, 6, 20, 20, 2, 3, 4]
+        try:
+            with open(blocks_metadata_path) as f:
+                blocks_metadata = json.load(f)
+        except NameError:
+            logger.error("Dataset metadata must have be created first..")
+            exit(1)
+        attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
         self.query_pool = QueryPool(attribute_domain_sizes, queries)
 
     def create_dp_task(self, task) -> dict:
         task_name = f"task-{task.query_id}-{task.n_blocks}"
+        query, query_path = self.query_pool.get_query(task.query_id)
         dp_task = {
             "query_id": task.query_id,
             "query_type": task.query_type,
@@ -71,8 +73,10 @@ class PrivacyWorkload:
             "utility": task.utility,
             "utility_beta": task.utility_beta,
             "task_name": task_name,
-            "query": self.query_pool.get_query(task.query_id),
+            "query": query,
         }
+        if query_path:
+            dp_task.update({"query_path": query_path})
         if task.start_time:
             dp_task.update({"submit_time": task.start_time})
         return dp_task

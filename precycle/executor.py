@@ -87,13 +87,13 @@ class Executor:
 
                 # External Update to the Histogram
                 if self.config.cache.type == "HybridCache":
-                    t = time.time()
+                    # t = time.time()
                     self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
-                    print("Update Histogram", time.time() - t)
+                    # print("Update Histogram", time.time() - t)
 
 
             elif isinstance(run_op, RunHistogram):

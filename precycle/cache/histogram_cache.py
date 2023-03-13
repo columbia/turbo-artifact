@@ -150,18 +150,22 @@ class HistogramCache:
 
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
+        # print("predicted result", predicted_output)
 
-        # Increase weights iff predicted_output is too small
+        # Increase weights if predicted_output is too small
         lr = self.learning_rate / 8
         if noisy_result < predicted_output:
             lr *= -1
 
         # Multiplicative weights update for the relevant bins
-        t = time.time()
-        for i in flat_indices(query):
-            cache_entry.histogram.tensor[i] *= torch.exp(query[i] * lr)
-            cache_entry.bin_updates[i] += 1
-        print("\tUpdate histogram For loop", time.time() - t)
+        # TODO: This depends on Query Values being 1 (counts queries only) for now
+        # t = time.time()
+        query_tensor_dense = query #.to_dense()
+        update_tensor = torch.mul(cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr))
+        bins_mask = query_tensor_dense == 0
+        cache_entry.histogram.tensor = torch.add(torch.mul(cache_entry.histogram.tensor, bins_mask), update_tensor)
+        cache_entry.bin_updates = torch.add(cache_entry.bin_updates, query_tensor_dense)
+        # print("\tUpdate histogram For loop", time.time() - t)
 
         cache_entry.histogram.normalize()
 
@@ -172,33 +176,29 @@ class HistogramCache:
         cache_entry = self.read_entry(blocks)
         assert cache_entry is not None
 
-        bin_updates = [cache_entry.bin_updates[i] for i in flat_indices(query)]
-        new_threshold = min(bin_updates) + self.bin_thershold_step
-        for i in flat_indices(query):
-            cache_entry.bin_thresholds[i] = new_threshold
+        # TODO: This depends on Query Values being 1 (counts queries only) for now
+        query_tensor_dense = query #.to_dense()
+        bin_updates_tensor = torch.mul(cache_entry.bin_updates, query_tensor_dense)
+        new_threshold = torch.min(bin_updates_tensor[bin_updates_tensor>0]) + self.bin_thershold_step
+        updated_thresholds_tensor = torch.mul(query_tensor_dense, new_threshold)
+        bin_thresholds_mask = query_tensor_dense == 0
+        # Keep irrelevant bins as they are - set the rest to 0 and add to them the new threshold
+        cache_entry.bin_thresholds = torch.add(torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask), updated_thresholds_tensor)
+    
         # # Write updated entry
         self.write_entry(blocks, cache_entry)
-
-    def get_bin_updates(self, blocks, query):
-        cache_entry = self.read_entry(blocks)
-        assert cache_entry is not None
-        bin_updates = [cache_entry.bin_updates[i] for i in flat_indices(query)]
-        return bin_updates
-
-    def get_bin_thresholds(self, blocks, query):
-        cache_entry = self.read_entry(blocks)
-        assert cache_entry is not None
-        bin_thresholds = [cache_entry.bin_thresholds[i] for i in flat_indices(query)]
-        return bin_thresholds
 
     def is_query_hard(self, query, blocks):
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
             return True
         # If each bin has been updated at least <bin-threshold> times the query is easy
-        for i in flat_indices(query):
-            if cache_entry.bin_updates[i] < cache_entry.bin_thresholds[i]:
-                return True
+        query_tensor_dense = query #.to_dense()
+        bin_updates_query = torch.mul(cache_entry.bin_updates, query_tensor_dense)
+        bin_thresholds_query = torch.mul(cache_entry.bin_thresholds, query_tensor_dense)
+        comparisons = bin_updates_query < bin_thresholds_query
+        if torch.any(comparisons).item():
+            return True
         return False
 
 

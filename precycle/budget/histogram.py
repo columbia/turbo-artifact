@@ -37,9 +37,10 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
 
     def run(self, query: torch.Tensor) -> float:
         # sparse (1,N) x dense (N,1)
-        return torch.smm(query, self.tensor.t()).item()
+        # return torch.smm(query, self.tensor.t()).item()
+        return torch.mm(query, self.tensor.t()).item()
 
-    # TODO: Extra optimization: don't even create the query vector
+    # TODO: Extra optimization: don't even create the query vector  
     def run_rectangle(self, marginal_query: Dict[int, int]):
         # Multiple values for a single attribute?
         # attribute_ids, values = marginal_query.items()

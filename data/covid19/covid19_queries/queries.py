@@ -135,7 +135,7 @@ def write_queries(queries_dir, workload, query_tensors):
     # Write queries to a json file
     queries = {}
     for i, query in enumerate(query_tensors):
-        queries[i] = query
+        queries[i] = {"query": query}
     json_object = json.dumps(queries, indent=4)
     # Writing to queries.json
     with open(queries_path, "w") as outfile:

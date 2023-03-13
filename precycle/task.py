@@ -1,7 +1,5 @@
 from typing import List, Union
 
-from precycle.budget.histogram import k_way_marginal_query_list
-
 
 class Task:
     def __init__(
@@ -9,32 +7,23 @@ class Task:
         id: int,
         query_id: int,
         query_type: str,
-        query: List[List[int]],
+        query,
+        query_db_format,
         blocks: List[int],
         n_blocks: Union[int, str],
         utility: float,
         utility_beta: float,
-        query_db_format=None,
         name: str = None,
-        attribute_sizes: List[int] = None,
     ):
         self.id = id
         self.query_id = query_id
         self.query_type = query_type
-
-        # Read compressed rectangle or PyTorch slice, output a query vector
-        if isinstance(query, dict):
-            # NOTE: we only support pure k-way marginals for now
-            self.query = k_way_marginal_query_list(
-                query, attribute_sizes=attribute_sizes
-            )
-        else:
-            self.query = query
+        self.query = query
+        self.query_db_format = query_db_format
         self.blocks = blocks
         self.n_blocks = n_blocks
         self.utility = utility
         self.utility_beta = utility_beta
-        self.query_db_format = query_db_format
         self.name = name
 
     def dump(self):
