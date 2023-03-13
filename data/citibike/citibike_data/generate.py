@@ -7,6 +7,7 @@ from pathlib import Path
 from loguru import logger
 from geopy import distance
 from zipfile import ZipFile
+
 # import modin.pandas as pd
 import matplotlib.pyplot as plt
 from urllib.request import urlretrieve
@@ -38,6 +39,7 @@ def compute_distance(row):
     row["distance_meters"] = int(distance.distance(start, end).m)
     return row
 
+
 def year_month_iterator():
     # age/gender are present until at least Jan 2021. In 2017 the column names are different
     start_year = 2018
@@ -48,6 +50,7 @@ def year_month_iterator():
             name = f"{year}{month:02d}"
             names.append(name)
     return names
+
 
 def cluster_stations(months_dir):
     print("Clustering stations..")
@@ -81,11 +84,11 @@ def cluster_stations(months_dir):
     station_ids = {}
     for i, row in enumerate(stations_lat_long):
         station_ids[f"{row[0]}:{row[1]}"] = label[i]
-  
+
     print("Update station attributes..")
 
     def update_station_attributes(name, months_dir):
-        print("\tProcessing month",name)
+        print("\tProcessing month", name)
         df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
         df["start_latitude"] = df["start_latitude"].astype("str")
         df["start_longitude"] = df["start_longitude"].astype("str")
@@ -104,7 +107,7 @@ def cluster_stations(months_dir):
             ]
         )
         df.to_csv(months_dir.joinpath(f"{name}.csv"), index=False)
-   
+
     # Running in Parallel
     processes = []
     names = year_month_iterator()
@@ -118,6 +121,7 @@ def cluster_stations(months_dir):
         processes[i].start()
     for process in processes:
         process.join()
+
 
 def preprocess_month_data(name, months_dir):
     # Doesn't work for all years
@@ -142,7 +146,7 @@ def preprocess_month_data(name, months_dir):
     # ISO: (year, week, weekday)
     df["year"] = df.starttime.map(lambda x: x.isocalendar()[0])
     df["week"] = df.starttime.map(lambda x: x.isocalendar()[1])
-    df["weekday"] = df.starttime.map(lambda x: x.isocalendar()[2]-1)
+    df["weekday"] = df.starttime.map(lambda x: x.isocalendar()[2] - 1)
 
     # Also day data
     df["hour"] = df.starttime.map(lambda x: x.hour)
@@ -164,7 +168,9 @@ def preprocess_month_data(name, months_dir):
     # Chop off a weird outlier
     df["start_latitude"] = df["start_latitude"].map(lambda x: x if x < 42 else np.nan)
     df["end_latitude"] = df["start_latitude"].map(lambda x: x if x < 42 else np.nan)
-    df["start_longitude"] = df["start_longitude"].map(lambda x: x if x < -73.6 else np.nan)
+    df["start_longitude"] = df["start_longitude"].map(
+        lambda x: x if x < -73.6 else np.nan
+    )
     df["end_longitude"] = df["end_longitude"].map(lambda x: x if x < -73.6 else np.nan)
 
     df = df[
@@ -187,6 +193,7 @@ def preprocess_month_data(name, months_dir):
     df = df.dropna()
     df.to_csv(months_dir.joinpath(f"{name}.csv"), index=False)
 
+
 def preprocess_months(months_dir):
     # Running in Parallel
     processes = []
@@ -202,6 +209,7 @@ def preprocess_months(months_dir):
     for process in processes:
         process.join()
 
+
 def age_groups(birthYear, currYear):
     # "0-17": 0, "18-49": 1, "50-64": 2,  "65+": 3
     if birthYear > 1920:
@@ -215,6 +223,7 @@ def age_groups(birthYear, currYear):
         if x > 64:
             return 3
     return np.NaN
+
 
 def split_months_into_week_blocks(months_dir, blocks_dir):
     # TODO: precompute block sizes (with DP optionally)
@@ -232,7 +241,9 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
         "age": 4,
     }
 
-    def bucketize_and_drop(name, week_counter, month_num_weeks, metadata, months_dir, blocks_dir):
+    def bucketize_and_drop(
+        name, week_counter, month_num_weeks, metadata, months_dir, blocks_dir
+    ):
         print("Processing blocks", name, month_num_weeks)
         month_df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
 
@@ -246,7 +257,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
             df["age"] = df["birth_year"]
             for index, row in df.iterrows():
                 df.loc[index, "age"] = age_groups(row["birth_year"], row["year"])
-            
+
             df["hour"] = df.hour.map(lambda x: x // hours_granularity)
             df["duration_minutes"] = df.duration_minutes.map(
                 lambda x: x // duration_minutes_granularity
@@ -261,7 +272,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
             df = df[ATTRIBUTES]
             df.insert(0, "time", block_id)
             df.to_csv(blocks_dir.joinpath(f"block_{block_id}.csv"), index=False)
-            metadata[block_id] = (f"{year}-{week_number}", df.shape[0]) 
+            metadata[block_id] = (f"{year}-{week_number}", df.shape[0])
             week_counter += 1
 
     # Running in Parallel
@@ -276,12 +287,19 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
         processes.append(
             Process(
                 target=bucketize_and_drop,
-                args=(name, week_counter, month_num_weeks, return_dict, months_dir, blocks_dir),
+                args=(
+                    name,
+                    week_counter,
+                    month_num_weeks,
+                    return_dict,
+                    months_dir,
+                    blocks_dir,
+                ),
             )
         )
         processes[i].start()
         week_counter += month_num_weeks
-    
+
     for process in processes:
         process.join()
 

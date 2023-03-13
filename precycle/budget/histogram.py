@@ -40,7 +40,7 @@ class DenseHistogram:  # We use it to represent the PMW Histogram
         # return torch.smm(query, self.tensor.t()).item()
         return torch.mm(query, self.tensor.t()).item()
 
-    # TODO: Extra optimization: don't even create the query vector  
+    # TODO: Extra optimization: don't even create the query vector
     def run_rectangle(self, marginal_query: Dict[int, int]):
         # Multiple values for a single attribute?
         # attribute_ids, values = marginal_query.items()
@@ -59,6 +59,7 @@ class SparseHistogram:  # We use it to represent the block data and queries
             attribute_sizes=attribute_sizes,
         )
         self.domain_size = self.tensor.shape[1]  # N
+
     @classmethod
     def from_dataframe(
         cls,

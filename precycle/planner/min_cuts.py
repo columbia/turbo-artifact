@@ -6,6 +6,7 @@ from precycle.executor import A, RunLaplace, RunHistogram, RunPMW
 from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
 from precycle.utils.utils import get_blocks_size
 
+
 class MinCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
@@ -38,9 +39,6 @@ class MinCuts(Planner):
         """
 
         subqueries = self.get_min_cuts(task.blocks)
-        # block_size = self.config.blocks_metadata["block_size"]
-        # num_blocks = task.blocks[1] - task.blocks[0] + 1
-        # n = num_blocks * block_size
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
 
         # NOTE: System wide accuracy for now
@@ -52,7 +50,7 @@ class MinCuts(Planner):
             min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
             for (i, j) in subqueries:
                 # node_size = (j - i + 1) * block_size
-                node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+                node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
@@ -63,7 +61,7 @@ class MinCuts(Planner):
             # NOTE: This is PMW.To be used only in the Monoblock case
             assert len(subqueries) == 1
             (i, j) = subqueries[0]
-            node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+            node_size = get_blocks_size((i, j), self.config.blocks_metadata)
             epsilon = get_pmw_epsilon(alpha, beta, node_size, 1)
             run_ops = [RunPMW((i, j), alpha, epsilon)]
             plan = A(l=run_ops, sv_check=False, cost=0)
@@ -80,7 +78,7 @@ class MinCuts(Planner):
                 # Measure the expected additional budget needed for a Laplace run.
                 cache_entry = self.cache.laplace_cache.read_entry(task.query_id, (i, j))
                 # node_size = (j - i + 1) * block_size
-                node_size = get_blocks_size((i,j), self.config.blocks_metadata)
+                node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
@@ -91,7 +89,7 @@ class MinCuts(Planner):
                     # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
                     # Also choose the Laplace if the histogram is not well trained according to our heuristic
                     # if cache_entry and noise_std >= cache_entry.noise_std:
-                        # print("ALREADY STORED ...")
+                    # print("ALREADY STORED ...")
                     run_ops += [RunLaplace((i, j), noise_std)]
                 else:
                     sv_check = True

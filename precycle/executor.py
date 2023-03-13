@@ -95,7 +95,6 @@ class Executor:
                     )
                     # print("Update Histogram", time.time() - t)
 
-
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
                     run_op, task.query, task.query_db_format
@@ -121,7 +120,6 @@ class Executor:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
-
             # Do the final SV check if there is at least one Histogram run involved
             if plan.sv_check:
                 status = self.run_sv_check(
@@ -164,8 +162,6 @@ class Executor:
         3) Flags the SV as uninitialized if check failed.
         4) Increases the heuristic threshold of participating histograms if check failed.
         """
-
-        sv_check_status = True
 
         # Fetches the SV of the lowest common ancestor of <blocks>
         node_id = self.cache.sparse_vectors.get_lowest_common_ancestor(blocks)
@@ -214,15 +210,17 @@ class Executor:
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
+            sv_check_status = False
             sv.initialized = False
             for run_op in plan.l:
                 if isinstance(run_op, RunHistogram):
                     self.cache.histogram_cache.update_entry_threshold(
                         run_op.blocks, query
                     )
-            self.cache.sparse_vectors.write_entry(sv)
-            sv_check_status = False
-        print(colored("FREE LUNCH - yum yum\n", "blue"))
+        else:
+            sv_check_status = True
+            print(colored("FREE LUNCH - yum yum\n", "blue"))
+
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
 
@@ -324,9 +322,11 @@ class Executor:
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query_db_format, run_op.blocks)
-
+        # print("true result", true_result)
         # Run histogram to get the predicted output
         noisy_result = cache_entry.histogram.run(query)
+        # print("noisy result", noisy_result)
+
         # Histogram prediction doesn't cost anything
         run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 

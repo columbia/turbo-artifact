@@ -13,8 +13,9 @@ def get_paths(dataset):
     blocks_path = str(blocks_path_prefix.joinpath("blocks"))
     return blocks_path, blocks_metadata, tasks_path_prefix
 
+
 # Covid19 Dataset Experiments
-def caching_monoblock_covid(dataset):
+def caching_monoblock_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
@@ -29,6 +30,7 @@ def caching_monoblock_covid(dataset):
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
         cache=["HybridCache", "LaplaceCache", "PMWCache"],
+        # cache=["HybridCache"],
         initial_blocks=[1],
         max_blocks=[1],
         avg_num_tasks_per_block=[25e3],
@@ -37,6 +39,7 @@ def caching_monoblock_covid(dataset):
         alpha=[0.05],
         beta=[0.001],
         zipf_k=[0, 0.5, 1, 1.5],
+        # zipf_k=[1.5],
         heuristic=["bin_visits:100-10"],
         variance_reduction=[True],
         log_every_n_tasks=100,
@@ -44,7 +47,8 @@ def caching_monoblock_covid(dataset):
         bootstrapping=[False],
     )
 
-def caching_static_multiblock_laplace_vs_hybrid_covid(dataset):
+
+def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
@@ -75,7 +79,8 @@ def caching_static_multiblock_laplace_vs_hybrid_covid(dataset):
         bootstrapping=[False],
     )
 
-def caching_static_multiblock_heuristics_covid(dataset):
+
+def caching_static_multiblock_heuristics_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
@@ -111,7 +116,8 @@ def caching_static_multiblock_heuristics_covid(dataset):
         bootstrapping=[False],
     )
 
-def caching_static_multiblock_learning_rate_covid(dataset):
+
+def caching_static_multiblock_learning_rate_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
@@ -142,7 +148,8 @@ def caching_static_multiblock_learning_rate_covid(dataset):
         bootstrapping=[False],
     )
 
-def streaming_multiblock_laplace_vs_hybrid_covid(dataset):
+
+def streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
     task_paths = [
@@ -176,10 +183,10 @@ def streaming_multiblock_laplace_vs_hybrid_covid(dataset):
     )
 
 
-# Citibike Dataset Experiments 
+# Citibike Dataset Experiments
 def caching_monoblock_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1blocks_282queries.privacy_tasks.csv"]
+    task_paths = ["1blocks_2065queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -196,19 +203,20 @@ def caching_monoblock_citibike(dataset):
         cache=["HybridCache"],
         initial_blocks=[1],
         max_blocks=[1],
-        avg_num_tasks_per_block=[4e3],
-        max_tasks=[4e3],
+        avg_num_tasks_per_block=[20e3],
+        max_tasks=[20e3],
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
         # zipf_k=[0, 0.5, 1, 1.5],
         zipf_k=[0],
-        heuristic=["bin_visits:100-10", "bin_visits:50-5", "bin_visits:20-5"],
+        heuristic=["bin_visits:50-5"],
         variance_reduction=[True],
         log_every_n_tasks=100,
-        learning_rate=[0.2,  0.4],
+        learning_rate=[0.2, 0.4, 0.8],
         bootstrapping=[False],
     )
+
 
 def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
@@ -240,6 +248,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         learning_rate=[0.2],
         bootstrapping=[False],
     )
+
 
 def caching_static_multiblock_heuristics_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
@@ -277,6 +286,7 @@ def caching_static_multiblock_heuristics_citibike(dataset):
         bootstrapping=[False],
     )
 
+
 def caching_static_multiblock_learning_rate_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["1:2:4:8:16:32:64:128blocks_282queries.privacy_tasks.csv"]
@@ -307,6 +317,7 @@ def caching_static_multiblock_learning_rate_citibike(dataset):
         learning_rate=[0.05, 0.1, 0.15, 0.2],
         bootstrapping=[False],
     )
+
 
 def streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)

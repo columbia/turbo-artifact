@@ -28,7 +28,6 @@ class TaskGenerator:
         self.tasks = df_tasks
         self.query_converter = QueryConverter(self.config.blocks_metadata)
 
-
     def sample_task_row(self, config):
         raise NotImplementedError("Must override")
 
@@ -62,7 +61,7 @@ class TaskGenerator:
 
         # Load tensor /query from disk if stored
         if "query_path" in task_row:
-            with open(task_row["query_path"], 'rb') as f:
+            with open(task_row["query_path"], "rb") as f:
                 query_tensor = pickle.load(f)
         else:
             query_tensor = self.query_converter.convert_to_tensor(query)
@@ -78,7 +77,7 @@ class TaskGenerator:
         )
         # print(query_id, "query", query)
         # print(query_id, "query tensor", query_tensor)
-        # print(query_id, "query path", task_row["query_path"])   
+        # print(query_id, "query path", task_row["query_path"])
 
         # print("Query Prep Time", time.time() - t)
 

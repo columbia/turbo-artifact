@@ -42,7 +42,7 @@ class QueryPool:
         query_id_str = str(query_id)
         if query_id_str in self.queries:
             q = self.queries[query_id_str]
-            query = q['query']            
+            query = q["query"]
             query_path = q["query_path"] if "query_path" in q else None
         assert query is not None
         return query, query_path

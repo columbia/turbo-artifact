@@ -10,7 +10,6 @@ from precycle.utils.utils import mlflow_log
 from precycle.utils.utils import FINISHED, FAILED
 
 
-
 class QueryProcessor:
     def __init__(self, db, cache, planner, budget_accountant, config):
         self.config = config
@@ -30,7 +29,8 @@ class QueryProcessor:
         """
 
         round = 0
-        result = status = None
+        result = None
+        status = None
         run_metadata = {
             "sv_check_status": [],
             "sv_node_id": [],
@@ -39,17 +39,17 @@ class QueryProcessor:
         }
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
-        while not result and (not status or status == "sv_failed"):
+        while result is None and (not status or status == "sv_failed"):
             start_planning = time.time()
             # Get a DP execution plan for query.
             plan = self.planner.get_execution_plan(task)
 
-            # print(
-            #     colored(
-            #         f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
-            #         "green",
-            #     )
-            # )
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    "green",
+                )
+            )
             assert plan is not None
             planning_time = time.time() - start_planning
             # print("Planning", planning_time)

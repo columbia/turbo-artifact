@@ -1,8 +1,7 @@
-import time
 import torch
 import redisai as rai
 from copy import deepcopy
-from precycle.budget.histogram import DenseHistogram, flat_indices
+from precycle.budget.histogram import DenseHistogram
 
 
 class CacheKey:
@@ -160,13 +159,12 @@ class HistogramCache:
         # Multiplicative weights update for the relevant bins
         # TODO: This depends on Query Values being 1 (counts queries only) for now
         # t = time.time()
-        query_tensor_dense = query #.to_dense()
-        update_tensor = torch.mul(cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr))
-        bins_mask = query_tensor_dense == 0
-        cache_entry.histogram.tensor = torch.add(torch.mul(cache_entry.histogram.tensor, bins_mask), update_tensor)
+        query_tensor_dense = query  # .to_dense()
+        cache_entry.histogram.tensor = torch.mul(
+            cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
+        )
         cache_entry.bin_updates = torch.add(cache_entry.bin_updates, query_tensor_dense)
         # print("\tUpdate histogram For loop", time.time() - t)
-
         cache_entry.histogram.normalize()
 
         # Write updated entry
@@ -177,14 +175,20 @@ class HistogramCache:
         assert cache_entry is not None
 
         # TODO: This depends on Query Values being 1 (counts queries only) for now
-        query_tensor_dense = query #.to_dense()
-        bin_updates_tensor = torch.mul(cache_entry.bin_updates, query_tensor_dense)
-        new_threshold = torch.min(bin_updates_tensor[bin_updates_tensor>0]) + self.bin_thershold_step
-        updated_thresholds_tensor = torch.mul(query_tensor_dense, new_threshold)
-        bin_thresholds_mask = query_tensor_dense == 0
+        query_tensor_dense = query  # .to_dense()
+        # print("query", query_tensor_dense)
+        new_threshold = (
+            torch.min(cache_entry.bin_updates[query_tensor_dense > 0])
+            + self.bin_thershold_step
+        )
         # Keep irrelevant bins as they are - set the rest to 0 and add to them the new threshold
-        cache_entry.bin_thresholds = torch.add(torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask), updated_thresholds_tensor)
-    
+        # print("bin_thresholds", cache_entry.bin_thresholds)
+        bin_thresholds_mask = (query_tensor_dense == 0).int()
+        cache_entry.bin_thresholds = torch.add(
+            torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask),
+            query_tensor_dense * new_threshold,
+        )
+        # print("bin_thresholds new", cache_entry.bin_thresholds)
         # # Write updated entry
         self.write_entry(blocks, cache_entry)
 
@@ -193,10 +197,16 @@ class HistogramCache:
         if not cache_entry:
             return True
         # If each bin has been updated at least <bin-threshold> times the query is easy
-        query_tensor_dense = query #.to_dense()
+        query_tensor_dense = query  # .to_dense()
+        # print("query", query_tensor_dense)
         bin_updates_query = torch.mul(cache_entry.bin_updates, query_tensor_dense)
+        # print("bin_updates", cache_entry.bin_updates)
+        # print("bin_updates_query", bin_updates_query)
         bin_thresholds_query = torch.mul(cache_entry.bin_thresholds, query_tensor_dense)
+        # print("bin_thresholds_query", bin_thresholds_query)
         comparisons = bin_updates_query < bin_thresholds_query
+        # print("comparisons", comparisons)
+
         if torch.any(comparisons).item():
             return True
         return False

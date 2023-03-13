@@ -74,16 +74,16 @@ class SparseVectors:
 
     def min_sum_subarray(self, blocks, k):
 
-        arr = [get_blocks_size((i,i), self.blocks_metadata) for i in blocks]
+        arr = [get_blocks_size((i, i), self.blocks_metadata) for i in blocks]
         assert not len(arr) < k
 
         start = 0
         end = k - 1
-        window_sum = sum(arr[start:end+1])
+        window_sum = sum(arr[start : end + 1])
         min_sum = window_sum
-        
+
         for i in range(k, len(arr)):
-            window_sum += arr[i] - arr[i-k]
+            window_sum += arr[i] - arr[i - k]
             if window_sum < min_sum:
                 min_sum = window_sum
                 start = i - k + 1

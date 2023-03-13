@@ -7,7 +7,8 @@ from pathlib import Path
 from precycle.utils.utils import REPO_ROOT
 from precycle.budget.histogram import k_way_marginal_query_list
 from precycle.budget.histogram import build_sparse_tensor
-from multiprocessing import Manager, Process
+from multiprocessing import Process
+
 app = typer.Typer()
 
 # A total of 7,804 stories
@@ -65,6 +66,7 @@ app = typer.Typer()
 
 """
 
+
 def any_gender():
     return list(range(3))
 
@@ -117,7 +119,7 @@ attribute_position = {
     "end_station": "4",
     "user_type": "5",
     "gender": "6",
-    "age": "7"
+    "age": "7",
 }
 
 # What is the gender of riders
@@ -140,7 +142,7 @@ def query_2():
     return queries
 
 
-# Subscribers vs Customers by month broken down by gender
+# Subscribers vs Customers broken down by gender
 def query_3():
     # Count riders [usertype, gender]
     queries = []
@@ -190,7 +192,7 @@ def query_7():
     return queries
 
 
-# Peak Riding times within a week across all hours
+# Peak Riding times across all hours
 def query_8():
     # Count riders per [hour]
     queries = []
@@ -239,7 +241,7 @@ def query_12():
     # Count riders [duration-minutes, age]
     queries = []
     key1 = attribute_position["duration_minutes"]
-    key2 = attribute_position["age"] 
+    key2 = attribute_position["age"]
     for value1 in any_duration_minutes():
         for value2 in any_age():
             queries.append({key1: value1, key2: value2})
@@ -251,44 +253,228 @@ def query_13():
     # Count riders [duration-minutes, gender]
     queries = []
     key1 = attribute_position["duration_minutes"]
-    key2 = attribute_position["gender"] 
+    key2 = attribute_position["gender"]
     for value1 in any_duration_minutes():
         for value2 in any_gender():
             queries.append({key1: value1, key2: value2})
     return queries
 
 
-# Count riders by age, by start-station (weird one)
+# Count riders by trip-duration, by gender by age
 def query_14():
+    # Count riders [duration-minutes, gender, age]
+    queries = []
+    key1 = attribute_position["duration_minutes"]
+    key2 = attribute_position["gender"]
+    key3 = attribute_position["age"]
+
+    for value1 in any_duration_minutes():
+        for value2 in any_gender():
+            for value3 in any_age():
+                queries.append({key1: value1, key2: value2, key3: value3})
+    return queries
+
+
+# Count riders by trip-duration, by user-type
+def query_15():
+    # Count riders [duration-minutes, usertype]
+    queries = []
+    key1 = attribute_position["duration_minutes"]
+    key2 = attribute_position["user_type"]
+
+    for value1 in any_duration_minutes():
+        for value2 in any_user_type():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by age, by start-station (weird one)
+def query_16():
     # Count riders [age, start-station]
     queries = []
-    key1 = attribute_position["age"]
-    key2 = attribute_position["start_station"]
-    for value1 in any_age():
-        for value2 in any_start_station():
+    key1 = attribute_position["start_station"]
+    key2 = attribute_position["age"]
+    for value1 in any_start_station():
+        for value2 in any_age():
             queries.append({key1: value1, key2: value2})
     return queries
 
 
 # Count riders by age, by end-station (weird one)
-def query_15():
+def query_17():
     # Count riders [age, end-station]
     queries = []
-    key1 = attribute_position["age"]
-    key2 = attribute_position["end_station"]
-    for value1 in any_age():
+    key1 = attribute_position["end_station"]
+    key2 = attribute_position["age"]
+    for value1 in any_end_station():
+        for value2 in any_age():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Additional
+
+# Subscribers vs Customers broken down by age
+def query_18():
+    # Count riders [usertype, age]
+    queries = []
+    key1 = attribute_position["user_type"]
+    key2 = attribute_position["age"]
+    for value1 in any_user_type():
+        for value2 in any_age():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Riders broken down by weekday
+def query_19():
+    # Count riders [weekday]
+    queries = []
+    key = attribute_position["weekday"]
+    for value in any_weekday():
+        queries.append({key: value})
+    return queries
+
+
+# Count riders by trip-duration, by weekday
+def query_20():
+    # Count riders [duration-minutes, weekday]
+    queries = []
+    key1 = attribute_position["weekday"]
+    key2 = attribute_position["duration_minutes"]
+
+    for value1 in any_weekday():
+        for value2 in any_duration_minutes():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by trip-duration, by hour
+def query_21():
+    # Count riders [duration-minutes, hour]
+    queries = []
+    key1 = attribute_position["hour"]
+    key2 = attribute_position["duration_minutes"]
+
+    for value1 in any_hour():
+        for value2 in any_duration_minutes():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by hour, by weekday
+def query_22():
+    # Count riders [hour, weekday]
+    queries = []
+    key1 = attribute_position["weekday"]
+    key2 = attribute_position["hour"]
+
+    for value1 in any_weekday():
+        for value2 in any_hour():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by user_type, by gender by age
+def query_23():
+    # Count riders [duration-minutes, gender, age]
+    queries = []
+    key1 = attribute_position["user_type"]
+    key2 = attribute_position["gender"]
+    key3 = attribute_position["age"]
+
+    for value1 in any_user_type():
+        for value2 in any_gender():
+            for value3 in any_age():
+                queries.append({key1: value1, key2: value2, key3: value3})
+    return queries
+
+
+# Count riders by hour, start-station
+def query_24():
+    # Count riders [start_station, hour]
+    queries = []
+    key1 = attribute_position["hour"]
+    key2 = attribute_position["start_station"]
+
+    for value1 in any_hour():
         for value2 in any_start_station():
             queries.append({key1: value1, key2: value2})
     return queries
 
 
-# TODO: We need to implement AVG? - implemented the queries below as Counts
-# Average Ride Time
-# Average trip duration per age
-# Average age of riders per start station (weird one)
-# Average trip duration per gender
-# Total trip duration per bike id (to see how tired each bike is?)
-# Total number of riders per bike id
+# Count riders by hour, end-station
+def query_25():
+    # Count riders [end_station, hour]
+    queries = []
+    key1 = attribute_position["hour"]
+    key2 = attribute_position["end_station"]
+
+    for value1 in any_hour():
+        for value2 in any_end_station():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by weekday, start-station
+def query_26():
+    # Count riders [start_station, hour]
+    queries = []
+    key1 = attribute_position["weekday"]
+    key2 = attribute_position["start_station"]
+
+    for value1 in any_hour():
+        for value2 in any_start_station():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Count riders by weekday, end-station
+def query_27():
+    # Count riders [end_station, weekday]
+    queries = []
+    key1 = attribute_position["weekday"]
+    key2 = attribute_position["end_station"]
+
+    for value1 in any_hour():
+        for value2 in any_end_station():
+            queries.append({key1: value1, key2: value2})
+    return queries
+
+
+# Most popular biking routes in NYC per weekday
+def query_28():
+    # Count riders per [weekday, start/end station]
+    queries = []
+    key1 = attribute_position["weekday"]
+    key2 = attribute_position["start_station"]
+    key3 = attribute_position["end_station"]
+    for value1 in any_weekday():
+        for value2 in any_start_station():
+            for value3 in any_end_station():
+                queries.append({key1: value1, key2: value2, key3: value3})
+    return queries
+
+
+# Most popular biking routes in NYC per hour
+def query_29():
+    # Count riders per [hour, start/end station]
+    queries = []
+    key1 = attribute_position["hour"]
+    key2 = attribute_position["start_station"]
+    key3 = attribute_position["end_station"]
+    for value1 in any_hour():
+        for value2 in any_start_station():
+            for value3 in any_end_station():
+                queries.append({key1: value1, key2: value2, key3: value3})
+    return queries
+
+
+def create_queries():
+    queries = []
+    for i in range(1, 30):
+        queries += globals()[f"query_{i}"]()
+    return queries
 
 
 def write_queries(queries_dir, workload, queries, query_tensors_path):
@@ -302,26 +488,6 @@ def write_queries(queries_dir, workload, queries, query_tensors_path):
     queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
     with open(queries_path, "w") as outfile:
         outfile.write(json.dumps(query_paths, indent=4))
-
-
-def create_queries():
-    queries = []
-    queries += query_1()
-    queries += query_2()
-    queries += query_3()
-    queries += query_4()
-    queries += query_5()
-    queries += query_6()
-    queries += query_7()
-    queries += query_8()
-    queries += query_9()
-    queries += query_10()
-    queries += query_11()
-    queries += query_12()
-    queries += query_13()
-    queries += query_14()
-    queries += query_15()
-    return queries
 
 
 def save_query_tensors(queries, attribute_sizes, query_tensors_path):
@@ -368,7 +534,7 @@ def main(
         "data/citibike/citibike_data/blocks/metadata.json"
     ),
 ):
-    
+
     try:
         with open(blocks_metadata_path) as f:
             blocks_metadata = json.load(f)
