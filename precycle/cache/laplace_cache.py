@@ -1,5 +1,5 @@
-import yaml
 import redis
+import yaml
 
 
 class CacheKey:
@@ -12,6 +12,10 @@ class CacheEntry:
         self.result = result  # True result without noise
         self.noise_std = noise_std  # std of Laplace distribution
         self.noise = noise  # The actual noise sampled from the distribution
+        # TODO: store list of epsilons (or b?). Encapsulates multiblock case neatly?
+
+
+# TODO: MonteCarlo instead of utility?
 
 
 class LaplaceCache:

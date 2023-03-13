@@ -9,7 +9,6 @@ from termcolor import colored
 
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
-
 from precycle.cache.laplace_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 
@@ -119,6 +118,7 @@ class Executor:
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
 
+            # TODO: do the check only on histogram partial results, not Direct Laplace ones
             # Do the final SV check if there is at least one Histogram run involved
             if plan.sv_check:
                 status = self.run_sv_check(

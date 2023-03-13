@@ -42,11 +42,18 @@ def loose_epsilon(alpha, beta, n, l):
 
 
 def sum_laplace_beta(epsilon, n, alpha, l=1 / 2):
+    """
+    See "Tail bound of sum of two i.i.d. Laplace" on Overleaf.
+    """
     e = l * alpha * n * epsilon
     return (1 / 2 + e / 4) * np.exp(-e)
 
 
 def binary_search_epsilon(alpha, beta, n, l, beta_tolerance=1e-5):
+    """
+    See "Concentrated per-query accuracy guarantees for a single PMW" on Overleaf.
+    We just show the cost of the SV, not of the hard-query direct Laplace.
+    """
     eps_low = 0
     eps_high = loose_epsilon(alpha, beta, n, l)
     # Make sure that the initial upper bound is large enough
