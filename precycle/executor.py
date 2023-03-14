@@ -91,6 +91,7 @@ class Executor:
                 run_types[str(run_op.blocks)] = "Laplace"
 
                 # External Update to the Histogram
+                # TODO: Add the convergence check, right now we have zero guarantees
                 if self.config.cache.type == "HybridCache":
                     # t = time.time()
                     self.cache.histogram_cache.update_entry_histogram(

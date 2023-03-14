@@ -1,6 +1,8 @@
-import torch
-import redisai as rai
 from copy import deepcopy
+
+import redisai as rai
+import torch
+
 from precycle.budget.histogram import DenseHistogram
 
 
@@ -183,6 +185,7 @@ class HistogramCache:
         )
         # Keep irrelevant bins as they are - set the rest to 0 and add to them the new threshold
         # print("bin_thresholds", cache_entry.bin_thresholds)
+        # TODO: might be wasteful
         bin_thresholds_mask = (query_tensor_dense == 0).int()
         cache_entry.bin_thresholds = torch.add(
             torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask),
