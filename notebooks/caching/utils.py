@@ -320,9 +320,9 @@ def analyze_monoblock(experiment_path):
 
         df.to_csv("monoblock/budget_utilization.csv", index=False)
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order, "zipf_k": zipf_orders}
@@ -341,9 +341,9 @@ def analyze_monoblock(experiment_path):
 
     def plot_cumulative_budget_utilization_time(df, total_tasks):
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         # zipf_orders = ["1.5", "1.0", "0.5", "0"]
         category_orders = {"key": keys_order}
@@ -414,9 +414,9 @@ def analyze_multiblock(experiment_path):
         #     "initial_budget"
         # ]
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         category_orders = {"key": keys_order}
 
@@ -437,9 +437,9 @@ def analyze_multiblock(experiment_path):
 
     def plot_total_sv_checks(df, total_tasks):
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         category_orders = {"key": keys_order}
         fig = px.bar(
@@ -457,9 +457,9 @@ def analyze_multiblock(experiment_path):
 
     def plot_total_sv_misses(df, total_tasks):
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         category_orders = {"key": keys_order}
         fig = px.bar(
@@ -479,9 +479,9 @@ def analyze_multiblock(experiment_path):
         df["task"] = df["id"]
         df["cumul_budget"] = df["global_budget"]
         keys_order = [
-            "HybridCache:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplaceCache",
-            "PMWCache",
+            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+            "DirectLaplace",
+            "PMW",
         ]
         category_orders = {"key": keys_order}
         fig = px.line(
@@ -489,7 +489,7 @@ def analyze_multiblock(experiment_path):
             x="task",
             y="cumul_budget",
             color="key",
-            title=f"Cumulative Absolute Budget Consumption across all 150 blocks - total tasks-{total_tasks}",
+            title=f"Cumulative Absolute Budget Consumption across all blocks - total tasks-{total_tasks}",
             width=1000,
             height=600,
             facet_row="zipf_k",
@@ -585,7 +585,7 @@ def analyze_sv_misses(experiment_path):
         return fig
 
     df = get_df(experiment_path)
-    df = df.query("cache == 'HybridCache'")
+    df = df.query("cache == 'Hybrid'")
     total_tasks = df["total_tasks"].max()
     sv_misses = get_sv_misses_information(df)
     iplot(plot_sv_misses_per_node(sv_misses, total_tasks))
@@ -651,7 +651,7 @@ def analyze_query_types(experiment_path):
 
     df = get_df(experiment_path)
     df["zipf_k"] = df["zipf_k"].astype(float)
-    df = df.query("cache == 'DirectLaplaceCache'")
+    df = df.query("cache == 'DirectLaplace'")
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
     tasks = get_tasks_information(df)
@@ -660,50 +660,50 @@ def analyze_query_types(experiment_path):
     # iplot(plot_query_per_task(tasks))
 
 
-def analyze_cache_type_use_bar(df):
-    def plot_cache_type_use(df):
-        fig = px.bar(
-            df,
-            x="id",
-            y="count",
-            color="type",
-            title="Laplace vs PMW runs for cache",
-            width=3500,
-            height=800,
-            facet_row="zipf_k",
-            color_discrete_sequence=["red", "black"],
-            # color_discrete_map={
-            #     'DeterministicCache': 'red',
-            #     'ProbabilisticCache': 'black'
-            # }
-        )
-        return fig
+# def analyze_cache_type_use_bar(df):
+#     def plot_cache_type_use(df):
+#         fig = px.bar(
+#             df,
+#             x="id",
+#             y="count",
+#             color="type",
+#             title="Laplace vs PMW runs for cache",
+#             width=3500,
+#             height=800,
+#             facet_row="zipf_k",
+#             color_discrete_sequence=["red", "black"],
+#             # color_discrete_map={
+#             #     'DeterministicCache': 'red',
+#             #     'ProbabilisticCache': 'black'
+#             # }
+#         )
+#         return fig
 
-    df = df.query("cache == 'MixedRuns'")
-    tasks = get_tasks_information(df)
-    tasks_deterministic = tasks[["id", "laplace_runs", "zipf_k"]]
-    tasks_deterministic.insert(0, "type", "LaplaceRuns")
-    tasks_deterministic = tasks_deterministic.rename(columns={"laplace_runs": "count"})
-    tasks_probabilistic = tasks[["id", "pmw_runs", "zipf_k"]]
-    tasks_probabilistic.insert(0, "type", "PMWRuns")
-    tasks_probabilistic = tasks_probabilistic.rename(columns={"pmw_runs": "count"})
-    tasks_new = pd.concat([tasks_deterministic, tasks_probabilistic])
-    iplot(plot_cache_type_use(tasks_new))
+#     df = df.query("cache == 'MixedRuns'")
+#     tasks = get_tasks_information(df)
+#     tasks_deterministic = tasks[["id", "laplace_runs", "zipf_k"]]
+#     tasks_deterministic.insert(0, "type", "LaplaceRuns")
+#     tasks_deterministic = tasks_deterministic.rename(columns={"laplace_runs": "count"})
+#     tasks_probabilistic = tasks[["id", "pmw_runs", "zipf_k"]]
+#     tasks_probabilistic.insert(0, "type", "PMWRuns")
+#     tasks_probabilistic = tasks_probabilistic.rename(columns={"pmw_runs": "count"})
+#     tasks_new = pd.concat([tasks_deterministic, tasks_probabilistic])
+#     iplot(plot_cache_type_use(tasks_new))
 
 
-def analyze_cache_type_use(df):
-    def plot_cache_type_use(df):
-        fig = px.line(
-            df,
-            x="id",
-            y="total_pmw_runs",
-            color="zipf_k",
-            title="PMW runs",
-            width=3500,
-            height=800,
-        )
-        return fig
+# def analyze_cache_type_use(df):
+#     def plot_cache_type_use(df):
+#         fig = px.line(
+#             df,
+#             x="id",
+#             y="total_pmw_runs",
+#             color="zipf_k",
+#             title="PMW runs",
+#             width=3500,
+#             height=800,
+#         )
+#         return fig
 
-    df = df.query("cache == 'MixedRuns'")
-    tasks = get_tasks_information(df)
-    iplot(plot_cache_type_use(tasks))
+#     df = df.query("cache == 'MixedRuns'")
+#     tasks = get_tasks_information(df)
+#     iplot(plot_cache_type_use(tasks))

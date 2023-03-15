@@ -55,7 +55,6 @@ class TaskGenerator:
             query_vector = k_way_marginal_query_list(
                 query, attribute_sizes=attribute_sizes
             )
-            # print("kmarginal", query)
         else:
             query_vector = query
 
@@ -75,10 +74,6 @@ class TaskGenerator:
             if self.config.mock
             else self.query_converter.convert_to_sql(query_vector, task.blocks)
         )
-        # print(query_id, "query", query)
-        # print(query_id, "query tensor", query_tensor)
-        # print(query_id, "query path", task_row["query_path"])
-
         # print("Query Prep Time", time.time() - t)
 
         task = Task(
@@ -112,8 +107,11 @@ class PoissonTaskGenerator(TaskGenerator):
             samples = Zipf(config.tasks.zipf_k, min, max, int(config.tasks.max_num))
             for sample in samples:
                 yield sample
+            # return samples
 
         self.zipf_sampling = zipf()
+        # print("\n\n\nUnique queries", len([*set(self.zipf_sampling)]))
+        # exit()
 
     def sample_task_row(self, num_blocks, config):
         try:

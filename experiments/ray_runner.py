@@ -22,7 +22,7 @@ def grid_online(
     tasks_path: List[str],
     blocks_path: str,
     blocks_metadata: str,
-    cache: List[str],
+    mechanism: List[str],
     planner: List[str] = ["MinCuts"],
     avg_num_tasks_per_block: List[int] = [100],
     block_selection_policy: List[str] = ["RandomBlocks"],
@@ -32,24 +32,26 @@ def grid_online(
     alpha: List[int] = [0.05],
     beta: List[int] = [0.001],
     learning_rate: List[int] = [0.1],
-    heuristic: str = "bin_updates:500:50",
+    heuristic: str = "bin_updates:100:5",
     zipf_k: List[int] = [0.5],
     variance_reduction: List[bool] = True,
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
+    exact_match_caching: bool = [True],
 ):
     exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
         "mock": True,  # Never disable "mock" when running with ray
         "puredp": True,
+        "exact_match_caching": tune.grid_search(exact_match_caching),
         "variance_reduction": variance_reduction,
         "alpha": tune.grid_search(alpha),
         "beta": tune.grid_search(beta),
         "global_seed": global_seed,
         "enable_random_seed": enable_random_seed,
-        "cache": {
-            "type": tune.grid_search(cache),
+        "mechanism": {
+            "type": tune.grid_search(mechanism),
             "probabilistic_cfg": {
                 "learning_rate": tune.grid_search(learning_rate),
                 "heuristic": tune.grid_search(heuristic),
@@ -59,7 +61,7 @@ def grid_online(
         "planner": {
             "method": tune.grid_search(planner),
         },
-        "budget_accountant": {"epsilon": 100, "delta": 1e-07},
+        "budget_accountant": {"epsilon": 10, "delta": 1e-07},
         "blocks": {
             "initial_num": tune.grid_search(initial_blocks),
             "max_num": tune.grid_search(max_blocks),
@@ -107,12 +109,13 @@ def grid_online(
         progress_reporter=ray.tune.CLIReporter(
             metric_columns=["n_allocated_tasks", "total_tasks", "global_budget"],
             parameter_columns={
+                "exact_match_caching": "exact_match_caching",
                 "planner/method": "planner",
-                "cache/type": "cache",
+                "mechanism/type": "mechanism",
                 "tasks/zipf_k": "zipf_k",
-                "cache/probabilistic_cfg/heuristic": "heuristic",
-                "cache/probabilistic_cfg/learning_rate": "learning_rate",
-                "cache/probabilistic_cfg/bootstrapping": "bootstrapping",
+                "mechanism/probabilistic_cfg/heuristic": "heuristic",
+                "mechanism/probabilistic_cfg/learning_rate": "learning_rate",
+                "mechanism/probabilistic_cfg/bootstrapping": "bootstrapping",
             },
             max_report_frequency=60,
         ),

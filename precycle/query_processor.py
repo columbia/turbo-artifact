@@ -55,9 +55,7 @@ class QueryProcessor:
             # print("Planning", planning_time)
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
-            # t = time.time()
             result, status = self.executor.execute_plan(plan, task, run_metadata)
-            # print("Execution", time.time() - t)
 
             # Sanity checks
             # Second try must always use Laplaces so we can't reach third trial

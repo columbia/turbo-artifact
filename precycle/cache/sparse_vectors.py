@@ -76,10 +76,10 @@ class SparseVectors:
 
         arr = []
         for i in blocks:
-            if not str(i) in self.blocks_metadata['blocks']:
+            if not str(i) in self.blocks_metadata["blocks"]:
                 break
             else:
-                arr.append(get_blocks_size((i, i), self.blocks_metadata)) 
+                arr.append(get_blocks_size((i, i), self.blocks_metadata))
         assert not len(arr) < k
         start = 0
         end = k - 1

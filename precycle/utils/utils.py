@@ -191,26 +191,36 @@ def get_logs(
     query_pool_size = len(workload["query_id"].unique())
     config = {}
 
-    if config_dict["cache"]["type"] == "LaplaceCache":
-        cache_type = "DirectLaplaceCache"
+    if config_dict["mechanism"]["type"] == "Laplace":
+        mechanism_type = "DirectLaplace"
         heuristic = ""
         learning_rate = ""
         bootstrapping = ""
-        key = cache_type
-    elif config_dict["cache"]["type"] == "PMWCache":
-        cache_type = "PMWCache"
+        key = mechanism_type
+    elif config_dict["mechanism"]["type"] == "PMW":
+        mechanism_type = "PMW"
         heuristic = ""
         learning_rate = ""
         bootstrapping = ""
-        key = cache_type
+        key = mechanism_type
 
     else:
-        cache_type = "HybridCache"
-        heuristic = config_dict["cache"]["probabilistic_cfg"]["heuristic"]
-        learning_rate = str(config_dict["cache"]["probabilistic_cfg"]["learning_rate"])
-        bootstrapping = str(config_dict["cache"]["probabilistic_cfg"]["bootstrapping"])
+        mechanism_type = "Hybrid"
+        heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
+        learning_rate = str(
+            config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
+        )
+        bootstrapping = str(
+            config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"]
+        )
         key = (
-            cache_type + ":" + heuristic + ":lr" + learning_rate + ":bs" + bootstrapping
+            mechanism_type
+            + ":"
+            + heuristic
+            + ":lr"
+            + learning_rate
+            + ":bs"
+            + bootstrapping
         )
 
     config.update(
@@ -221,7 +231,7 @@ def get_logs(
             "total_sv_checks": total_sv_checks,
             "total_histogram_runs": total_histogram_runs,
             "total_laplace_runs": total_laplace_runs,
-            "cache": cache_type,
+            "mechanism": mechanism_type,
             "planner": config_dict["planner"]["method"],
             "workload_path": config_dict["tasks"]["path"],
             "query_pool_size": query_pool_size,
@@ -230,6 +240,7 @@ def get_logs(
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
+            "exact_match_caching": config_dict["exact_match_caching"],
             "config": config_dict,
             "learning_rate": learning_rate,
             "bootstrapping": bootstrapping,

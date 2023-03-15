@@ -4,6 +4,7 @@ from copy import deepcopy
 from precycle.cache.histogram import DenseHistogram
 import time
 
+
 class CacheKey:
     def __init__(self, blocks):
         self.key = str(blocks)
@@ -21,9 +22,9 @@ class HistogramCache:
         self.kv_store = self.get_kv_store(config)
         self.config = config
         self.blocks_metadata = self.config.blocks_metadata
-        self.learning_rate = config.cache.probabilistic_cfg.learning_rate
+        self.learning_rate = config.mechanism.probabilistic_cfg.learning_rate
         self.domain_size = self.blocks_metadata["domain_size"]
-        heuristic = config.cache.probabilistic_cfg.heuristic
+        heuristic = config.mechanism.probabilistic_cfg.heuristic
         _, heuristic_params = heuristic.split(":")
         threshold, step = heuristic_params.split("-")
         self.bin_thershold = int(threshold)
@@ -68,17 +69,12 @@ class HistogramCache:
         entry_histogram = DenseHistogram(
             domain_size=self.domain_size, tensor=entry_histogram_tensor
         )
-
-        # print(entry_histogram_tensor)
-        # print(entry_bin_updates)
-        # print(entry_bin_thresholds)
-
         return CacheEntry(entry_histogram, entry_bin_updates, entry_bin_thresholds)
 
     def create_new_entry(self, blocks):
 
         cache_entry = None
-        if self.config.cache.probabilistic_cfg.bootstrapping == True:
+        if self.config.mechanism.probabilistic_cfg.bootstrapping == True:
             # Bootstrapping: creating a histogram for a new block or node and
             # initializing it with the histogram of the previous block or the children nodes
             (i, j) = blocks
@@ -149,28 +145,21 @@ class HistogramCache:
 
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
-        # print("predicted result", predicted_output)
 
         # Increase weights if predicted_output is too small
         lr = self.learning_rate / 8
         if noisy_result < predicted_output:
             lr *= -1
 
-        # Multiplicative weights update for the relevant bins
-        # TODO: This depends on Query Values being 1 (counts queries only) for now
         # t = time.time()
-        query_tensor_dense = query  # .to_dense()
-        
-        # print("histogram old", cache_entry.histogram.tensor)
+        # Multiplicative weights update for the relevant bins
+        query_tensor_dense = query
         cache_entry.histogram.tensor = torch.mul(
             cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
         )
-        # print("histogram new", cache_entry.histogram.tensor)
+        # TODO: This depends on Query Values being 1 (counts queries only) for now
         cache_entry.bin_updates = torch.add(cache_entry.bin_updates, query_tensor_dense)
-        # print("\tUpdate histogram For loop", time.time() - t)
         cache_entry.histogram.normalize()
-        # print("histogram new", list(cache_entry.histogram.tensor.numpy()[0])[0:500])
-        # time.sleep(2)
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)
@@ -180,21 +169,18 @@ class HistogramCache:
         assert cache_entry is not None
 
         # TODO: This depends on Query Values being 1 (counts queries only) for now
-        query_tensor_dense = query  # .to_dense()
-        # print("query", query_tensor_dense)
+        query_tensor_dense = query
         new_threshold = (
             torch.min(cache_entry.bin_updates[query_tensor_dense > 0])
             + self.bin_thershold_step
         )
         # Keep irrelevant bins as they are - set the rest to 0 and add to them the new threshold
-        # print("bin_thresholds", cache_entry.bin_thresholds)
         bin_thresholds_mask = (query_tensor_dense == 0).int()
         cache_entry.bin_thresholds = torch.add(
             torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask),
             query_tensor_dense * new_threshold,
         )
-        # print("bin_thresholds new", cache_entry.bin_thresholds)
-        # # Write updated entry
+        # Write updated entry
         self.write_entry(blocks, cache_entry)
 
     def is_query_hard(self, query, blocks):
@@ -202,16 +188,10 @@ class HistogramCache:
         if not cache_entry:
             return True
         # If each bin has been updated at least <bin-threshold> times the query is easy
-        query_tensor_dense = query  # .to_dense()
-        # print("query", query_tensor_dense)
+        query_tensor_dense = query
         bin_updates_query = torch.mul(cache_entry.bin_updates, query_tensor_dense)
-        # print("bin_updates", cache_entry.bin_updates)
-        # print("bin_updates_query", bin_updates_query)
         bin_thresholds_query = torch.mul(cache_entry.bin_thresholds, query_tensor_dense)
-        # print("bin_thresholds_query", bin_thresholds_query)
         comparisons = bin_updates_query < bin_thresholds_query
-        # print("comparisons", comparisons)
-
         if torch.any(comparisons).item():
             return True
         return False

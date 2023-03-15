@@ -8,7 +8,7 @@ from precycle.query_processor import QueryProcessor
 from precycle.psql import MockPSQL
 from precycle.budget_accountant import MockBudgetAccountant
 
-from precycle.planner.ilp import ILP
+from precycle.planner.ilp_deprecated import ILP
 from precycle.planner.min_cuts import MinCuts
 from precycle.cache.combined_cache import MockCombinedCache
 

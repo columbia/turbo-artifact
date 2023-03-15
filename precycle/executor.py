@@ -10,7 +10,7 @@ from termcolor import colored
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 
-from precycle.cache.laplace_cache import CacheEntry
+from precycle.cache.exact_match_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
 
 
@@ -86,14 +86,12 @@ class Executor:
                 run_types[str(run_op.blocks)] = "Laplace"
 
                 # External Update to the Histogram
-                if self.config.cache.type == "HybridCache":
-                    # t = time.time()
+                if self.config.mechanism.type == "Hybrid":
                     self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
-                    # print("Update Histogram", time.time() - t)
 
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
@@ -228,8 +226,24 @@ class Executor:
     def run_laplace(self, run_op, query_id, query_db_format):
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / node_size
+
+        if self.config.exact_match_caching == False:
+            # True output never released except in debugging logs
+            true_result = self.db.run_query(query_db_format, run_op.blocks)
+            laplace_scale = run_op.noise_std / math.sqrt(2)
+            epsilon = sensitivity / laplace_scale
+            run_budget = (
+                BasicBudget(epsilon)
+                if self.config.puredp
+                else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+            )
+            noise = np.random.laplace(scale=laplace_scale)
+            noisy_result = true_result + noise
+            rv = RunReturnValue(true_result, noisy_result, run_budget)
+            return rv
+
         # Check for the entry inside the cache
-        cache_entry = self.cache.laplace_cache.read_entry(query_id, run_op.blocks)
+        cache_entry = self.cache.exact_match_cache.read_entry(query_id, run_op.blocks)
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
@@ -310,7 +324,9 @@ class Executor:
             cache_entry = CacheEntry(
                 result=true_result, noise_std=run_op.noise_std, noise=noise
             )
-            self.cache.laplace_cache.write_entry(query_id, run_op.blocks, cache_entry)
+            self.cache.exact_match_cache.write_entry(
+                query_id, run_op.blocks, cache_entry
+            )
         noisy_result = true_result + noise
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
@@ -323,11 +339,8 @@ class Executor:
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query_db_format, run_op.blocks)
-        # print("true result", true_result)
         # Run histogram to get the predicted output
         noisy_result = cache_entry.histogram.run(query)
-        # print("noisy result", noisy_result)
-
         # Histogram prediction doesn't cost anything
         run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 

@@ -1,19 +1,22 @@
 {
     "mock": true,
+    "exact_match_caching": true,
     "puredp": true,
     "global_seed": 64,
     "variance_reduction": true,
     "alpha": 0.05,
     "beta": 0.001,
-    "cache": {
-        "host": "localhost",
-        "port": 6379,
-        "type": "HybridCache",
+    "mechanism": {
+        "type": "Hybrid",
         "probabilistic_cfg": {
             "learning_rate": 0.2,
             "heuristic": "bin_visits:100-10",
             "bootstrapping": false
         }
+    },
+    "cache": {
+        "host": "localhost",
+        "port": 6379
     },
     "planner": {
         "method": "MinCuts"

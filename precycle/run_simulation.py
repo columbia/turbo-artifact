@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.cache import MockCache, Cache
+from precycle.planner.no_cuts import NoCuts
 from precycle.planner.min_cuts import MinCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
@@ -68,7 +69,10 @@ class Simulator:
             budget_accountant = BudgetAccountant(self.config)
             cache = Cache(self.config)
 
-        planner = MinCuts(cache, budget_accountant, self.config)
+        if self.config.planner.method == "MinCuts":
+            planner = MinCuts(cache, budget_accountant, self.config)
+        elif self.config.planner.method == "NoCuts":
+            planner = NoCuts(cache, budget_accountant, self.config)
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config
