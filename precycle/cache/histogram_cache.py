@@ -1,8 +1,8 @@
 import torch
 import redisai as rai
 from copy import deepcopy
-from precycle.budget.histogram import DenseHistogram
-
+from precycle.cache.histogram import DenseHistogram
+import time
 
 class CacheKey:
     def __init__(self, blocks):
@@ -160,12 +160,17 @@ class HistogramCache:
         # TODO: This depends on Query Values being 1 (counts queries only) for now
         # t = time.time()
         query_tensor_dense = query  # .to_dense()
+        
+        # print("histogram old", cache_entry.histogram.tensor)
         cache_entry.histogram.tensor = torch.mul(
             cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
         )
+        # print("histogram new", cache_entry.histogram.tensor)
         cache_entry.bin_updates = torch.add(cache_entry.bin_updates, query_tensor_dense)
         # print("\tUpdate histogram For loop", time.time() - t)
         cache_entry.histogram.normalize()
+        # print("histogram new", list(cache_entry.histogram.tensor.numpy()[0])[0:500])
+        # time.sleep(2)
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)

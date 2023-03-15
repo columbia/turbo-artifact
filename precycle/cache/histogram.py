@@ -2,8 +2,8 @@ import math
 from itertools import product
 from typing import Dict, List, Optional
 
-import numpy as np
 import torch
+import numpy as np
 import torch.nn.functional as F
 
 

@@ -120,6 +120,7 @@ class Executor:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
+            # print("noisy result, true result", noisy_result, true_result)
             # Do the final SV check if there is at least one Histogram run involved
             if plan.sv_check:
                 status = self.run_sv_check(

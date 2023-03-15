@@ -14,7 +14,7 @@ from urllib.request import urlretrieve
 from precycle.utils.utils import REPO_ROOT
 from multiprocessing import Manager, Process
 from scipy.cluster.vq import kmeans2, whiten
-from precycle.budget.histogram import get_domain_size
+from precycle.cache.histogram import get_domain_size
 
 # ray.init(runtime_env={"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}})
 

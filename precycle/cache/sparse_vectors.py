@@ -74,9 +74,13 @@ class SparseVectors:
 
     def min_sum_subarray(self, blocks, k):
 
-        arr = [get_blocks_size((i, i), self.blocks_metadata) for i in blocks]
+        arr = []
+        for i in blocks:
+            if not str(i) in self.blocks_metadata['blocks']:
+                break
+            else:
+                arr.append(get_blocks_size((i, i), self.blocks_metadata)) 
         assert not len(arr) < k
-
         start = 0
         end = k - 1
         window_sum = sum(arr[start : end + 1])
@@ -95,7 +99,7 @@ class SparseVectors:
         # Find the smallest request that will be handled by this sparse vector.
         covered_blocks = range(node_id[0], node_id[1] + 1)
         node_size = len(covered_blocks)
-        smallest_request_size = 1 if node_size == 1 else (node_size / 2) + 1
+        smallest_request_size = 1 if node_size == 1 else int((node_size / 2) + 1)
         # Find the <smallest-request-size> number of continuous blocks with smallest possible population n
         n = self.min_sum_subarray(covered_blocks, smallest_request_size)
         # print("smallest size request", n)

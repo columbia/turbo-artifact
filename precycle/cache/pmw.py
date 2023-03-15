@@ -10,7 +10,7 @@ from precycle.budget.curves import (
     PureDPtoRDP,
     ZeroCurve,
 )
-from precycle.budget.histogram import DenseHistogram, flat_indices
+from precycle.cache.histogram import DenseHistogram, flat_indices
 from precycle.utils.utils import mlflow_log
 from precycle.budget import BasicBudget
 
@@ -97,16 +97,9 @@ class PMW:
                 lr *= -1
 
             # Multiplicative weights update for the relevant bins
-            # for i in flat_indices(query):
-            #     self.histogram.tensor[i] *= torch.exp(query[i] * lr)
-
-            query_tensor_dense = query.to_dense()
-            update_tensor = torch.mul(
+            query_tensor_dense = query  # .to_dense()
+            self.histogram.tensor = torch.mul(
                 self.histogram.tensor, torch.exp(query_tensor_dense * lr)
-            )
-            bins_mask = query_tensor_dense == 0
-            self.histogram.tensor = torch.add(
-                torch.mul(self.histogram.tensor, bins_mask), update_tensor
             )
             self.histogram.normalize()
 

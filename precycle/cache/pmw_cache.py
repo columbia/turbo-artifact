@@ -1,5 +1,5 @@
 from precycle.cache.pmw import PMW
-from precycle.utils.utility_theorems import get_pmw_epsilon
+from precycle.utils.utility_theorems import get_pmw_epsilon, get_sv_epsilon
 from precycle.utils.utils import get_blocks_size
 
 
@@ -13,8 +13,8 @@ class MockPMWCache:
 
     def add_entry(self, blocks):
         n = get_blocks_size(blocks, self.blocks_metadata)
-        epsilon = get_pmw_epsilon(self.pmw_alpha, self.pmw_beta, n, 1)
-
+        # epsilon = get_pmw_epsilon(self.pmw_alpha, self.pmw_beta, n, 1)
+        epsilon = get_sv_epsilon(self.pmw_alpha, self.pmw_beta, n)
         pmw = PMW(
             alpha=self.pmw_alpha,
             epsilon=epsilon,

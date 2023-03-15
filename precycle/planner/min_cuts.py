@@ -3,7 +3,7 @@ from sortedcollections import OrderedSet
 from precycle.planner.planner import Planner
 from precycle.utils.utils import satisfies_constraint
 from precycle.executor import A, RunLaplace, RunHistogram, RunPMW
-from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
+from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon, get_sv_epsilon
 from precycle.utils.utils import get_blocks_size
 
 
@@ -62,7 +62,8 @@ class MinCuts(Planner):
             assert len(subqueries) == 1
             (i, j) = subqueries[0]
             node_size = get_blocks_size((i, j), self.config.blocks_metadata)
-            epsilon = get_pmw_epsilon(alpha, beta, node_size, 1)
+            # epsilon = get_pmw_epsilon(alpha, beta, node_size, 1)
+            epsilon = get_sv_epsilon(alpha, beta, node_size)
             run_ops = [RunPMW((i, j), alpha, epsilon)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 

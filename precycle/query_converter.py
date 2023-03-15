@@ -1,4 +1,4 @@
-from precycle.budget.histogram import build_sparse_tensor
+from precycle.cache.histogram import build_sparse_tensor
 
 
 class QueryConverter:

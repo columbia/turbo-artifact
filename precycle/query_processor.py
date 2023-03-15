@@ -67,7 +67,7 @@ class QueryProcessor:
                     assert run_type != "Histogram"
             round += 1
 
-        if result:
+        if result is not None:
 
             if self.config.logs.mlflow:
                 budget_per_block_list = run_metadata["budget_per_block"]
@@ -77,12 +77,12 @@ class QueryProcessor:
                 mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
 
             status = FINISHED
-            logger.info(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
-                    "green",
-                )
-            )
+            # logger.info(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+            #         "green",
+            #     )
+            # )
         else:
             status = FAILED
             logger.info(
