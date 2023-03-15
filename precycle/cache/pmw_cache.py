@@ -13,8 +13,8 @@ class MockPMWCache:
 
     def add_entry(self, blocks):
         n = get_blocks_size(blocks, self.blocks_metadata)
-        # epsilon = get_pmw_epsilon(self.pmw_alpha, self.pmw_beta, n, 1)
-        epsilon = get_sv_epsilon(self.pmw_alpha, self.pmw_beta, n)
+        epsilon = get_pmw_epsilon(self.pmw_alpha, self.pmw_beta, n)
+        # epsilon = get_sv_epsilon(self.pmw_alpha, self.pmw_beta, n)
         pmw = PMW(
             alpha=self.pmw_alpha,
             epsilon=epsilon,
