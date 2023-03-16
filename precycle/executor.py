@@ -235,7 +235,7 @@ class Executor:
         sensitivity = 1 / node_size
 
         if self.config.exact_match_caching == False:
-            # True output never released except in debugging logs
+            # Run from scratch - don't look into the cache
             true_result = self.db.run_query(query_db_format, run_op.blocks)
             laplace_scale = run_op.noise_std / math.sqrt(2)
             epsilon = sensitivity / laplace_scale
@@ -276,7 +276,6 @@ class Executor:
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
             else:
-
                 # We need to improve on the cache
                 if not self.config.variance_reduction:
                     # Just compute from scratch and pay for it
@@ -293,7 +292,6 @@ class Executor:
                     noises.append(noise)
 
                 else:
-
                     # noise_std = sqrt(2) / (node_size * epsilon)
                     target_laplace_scale = run_op.noise_std / math.sqrt(2)
                     k = run_op.k if run_op.k else 1  # Number of aggregations
@@ -383,27 +381,6 @@ class Executor:
         #     )
         #     # TODO: Temporary hack is that I don't compute the noise by using the coefficients
         #     noise = np.random.laplace(scale=target_laplace_scale)
-
-        #     # TODO: re-enable variance reduction
-        #     # Var[X] = 2x^2, Y ∼ Lap(y). X might not follow a Laplace distribution!
-        #     # Var[aX + bY] = 2(ax)^2 + 2(by)^2 = c
-        #     # We set a ∈ [0,1] and b = 1-a
-        #     # Then, we maximize y^2 = f(a) = (c - 2(ax)^2)/2(1-a)^2
-        #     # We have (1-a)^3 f'(a) = c - 2ax^2
-        #     # So we take a = c/(2x^2)
-        #     x = cache_entry.noise_std / np.sqrt(2)
-        #     c = run_op.noise_std**2
-        #     a = c / (2 * (x**2))
-        #     b = 1 - a
-        #     y = np.sqrt((c - 2 * (a * x) ** 2) / (2 * b**2))
-
-        #     assert np.isclose(2 * (a * x) ** 2 + 2 * (b * y) ** 2, c)
-
-        #     # Get some fresh noise with optimal variance and take a linear combination with the old noise
-        #     laplace_scale = y / np.sqrt(2)
-        #     fresh_noise = np.random.laplace(scale=laplace_scale)
-        #     run_budget = LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
-        #     noise = a * cache_entry.noise + b * fresh_noise
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (

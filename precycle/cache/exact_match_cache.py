@@ -2,19 +2,30 @@ import yaml
 import redis
 
 
+def cache_key(query_id, blocks):
+    return f"{query_id}:{blocks}"
+
+
 class CacheKey:
     def __init__(self, query_id, blocks):
-        self.key = f"{query_id}:{blocks}"
+        self.key = cache_key(query_id, blocks)
 
 
 class CacheEntry:
-    def __init__(self, result, noise_std, noise):
+    def __init__(self, result, noise_std, noise, epsilons=[], noises=[]):
         self.result = result  # True result without noise
         self.noise_std = noise_std  # std of Laplace distribution
         self.noise = noise  # The actual noise sampled from the distribution
 
+        # TODO: store list of epsilons (or b?). Encapsulates multiblock case neatly?
+        self.epsilons = epsilons
+        self.noises = noises
 
-class LaplaceCache:
+
+# TODO: MonteCarlo instead of utility?
+
+# TODO: add extra fields
+class ExactMatchCache:
     def __init__(self, config):
         self.config = config
         self.kv_store = self.get_kv_store(config)
@@ -43,7 +54,7 @@ class LaplaceCache:
         pass
 
 
-class MockLaplaceCache(LaplaceCache):
+class MockExactMatchCache(ExactMatchCache):
     def __init__(self, config):
         super().__init__(config)
 
@@ -51,19 +62,12 @@ class MockLaplaceCache(LaplaceCache):
         return {}
 
     def write_entry(self, query_id, blocks, cache_entry):
-        key = CacheKey(query_id, blocks).key
-        self.kv_store[key] = {
-            "result": cache_entry.result,
-            "noise_std": cache_entry.noise_std,
-            "noise": cache_entry.noise,
-        }
+        key = cache_key(query_id, blocks)
+        self.kv_store[key] = cache_entry
 
     def read_entry(self, query_id, blocks):
-        key = CacheKey(query_id, blocks).key
-        if key in self.kv_store:
-            entry = self.kv_store[key]
-            return CacheEntry(entry["result"], entry["noise_std"], entry["noise"])
-        return None
+        key = cache_key(query_id, blocks)
+        return self.kv_store.get(key, None)
 
     def dump(self):
         print("Cache", yaml.dump(self.key_values))

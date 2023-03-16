@@ -24,7 +24,7 @@ def caching_monoblock_covid19(dataset):
 
     grid_online(
         global_seed=64,
-        logs_dir=f"final/{dataset}/monoblock",
+        logs_dir=f"kelly/{dataset}/monoblock",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -38,7 +38,7 @@ def caching_monoblock_covid19(dataset):
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[1.5],
+        zipf_k=[0, 1],
         heuristic=["bin_visits:100-5"],
         variance_reduction=[True],
         log_every_n_tasks=100,

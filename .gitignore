@@ -2,6 +2,7 @@
 .vscode/
 logs
 *.csv
+/data/citibike/citibike_queries/
 mlruns/
 experiments/figures/
 data/alibaba/

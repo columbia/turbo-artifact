@@ -4,6 +4,7 @@ import time
 import redisai as rai
 import torch
 
+
 class CacheKey:
     def __init__(self, blocks):
         self.key = str(blocks)

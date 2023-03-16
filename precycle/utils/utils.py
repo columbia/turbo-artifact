@@ -191,12 +191,15 @@ def get_logs(
     query_pool_size = len(workload["query_id"].unique())
     config = {}
 
+    exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "DirectLaplace"
         heuristic = ""
         learning_rate = ""
         bootstrapping = ""
         key = mechanism_type
+        key += ":exact_cache" + str(exact_match_caching)
+
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
         heuristic = ""
@@ -219,9 +222,10 @@ def get_logs(
             + heuristic
             + ":lr"
             + learning_rate
-            + ":bs"
+            + ":warmup"
             + bootstrapping
         )
+        key += ":exact_cache" + str(exact_match_caching)
 
     config.update(
         {
