@@ -2,7 +2,7 @@
 # Run with https://github.com/casey/just or copy-paste
 
 run_one:
-    python precycle/run_simulation.py --omegaconf precycle/config/precycle.json
+    python precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
 
     # python precycle/start_precycle.py --omegaconf precycle/config/precycle.json
 

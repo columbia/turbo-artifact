@@ -1,9 +1,8 @@
-import torch
-import redisai as rai
 from copy import deepcopy
 from precycle.cache.histogram import DenseHistogram
 import time
-
+import redisai as rai
+import torch
 
 class CacheKey:
     def __init__(self, blocks):
@@ -175,6 +174,7 @@ class HistogramCache:
             + self.bin_thershold_step
         )
         # Keep irrelevant bins as they are - set the rest to 0 and add to them the new threshold
+        # TODO: might be wasteful
         bin_thresholds_mask = (query_tensor_dense == 0).int()
         cache_entry.bin_thresholds = torch.add(
             torch.mul(cache_entry.bin_thresholds, bin_thresholds_mask),

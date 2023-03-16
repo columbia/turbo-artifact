@@ -56,21 +56,18 @@ def loose_epsilon(alpha, beta, n, l):
     return 2 * np.log(1 / beta) / (l * alpha * n)
 
 
-def sum_laplace_beta(epsilon, n, alpha, l=1 / 2, extra_laplace=False):
+def sum_laplace_beta(epsilon, n, alpha, l=1 / 2):
     """
-    If extra_laplace = True, we add an extra failure probability coming from the hard query Laplace noise
-    See "Concentrated per-query accuracy guarantees for a single PMW" lemma.
+    See "Tail bound of sum of two i.i.d. Laplace" on Overleaf.
     """
     e = l * alpha * n * epsilon
-    beta_sv = (1 / 2 + e / 4) * np.exp(-e)
-    beta_laplace = np.exp(-2 * e) if extra_laplace else 0
-    return beta_laplace + beta_sv
+    return (1 / 2 + e / 4) * np.exp(-e)
 
 
-def binary_search_epsilon(alpha, beta, n, l, beta_tolerance=1e-5, extra_laplace=False):
+def binary_search_epsilon(alpha, beta, n, l, beta_tolerance=1e-5):
     """
-    Find the lowest epsilon that satisfies the failure probability guarantee.
-    If extra_laplace = True, this is for a full PMW. Otherwise, it's just for a single SV.
+    See "Concentrated per-query accuracy guarantees for a single PMW" on Overleaf.
+    We just show the cost of the SV, not of the hard-query direct Laplace.
     """
     eps_low = 0
     eps_high = loose_epsilon(alpha, beta, n, l)

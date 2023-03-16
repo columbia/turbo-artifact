@@ -14,7 +14,7 @@ class CacheEntry:
         self.noise = noise  # The actual noise sampled from the distribution
 
 
-class ExactMatchCache:
+class LaplaceCache:
     def __init__(self, config):
         self.config = config
         self.kv_store = self.get_kv_store(config)
@@ -43,7 +43,7 @@ class ExactMatchCache:
         pass
 
 
-class MockExactMatchCache(ExactMatchCache):
+class MockLaplaceCache(LaplaceCache):
     def __init__(self, config):
         super().__init__(config)
 

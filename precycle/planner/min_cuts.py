@@ -4,10 +4,7 @@ from sortedcollections import OrderedSet
 
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
-from precycle.utils.utility_theorems import (
-    get_laplace_epsilon,
-    get_pmw_epsilon,
-)
+from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
 
@@ -44,6 +41,7 @@ class MinCuts(Planner):
 
         subqueries = self.get_min_cuts(task.blocks)
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
+        k = len(subqueries)
 
         # NOTE: System wide accuracy for now
         alpha = self.config.alpha  # task.utility
@@ -51,13 +49,13 @@ class MinCuts(Planner):
 
         if self.mechanism_type == "Laplace":
             run_ops = []
-            min_epsilon = get_laplace_epsilon(alpha, beta, n, len(subqueries))
+            min_epsilon = get_laplace_epsilon(alpha, beta, n, k)
             for (i, j) in subqueries:
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
-                run_ops += [RunLaplace((i, j), noise_std)]
+                run_ops += [RunLaplace((i, j), noise_std, k=k)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.mechanism_type == "PMW":
