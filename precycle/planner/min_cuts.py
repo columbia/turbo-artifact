@@ -90,7 +90,7 @@ class MinCuts(Planner):
                 ) or self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
                     # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
                     # Also choose the Laplace if the histogram is not well trained according to our heuristic
-                    run_ops += [RunLaplace((i, j), noise_std)]
+                    run_ops += [RunLaplace((i, j), noise_std, k=k)]
                 else:
                     sv_check = True
                     run_ops += [RunHistogram((i, j))]

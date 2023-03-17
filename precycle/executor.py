@@ -276,6 +276,10 @@ class Executor:
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
             else:
+
+                # Activate a complicated VR that is supposed to optimize variance but that fails sometimes
+                SQRT_VR = False
+
                 # We need to improve on the cache
                 if not self.config.variance_reduction:
                     # Just compute from scratch and pay for it
@@ -291,7 +295,7 @@ class Executor:
                     epsilons.append(epsilon)
                     noises.append(noise)
 
-                else:
+                elif SQRT_VR:
                     # noise_std = sqrt(2) / (node_size * epsilon)
                     target_laplace_scale = run_op.noise_std / math.sqrt(2)
                     k = run_op.k if run_op.k else 1  # Number of aggregations
@@ -308,7 +312,6 @@ class Executor:
                         target_pure_epsilon**2 - sum([e**2 for e in epsilons])
                     )
                     run_laplace_scale = sensitivity / run_pure_epsilon
-
                     fresh_noise = np.random.laplace(scale=run_laplace_scale)
                     run_budget = (
                         BasicBudget(run_pure_epsilon)
@@ -362,6 +365,63 @@ class Executor:
 
                         epsilons.append(epsilon)
                         noises.append(noise)
+
+                else:
+                    # Recover epsilon with noise_std = sqrt(2) / (node_size * epsilon)
+                    target_laplace_scale = run_op.noise_std / math.sqrt(2)
+                    k = run_op.k if run_op.k else 1  # Number of aggregations
+                    target_pure_epsilon = sensitivity / target_laplace_scale
+
+                    # We already have j-1 epsilons, our goal is to have j identical (scaled) Laplace
+                    j = len(epsilons) + 1
+
+                    # Linear combination coefficients
+                    gammas = [
+                        e / (math.sqrt(j) * target_pure_epsilon) for e in epsilons
+                    ]
+                    x = 1 - sum(gammas)
+
+                    # Check that the multiblock VR concentration bound holds
+                    if x < 0 or k * j < math.log(2 / self.config.beta):
+                        logger.warning(
+                            f"Fallback on the b_M branch for Vr: x = {x} < 0, or {k} * {j} < {math.log(2 / self.config.beta)} "
+                        )
+
+                        # The concentration bound doesn't hold, probably because we don't have enough Laplace
+                        # In particular k < math.log(2 / self.config.beta) so `get_laplace_epsilon` is on the b_M branch
+                        # We could just take one Laplace with the right b_M
+
+                        laplace_scale = run_op.noise_std / math.sqrt(2)
+                        epsilon = sensitivity / laplace_scale
+                        run_budget = (
+                            BasicBudget(epsilon)
+                            if self.config.puredp
+                            else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
+                        )
+                        noise = np.random.laplace(scale=laplace_scale)
+
+                        epsilons.append(epsilon)
+                        noises.append(noise)
+                    else:
+                        logger.info("Doing VR just fine.")
+
+                        # Compute the new noise
+                        run_pure_epsilon = x * math.sqrt(j) * target_pure_epsilon
+                        run_laplace_scale = sensitivity / run_pure_epsilon
+                        fresh_noise = np.random.laplace(scale=run_laplace_scale)
+                        run_budget = (
+                            BasicBudget(run_pure_epsilon)
+                            if self.config.puredp
+                            else LaplaceCurve(
+                                laplace_noise=run_laplace_scale / sensitivity
+                            )
+                        )
+
+                        epsilons.append(run_pure_epsilon)
+                        noises.append(fresh_noise)
+                        gammas.append(x)  # sum(gammas) = 1 now
+
+                        noise = sum(n * g for n, g in zip(noises, gammas))
 
         # else:
         #     # TODO a temporary hack to enable VR.
