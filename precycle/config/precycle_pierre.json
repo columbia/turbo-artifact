@@ -1,19 +1,22 @@
 {
     "mock": true,
+    "exact_match_caching": true,
     "puredp": true,
     "global_seed": 64,
     "variance_reduction": true,
     "alpha": 0.05,
     "beta": 0.001,
-    "cache": {
-        "host": "localhost",
-        "port": 6379,
-        "type": "LaplaceCache",
+    "mechanism": {
+        "type": "Hybrid",
         "probabilistic_cfg": {
             "learning_rate": 0.2,
-            "heuristic": "bin_visits:10-5",
-            "bootstrapping": true
+            "heuristic": "bin_visits:100-10",
+            "bootstrapping": false
         }
+    },
+    "cache": {
+        "host": "localhost",
+        "port": 6379
     },
     "planner": {
         "method": "MinCuts"
@@ -44,7 +47,7 @@
         "avg_num_tasks_per_block": 1e1,
         "max_num": 5e3,
         "initial_num": 0,
-        "zipf_k": 0.5
+        "zipf_k": 2
     },
     "blocks_server": {
         "host": "localhost",

@@ -1,11 +1,13 @@
-import time
 import pickle
 import random
+import time
+
 import numpy as np
 from loguru import logger
-from precycle.task import Task
+
 from precycle.cache.histogram import k_way_marginal_query_list
 from precycle.query_converter import QueryConverter
+from precycle.task import Task
 
 
 def Zipf(a: np.float64, min: np.uint64, max: np.uint64, size=None):
@@ -48,6 +50,9 @@ class TaskGenerator:
         # t = time.time()
         # Query may be either a query_vector (covid19) or a dict format (citibike)
         query = eval(task_row["query"])
+
+        # print(f"Read query from csv: {query} of type {type(query)}")
+
         # Read compressed rectangle or PyTorch slice, output a query vector
         if isinstance(query, dict):
             # NOTE: we only support pure k-way marginals for now
@@ -63,7 +68,8 @@ class TaskGenerator:
             with open(task_row["query_path"], "rb") as f:
                 query_tensor = pickle.load(f)
         else:
-            query_tensor = self.query_converter.convert_to_tensor(query)
+            query_tensor = self.query_converter.convert_to_sparse_tensor(query)
+            # query_tensor = self.query_converter.convert_to_dense_tensor(query)
 
         # Converting to dense tensor to facilitate future tensor operations
         # TODO: Maybe this is unecessary? I'm not very familiar with PyTorch.

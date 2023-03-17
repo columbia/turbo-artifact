@@ -1,8 +1,10 @@
-from copy import deepcopy
-from precycle.cache.histogram import DenseHistogram
 import time
+from copy import deepcopy
+
 import redisai as rai
 import torch
+
+from precycle.cache.histogram import DenseHistogram
 
 
 class CacheKey:
@@ -81,10 +83,14 @@ class HistogramCache:
             node_size = j - i + 1
             if node_size == 1 and i > 0:  # leaf node
                 # Find the first previous block in cache to initialize from
-                for x in reversed(range(i)):
+                # for x in reversed(range(i)):
+                for x in reversed(range(i - 5)):
                     cache_entry = self.read_entry((x, x))
                     if cache_entry is not None:
                         break
+
+                # TODO(Pierre): weighted average?
+                # can also use parents!
             else:  # not leaf node - aggregate children
                 # Get children nodes
                 left_child = (i, i + node_size / 2 - 1)

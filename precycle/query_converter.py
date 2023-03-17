@@ -30,7 +30,7 @@ class QueryConverter:
         )
         return sql
 
-    def convert_to_tensor(self, query_vector):
+    def convert_to_sparse_tensor(self, query_vector):
         # print("length query", len(query_vector))
         tensor = build_sparse_tensor(
             bin_indices=query_vector,
@@ -38,3 +38,8 @@ class QueryConverter:
             attribute_sizes=self.attribute_domain_sizes,
         )
         return tensor
+
+    def convert_to_dense_tensor(self, query_vector):
+        # print("length query", len(query_vector))
+        # print(f"Converting: {query_vector} of type {type(query_vector)}")
+        pass

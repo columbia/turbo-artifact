@@ -7,8 +7,10 @@ def get_laplace_epsilon(a, b, n, k):
     if k == 1:
         epsilon = math.log(1 / b) / (n * a)
     elif k >= math.log(2 / b):
+        # Concentration branch
         epsilon = math.sqrt(k * 8 * math.log(2 / b)) / (n * a)
     else:
+        # b_M branch
         epsilon = (math.log(2 / b) * math.sqrt(8)) / (n * a)
     return epsilon
 
