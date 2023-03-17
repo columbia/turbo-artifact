@@ -90,7 +90,7 @@ def get_budgets_information(df, blocks):
         initial_budget,
         key,
         zipf_k,
-        mechanism,
+        cache,
         learning_rate,
         bootstrapping,
     ) in df[
@@ -100,7 +100,7 @@ def get_budgets_information(df, blocks):
             "blocks_initial_budget",
             "key",
             "zipf_k",
-            "mechanism",
+            "cache",
             "learning_rate",
             "bootstrapping",
         ]
@@ -152,7 +152,7 @@ def get_budgets_information(df, blocks):
                                 "budget": task_budget,
                                 "key": key,
                                 "zipf_k": zipf_k,
-                                "mechanism": mechanism,
+                                "cache": cache,
                                 "learning_rate": learning_rate,
                                 "bootstrapping": bootstrapping,
                             }
@@ -170,7 +170,7 @@ def get_budgets_information(df, blocks):
                             "key": key,
                             "global_budget": global_budget,
                             "zipf_k": zipf_k,
-                            "mechanism": mechanism,
+                            "cache": cache,
                             "learning_rate": learning_rate,
                             "bootstrapping": bootstrapping,
                         }
@@ -194,7 +194,7 @@ def get_blocks_information(df):
         key,
         zipf_k,
         total_tasks,
-        mechanism,
+        cache,
         learning_rate,
         bootstrapping,
     ) in df[
@@ -204,7 +204,7 @@ def get_blocks_information(df):
             "key",
             "zipf_k",
             "total_tasks",
-            "mechanism",
+            "cache",
             "learning_rate",
             "bootstrapping",
         ]
@@ -233,7 +233,7 @@ def get_blocks_information(df):
                             "key": key,
                             "zipf_k": zipf_k,
                             "total_tasks": total_tasks,
-                            "mechanism": mechanism,
+                            "cache": cache,
                             "learning_rate": learning_rate,
                             "bootstrapping": bootstrapping,
                         }
@@ -319,13 +319,13 @@ def analyze_monoblock(experiment_path):
         # ]
 
         df.to_csv("monoblock/budget_utilization.csv", index=False)
-        keys_order = [
-            "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
-            "DirectLaplace",
-            "PMW",
-        ]
+        # keys_order = [
+        #     "Hybrid:bin_visits:100-10:lr0.2:bsFalse",
+        #     "DirectLaplace",
+        #     "PMW",
+        # ]
         zipf_orders = ["1.5", "1.0", "0.5", "0"]
-        category_orders = {"key": keys_order, "zipf_k": zipf_orders}
+        category_orders = {"zipf_k": zipf_orders}
         fig = px.bar(
             df,
             x="zipf_k",
@@ -390,8 +390,8 @@ def analyze_monoblock(experiment_path):
     iplot(plot_cumulative_budget_utilization_time(time_budgets, total_tasks))
     iplot(plot_budget_utilization_time(time_budgets, total_tasks))
 
-    # analyze_mechanism_type_use(df)
-    # analyze_mechanism_type_use_bar(df)
+    # analyze_cache_type_use(df)
+    # analyze_cache_type_use_bar(df)
 
 
 def analyze_multiblock(experiment_path):
@@ -585,7 +585,7 @@ def analyze_sv_misses(experiment_path):
         return fig
 
     df = get_df(experiment_path)
-    df = df.query("mechanism == 'Hybrid'")
+    df = df.query("cache == 'Hybrid'")
     total_tasks = df["total_tasks"].max()
     sv_misses = get_sv_misses_information(df)
     iplot(plot_sv_misses_per_node(sv_misses, total_tasks))
@@ -651,7 +651,7 @@ def analyze_query_types(experiment_path):
 
     df = get_df(experiment_path)
     df["zipf_k"] = df["zipf_k"].astype(float)
-    df = df.query("mechanism == 'DirectLaplace'")
+    df = df.query("cache == 'DirectLaplace'")
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
 
     tasks = get_tasks_information(df)
@@ -660,26 +660,26 @@ def analyze_query_types(experiment_path):
     # iplot(plot_query_per_task(tasks))
 
 
-# def analyze_mechanism_type_use_bar(df):
-#     def plot_mechanism_type_use(df):
+# def analyze_cache_type_use_bar(df):
+#     def plot_cache_type_use(df):
 #         fig = px.bar(
 #             df,
 #             x="id",
 #             y="count",
 #             color="type",
-#             title="Laplace vs PMW runs for mechanism",
+#             title="Laplace vs PMW runs for cache",
 #             width=3500,
 #             height=800,
 #             facet_row="zipf_k",
 #             color_discrete_sequence=["red", "black"],
 #             # color_discrete_map={
-#             #     'Deterministicmechanism': 'red',
-#             #     'Probabilisticmechanism': 'black'
+#             #     'Deterministiccache': 'red',
+#             #     'Probabilisticcache': 'black'
 #             # }
 #         )
 #         return fig
 
-#     df = df.query("mechanism == 'MixedRuns'")
+#     df = df.query("cache == 'MixedRuns'")
 #     tasks = get_tasks_information(df)
 #     tasks_deterministic = tasks[["id", "laplace_runs", "zipf_k"]]
 #     tasks_deterministic.insert(0, "type", "LaplaceRuns")
@@ -688,11 +688,11 @@ def analyze_query_types(experiment_path):
 #     tasks_probabilistic.insert(0, "type", "PMWRuns")
 #     tasks_probabilistic = tasks_probabilistic.rename(columns={"pmw_runs": "count"})
 #     tasks_new = pd.concat([tasks_deterministic, tasks_probabilistic])
-#     iplot(plot_mechanism_type_use(tasks_new))
+#     iplot(plot_cache_type_use(tasks_new))
 
 
-# def analyze_mechanism_type_use(df):
-#     def plot_mechanism_type_use(df):
+# def analyze_cache_type_use(df):
+#     def plot_cache_type_use(df):
 #         fig = px.line(
 #             df,
 #             x="id",
@@ -704,6 +704,6 @@ def analyze_query_types(experiment_path):
 #         )
 #         return fig
 
-#     df = df.query("mechanism == 'MixedRuns'")
+#     df = df.query("cache == 'MixedRuns'")
 #     tasks = get_tasks_information(df)
-#     iplot(plot_mechanism_type_use(tasks))
+#     iplot(plot_cache_type_use(tasks))

@@ -84,7 +84,7 @@ class HistogramCache:
             if node_size == 1 and i > 0:  # leaf node
                 # Find the first previous block in cache to initialize from
                 # for x in reversed(range(i)):
-                for x in reversed(range(i - 5)):
+                for x in reversed(range(i)):
                     cache_entry = self.read_entry((x, x))
                     if cache_entry is not None:
                         break

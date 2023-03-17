@@ -65,7 +65,7 @@ class ResourceManager:
 
             block_id = block_message
             block_data_path = (
-                self.config.blocks.block_data_path + f"/block_{block_id}.csv"
+                self.config.blocks.block_data_path + f"/block_{block_id}"
             )
             self.db.add_new_block(block_data_path)
             self.budget_accountant.add_new_block_budget()

@@ -1,6 +1,7 @@
 import os
 import ray
 import json
+import pickle
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -15,6 +16,7 @@ from precycle.utils.utils import REPO_ROOT
 from multiprocessing import Manager, Process
 from scipy.cluster.vq import kmeans2, whiten
 from precycle.cache.histogram import get_domain_size
+from precycle.cache import SparseHistogram
 
 # ray.init(runtime_env={"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}})
 
@@ -31,13 +33,13 @@ ATTRIBUTES = [
 ]
 
 
-def compute_distance(row):
-    # Units are in decimal degrees
-    # https://geohack.toolforge.org/geohack.php?pagename=New_York_City&params=40_42_46_N_74_00_22_W_region:US-NY_type:city(8804190)
-    start = row["start station latitude"], row["start station longitude"]
-    end = row["end station latitude"], row["end station longitude"]
-    row["distance_meters"] = int(distance.distance(start, end).m)
-    return row
+# def compute_distance(row):
+#     # Units are in decimal degrees
+#     # https://geohack.toolforge.org/geohack.php?pagename=New_York_City&params=40_42_46_N_74_00_22_W_region:US-NY_type:city(8804190)
+#     start = row["start station latitude"], row["start station longitude"]
+#     end = row["end station latitude"], row["end station longitude"]
+#     row["distance_meters"] = int(distance.distance(start, end).m)
+#     return row
 
 
 def year_month_iterator():
@@ -242,7 +244,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
     }
 
     def bucketize_and_drop(
-        name, week_counter, month_num_weeks, metadata, months_dir, blocks_dir
+        name, week_counter, month_num_weeks, metadata, months_dir, blocks_dir, 
     ):
         print("Processing blocks", name, month_num_weeks)
         month_df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
@@ -270,8 +272,16 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
             df = df.dropna()
             df = df.astype("int64")
             df = df[ATTRIBUTES]
+
+            with open(blocks_dir.joinpath(f"block_{block_id}.pkl"), "wb") as f:
+                histogram_data = SparseHistogram.from_dataframe(
+                        df, list(attributes_domains_sizes.values())
+                )
+                pickle.dump(histogram_data, f)
+
             df.insert(0, "time", block_id)
             df.to_csv(blocks_dir.joinpath(f"block_{block_id}.csv"), index=False)
+
             metadata[block_id] = (f"{year}-{week_number}", df.shape[0])
             week_counter += 1
 
@@ -323,7 +333,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
         outfile.write(json_object)
 
 
-def main(re_preprocess_months=True):
+def main(re_preprocess_months=False):
     months_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/months")
     months_dir.mkdir(parents=True, exist_ok=True)
 
@@ -331,7 +341,7 @@ def main(re_preprocess_months=True):
         preprocess_months(months_dir)
         cluster_stations(months_dir)
 
-    blocks_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/blocks")
+    blocks_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/blocks1")
     blocks_dir.mkdir(parents=True, exist_ok=True)
     split_months_into_week_blocks(months_dir, blocks_dir)
 

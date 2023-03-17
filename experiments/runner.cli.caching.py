@@ -2,15 +2,15 @@ import os
 import typer
 from experiments.ray_runner import grid_online
 from precycle.utils.utils import REPO_ROOT
-
+from notebooks.caching.utils import get_df, analyze_monoblock, analyze_multiblock
 app = typer.Typer()
 
 
 def get_paths(dataset):
     tasks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_workload/")
     blocks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_data/")
-    blocks_metadata = str(blocks_path_prefix.joinpath("blocks/metadata.json"))
-    blocks_path = str(blocks_path_prefix.joinpath("blocks"))
+    blocks_metadata = str(blocks_path_prefix.joinpath("blocks1/metadata.json"))
+    blocks_path = str(blocks_path_prefix.joinpath("blocks1"))
     return blocks_path, blocks_metadata, tasks_path_prefix
 
 
@@ -21,10 +21,11 @@ def caching_monoblock_covid19(dataset):
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
+    logs_dir = f"kelly/{dataset}/monoblock"
 
     grid_online(
         global_seed=64,
-        logs_dir=f"kelly/{dataset}/monoblock",
+        logs_dir=logs_dir,
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
@@ -46,6 +47,7 @@ def caching_monoblock_covid19(dataset):
         bootstrapping=[False],
         exact_match_caching=[False, True],
     )
+    analyze_monoblock(logs_dir)
 
 
 def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
@@ -57,12 +59,12 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
 
     grid_online(
         global_seed=64,
-        logs_dir="{dataset}/static-multiblock_laplace_vs_hybrid",
+        logs_dir=f"kelly{dataset}/static-multiblock_laplace_vs_hybrid",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        mechanism=["Laplace", "Hybrid"],
+        mechanism=["Laplace"], #, "Hybrid"],
         initial_blocks=[150],
         max_blocks=[150],
         block_selection_policy=["RandomBlocks"],
@@ -71,7 +73,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         initial_tasks=[0],
         alpha=[0.05],
         beta=[0.001],
-        zipf_k=[0, 0.5, 1, 1.5],
+        zipf_k=[1],
         heuristic=["bin_visits:100-5"],
         variance_reduction=[True],
         log_every_n_tasks=500,
@@ -186,7 +188,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
 # Citibike Dataset Experiments
 def caching_monoblock_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1blocks_2065queries.privacy_tasks.csv"]
+    task_paths = ["1blocks_2485queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -221,7 +223,7 @@ def caching_monoblock_citibike(dataset):
 
 def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1:2:4:8:16:32:64:128blocks_2065queries.privacy_tasks.csv"]
+    task_paths = ["1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -233,8 +235,8 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,
         planner=["MinCuts"],
-        mechanism=["Laplace", "Hybrid"],
-        # mechanism=["Hybrid"],
+        # mechanism=["Laplace", "Hybrid"],
+        mechanism=["Hybrid"],
         initial_blocks=[188],
         max_blocks=[188],
         block_selection_policy=["RandomBlocks"],
@@ -254,7 +256,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
 
 def caching_static_multiblock_heuristics_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1:2:4:8:16:32:64:128blocks_2065queries.privacy_tasks.csv"]
+    task_paths = ["1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -291,7 +293,7 @@ def caching_static_multiblock_heuristics_citibike(dataset):
 
 def caching_static_multiblock_learning_rate_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1:2:4:8:16:32:64:128blocks_2065queries.privacy_tasks.csv"]
+    task_paths = ["1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -323,14 +325,14 @@ def caching_static_multiblock_learning_rate_citibike(dataset):
 
 def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_2065queries.privacy_tasks.csv"]
+    task_paths = ["1:1:1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
     grid_online(
         global_seed=64,
-        logs_dir=f"{dataset}/streaming_multiblock_laplace_vs_hybrid",
+        logs_dir=f"pickle/{dataset}/streaming_multiblock_laplace_vs_hybrid",
         tasks_path=task_paths,
         blocks_path=blocks_path,
         blocks_metadata=blocks_metadata,

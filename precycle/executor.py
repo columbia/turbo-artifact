@@ -383,9 +383,9 @@ class Executor:
 
                     # Check that the multiblock VR concentration bound holds
                     if x < 0 or k * j < math.log(2 / self.config.beta):
-                        logger.warning(
-                            f"Fallback on the b_M branch for Vr: x = {x} < 0, or {k} * {j} < {math.log(2 / self.config.beta)} "
-                        )
+                        # logger.warning(
+                            # f"Fallback on the b_M branch for Vr: x = {x} < 0, or {k} * {j} < {math.log(2 / self.config.beta)} "
+                        # )
 
                         # The concentration bound doesn't hold, probably because we don't have enough Laplace
                         # In particular k < math.log(2 / self.config.beta) so `get_laplace_epsilon` is on the b_M branch
@@ -403,7 +403,7 @@ class Executor:
                         epsilons.append(epsilon)
                         noises.append(noise)
                     else:
-                        logger.info("Doing VR just fine.")
+                        # logger.info("Doing VR just fine.")
 
                         # Compute the new noise
                         run_pure_epsilon = x * math.sqrt(j) * target_pure_epsilon
@@ -423,24 +423,6 @@ class Executor:
 
                         noise = sum(n * g for n, g in zip(noises, gammas))
 
-        # else:
-        #     # TODO a temporary hack to enable VR.
-        #     cached_laplace_scale = cache_entry.noise_std / math.sqrt(2)
-        #     cached_pure_epsilon = sensitivity / cached_laplace_scale
-
-        #     target_laplace_scale = run_op.noise_std / math.sqrt(2)
-        #     target_pure_epsilon = sensitivity / target_laplace_scale
-
-        #     run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
-        #     run_laplace_scale = sensitivity / run_pure_epsilon
-
-        #     run_budget = (
-        #         BasicBudget(run_pure_epsilon)
-        #         if self.config.puredp
-        #         else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
-        #     )
-        #     # TODO: Temporary hack is that I don't compute the noise by using the coefficients
-        #     noise = np.random.laplace(scale=target_laplace_scale)
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (

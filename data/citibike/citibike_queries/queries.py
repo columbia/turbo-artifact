@@ -377,7 +377,7 @@ def query_22():
 
 # Count riders by user_type, by gender by age
 def query_23():
-    # Count riders [duration-minutes, gender, age]
+    # Count riders [user_type, gender, age]
     queries = []
     key1 = attribute_position["user_type"]
     key2 = attribute_position["gender"]
@@ -418,12 +418,12 @@ def query_25():
 
 # Count riders by weekday, start-station
 def query_26():
-    # Count riders [start_station, hour]
+    # Count riders [start_station, weekday]
     queries = []
     key1 = attribute_position["weekday"]
     key2 = attribute_position["start_station"]
 
-    for value1 in any_hour():
+    for value1 in any_weekday():
         for value2 in any_start_station():
             queries.append({key1: value1, key2: value2})
     return queries
@@ -436,7 +436,7 @@ def query_27():
     key1 = attribute_position["weekday"]
     key2 = attribute_position["end_station"]
 
-    for value1 in any_hour():
+    for value1 in any_weekday():
         for value2 in any_end_station():
             queries.append({key1: value1, key2: value2})
     return queries
@@ -470,9 +470,23 @@ def query_29():
     return queries
 
 
+# Most popular biking routes in NYC per age
+def query_30():
+    # Count riders per [age, start/end station]
+    queries = []
+    key1 = attribute_position["age"]
+    key2 = attribute_position["start_station"]
+    key3 = attribute_position["end_station"]
+    for value1 in any_age():
+        for value2 in any_start_station():
+            for value3 in any_end_station():
+                queries.append({key1: value1, key2: value2, key3: value3})
+    return queries
+
+
 def create_queries():
     queries = []
-    for i in range(1, 30):
+    for i in range(1, 31):
         queries += globals()[f"query_{i}"]()
     return queries
 

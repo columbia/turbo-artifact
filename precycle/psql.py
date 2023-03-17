@@ -1,8 +1,9 @@
+import pickle
 import psycopg2
 import pandas as pd
 from loguru import logger
 from collections import namedtuple
-from precycle.budget import SparseHistogram
+from precycle.cache import SparseHistogram
 from precycle.utils.utils import get_blocks_size
 
 
@@ -79,10 +80,18 @@ class MockPSQL:
         self.domain_size = float(self.config.blocks_metadata["domain_size"])
 
     def add_new_block(self, block_data_path):
-        raw_data = pd.read_csv(block_data_path).drop(columns=["time"])
-        histogram_data = SparseHistogram.from_dataframe(
-            raw_data, self.attributes_domain_sizes
-        )
+        histogram_data = None
+        try:
+            with open(f"{block_data_path}.pkl", 'rb') as    f:
+                histogram_data = pickle.load(f)
+                print(histogram_data)
+        except:
+            pass
+        if histogram_data is None:
+            raw_data = pd.read_csv(f"{block_data_path}.csv").drop(columns=["time"])
+            histogram_data = SparseHistogram.from_dataframe(
+                raw_data, self.attributes_domain_sizes
+            )
         block_id = self.blocks_count
         block_size = get_blocks_size(block_id, self.config.blocks_metadata)
         block = Block(block_size, histogram_data)
