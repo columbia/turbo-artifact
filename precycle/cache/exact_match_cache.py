@@ -1,5 +1,5 @@
-import yaml
 import redis
+import yaml
 
 
 def cache_key(query_id, blocks):
@@ -12,7 +12,7 @@ class CacheKey:
 
 
 class CacheEntry:
-    def __init__(self, result, noise_std, noise, epsilons=[], noises=[]):
+    def __init__(self, result, noise_std, noise, epsilons=[], noises=[], n=None):
         self.result = result  # True result without noise
         self.noise_std = noise_std  # std of Laplace distribution
         self.noise = noise  # The actual noise sampled from the distribution
@@ -20,6 +20,7 @@ class CacheEntry:
         # TODO: store list of epsilons (or b?). Encapsulates multiblock case neatly?
         self.epsilons = epsilons
         self.noises = noises
+        self.n = n
 
 
 # TODO: MonteCarlo instead of utility?
