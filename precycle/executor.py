@@ -384,7 +384,7 @@ class Executor:
                     # Check that the multiblock VR concentration bound holds
                     if x < 0 or k * j < math.log(2 / self.config.beta):
                         # logger.warning(
-                            # f"Fallback on the b_M branch for Vr: x = {x} < 0, or {k} * {j} < {math.log(2 / self.config.beta)} "
+                        # f"Fallback on the b_M branch for Vr: x = {x} < 0, or {k} * {j} < {math.log(2 / self.config.beta)} "
                         # )
 
                         # The concentration bound doesn't hold, probably because we don't have enough Laplace
@@ -422,7 +422,6 @@ class Executor:
                         gammas.append(x)  # sum(gammas) = 1 now
 
                         noise = sum(n * g for n, g in zip(noises, gammas))
-
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (

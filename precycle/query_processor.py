@@ -46,10 +46,11 @@ class QueryProcessor:
 
             print(
                 colored(
-                    f"Task: {task.id}, Query: {task.query_id}, Cost of plan: {plan.cost}, on blocks: {task.blocks}, Plan: {plan}. ",
+                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}",
                     "green",
                 )
             )
+            # , Plan: {plan}. 
             assert plan is not None
             planning_time = time.time() - start_planning
             # print("Planning", planning_time)

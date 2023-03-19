@@ -82,9 +82,8 @@ class MockPSQL:
     def add_new_block(self, block_data_path):
         histogram_data = None
         try:
-            with open(f"{block_data_path}.pkl", 'rb') as    f:
+            with open(f"{block_data_path}.pkl", "rb") as f:
                 histogram_data = pickle.load(f)
-                print(histogram_data)
         except:
             pass
         if histogram_data is None:

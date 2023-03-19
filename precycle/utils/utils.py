@@ -193,39 +193,37 @@ def get_logs(
 
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
-        mechanism_type = "DirectLaplace"
+        mechanism_type = "Laplace"
         heuristic = ""
         learning_rate = ""
-        bootstrapping = ""
+        warmup = ""
         key = mechanism_type
-        key += ":exact_cache" + str(exact_match_caching)
+        if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
+            key += "+Cache"
+        
+        if config_dict["planner"]["method"] == "MinCuts" and exact_match_caching == True:
+            key += "+TreeCache"
 
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
         heuristic = ""
         learning_rate = ""
-        bootstrapping = ""
+        warmup = ""
         key = mechanism_type
 
     else:
         mechanism_type = "Hybrid"
+        key = mechanism_type
+        warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
         heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
-        learning_rate = str(
-            config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
-        )
-        bootstrapping = str(
-            config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"]
-        )
-        key = (
-            mechanism_type
-            + ":"
-            + heuristic
-            + ":lr"
-            + learning_rate
-            + ":warmup"
-            + bootstrapping
-        )
-        key += ":exact_cache" + str(exact_match_caching)
+        learning_rate = str(config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"])
+        if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
+            key += "+Cache"
+        if config_dict["planner"]["method"] == "MinCuts" and exact_match_caching == True:
+            key += "+TreeCache"
+        key += "+" + heuristic + "+lr" + learning_rate
+        if warmup == "True":
+            key += "+warmup"
 
     config.update(
         {
@@ -244,10 +242,10 @@ def get_logs(
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
-            "exact_match_caching": config_dict["exact_match_caching"],
+            "direct_match_caching": config_dict["exact_match_caching"],
             "config": config_dict,
             "learning_rate": learning_rate,
-            "bootstrapping": bootstrapping,
+            "warmup": warmup,
             "global_budget": global_budget,
             "chunks": chunks,
             "sv_misses": sv_misses,

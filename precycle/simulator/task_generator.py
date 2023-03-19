@@ -29,6 +29,7 @@ class TaskGenerator:
         self.config = config
         self.tasks = df_tasks
         self.query_converter = QueryConverter(self.config.blocks_metadata)
+        self.query_pool = {}
 
     def sample_task_row(self, config):
         raise NotImplementedError("Must override")
@@ -63,17 +64,20 @@ class TaskGenerator:
         else:
             query_vector = query
 
-        # Load tensor /query from disk if stored
-        if "query_path" in task_row:
-            with open(task_row["query_path"], "rb") as f:
-                query_tensor = pickle.load(f)
+        if query_id in self.query_pool:
+            query_tensor = self.query_pool[query_id]
         else:
-            query_tensor = self.query_converter.convert_to_sparse_tensor(query)
-            # query_tensor = self.query_converter.convert_to_dense_tensor(query)
+            # Load tensor /query from disk if stored
+            if "query_path" in task_row:
+                with open(task_row["query_path"], "rb") as f:
+                    query_tensor = pickle.load(f)
+            else:
+                query_tensor = self.query_converter.convert_to_sparse_tensor(query)
 
-        # Converting to dense tensor to facilitate future tensor operations
-        # TODO: Maybe this is unecessary? I'm not very familiar with PyTorch.
-        query_tensor = query_tensor.to_dense()
+            # Converting to dense tensor to facilitate future tensor operations
+            # TODO: Maybe this is unecessary? I'm not very familiar with PyTorch.
+            query_tensor = query_tensor.to_dense()
+            # self.query_pool[query_id] = query_tensor
 
         query_db_format = (
             query_tensor

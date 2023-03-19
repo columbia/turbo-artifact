@@ -561,11 +561,11 @@ geographiclib = ">=1.52,<3"
 
 [package.extras]
 aiohttp = ["aiohttp"]
-dev = ["coverage", "flake8 (>=5.0,<5.1)", "isort (>=5.10.0,<5.11.0)", "pytest-asyncio (>=0.17)", "pytest (>=3.10)", "readme-renderer", "sphinx-issues", "sphinx (<=4.3.2)", "sphinx-rtd-theme (>=0.5.0)"]
+dev = ["coverage", "flake8 (>=5.0,<5.1)", "isort (>=5.10.0,<5.11.0)", "pytest (>=3.10)", "pytest-asyncio (>=0.17)", "readme-renderer", "sphinx (<=4.3.2)", "sphinx-issues", "sphinx-rtd-theme (>=0.5.0)"]
 dev-docs = ["readme-renderer", "sphinx (<=4.3.2)", "sphinx-issues", "sphinx-rtd-theme (>=0.5.0)"]
 dev-lint = ["flake8 (>=5.0,<5.1)", "isort (>=5.10.0,<5.11.0)"]
-dev-test = ["coverage", "pytest-asyncio (>=0.17)", "pytest (>=3.10)", "sphinx (<=4.3.2)"]
-requests = ["urllib3 (>=1.24.2)", "requests (>=2.16.2)"]
+dev-test = ["coverage", "pytest (>=3.10)", "pytest-asyncio (>=0.17)", "sphinx (<=4.3.2)"]
+requests = ["requests (>=2.16.2)", "urllib3 (>=1.24.2)"]
 timezone = ["pytz"]
 
 [[package]]
@@ -1050,6 +1050,14 @@ description = "Jupyter interactive widgets for JupyterLab"
 category = "main"
 optional = false
 python-versions = ">=3.7"
+
+[[package]]
+name = "kaleido"
+version = "0.2.1"
+description = "Static image export for web-based visualization libraries with zero dependencies"
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "kiwisolver"
@@ -1964,17 +1972,17 @@ requests = "*"
 virtualenv = ">=20.0.24"
 
 [package.extras]
-air = ["prometheus-client (>=0.7.1)", "aiorwlock", "pandas (>=1.3)", "aiohttp (>=3.7)", "colorful", "py-spy (>=0.2.0)", "fsspec", "numpy (>=1.20)", "pydantic", "pandas", "smart-open", "starlette", "tensorboardX (>=1.9)", "tabulate", "gpustat (>=1.0.0)", "aiohttp-cors", "uvicorn", "pyarrow (>=6.0.1)", "fastapi", "requests", "opencensus"]
-all = ["prometheus-client (>=0.7.1)", "aiorwlock", "pandas (>=1.3)", "aiohttp (>=3.7)", "colorful", "rich", "kubernetes", "py-spy (>=0.2.0)", "opentelemetry-sdk", "dm-tree", "fsspec", "pyyaml", "numpy (>=1.20)", "pydantic", "pandas", "smart-open", "typer", "starlette", "tensorboardX (>=1.9)", "tabulate", "gpustat (>=1.0.0)", "opentelemetry-exporter-otlp", "aiohttp-cors", "ray-cpp (==2.3.0)", "uvicorn", "urllib3", "opentelemetry-api", "lz4", "pyarrow (>=6.0.1)", "fastapi", "scikit-image", "requests", "opencensus", "gymnasium (==0.26.3)", "scipy"]
+air = ["aiohttp (>=3.7)", "aiohttp-cors", "aiorwlock", "colorful", "fastapi", "fsspec", "gpustat (>=1.0.0)", "numpy (>=1.20)", "opencensus", "pandas", "pandas (>=1.3)", "prometheus-client (>=0.7.1)", "py-spy (>=0.2.0)", "pyarrow (>=6.0.1)", "pydantic", "requests", "smart-open", "starlette", "tabulate", "tensorboardX (>=1.9)", "uvicorn"]
+all = ["aiohttp (>=3.7)", "aiohttp-cors", "aiorwlock", "colorful", "dm-tree", "fastapi", "fsspec", "gpustat (>=1.0.0)", "gymnasium (==0.26.3)", "kubernetes", "lz4", "numpy (>=1.20)", "opencensus", "opentelemetry-api", "opentelemetry-exporter-otlp", "opentelemetry-sdk", "pandas", "pandas (>=1.3)", "prometheus-client (>=0.7.1)", "py-spy (>=0.2.0)", "pyarrow (>=6.0.1)", "pydantic", "pyyaml", "ray-cpp (==2.3.0)", "requests", "rich", "scikit-image", "scipy", "smart-open", "starlette", "tabulate", "tensorboardX (>=1.9)", "typer", "urllib3", "uvicorn"]
 cpp = ["ray-cpp (==2.3.0)"]
-data = ["numpy (>=1.20)", "pandas (>=1.3)", "pyarrow (>=6.0.1)", "fsspec"]
-default = ["aiohttp (>=3.7)", "aiohttp-cors", "colorful", "py-spy (>=0.2.0)", "requests", "gpustat (>=1.0.0)", "opencensus", "pydantic", "prometheus-client (>=0.7.1)", "smart-open"]
+data = ["fsspec", "numpy (>=1.20)", "pandas (>=1.3)", "pyarrow (>=6.0.1)"]
+default = ["aiohttp (>=3.7)", "aiohttp-cors", "colorful", "gpustat (>=1.0.0)", "opencensus", "prometheus-client (>=0.7.1)", "py-spy (>=0.2.0)", "pydantic", "requests", "smart-open"]
 k8s = ["kubernetes", "urllib3"]
-observability = ["opentelemetry-api", "opentelemetry-sdk", "opentelemetry-exporter-otlp"]
-rllib = ["pandas", "tabulate", "tensorboardX (>=1.9)", "requests", "dm-tree", "gymnasium (==0.26.3)", "lz4", "scikit-image", "pyyaml", "scipy", "typer", "rich"]
-serve = ["prometheus-client (>=0.7.1)", "gpustat (>=1.0.0)", "aiorwlock", "fastapi", "pydantic", "smart-open", "aiohttp-cors", "requests", "aiohttp (>=3.7)", "colorful", "opencensus", "starlette", "py-spy (>=0.2.0)", "uvicorn"]
-train = ["pandas", "tabulate", "tensorboardX (>=1.9)", "requests"]
-tune = ["pandas", "tabulate", "tensorboardX (>=1.9)", "requests"]
+observability = ["opentelemetry-api", "opentelemetry-exporter-otlp", "opentelemetry-sdk"]
+rllib = ["dm-tree", "gymnasium (==0.26.3)", "lz4", "pandas", "pyyaml", "requests", "rich", "scikit-image", "scipy", "tabulate", "tensorboardX (>=1.9)", "typer"]
+serve = ["aiohttp (>=3.7)", "aiohttp-cors", "aiorwlock", "colorful", "fastapi", "gpustat (>=1.0.0)", "opencensus", "prometheus-client (>=0.7.1)", "py-spy (>=0.2.0)", "pydantic", "requests", "smart-open", "starlette", "uvicorn"]
+train = ["pandas", "requests", "tabulate", "tensorboardX (>=1.9)"]
+tune = ["pandas", "requests", "tabulate", "tensorboardX (>=1.9)"]
 
 [[package]]
 name = "redis"
@@ -2324,6 +2332,14 @@ docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["pre-commit", "pytest (>=7.0)", "pytest-timeout"]
 
 [[package]]
+name = "threaded"
+version = "4.1.0"
+description = "Decorators for running functions in Thread/ThreadPool/IOLoop"
+category = "main"
+optional = false
+python-versions = ">=3.6.0"
+
+[[package]]
 name = "threadpoolctl"
 version = "3.1.0"
 description = "threadpoolctl"
@@ -2591,7 +2607,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "12357f767c1bf54afec20faa3a04224938f0afb56f6f826b0dbde055e0733860"
+content-hash = "2597ac271fa1a7a24313d811cbcdb698f6b3c84b50122cf5994038432c8c83ef"
 
 [metadata.files]
 aiosignal = [
@@ -3464,6 +3480,14 @@ jupyterlab-pygments = [
 jupyterlab-widgets = [
     {file = "jupyterlab_widgets-3.0.5-py3-none-any.whl", hash = "sha256:a04a42e50231b355b7087e16a818f541e53589f7647144ea0344c4bf16f300e5"},
     {file = "jupyterlab_widgets-3.0.5.tar.gz", hash = "sha256:eeaecdeaf6c03afc960ddae201ced88d5979b4ca9c3891bcb8f6631af705f5ef"},
+]
+kaleido = [
+    {file = "kaleido-0.2.1-py2.py3-none-macosx_10_11_x86_64.whl", hash = "sha256:ca6f73e7ff00aaebf2843f73f1d3bacde1930ef5041093fe76b83a15785049a7"},
+    {file = "kaleido-0.2.1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:bb9a5d1f710357d5d432ee240ef6658a6d124c3e610935817b4b42da9c787c05"},
+    {file = "kaleido-0.2.1-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:aa21cf1bf1c78f8fa50a9f7d45e1003c387bd3d6fe0a767cfbbf344b95bdc3a8"},
+    {file = "kaleido-0.2.1-py2.py3-none-manylinux2014_aarch64.whl", hash = "sha256:845819844c8082c9469d9c17e42621fbf85c2b237ef8a86ec8a8527f98b6512a"},
+    {file = "kaleido-0.2.1-py2.py3-none-win32.whl", hash = "sha256:ecc72635860be616c6b7161807a65c0dbd9b90c6437ac96965831e2e24066552"},
+    {file = "kaleido-0.2.1-py2.py3-none-win_amd64.whl", hash = "sha256:4670985f28913c2d063c5734d125ecc28e40810141bdb0a46f15b76c1d45f23c"},
 ]
 kiwisolver = [
     {file = "kiwisolver-1.4.4-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:2f5e60fabb7343a836360c4f0919b8cd0d6dbf08ad2ca6b9cf90bf0c76a3c4f6"},
@@ -4533,6 +4557,44 @@ termcolor = [
 terminado = [
     {file = "terminado-0.17.1-py3-none-any.whl", hash = "sha256:8650d44334eba354dd591129ca3124a6ba42c3d5b70df5051b6921d506fdaeae"},
     {file = "terminado-0.17.1.tar.gz", hash = "sha256:6ccbbcd3a4f8a25a5ec04991f39a0b8db52dfcd487ea0e578d977e6752380333"},
+]
+threaded = [
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:27c89302f1e98775a4e8ed4b3a1e982940c5615d857b5971791c2ecc344c3aee"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:5b6bc80e852de468f35d17f710baefc6210825021f6ef77efefb1dac471c8f9a"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux2010_i686.whl", hash = "sha256:1476bcf22f8e014585b0dd4b3459a386303a796abeea5d03a3c7b17aed2127a9"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:df67a80af4e268eb66e7cdce2760b78b57d073f34948b1f66a9007ea42e9805c"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:c42301f59c9377404e070506d26b9532b47e984c22de254d8cbed2c35949567f"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux2014_i686.whl", hash = "sha256:76d05c4042511451d4db93d7cd80abd32795ffdb9d5cdf975e6311e65d7bf709"},
+    {file = "threaded-4.1.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:adc8191fbfc732b6b8aaad31dc6e394f36ac720e205a02ae1aa03178403d5a80"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:91b486434ad361a58cde711c9916afe0d1c4b1fe43d52b4c225240641d9257bf"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:09f1b660d6653931f47614aaf6b7dd7489dbff4f631b368524ee1fcbac3c1a11"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux2010_i686.whl", hash = "sha256:f67e20fa18b825a4bb0a5c608ff317bce08315c3cce6b300eb6ec5cc6dc7d654"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:101c9e0e4b997902a3c7f1892d64af1cbe50535b4738a53008efd2917e6c304e"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:8cfeef7ce326613ec02aab281708f7b438ed75694a78ddb6bf5dbbbbf4bb1ca8"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux2014_i686.whl", hash = "sha256:34770786fa06f1b77e32230928ad0cce959e30baa089aac7316da2b113df0d8a"},
+    {file = "threaded-4.1.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:e230ad33d7eabf69f928d7ed6bf32bbce0b675e6ea61ccd5be4e1f709f2b6fce"},
+    {file = "threaded-4.1.0-cp37-cp37m-win32.whl", hash = "sha256:af19e214c8421ee0fa11b9a054e4d52ab4ccad8cc055f0f9c475fa1438874a14"},
+    {file = "threaded-4.1.0-cp37-cp37m-win_amd64.whl", hash = "sha256:c5f91ea9148752347e62ca8e3cb856d08276856336c1c62d7b7f102f34c2c598"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux1_i686.whl", hash = "sha256:ad28f1c92a0fbf92dc0d1749c04209ad0f726a921537b5b432f8898ffd6a5377"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:2ff3f080b82c29c649ecd5428294880bc8f1abc9732d726d29925d4a944add63"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux2010_i686.whl", hash = "sha256:31525689a7737a7afb9e37ce38e4944365dc04747f57d8a83c10f35a253744d3"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:d5ac8bd804ac6d854cf07aca33c73d94a81cb8e84aaa7e783ae7c65a2ee7a787"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:5720749fd3b1ae549657888fa580d7154c8ff7036dd0c8202affe4eb8708c059"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux2014_i686.whl", hash = "sha256:b0323eed66abc45a1f332772ee0a8668d0ceb7dea7d0ffc13745033289f5dd3e"},
+    {file = "threaded-4.1.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:6bfe57c4274aa707a198f643dc246a7919711e3c1f96ac17d3914197f1e3f9a0"},
+    {file = "threaded-4.1.0-cp38-cp38-win32.whl", hash = "sha256:41d6b39a77c3dad253d12fcc4613b827bbcd57bc1c85dfdfbd18f546d642ba52"},
+    {file = "threaded-4.1.0-cp38-cp38-win_amd64.whl", hash = "sha256:5032cf935f97898f5d219646f877df335636167ca812db3bcc9f8a294a5a59b8"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux1_i686.whl", hash = "sha256:8af7b667b0b1d0bb734043d2b784810b8533c198f5aa86af7780ffbb502d0920"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:dad9d25e036c2cd51920c25b0db366aa2e30417658ca38b2cfe91998b2a143fe"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux2010_i686.whl", hash = "sha256:dc8d09bbc41ddf79a43ed742d049cc456128b5e091065606e03f9eb8664f5bd2"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:bef9c976f038dfbf9231483b166cd39fdbd550d895062f1f58cac1314e389364"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:ac99a572226e938dd4608b439978534376a350aa63d0e1503d167f45b150109d"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux2014_i686.whl", hash = "sha256:25edeb51a284d9eceea16f4cd7f01c4968eb835b9354e32ece6ffb62b1b0b586"},
+    {file = "threaded-4.1.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:b0ca1b60a9b222e8fcefb0c7e359044546be0f32577869f0912d627ea0f30f72"},
+    {file = "threaded-4.1.0-cp39-cp39-win32.whl", hash = "sha256:79d80de23f67f1d2371df080e3771e3e81ddd6c976317f3905bb1cdd8bf55a5e"},
+    {file = "threaded-4.1.0-cp39-cp39-win_amd64.whl", hash = "sha256:4716455237f688a8f183fd4a6f2134c67046092a6beb73215d808aed3b761804"},
+    {file = "threaded-4.1.0-py3-none-any.whl", hash = "sha256:dd71362a8bde1cec2fe775710e50fd8836b76831add7806e747f4a489005389f"},
+    {file = "threaded-4.1.0.tar.gz", hash = "sha256:2e4e690a8246788602ff53f216c74dc540ae80678fba1082337f1b5fa85072c0"},
 ]
 threadpoolctl = [
     {file = "threadpoolctl-3.1.0-py3-none-any.whl", hash = "sha256:8b99adda265feb6773280df41eece7b2e6561b772d21ffd52e372f999024907b"},

@@ -11,7 +11,6 @@ class SparseVector:
         self.id = id
         self.alpha = alpha
         self.beta = beta
-        print(alpha, beta, n)
 
         if not sv_state:
             self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)

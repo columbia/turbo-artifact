@@ -244,7 +244,12 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
     }
 
     def bucketize_and_drop(
-        name, week_counter, month_num_weeks, metadata, months_dir, blocks_dir, 
+        name,
+        week_counter,
+        month_num_weeks,
+        metadata,
+        months_dir,
+        blocks_dir,
     ):
         print("Processing blocks", name, month_num_weeks)
         month_df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
@@ -275,7 +280,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
 
             with open(blocks_dir.joinpath(f"block_{block_id}.pkl"), "wb") as f:
                 histogram_data = SparseHistogram.from_dataframe(
-                        df, list(attributes_domains_sizes.values())
+                    df, list(attributes_domains_sizes.values())
                 )
                 pickle.dump(histogram_data, f)
 
@@ -341,7 +346,7 @@ def main(re_preprocess_months=False):
         preprocess_months(months_dir)
         cluster_stations(months_dir)
 
-    blocks_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/blocks1")
+    blocks_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/blocks")
     blocks_dir.mkdir(parents=True, exist_ok=True)
     split_months_into_week_blocks(months_dir, blocks_dir)
 
