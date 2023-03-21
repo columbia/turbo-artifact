@@ -23,6 +23,7 @@ def grid_online(
     blocks_path: str,
     blocks_metadata: str,
     mechanism: List[str],
+    block_requests_pattern: List[int] = [1],
     planner: List[str] = ["MinCuts"],
     avg_num_tasks_per_block: List[int] = [100],
     block_selection_policy: List[str] = ["RandomBlocks"],
@@ -69,6 +70,7 @@ def grid_online(
             "arrival_interval": 1,
             "block_data_path": blocks_path,
             "block_metadata_path": blocks_metadata,
+            "block_requests_pattern": block_requests_pattern,
         },
         "tasks": {
             "path": tune.grid_search(tasks_path),

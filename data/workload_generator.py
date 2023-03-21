@@ -116,7 +116,7 @@ def main(
     requests_type: str = "1",  # 1:1:1:2:4:8:16:32  # 3/8 to select 1 block
     utility: float = 0.05,
     utility_beta: float = 0.001,
-    queries: str = "covid19/covid19_queries/all_2way_marginals.queries.json",
+    queries: str = "covid19/covid19_queries/all.queries.json",
     workload_dir: str = "covid19/covid19_workload",
     blocks_metadata_path: str = REPO_ROOT.joinpath(
         "data/covid19/covid19_data/blocks/metadata.json"
@@ -129,7 +129,7 @@ def main(
     privacy_workload.generate_nblocks(
         n_different_queries, rangelist, utility, utility_beta
     )
-    path = f"{workload_dir}/{requests_type}blocks_{n_different_queries}queries.privacy_tasks.csv"
+    path = f"{workload_dir}/{n_different_queries}queries.privacy_tasks.csv"
     privacy_workload.dump(path=path)
 
 

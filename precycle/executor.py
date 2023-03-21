@@ -276,6 +276,22 @@ class Executor:
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
             else:
+                # cached_laplace_scale = cache_entry.noise_std / math.sqrt(2)
+                # cached_pure_epsilon = sensitivity / cached_laplace_scale
+
+                # target_laplace_scale = run_op.noise_std / math.sqrt(2)
+                # target_pure_epsilon = sensitivity / target_laplace_scale
+
+                # run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
+                # run_laplace_scale = sensitivity / run_pure_epsilon
+
+                # run_budget = (
+                #     BasicBudget(run_pure_epsilon)
+                #     if self.config.puredp
+                #     else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+                # )
+                # # TODO: Temporary hack is that I don't compute the noise by using the coefficients
+                # noise = np.random.laplace(scale=target_laplace_scale)
 
                 # Activate a complicated VR that is supposed to optimize variance but that fails sometimes
                 SQRT_VR = False

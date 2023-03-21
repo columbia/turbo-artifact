@@ -33,7 +33,7 @@ class NoCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
-            min_epsilon = get_laplace_epsilon(alpha, beta, n, len(task.blocks))
+            min_epsilon = get_laplace_epsilon(alpha, beta, n, 1)
             sv_check = False
 
             # Measure the expected additional budget needed for a Laplace run.

@@ -96,7 +96,7 @@ class Simulator:
             if self.config.logs.save:
                 config = OmegaConf.to_object(self.config)
                 config["blocks_metadata"] = {}
-                mlflow.log_params(config)
+                # mlflow.log_params(config)
                 logs = get_logs(
                     self.rm.query_processor.tasks_info,
                     self.rm.budget_accountant.dump(),

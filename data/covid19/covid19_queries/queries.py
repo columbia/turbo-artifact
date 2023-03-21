@@ -145,7 +145,7 @@ def write_queries(queries_dir, workload, query_tensors):
 def main(
     queries_dir: str = REPO_ROOT.joinpath("data/covid19/covid19_queries"),
     blocks_metadata_path: str = REPO_ROOT.joinpath(
-        "data/covid19/covid19_data/metadata.json"
+        "data/covid19/covid19_data/blocks/metadata.json"
     ),
 ):
 

@@ -85,7 +85,7 @@ def get_logs(
     # Finally logging only a small number of tasks for faster analysis
     chunks = {}
     tasks_to_log = []
-    accummulated_budget_per_block = {}
+    cumulative_budget_per_block = {}
     sv_misses = {}
     sv_checks = {}
 
@@ -119,6 +119,9 @@ def get_logs(
                     elif run_type == "Histogram":
                         histogram_runs += 1
 
+            task_info["laplace_runs"] = laplace_runs
+            task_info["histogram_runs"] = histogram_runs
+
             total_laplace_runs += laplace_runs
             total_histogram_runs += histogram_runs
 
@@ -138,48 +141,48 @@ def get_logs(
                 sv_checks[sv_node_id] += 1
                 total_sv_checks += 1
 
-            total_budget_per_block = {}
-            # total budget per block keeps the budget spent for a task across all of its trials
+            ##### Total task budget per block across all trials #####
+            total_task_budget_per_block = {}
             budget_per_block_list = run_metadata["budget_per_block"]
             for budget_per_block in budget_per_block_list:
                 for block, budget in budget_per_block.items():
-                    if block not in total_budget_per_block:
-                        total_budget_per_block[block] = budget
+                    if block not in total_task_budget_per_block:
+                        total_task_budget_per_block[block] = budget
                     else:
-                        total_budget_per_block[block] += budget
+                        total_task_budget_per_block[block] += budget
+            #########################################################
 
-            for block, budget in total_budget_per_block.items():
-                if block not in accummulated_budget_per_block:
-                    accummulated_budget_per_block[block] = budget
+            ##### Total budget per block up to this task/time #####
+            for block, budget in total_task_budget_per_block.items():
+                if block not in cumulative_budget_per_block:
+                    cumulative_budget_per_block[block] = budget
                 else:
-                    accummulated_budget_per_block[block] += budget
-            accummulated_budget_per_block_dump = {}
-            for block in accummulated_budget_per_block:
-                accummulated_budget_per_block_dump[
-                    block
-                ] = accummulated_budget_per_block[block].dump()
+                    cumulative_budget_per_block[block] += budget
+            #########################################################
 
-            for block in total_budget_per_block:
-                total_budget_per_block[block] = total_budget_per_block[block].dump()
-
-            task_info["run_metadata"]["budget_per_block"] = total_budget_per_block
-            task_info["run_metadata"].update(
-                {"accummulated_budget_per_block": accummulated_budget_per_block_dump}
-            )
+            # Convert budgets to serializable form and save them
+            cumulative_budget_per_block_dump = {
+                block: budget.dump()
+                for block, budget in cumulative_budget_per_block.items()
+            }
+            total_task_budget_per_block_dump = {
+                block: budget.dump()
+                for block, budget in total_task_budget_per_block.items()
+            }
+            task_info["run_metadata"][
+                "budget_per_block"
+            ] = total_task_budget_per_block_dump
+            task_info["run_metadata"][
+                "cumulative_budget_per_block"
+            ] = cumulative_budget_per_block_dump
+            #########################################################
 
             # Final Global budget consumption across all blocks - to output in the terminal
             if i == len(tasks_info) - 1:
-                # For each task and each block find the accumulated normalized total budget
+                # For each block find the cumulative total budget
                 global_budget = 0
-                for block, budget in accummulated_budget_per_block.items():
+                for block, budget in cumulative_budget_per_block.items():
                     global_budget += budget.epsilon
-
-            task_info.update(
-                {
-                    "laplace_runs": laplace_runs,
-                    "histogram_runs": histogram_runs,
-                }
-            )
 
             if (
                 task_info["id"] % int(config_dict["logs"]["log_every_n_tasks"]) == 0
@@ -191,18 +194,21 @@ def get_logs(
     query_pool_size = len(workload["query_id"].unique())
     config = {}
 
+    # Fix a key for each run
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        key = mechanism_type
         if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
-            key += "+Cache"
-        
-        if config_dict["planner"]["method"] == "MinCuts" and exact_match_caching == True:
-            key += "+TreeCache"
+            mechanism_type += "+Cache"
+        if (
+            config_dict["planner"]["method"] == "MinCuts"
+            and exact_match_caching == True
+        ):
+            mechanism_type += "+TreeCache"
+        key = mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
@@ -213,15 +219,19 @@ def get_logs(
 
     else:
         mechanism_type = "Hybrid"
-        key = mechanism_type
         warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
         heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
-        learning_rate = str(config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"])
+        learning_rate = str(
+            config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
+        )
         if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
-            key += "+Cache"
-        if config_dict["planner"]["method"] == "MinCuts" and exact_match_caching == True:
-            key += "+TreeCache"
-        key += "+" + heuristic + "+lr" + learning_rate
+            mechanism_type += "+Cache"
+        if (
+            config_dict["planner"]["method"] == "MinCuts"
+            and exact_match_caching == True
+        ):
+            mechanism_type += "+TreeCache"
+        key = mechanism_type + "+" + heuristic + "+lr" + learning_rate
         if warmup == "True":
             key += "+warmup"
 

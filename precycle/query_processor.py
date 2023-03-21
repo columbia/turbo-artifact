@@ -50,7 +50,7 @@ class QueryProcessor:
                     "green",
                 )
             )
-            # , Plan: {plan}. 
+            # , Plan: {plan}.
             assert plan is not None
             planning_time = time.time() - start_planning
             # print("Planning", planning_time)

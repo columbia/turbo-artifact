@@ -24,13 +24,19 @@ class HistogramCache:
         self.kv_store = self.get_kv_store(config)
         self.config = config
         self.blocks_metadata = self.config.blocks_metadata
-        self.learning_rate = config.mechanism.probabilistic_cfg.learning_rate
         self.domain_size = self.blocks_metadata["domain_size"]
         heuristic = config.mechanism.probabilistic_cfg.heuristic
         _, heuristic_params = heuristic.split(":")
         threshold, step = heuristic_params.split("-")
         self.bin_thershold = int(threshold)
         self.bin_thershold_step = int(step)
+        self.learning_rate = config.mechanism.probabilistic_cfg.learning_rate
+        if isinstance(self.learning_rate, str):
+            lrs = {}
+            for lr in self.learning_rate.split("_"):
+                x = lr.split(":")
+                lrs[float(x[0])] = float(x[1])
+            self.learning_rate = lrs
 
     def get_kv_store(self, config):
         return rai.Client(host=config.cache.host, port=config.cache.port, db=0)
@@ -149,17 +155,30 @@ class HistogramCache:
         if not cache_entry:
             cache_entry = self.create_new_entry(blocks)
 
+        query_tensor_dense = query
+
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
 
+        learning_rate = self.learning_rate
+        if isinstance(self.learning_rate, dict):
+            min_num_updates = torch.min(
+                cache_entry.bin_updates[query_tensor_dense > 0]
+            ).item()
+            # print("min", min_num_updates, "\n")
+            for t in reversed(sorted(list(self.learning_rate.keys()))):
+                # print("t", t, self.learning_rate[t])
+                if min_num_updates >= t:
+                    learning_rate = learning_rate[t]
+                    break
+        # print("LEARNING RATE", learning_rate, "\n\n")
         # Increase weights if predicted_output is too small
-        lr = self.learning_rate / 8
+        lr = learning_rate / 8
         if noisy_result < predicted_output:
             lr *= -1
 
         # t = time.time()
         # Multiplicative weights update for the relevant bins
-        query_tensor_dense = query
         cache_entry.histogram.tensor = torch.mul(
             cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
         )

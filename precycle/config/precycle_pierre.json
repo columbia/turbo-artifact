@@ -38,11 +38,11 @@
         "initial_num": 5,
         "max_num": 5,
         "arrival_interval": 1,
-        "block_data_path": "/home/pierre/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/pierre/precycle/data/covid19/covid19_data/blocks/metadata.json"
+        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json"
     },
     "tasks": {
-        "path": "/home/pierre/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
         "avg_num_tasks_per_block": 1e1,
         "max_num": 5e3,
