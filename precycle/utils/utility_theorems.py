@@ -6,12 +6,27 @@ import numpy as np
 
 def monte_carlo_beta(existing_epsilons, chunk_sizes, fresh_epsilon, alpha, N=1_000_000):
 
-    # Add fresh epsilon
-    epsilons = [
-        np.append(eps_by_chunk, fresh_epsilon) for eps_by_chunk in existing_epsilons
-    ]
+    fresh_epsilons = [fresh_epsilon] * len(existing_epsilons)
+    return monte_carlo_beta_multieps(
+        existing_epsilons=existing_epsilons,
+        chunk_sizes=chunk_sizes,
+        fresh_epsilons=fresh_epsilons,
+        alpha=alpha,
+        N=N,
+    )
 
-    # TODO: heuristic to drop some chunks?
+
+def monte_carlo_beta_multieps(
+    existing_epsilons, chunk_sizes, fresh_epsilons, alpha, N=1_000_000
+):
+
+    # Add fresh epsilons, ignore chunks where fresh_epsilon=0
+    epsilons = [
+        np.append(eps_by_chunk, fresh_eps_by_chunk)
+        if fresh_eps_by_chunk > 0
+        else eps_by_chunk
+        for eps_by_chunk, fresh_eps_by_chunk in zip(existing_epsilons, fresh_epsilons)
+    ]
 
     # Vectorized code with a batch dimension corresponding to N
     n_chunks = len(epsilons)
@@ -22,6 +37,7 @@ def monte_carlo_beta(existing_epsilons, chunk_sizes, fresh_epsilon, alpha, N=1_0
         single_chunk_laplace_scale = epsilons[chunk_id] / (
             n * np.sum(epsilons[chunk_id] ** 2)
         )
+        print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
         laplace_scale = np.repeat([single_chunk_laplace_scale], N, axis=0)
         laplace_noises = np.random.laplace(scale=laplace_scale)
 
@@ -54,6 +70,54 @@ def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k):
     epsilon = binary_search(get_beta_fn=get_beta_fn, beta=b, epsilon_high=epsilon_high)
 
     return epsilon
+
+
+def get_epsilon_vr_monte_carlo(existing_epsilons, chunk_sizes, alpha, beta, N=100_000):
+
+    # Loose bound with Chebyshev (Pr[|X| > a] <= Var[X]/a^2)
+    # (we can tolerate higher variance than that because we know we have Laplace noise)
+    target_var = alpha * beta**2
+
+    # Final variance is 2/n**2 * sum_i 1/(sum_j eps_{ij}**2)
+    # Sufficient condition to achieve target_var: 1/(sum_{ij} eps_{ij}**2) <= target_var * n / 2
+    # Heuristic: we don't spend budget on chunks that satisfy this condition.
+
+    n = sum(chunk_sizes)
+    fresh_epsilon_mask = np.ones(len(chunk_sizes))
+    epsilon_high = 0
+    for i in range(len(chunk_sizes)):
+        if 1 / np.sum(existing_epsilons[i] ** 2) <= target_var * n / 2:
+            fresh_epsilon_mask[i] = 0
+        else:
+            sufficient_fresh_eps = np.sqrt(
+                2 / (target_var * n) - np.sum(existing_epsilons[i] ** 2)
+            )
+            print(f"Sufficient fresh eps for chunk {i}: {sufficient_fresh_eps}")
+            epsilon_high = max(epsilon_high, sufficient_fresh_eps)
+
+    def get_beta_fn(eps):
+        fresh_epsilons = eps * fresh_epsilon_mask
+        print(f"Fresh epsilons: {fresh_epsilons}")
+        return monte_carlo_beta_multieps(
+            existing_epsilons=existing_epsilons,
+            chunk_sizes=chunk_sizes,
+            fresh_epsilons=fresh_epsilons,
+            alpha=alpha,
+            N=N,
+        )
+
+    if sum(fresh_epsilon_mask) == 0:
+        print("No fresh epsilon needed.")
+        return 0, fresh_epsilon_mask
+
+    epsilon = binary_search(
+        get_beta_fn=get_beta_fn, beta=beta, epsilon_high=epsilon_high
+    )
+
+    # NOTE: if we want to be really optimal, we can search for epsilons close to eps_tolerance (e.g. 1e-10)
+    # and try to completely remove them from the list of fresh epsilons.
+
+    return epsilon, fresh_epsilon_mask
 
 
 def get_laplace_epsilon(a, b, n, k):
@@ -160,7 +224,9 @@ def binary_search_sum_lap(alpha, beta, n, l):
     return binary_search(get_beta_fn, beta, epsilon_high)
 
 
-def binary_search(get_beta_fn, beta, epsilon_high, beta_tolerance=1e-5):
+def binary_search(
+    get_beta_fn, beta, epsilon_high, beta_tolerance=1e-5, eps_tolerance=1e-10
+):
     """
     Find the lowest epsilon that satisfies the failure probability guarantee.
     If extra_laplace = True, this is for a full PMW. Otherwise, it's just for a single SV.
@@ -186,5 +252,11 @@ def binary_search(get_beta_fn, beta, epsilon_high, beta_tolerance=1e-5):
         else:
             # Don't update the real_beta, you can only exit the loop if real_beta < beta - beta_tolerance
             eps_low = eps_mid
+
+        if (eps_high - eps_low < eps_tolerance) and (real_beta < beta - beta_tolerance):
+            # If the epsilon estimate is close enough, stop (wasting up to `eps_tolerance` budget)
+            # Helpful to avoid infinite loops when the true epsilon is actually 0
+            # (e.g. because we had enough past epsilons, but not enough to detect it with Chebyshev)
+            break
 
     return eps_high
