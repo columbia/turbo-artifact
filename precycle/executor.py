@@ -73,7 +73,7 @@ class Executor:
         self.config = config
         self.budget_accountant = budget_accountant
 
-    def execute_plan(self, plan, task, run_metadata) -> Tuple[float, Dict]:
+    def execute_plan(self, plan: A, task, run_metadata) -> Tuple[float, Dict]:
         total_size = 0
         true_result = None
         noisy_result = None
@@ -83,8 +83,17 @@ class Executor:
         true_partial_results = []
         noisy_partial_results = []
 
+        MONTECARLO = True
+
+        if MONTECARLO:
+            # Preprocess the plan: look at the cache for all Laplace, and *jointly* combine the optimal epsilon
+
+            # Completely ignore the noise_std computed by the planner, it's just a loose upper bound
+            pass
+
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
+
                 run_return_value = self.run_laplace(
                     run_op, task.query_id, task.query_db_format
                 )
@@ -92,6 +101,23 @@ class Executor:
 
                 # External Update to the Histogram
                 # TODO: Add the convergence check, right now we have zero guarantees
+                if self.config.mechanism.type == "Hybrid":
+                    self.cache.histogram_cache.update_entry_histogram(
+                        task.query,
+                        run_op.blocks,
+                        run_return_value.noisy_result,
+                    )
+
+            elif isinstance(run_op, RunLaplaceMonteCarlo):
+                # MonteCarlo already checked the cache for us!
+                run_return_value = self.run_laplace_monte_carlo(
+                    run_op, task.query_id, task.query_db_format
+                )
+
+                # For the outside world it's just a Laplace
+                run_types[str(run_op.blocks)] = "Laplace"
+
+                # External update
                 if self.config.mechanism.type == "Hybrid":
                     self.cache.histogram_cache.update_entry_histogram(
                         task.query,
@@ -229,6 +255,51 @@ class Executor:
 
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
+
+    def run_laplace_montecarlo(self, run_op, query_id, query_db_format):
+
+        # Get the true result from the cache if possible
+        cache_entry = self.cache.exact_match_cache.read_entry(query_id, run_op.blocks)
+        if cache_entry is None:
+            true_result = self.db.run_query(query_db_format, run_op.blocks)
+        else:
+            true_result = cache_entry.result
+
+        # Just run a Laplace with the MonteCarlo epsilon, and store the result
+        if run_op.epsilon is not None:
+            node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+            sensitivity = 1 / node_size
+            run_budget = (
+                BasicBudget(run_op.epsilon)
+                if self.config.puredp
+                else LaplaceCurve(laplace_noise=run_op.epsilon)
+            )
+            fresh_noise = np.random.laplace(scale=run_op.epsilon / sensitivity)
+            
+            cache_entry = CacheEntry(
+                result=true_result,
+                noise_std=run_op.noise_std,  # It's the true std of our new linear combination
+                noise=noise,
+                epsilons=epsilons,
+                noises=noises,
+            )
+            self.cache.exact_match_cache.write_entry(
+                query_id, run_op.blocks, cache_entry
+            )
+
+            # Use variance reduction to compute the result
+            vr_noise = "TODO!"
+
+            # This is DP (even if we look at true_result internally) because sum_j gamma_j = 1
+            noisy_result = true_result + vr_noise
+
+            # Store the result in the cache
+        
+        else:
+            # run_budget = 0, true res, etc.
+            # TODO: If the cache is already good, do we even need to do VR again?
+
+        return RunReturnValue(true_result, noisy_result, run_budget)
 
     def run_laplace(self, run_op, query_id, query_db_format):
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
