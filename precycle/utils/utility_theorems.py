@@ -31,6 +31,10 @@ def monte_carlo_beta_multieps(
     # Vectorized code with a batch dimension corresponding to N
     n_chunks = len(epsilons)
     n = sum(chunk_sizes)
+
+    # TODO(Pierre): parallelize chunks
+    # N // 32
+    # ray
     chunk_noises = np.zeros((N, n_chunks))
     for chunk_id in range(n_chunks):
         # The final laplace scale (Q_ij), already scaled by n_i/n * eps^2/sum(eps^2)
