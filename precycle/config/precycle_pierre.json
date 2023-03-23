@@ -6,6 +6,7 @@
     "variance_reduction": true,
     "alpha": 0.05,
     "beta": 0.001,
+    "n_processes": 1,
     "mechanism": {
         "type": "Hybrid",
         "probabilistic_cfg": {
@@ -21,7 +22,7 @@
     "planner": {
         "method": "MinCuts",
         "monte_carlo": true,
-        "monte_carlo_N": 10000
+        "monte_carlo_N": 200000
     },
     "budget_accountant": {
         "host": "localhost",

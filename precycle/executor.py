@@ -243,6 +243,7 @@ class Executor:
             alpha=alpha,
             beta=beta,
             N=N,
+            n_processes=self.config.n_processes,
         )
 
         # Completely ignore the noise_std computed by the planner, it's just a loose upper bound
