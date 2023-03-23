@@ -19,12 +19,14 @@
         "port": 6379
     },
     "planner": {
-        "method": "MinCuts"
+        "method": "MinCuts",
+        "monte_carlo": true,
+        "monte_carlo_N": 100000
     },
     "budget_accountant": {
         "host": "localhost",
         "port": 6378,
-        "epsilon":10,
+        "epsilon": 10,
         "delta": 1e-07
     },
     "postgres": {
@@ -63,6 +65,7 @@
         "mlflow": true,
         "mlflow_experiment_id": "precycle",
         "loguru_level": "INFO",
-        "log_every_n_tasks": 100
+        "log_every_n_tasks": 100,
+        "print_pid": true
     }
 }
