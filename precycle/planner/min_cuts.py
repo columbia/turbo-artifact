@@ -58,7 +58,7 @@ class MinCuts(Planner):
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
-                run_ops += [RunLaplace((i, j), noise_std, k=k)]
+                run_ops += [RunLaplace((i, j), noise_std, k=k, alpha=alpha, beta=beta)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
         elif self.mechanism_type == "PMW":
@@ -131,6 +131,7 @@ class MinCuts(Planner):
             # Split alpha and beta between both. Heuristic: weight by node size
             # It doesn't really matter when we do a global SV check
             # that covers the Laplace too (using too large alpha or beta will just result in more SV resets)
+            # TODO: if Laplace are too noisy, you can increase alpha_laplace to have more precise PMW updates
             alpha_laplace = alpha * laplace_size / n
             beta_laplace = beta * laplace_size / n
 
