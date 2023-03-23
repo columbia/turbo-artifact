@@ -21,7 +21,7 @@
     "planner": {
         "method": "MinCuts",
         "monte_carlo": true,
-        "monte_carlo_N": 100000
+        "monte_carlo_N": 200000
     },
     "budget_accountant": {
         "host": "localhost",

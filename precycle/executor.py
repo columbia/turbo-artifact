@@ -207,6 +207,8 @@ class Executor:
     def preprocess_montecarlo_laplace_ops(
         self, laplace_ops: List[RunLaplace], query_id: int, N: int = 100_000
     ) -> List[RunLaplaceMonteCarlo]:
+        if len(laplace_ops) == 0:
+            return []
 
         # Browse cache to populate state
         existing_epsilons = []
@@ -225,16 +227,23 @@ class Executor:
             )
             existing_epsilons.append(epsilons)
 
-        # TODO: to support multiple alphas, look into each op.alpha and check that they are equal
-        alpha = self.config.alpha
+        alphas = set(run_op.alpha for run_op in laplace_ops)
+        betas = set(run_op.beta for run_op in laplace_ops)
+
+        assert len(alphas) == 1, f"Alphas are not the same: {alphas}"
+        assert len(betas) == 1, f"Betas are not the same: {betas}"
+
+        alpha = alphas.pop()
+        beta = betas.pop()
 
         # Drop some epsilons and use binary search monte carlo to find the best fresh epsilon
         fresh_epsilon, fresh_epsilon_mask = get_epsilon_vr_monte_carlo(
             existing_epsilons,
             chunk_sizes,
             alpha=alpha,
-            beta=self.config.beta,
+            beta=beta,
             N=N,
+            n_processes=self.config.n_processes,
         )
 
         # Completely ignore the noise_std computed by the planner, it's just a loose upper bound

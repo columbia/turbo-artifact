@@ -1,7 +1,30 @@
 import math
 from functools import partial
+from multiprocessing import Pool
 
 import numpy as np
+
+# from ray.util.multiprocessing import Pool
+
+
+def single_process_toplevel(arg_tuple):
+    N_local, n_chunks, epsilons, alpha, n = arg_tuple
+    chunk_noises = np.zeros((N_local, n_chunks))
+    for chunk_id in range(n_chunks):
+        # The final laplace scale (Q_ij), already scaled by n_i/n * eps^2/sum(eps^2)
+        single_chunk_laplace_scale = epsilons[chunk_id] / (
+            n * np.sum(epsilons[chunk_id] ** 2)
+        )
+        # print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
+        laplace_scale = np.repeat([single_chunk_laplace_scale], N_local, axis=0)
+        laplace_noises = np.random.laplace(scale=laplace_scale)
+
+        # Optimal average for that chunk, N times
+        chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
+
+    aggregated_noise_total = np.sum(chunk_noises, axis=1)
+    beta = np.sum(aggregated_noise_total > alpha) / N_local
+    return beta
 
 
 def monte_carlo_beta(existing_epsilons, chunk_sizes, fresh_epsilon, alpha, N=1_000_000):
@@ -17,7 +40,7 @@ def monte_carlo_beta(existing_epsilons, chunk_sizes, fresh_epsilon, alpha, N=1_0
 
 
 def monte_carlo_beta_multieps(
-    existing_epsilons, chunk_sizes, fresh_epsilons, alpha, N=1_000_000
+    existing_epsilons, chunk_sizes, fresh_epsilons, alpha, N=1_000_000, n_processes=1
 ):
 
     # Add fresh epsilons, ignore chunks where fresh_epsilon=0
@@ -31,21 +54,43 @@ def monte_carlo_beta_multieps(
     # Vectorized code with a batch dimension corresponding to N
     n_chunks = len(epsilons)
     n = sum(chunk_sizes)
-    chunk_noises = np.zeros((N, n_chunks))
-    for chunk_id in range(n_chunks):
-        # The final laplace scale (Q_ij), already scaled by n_i/n * eps^2/sum(eps^2)
-        single_chunk_laplace_scale = epsilons[chunk_id] / (
-            n * np.sum(epsilons[chunk_id] ** 2)
-        )
-        # print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
-        laplace_scale = np.repeat([single_chunk_laplace_scale], N, axis=0)
-        laplace_noises = np.random.laplace(scale=laplace_scale)
 
-        # Optimal average for that chunk, N times
-        chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
+    # TODO: for faster preprocessing, scale only once and use shared memory?
+    def single_process_closure(N_local):
+        chunk_noises = np.zeros((N_local, n_chunks))
+        for chunk_id in range(n_chunks):
+            # The final laplace scale (Q_ij), already scaled by n_i/n * eps^2/sum(eps^2)
+            single_chunk_laplace_scale = epsilons[chunk_id] / (
+                n * np.sum(epsilons[chunk_id] ** 2)
+            )
+            # print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
+            laplace_scale = np.repeat([single_chunk_laplace_scale], N_local, axis=0)
+            laplace_noises = np.random.laplace(scale=laplace_scale)
 
-    aggregated_noise_total = np.sum(chunk_noises, axis=1)
-    beta = np.sum(aggregated_noise_total > alpha) / N
+            # Optimal average for that chunk, N times
+            chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
+
+        aggregated_noise_total = np.sum(chunk_noises, axis=1)
+        beta = np.sum(aggregated_noise_total > alpha) / N_local
+        return beta
+
+    if n_processes == 1:
+        # This seems faster most of the time, don't bother with multiprocessing
+        beta = single_process_closure(N)
+    elif False:
+        pool = Pool(processes=n_processes)
+        # Might have slightly *more* samples than N
+        N_local = math.ceil(N / n_processes)
+        args = [N_local] * n_processes
+        betas = pool.map(single_process, args)
+        beta = sum(betas) / n_processes
+    else:
+        pool = Pool(processes=n_processes)
+        # Might have slightly *more* samples than N
+        N_local = math.ceil(N / n_processes)
+        args = [(N_local, n_chunks, epsilons, alpha, n)] * n_processes
+        betas = pool.map(single_process_toplevel, args)
+        beta = sum(betas) / n_processes
     return beta
 
 
@@ -72,7 +117,9 @@ def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k):
     return epsilon
 
 
-def get_epsilon_vr_monte_carlo(existing_epsilons, chunk_sizes, alpha, beta, N=100_000):
+def get_epsilon_vr_monte_carlo(
+    existing_epsilons, chunk_sizes, alpha, beta, N=100_000, n_processes=1
+):
 
     # Loose bound with Chebyshev (Pr[|X| > a] <= Var[X]/a^2)
     # (we can tolerate higher variance than that because we know we have Laplace noise)
@@ -103,6 +150,7 @@ def get_epsilon_vr_monte_carlo(existing_epsilons, chunk_sizes, alpha, beta, N=10
             fresh_epsilons=fresh_epsilons,
             alpha=alpha,
             N=N,
+            n_processes=n_processes,
         )
 
     if sum(fresh_epsilon_mask) == 0:
