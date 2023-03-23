@@ -1,6 +1,8 @@
 import json
 import os
 import random
+import time
+
 import mlflow
 import numpy as np
 import simpy
@@ -9,18 +11,13 @@ from loguru import logger
 from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
-from precycle.cache.cache import MockCache, Cache
-from precycle.planner.no_cuts import NoCuts
+from precycle.cache.cache import Cache, MockCache
 from precycle.planner.min_cuts import MinCuts
+from precycle.planner.no_cuts import NoCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.utils import (
-    DEFAULT_CONFIG_FILE,
-    LOGS_PATH,
-    get_logs,
-    save_logs,
-)
+from precycle.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, get_logs, save_logs
 
 app = typer.Typer()
 
@@ -33,6 +30,11 @@ class Simulator:
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
+
+        if self.config.logs.print_pid:
+            # PID for profiling, sleep a bit to give time to attach the profiler
+            print(f"PID: {os.getpid()}")
+            time.sleep(3)
 
         if self.config.logs.mlflow:
             os.environ["MLFLOW_TRACKING_URI"] = str(LOGS_PATH.joinpath("mlruns"))

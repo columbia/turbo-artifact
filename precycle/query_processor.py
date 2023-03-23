@@ -1,13 +1,12 @@
 import time
+from typing import Dict, Optional
+
 from loguru import logger
 from termcolor import colored
-from typing import Dict, Optional
 
 from precycle.executor import Executor
 from precycle.task import Task, TaskInfo
-
-from precycle.utils.utils import mlflow_log
-from precycle.utils.utils import FINISHED, FAILED
+from precycle.utils.utils import FAILED, FINISHED, mlflow_log
 
 
 class QueryProcessor:
@@ -41,8 +40,14 @@ class QueryProcessor:
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while result is None and (not status or status == "sv_failed"):
             start_planning = time.time()
+
+            # If the SV failed, don't risk it and go with Laplace everywhere
+            force_laplace = False if round == 0 else True
+            if force_laplace:
+                logger.debug("Forcing Laplace because SV failed")
+
             # Get a DP execution plan for query.
-            plan = self.planner.get_execution_plan(task)
+            plan = self.planner.get_execution_plan(task, force_laplace=force_laplace)
 
             print(
                 colored(
@@ -58,12 +63,16 @@ class QueryProcessor:
             # NOTE: if status is sth else like "out-of-budget" then it stops
             result, status = self.executor.execute_plan(plan, task, run_metadata)
 
-            # Sanity checks
-            # Second try must always use Laplaces so we can't reach third trial
-            assert round < 2
-            if round == 1:
-                for run_type in run_metadata["run_types"][round].values():
-                    assert run_type != "Histogram"
+            # # Sanity checks
+            # # Second try must always use Laplaces so we can't reach third trial
+            # # NOTE: What if one Laplace in the first round bumped a histogram so that it becomes ready?
+            # # The second try **of a given subquery** shouldn't be Histogram again
+            # assert round < 2
+            # if round == 1:
+            #     for run_type in run_metadata["run_types"][round].values():
+            #         assert (
+            #             run_type != "Histogram"
+            #         ), f"Should be Laplace. Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}"
             round += 1
 
         if result is not None:
