@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Tuple
 
 from sortedcollections import OrderedSet
 
@@ -33,7 +34,7 @@ class MinCuts(Planner):
                     break
         return indices
 
-    def get_execution_plan(self, task):
+    def get_execution_plan(self, task, force_laplace=False):
         """
         Picks a plan with minimal number of cuts that satisfies the binary constraint.
         If that plan can't be executed we don't look for another one
@@ -47,8 +48,10 @@ class MinCuts(Planner):
         alpha = self.config.alpha  # task.utility
         beta = self.config.beta  # task.utility_beta
 
-        if self.mechanism_type == "Laplace":
+        if self.mechanism_type == "Laplace" or force_laplace:
             run_ops = []
+            # If we are using Monte Carlo, this epsilon and std will be ignored and replaced by optimal ones
+            # depending on the content of the cache
             min_epsilon = get_laplace_epsilon(alpha, beta, n, k)
             for (i, j) in subqueries:
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
@@ -67,7 +70,9 @@ class MinCuts(Planner):
             run_ops = [RunPMW((i, j), alpha, epsilon)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
-        elif self.mechanism_type == "Hybrid":
+        elif (
+            self.mechanism_type == "Hybrid" and self.config.planner.monte_carlo == False
+        ):
             # Assign a Mechanism to each subquery
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
@@ -85,6 +90,9 @@ class MinCuts(Planner):
                 laplace_scale = sensitivity / min_epsilon
                 noise_std = math.sqrt(2) * laplace_scale
 
+                # BUG: it seems wrong to use the global k for each Laplace.
+                # Also, we should use probably use a smaller alpha/beta?
+
                 if (
                     (cache_entry and noise_std >= cache_entry.noise_std)
                 ) or self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
@@ -97,6 +105,55 @@ class MinCuts(Planner):
 
             # TODO: before running the query check if there is enough budget
             # for it because we do not do the check here any more
+            plan = A(l=run_ops, sv_check=sv_check, cost=0)
+
+        elif (
+            self.mechanism_type == "Hybrid" and self.config.planner.monte_carlo == True
+        ):
+
+            # Decide where to run the Laplace and where to run the Histogram
+            # We look at the histogram heuristic only, not at the cache
+            sv_check = False
+            laplace_size = 0
+            histogram_size = 0
+            run_type: Dict[Tuple[int, int], str] = {}
+            for (i, j) in subqueries:
+                node_size = get_blocks_size((i, j), self.config.blocks_metadata)
+                if self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
+                    run_type[(i, j)] = "Laplace"
+                    laplace_size += node_size
+                else:
+                    sv_check = True
+                    run_type[(i, j)] = "Histogram"
+                    #
+                    histogram_size += node_size
+
+            # Split alpha and beta between both. Heuristic: weight by node size
+            # It doesn't really matter when we do a global SV check
+            # that covers the Laplace too (using too large alpha or beta will just result in more SV resets)
+            alpha_laplace = alpha * laplace_size / n
+            beta_laplace = beta * laplace_size / n
+
+            # NOTE: If you don't do global check, use triangle inequality for alpha and union bound for beta
+            # and pass the remaining alpha/beta to the SV check
+
+            # Instantiate the plan
+            run_ops = []
+            for (i, j) in subqueries:
+                if run_type[(i, j)] == "Laplace":
+                    # The executor will look at the cache and compute the exact budget needed for each subquery
+                    run_ops += [
+                        RunLaplace(
+                            (i, j),
+                            noise_std=None,
+                            k=None,
+                            alpha=alpha_laplace,
+                            beta=beta_laplace,
+                        )
+                    ]
+                else:
+                    run_ops += [RunHistogram((i, j))]
+
             plan = A(l=run_ops, sv_check=sv_check, cost=0)
 
         return plan

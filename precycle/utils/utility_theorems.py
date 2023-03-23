@@ -37,7 +37,7 @@ def monte_carlo_beta_multieps(
         single_chunk_laplace_scale = epsilons[chunk_id] / (
             n * np.sum(epsilons[chunk_id] ** 2)
         )
-        print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
+        # print(f"Chunk {chunk_id} laplace scale: {single_chunk_laplace_scale}")
         laplace_scale = np.repeat([single_chunk_laplace_scale], N, axis=0)
         laplace_noises = np.random.laplace(scale=laplace_scale)
 
@@ -86,18 +86,17 @@ def get_epsilon_vr_monte_carlo(existing_epsilons, chunk_sizes, alpha, beta, N=10
     fresh_epsilon_mask = np.ones(len(chunk_sizes))
     epsilon_high = 0
     for i in range(len(chunk_sizes)):
-        if 1 / np.sum(existing_epsilons[i] ** 2) <= target_var * n / 2:
+        sq_eps_sum = np.sum(existing_epsilons[i] ** 2)
+        if sq_eps_sum > 0 and 1 / sq_eps_sum <= target_var * n / 2:
             fresh_epsilon_mask[i] = 0
         else:
-            sufficient_fresh_eps = np.sqrt(
-                2 / (target_var * n) - np.sum(existing_epsilons[i] ** 2)
-            )
-            print(f"Sufficient fresh eps for chunk {i}: {sufficient_fresh_eps}")
+            sufficient_fresh_eps = np.sqrt(2 / (target_var * n) - sq_eps_sum)
+            # print(f"Sufficient fresh eps for chunk {i}: {sufficient_fresh_eps}")
             epsilon_high = max(epsilon_high, sufficient_fresh_eps)
 
     def get_beta_fn(eps):
         fresh_epsilons = eps * fresh_epsilon_mask
-        print(f"Fresh epsilons: {fresh_epsilons}")
+        # print(f"Fresh epsilons: {fresh_epsilons}")
         return monte_carlo_beta_multieps(
             existing_epsilons=existing_epsilons,
             chunk_sizes=chunk_sizes,
@@ -242,9 +241,9 @@ def binary_search(
     while real_beta < beta - beta_tolerance:
         eps_mid = (eps_low + eps_high) / 2
         beta_mid = get_beta_fn(eps_mid)
-        print(
-            f"{eps_low} < {eps_mid} < {eps_high} gives beta={beta_mid}. Target {beta}"
-        )
+        # print(
+        #     f"{eps_low} < {eps_mid} < {eps_high} gives beta={beta_mid}. Target {beta}"
+        # )
 
         if beta_mid < beta:
             eps_high = eps_mid

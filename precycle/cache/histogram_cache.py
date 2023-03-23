@@ -191,9 +191,17 @@ class HistogramCache:
         self.write_entry(blocks, cache_entry)
 
     def is_query_hard(self, query, blocks):
+        # TODO: it's a bit odd that this doesn't depend on alpha, beta or node_size.
+        # We can always tune the threshold, but what if different block sizes like different thresholds?
+        # Or what if a query comes with much lower alpha?
+
+        # NOTE: if we need to know beta to decide whether to use Laplace or Histogram, how can we compute it?
+        # Right now I'm using the Laplace/Histogram split to find a good alpha/beta balance
+        # I think it shouldn't really depend on beta actually, only alpha*n
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
             return True
+
         # If each bin has been updated at least <bin-threshold> times the query is easy
         query_tensor_dense = query
         bin_updates_query = torch.mul(cache_entry.bin_updates, query_tensor_dense)
