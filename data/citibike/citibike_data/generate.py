@@ -254,7 +254,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
     ):
         print("Processing blocks", name, month_num_weeks)
         month_df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
-        month_df = month_df.groupby('week').filter(lambda x: len(x) >= K)
+        month_df = month_df.groupby("week").filter(lambda x: len(x) >= K)
         month_df = month_df.reset_index()
 
         for week_number in month_df.week.unique():
@@ -301,7 +301,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
     week_counter = 0
     for i, name in enumerate(year_month_iterator()):
         month_df = pd.read_csv(months_dir.joinpath(f"{name}.csv"))
-        month_df = month_df.groupby('week').filter(lambda x: len(x) >= K)
+        month_df = month_df.groupby("week").filter(lambda x: len(x) >= K)
         month_num_weeks = len(month_df.week.unique())
         processes.append(
             Process(

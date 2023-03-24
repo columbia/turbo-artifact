@@ -1,7 +1,7 @@
 import math
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
-from precycle.utils.utility_theorems import get_laplace_epsilon, get_pmw_epsilon
+from precycle.utils.utility_theorems import get_epsilon_generic_union_bound_monte_carlo, get_pmw_epsilon, get_epsilon_isotropic_laplace_concentration
 from precycle.utils.utils import get_blocks_size
 
 
@@ -9,15 +9,17 @@ class NoCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
 
-    def get_execution_plan(self, task):
+    def get_execution_plan(self, task, force_laplace=False):
         # NOTE: System wide accuracy for now
         alpha = self.config.alpha  # task.utility
         beta = self.config.beta  # task.utility_beta
         node_size = get_blocks_size(task.blocks, self.config.blocks_metadata)
 
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
-        if self.mechanism_type == "Laplace":
-            min_epsilon = get_laplace_epsilon(alpha, beta, n, 1)
+        if self.mechanism_type == "Laplace" or force_laplace:
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
+            # print(task.id, "SIMPLE k", 1, "epsilon ", min_epsilon)
+
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale
@@ -33,7 +35,7 @@ class NoCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
-            min_epsilon = get_laplace_epsilon(alpha, beta, n, 1)
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
             sv_check = False
 
             # Measure the expected additional budget needed for a Laplace run.

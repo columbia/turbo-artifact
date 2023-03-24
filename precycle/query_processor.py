@@ -49,19 +49,25 @@ class QueryProcessor:
             # Get a DP execution plan for query.
             plan = self.planner.get_execution_plan(task, force_laplace=force_laplace)
 
-            print(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}",
-                    "green",
-                )
-            )
-            # , Plan: {plan}.
+            # print(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
+            #         "green",
+            #     )
+            # )
+
             assert plan is not None
             planning_time = time.time() - start_planning
             # print("Planning", planning_time)
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
             result, status = self.executor.execute_plan(plan, task, run_metadata)
+            print(
+                colored(
+                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
+                    "green",
+                )
+            )
 
             # # Sanity checks
             # # Second try must always use Laplaces so we can't reach third trial

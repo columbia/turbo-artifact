@@ -224,15 +224,14 @@ def caching_monoblock_learning_rates_covid19(dataset):
 
 def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-    # task_paths = ["1:2:4:8:16:32:64:128blocks_34425queries.privacy_tasks.csv"]
-    # task_paths = ["1:2:3:4:5:6:7:8:9:10blocks_34425queries.privacy_tasks.csv"]
     task_paths = ["34425queries.privacy_tasks.csv"]
-    block_requests_pattern = list(range(1, 51))
+    block_requests_pattern = [1, 2, 4, 8]  # ,16,32,64,128]
+    # block_requests_pattern = list(range(1, 11))
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"help/{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"HELP/{dataset}/static_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
         "global_seed": 64,
@@ -241,16 +240,16 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
-        "planner": ["MinCuts"],
+        "planner": ["NoCuts"],
         "mechanism": ["Laplace"],
-        "initial_blocks": [50],
-        "max_blocks": [50],
-        "avg_num_tasks_per_block": [2e3],
-        "max_tasks": [100e3],
+        "initial_blocks": [10],
+        "max_blocks": [10],
+        "avg_num_tasks_per_block": [5e5],
+        "max_tasks": [50e3],
         "initial_tasks": [0],
         "alpha": [0.05],
         "beta": [0.001],
-        "zipf_k": [0, 1],
+        "zipf_k": [0],  # , 1],
         "heuristic": [""],
         "variance_reduction": [True],
         "log_every_n_tasks": 500,
@@ -263,27 +262,26 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["planner"] = ["NoCuts"]
-    config["mechanism"] = ["Laplace"]
-    config["heuristic"] = [""]
-    config["exact_match_caching"] = [True, False]
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
     config["exact_match_caching"] = [True]
-    config["planner"] = ["MinCuts"]
-    config["mechanism"] = ["Hybrid"]
-    config["heuristic"] = ["bin_visits:200-50"]
-    config["learning_rate"] = [0.2, 0.1]
-    config["bootstrapping"] = [False]
 
+    config["planner"] = ["MinCuts"]
+    config["heuristic"] = [""]
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
+    # config["planner"] = ["MinCuts"]
+    # config["mechanism"] = ["Hybrid"]
+    # config["heuristic"] = ["bin_visits:100-10"]
+    # config["learning_rate"] = [0.2]
+    # config["bootstrapping"] = [False]
+
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     experiments_start_and_join(experiments)
     analyze_multiblock(logs_dir)
 
@@ -361,7 +359,7 @@ def caching_monoblock_citibike(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
     block_requests_pattern = [1]
-    logs_dir = f"{dataset}/monoblock7"
+    logs_dir = f"{dataset}/monoblock"
     experiments = []
     config = {
         "global_seed": 64,
@@ -372,11 +370,8 @@ def caching_monoblock_citibike(dataset):
         "block_requests_pattern": block_requests_pattern,
         "planner": ["NoCuts"],
         "mechanism": ["PMW"],
-        "initial_blocks": [170],
-        "max_blocks": [170],
-        "block_selection_policy": [
-            "LatestBlocks"
-        ],  # Doing this to choose the 106th block instead of the first one
+        "initial_blocks": [1],
+        "max_blocks": [1],
         "avg_num_tasks_per_block": [7e4],
         "max_tasks": [7e4],
         "initial_tasks": [0],
@@ -390,11 +385,11 @@ def caching_monoblock_citibike(dataset):
         "bootstrapping": [False],
         "exact_match_caching": [True],
     }
-    # experiments.append(
-    #     multiprocessing.Process(
-    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
-    #     )
-    # )
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:2-5"]
     config["learning_rate"] = ["0:2_5:0.5_10:0.1"]
@@ -404,51 +399,52 @@ def caching_monoblock_citibike(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    # config["mechanism"] = ["Laplace"]
-    # config["heuristic"] = [""]
-    # config["learning_rate"] = [None]
-    # config["exact_match_caching"] = [True, False]
-    # experiments.append(
-    #     multiprocessing.Process(
-    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
-    #     )
-    # )
+    config["mechanism"] = ["Laplace"]
+    config["heuristic"] = [""]
+    config["learning_rate"] = [None]
+    config["exact_match_caching"] = [True, False]
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
     experiments_start_and_join(experiments)
     analyze_monoblock(logs_dir)
 
 
-# def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
-#     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
-#     task_paths = ["1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
-#     task_paths = [
-#         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
-#     ]
+def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    task_paths = ["1:2:4:8:16:32:64:128blocks_2485queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
 
-#     grid_online(
-#         global_seed=64,
-#         logs_dir=f"{dataset}/static-multiblock_laplace_vs_hybrid",
-#         tasks_path=task_paths,
-#         blocks_path=blocks_path,
-#         blocks_metadata=blocks_metadata,
-#         # "block_requests_pattern": block_requests_pattern,
-#         planner=["MinCuts"],
-#         # mechanism=["Laplace", "Hybrid"],
-#         mechanism=["Hybrid"],
-#         initial_blocks=[188],
-#         max_blocks=[188],
-#         block_selection_policy=["RandomBlocks"],
-#         avg_num_tasks_per_block=[2e3],
-#         max_tasks=[376e3],
-#         initial_tasks=[0],
-#         alpha=[0.05],
-#         beta=[0.001],
-#         zipf_k=[0],
-#         heuristic=["bin_visits:10-5"],
-#         variance_reduction=[True],
-#         log_every_n_tasks=500,
-#         learning_rate=[1],
-#         bootstrapping=[False],
-#     )
+    grid_online(
+        global_seed=64,
+        logs_dir=f"{dataset}/static-multiblock_laplace_vs_hybrid",
+        tasks_path=task_paths,
+        blocks_path=blocks_path,
+        blocks_metadata=blocks_metadata,
+        # "block_requests_pattern": block_requests_pattern,
+        planner=["MinCuts"],
+        # mechanism=["Laplace", "Hybrid"],
+        mechanism=["Hybrid"],
+        initial_blocks=[188],
+        max_blocks=[188],
+        block_selection_policy=["RandomBlocks"],
+        avg_num_tasks_per_block=[2e3],
+        max_tasks=[376e3],
+        initial_tasks=[0],
+        alpha=[0.05],
+        beta=[0.001],
+        zipf_k=[0],
+        heuristic=["bin_visits:10-5"],
+        variance_reduction=[True],
+        log_every_n_tasks=500,
+        learning_rate=[1],
+        bootstrapping=[False],
+    )
+
 
 def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)

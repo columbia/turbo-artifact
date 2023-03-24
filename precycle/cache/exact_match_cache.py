@@ -12,20 +12,12 @@ class CacheKey:
 
 
 class CacheEntry:
-    def __init__(self, result, noise_std, noise, epsilons=[], noises=[], n=None):
+    def __init__(self, result, noise_std, noise):
         self.result = result  # True result without noise
         self.noise_std = noise_std  # std of Laplace distribution
         self.noise = noise  # The actual noise sampled from the distribution
 
-        # TODO: store list of epsilons (or b?). Encapsulates multiblock case neatly?
-        self.epsilons = epsilons
-        self.noises = noises
-        self.n = n
 
-
-# TODO: MonteCarlo instead of utility?
-
-# TODO: add extra fields
 class ExactMatchCache:
     def __init__(self, config):
         self.config = config

@@ -19,7 +19,9 @@ class MockPMWCache:
             epsilon=epsilon,
             n=n,
             id=str(blocks)[1:-1].replace(", ", "-"),
-            domain_size=self.blocks_metadata["domain_size"],
+            domain_size=self.blocks_metadata[
+                "domain_size"
+            ],  # TODO: here in the domain size add blocks
             config=self.config,
         )
         self.key_values[blocks] = pmw
