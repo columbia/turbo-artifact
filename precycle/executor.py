@@ -374,6 +374,3 @@ class Executor:
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
 
-
-# 1 / epsilon
-# sensitivity / epsilon
