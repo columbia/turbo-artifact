@@ -39,7 +39,6 @@ def grid_online(
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
     exact_match_caching: bool = [True],
-    monte_carlo: bool = False,
 ):
 
     # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -64,7 +63,6 @@ def grid_online(
         },
         "planner": {
             "method": tune.grid_search(planner),
-            "monte_carlo": monte_carlo,
             "monte_carlo_N": 10000,
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},

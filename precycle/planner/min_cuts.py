@@ -80,12 +80,12 @@ class MinCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
+            factor = 1
             min_epsilon = (
                 get_epsilon_isotropic_laplace_concentration(alpha, beta, n, k)
                 if k == 1
-                else get_epsilon_generic_union_bound_monte_carlo(alpha, beta, n, k)
+                else get_epsilon_generic_union_bound_monte_carlo(alpha, beta/factor, n, k)
             )
-            # min_epsilon = get_epsilon_generic_union_bound_monte_carlo(alpha, beta, n, k)
 
             sv_check = False
             run_ops = []

@@ -287,6 +287,7 @@ class Executor:
                     if self.config.puredp
                     else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
                 )
+                run_op.epsilon = run_pure_epsilon
 
                 # The new noise sample is computed as per Algorithm 1 in the above paper page 37
                 noise = self.noise_down(cache_entry.noise, 1 / cached_laplace_scale, 1 / target_laplace_scale)
