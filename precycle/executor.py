@@ -290,8 +290,14 @@ class Executor:
                 run_op.epsilon = run_pure_epsilon
 
                 # The new noise sample is computed as per Algorithm 1 in the above paper page 37
-                noise = self.noise_down(cache_entry.noise, 1 / cached_laplace_scale, 1 / target_laplace_scale)
-                print(colored(f"\n\n\ne_old: {cached_pure_epsilon}, e_new: {target_pure_epsilon}, old_noise: {cache_entry.noise}, new_noise: {noise} \n", "blue"))
+                # NOTE: noise-down assumes sensitivity = 1 so here I scale the cached noise by n, 
+                # I compute the new noise using noise-down  and then I scale down the new noise by n again
+                scaled_noise = cache_entry.noise / sensitivity
+                noise = self.noise_down(scaled_noise, cached_pure_epsilon, target_pure_epsilon)
+                noise = noise * sensitivity
+
+                print(colored(f"\n\n\ne_old: {cached_pure_epsilon}, e_new: {target_pure_epsilon}, old_noise: {cache_entry.noise}, new_noise: {noise}\n", "blue"))
+                time.sleep(2)
 
 
         # If we used any fresh noise we need to update the cache
@@ -312,34 +318,28 @@ class Executor:
 
     # https://journalprivacyconfidentiality.org/index.php/jpc/article/view/649/632
     # https://gitlab.uwaterloo.ca/m2mazmud/cachedp-public/-/blob/main/apex/privacy/func/LCM_MP.py#L118
-    def noise_down(self, old_noise, old_b_inv, new_b_inv):
-        assert new_b_inv > old_b_inv
-        sign = np.sign(old_noise)
-        pdf = [old_b_inv / new_b_inv * np.exp((old_b_inv - new_b_inv) * abs(old_noise)),
-                (new_b_inv - old_b_inv) / (2.0 * new_b_inv),
-                (old_b_inv + new_b_inv) / (2.0 * new_b_inv) * (
-                            1.0 - np.exp((old_b_inv - new_b_inv) * abs(old_noise)))]
+    def noise_down(self, lap_noise, eps_old, eps_new):
+        assert eps_new > eps_old
 
-        p = np.random.random()
-        z = np.random.random()
+        pdf = [eps_old / eps_new * np.exp((eps_old - eps_new) * abs(lap_noise)),
+            (eps_new - eps_old) / (2.0 * eps_new),
+            (eps_old + eps_new) / (2.0 * eps_new) * (1.0 - np.exp((eps_old - eps_new) * abs(lap_noise)))]
+
+        p = np.random.random_sample()
 
         if p <= pdf[0]:
-            new_noise = old_noise
+            z = lap_noise
 
         elif p <= pdf[0] + pdf[1]:
-            new_noise = np.log(z) / (old_b_inv + new_b_inv)
-            new_noise = new_noise * sign
+            z = np.log(p) / (eps_old + eps_new)
 
         elif p <= pdf[0] + pdf[1] + pdf[2]:
-            new_noise = np.log(
-                z * (np.exp(abs(old_noise) * (old_b_inv - new_b_inv)) - 1.0) + 1.0) / (old_b_inv - new_b_inv)
-            new_noise = new_noise * sign
+            z = np.log(p * (np.exp(abs(lap_noise) * (eps_old - eps_new)) - 1.0) + 1.0) / (eps_old - eps_new)
 
         else:
-            new_noise = abs(old_noise) - np.log(1.0 - z) / \
-                        (new_b_inv + old_b_inv)
-            new_noise = new_noise * sign
-        return new_noise
+            z = abs(lap_noise) - np.log(1.0 - p) / (eps_new + eps_old)
+
+        return z
 
 
     def run_histogram(self, run_op, query, query_db_format):
@@ -373,3 +373,7 @@ class Executor:
         noisy_result, run_budget, _ = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
+
+
+# 1 / epsilon
+# sensitivity / epsilon
