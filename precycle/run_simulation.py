@@ -93,11 +93,17 @@ class Simulator:
     def run(self):
         logs = None
         with mlflow.start_run():
+            config = OmegaConf.to_object(self.config)
+            config["blocks_metadata"] = {}
+            config["blocks"]["block_requests_pattern"] = {}
+            mlflow.log_params(config)
+
             self.env.run()
 
             if self.config.logs.save:
-                config = OmegaConf.to_object(self.config)
-                config["blocks_metadata"] = {}
+                # config = OmegaConf.to_object(self.config)
+                # config["blocks_metadata"] = {}
+                # config["blocks"]["block_requests_pattern"] = {}
                 # mlflow.log_params(config)
                 logs = get_logs(
                     self.rm.query_processor.tasks_info,

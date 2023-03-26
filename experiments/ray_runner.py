@@ -41,11 +41,12 @@ def grid_online(
     exact_match_caching: bool = [True],
 ):
 
-    exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
+    # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
         "mock": True,  # Never disable "mock" when running with ray
         "puredp": True,
+        "n_processes": 1,
         "exact_match_caching": tune.grid_search(exact_match_caching),
         "variance_reduction": variance_reduction,
         "alpha": tune.grid_search(alpha),
@@ -62,6 +63,7 @@ def grid_online(
         },
         "planner": {
             "method": tune.grid_search(planner),
+            "monte_carlo_N": 10000,
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},
         "blocks": {
@@ -83,9 +85,11 @@ def grid_online(
         "logs": {
             "verbose": False,
             "save": True,
-            "mlflow": False,
+            "mlflow": enable_mlflow,
+            "mlflow_experiment_id": "precycle",
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
+            "print_pid": False,
         },
     }
 

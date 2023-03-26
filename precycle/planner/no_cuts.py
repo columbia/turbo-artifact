@@ -9,14 +9,14 @@ class NoCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
 
-    def get_execution_plan(self, task):
+    def get_execution_plan(self, task, force_laplace=False):
         # NOTE: System wide accuracy for now
         alpha = self.config.alpha  # task.utility
         beta = self.config.beta  # task.utility_beta
         node_size = get_blocks_size(task.blocks, self.config.blocks_metadata)
 
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
-        if self.mechanism_type == "Laplace":
+        if self.mechanism_type == "Laplace" or force_laplace:
             min_epsilon = get_laplace_epsilon(alpha, beta, n, 1)
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon

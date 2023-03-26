@@ -336,10 +336,21 @@ def analyze_multiblock(experiment_path):
         # / df[
         #     "initial_budget"
         # ]
-        df.to_csv(
-            LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization.csv"),
-            index=False,
-        )
+        grouped = df.groupby("zipf_k")
+        for key, group in grouped:
+            group_df = pd.DataFrame(group)
+            pivoted_df = group_df.pivot_table(
+                columns="mechanism",
+                index=[group_df.index.values, "block"],
+                values="budget",
+                aggfunc=np.sum,
+            ).reset_index(["block"])
+            pivoted_df["block"] = pivoted_df["block"].astype(int)
+            pivoted_df = pivoted_df.sort_values(["block"])
+            pivoted_df.to_csv(
+                LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization_zipf_{key}.csv"),
+                index=False,
+            )
         fig = px.bar(
             df,
             x="block",

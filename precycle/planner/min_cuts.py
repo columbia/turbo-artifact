@@ -115,7 +115,7 @@ class MinCuts(Planner):
             # We look at the histogram heuristic only, not at the cache
             sv_check = False
             laplace_size = 0
-            histogram_size = 0
+            # histogram_size = 0
             run_type: Dict[Tuple[int, int], str] = {}
             for (i, j) in subqueries:
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
@@ -125,8 +125,7 @@ class MinCuts(Planner):
                 else:
                     sv_check = True
                     run_type[(i, j)] = "Histogram"
-                    #
-                    histogram_size += node_size
+                    #histogram_size += node_size
 
             # Split alpha and beta between both. Heuristic: weight by node size
             # It doesn't really matter when we do a global SV check
