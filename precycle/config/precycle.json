@@ -6,6 +6,7 @@
     "variance_reduction": true,
     "alpha": 0.05,
     "beta": 0.001,
+    "n_processes": 1,
     "mechanism": {
         "type": "Hybrid",
         "probabilistic_cfg": {
@@ -37,17 +38,18 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 1,
-        "max_num": 1,
+        "initial_num": 10,
+        "max_num": 10,
         "arrival_interval": 1,
         "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json"
+        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json",
+        "block_requests_pattern": [1,2,3,4,5,6,7,8,9,10]
     },
     "tasks": {
-        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/kelly/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 25e3,
-        "max_num": 25e3,
+        "avg_num_tasks_per_block": 100,
+        "max_num": 1e3,
         "initial_num": 0,
         "zipf_k": 1.5
     },
@@ -66,6 +68,6 @@
         "mlflow_experiment_id": "precycle",
         "loguru_level": "INFO",
         "log_every_n_tasks": 100,
-        "print_pid": true
+        "print_pid": false
     }
 }

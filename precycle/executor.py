@@ -227,9 +227,12 @@ class Executor:
             )
             existing_epsilons.append(epsilons)
 
+
         alphas = set(run_op.alpha for run_op in laplace_ops)
         betas = set(run_op.beta for run_op in laplace_ops)
 
+        print(alphas)
+        print(betas)
         assert len(alphas) == 1, f"Alphas are not the same: {alphas}"
         assert len(betas) == 1, f"Betas are not the same: {betas}"
 
@@ -256,6 +259,7 @@ class Executor:
             )
 
         return laplace_montecarlo_ops
+
 
     def run_sv_check(
         self, noisy_result, true_result, blocks, plan, budget_per_block, query
@@ -348,9 +352,12 @@ class Executor:
             run_budget = (
                 BasicBudget(run_op.epsilon)
                 if self.config.puredp
-                else LaplaceCurve(laplace_noise=run_op.epsilon)
+                else LaplaceCurve(laplace_noise=1/run_op.epsilon)
             )
-            fresh_noise = np.random.laplace(scale=run_op.epsilon / sensitivity)
+            fresh_noise = np.random.laplace(scale=sensitivity / run_op.epsilon)
+            
+            print(f"Run Epsilon: {run_op.epsilon}")
+            print(f"Fresh noise: {fresh_noise}")
 
             epsilons.append(run_op.epsilon)
             noises.append(fresh_noise)
@@ -359,7 +366,8 @@ class Executor:
             sq_eps = np.array(epsilons) ** 2
             gammas = sq_eps / np.sum(sq_eps)
             noise_after_vr = np.dot(gammas, np.array(noises))
-
+            print(f"Noise after MC VR: {noise_after_vr}")
+            
             # Variance of each individual Laplace (With the right senstivity)
             variances = sq_eps * 2 / node_size**2
 
@@ -390,6 +398,7 @@ class Executor:
             run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
             noisy_result = true_result + cache_entry.noise
 
+        # time.sleep(4)
         return RunReturnValue(true_result, noisy_result, run_budget)
 
     def run_laplace(self, run_op, query_id, query_db_format):
