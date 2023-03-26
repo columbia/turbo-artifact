@@ -23,7 +23,9 @@ def single_process_toplevel(arg_tuple):
         chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
 
     aggregated_noise_total = np.sum(chunk_noises, axis=1)
-    beta = np.sum(aggregated_noise_total > alpha) / N_local
+    beta = (
+        np.sum(aggregated_noise_total > alpha) + np.sum(aggregated_noise_total < -alpha)
+    ) / N_local
     return beta
 
 
@@ -71,7 +73,11 @@ def monte_carlo_beta_multieps(
             chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
 
         aggregated_noise_total = np.sum(chunk_noises, axis=1)
-        beta = np.sum(aggregated_noise_total > alpha) / N_local
+        # beta = np.sum(aggregated_noise_total > alpha) / N_local
+        beta = (
+            np.sum(aggregated_noise_total > alpha)
+            + np.sum(aggregated_noise_total < -alpha)
+        ) / N_local
         return beta
 
     if n_processes == 1:
