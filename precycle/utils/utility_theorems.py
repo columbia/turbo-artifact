@@ -100,7 +100,10 @@ def monte_carlo_beta_multieps(
             chunk_noises[:, chunk_id] = np.sum(laplace_noises, axis=1)
 
         aggregated_noise_total = np.sum(chunk_noises, axis=1)
-        beta = np.sum(aggregated_noise_total > alpha) / N_local
+        beta = (
+            np.sum(aggregated_noise_total > alpha)
+            + np.sum(aggregated_noise_total < -alpha)
+        ) / N_local
         return beta
 
     if n_processes == 1:
@@ -120,6 +123,92 @@ def monte_carlo_beta_multieps(
         args = [(N_local, n_chunks, epsilons, alpha, n)] * n_processes
         betas = pool.map(single_process_toplevel, args)
         beta = sum(betas) / n_processes
+    return beta
+
+
+def get_beta_noisedown_montecarlo(
+    existing_epsilons,
+    new_epsilons,
+    existing_noises,
+    chunk_sizes,
+    alpha,
+    N=100_000,
+):
+    """
+    Take m chunks of size n_i, with existing epsilons existing_epsilons_i, and existing noise x_i
+    We apply NoiseDown on each chunk so that each chunk spends new_epsilons_i in terms of DP budget
+    It gives us a new_noise_i for each chunk
+    When we aggregate them, we can check whether the new noise is below alpha
+    Repeat many times in parallel to compute beta
+
+
+    Arbitrary sensitivity: the NoiseDown distribution works with epsilon-Lipschitz private mechanisms.
+
+    Prop 6: An eps-Lipschitz private mechanism is esp/n-DP for the following adjacency relation:
+        u and u' are adjacent iif d(u,u') <= 1/n
+
+    Their setting is a bit weird, you release the whole datapoint, not a query with some sensitivity.
+    x and x' are neighboring databases => d(q(x), q(x')) <= 1/n. But the reverse is not true.
+
+    It's not a problem, forget about Prop 6 and prove what you need by hand:
+
+    X -> U -> Y
+    x -> u -> y
+
+    If Q: u |-> u + V is espilon-Lipschitz private
+    then M: x |-> q(x) + V is epsilon/n-DP
+
+    Indeed, for all x, x' neighboring databases and output S, we have d(q(x), q(x')) <= 1/n
+    so |ln P[u + V \in S] - ln P[u' + V \in S]| <= epsilon * 1/n
+    """
+
+    chunk_noises = []
+    for chunk_id, n_i in enumerate(chunk_sizes):
+        e1 = existing_epsilons[chunk_id] * n_i
+        e2 = new_epsilons[chunk_id] * n_i
+
+        x = existing_noises[chunk_id] * np.ones(N)
+        p = np.random.random(N)
+
+        # Compute masks
+        threshold_1 = 0
+        threshold_2 = 0
+        threshold_3 = 0
+        below_1 = p < threshold_1
+        below_2 = p < threshold_2
+        below_3 = p < threshold_3
+        mask_1 = below_1
+        mask_2 = below_2 & ~below_1
+        mask_3 = below_3 & ~below_2
+        mask_4 = ~below_3
+
+        # Possible outputs
+        # NOTE: the partial pdfs in Algorithm 1 are not normalized. Should we normalize before sampling?
+        # I assume yes? Reusing the same transformation as Cache DP, assuming they are correct
+
+        # We compute the CDF and use https://en.wikipedia.org/wiki/Inverse_transform_sampling#Formal_statement
+        u = np.random.uniform(0, 1, N)
+        output_2 = np.log(u) / (e1 + e2)
+        output_3 = np.log(u * (np.exp(abs(x) * (e1 - e2)) - 1.0) + 1.0) / (e1 - e2)
+        output_4 = abs(x) - np.log(1.0 - u) / (e2 + e1)
+
+        # Vectorized switch statement
+        y = (
+            mask_1 * x
+            + mask_2 * output_2 * np.sign(x)
+            + mask_3 * output_3 * np.sign(x)
+            + mask_4 * output_4 * np.sign(x)
+        )
+        chunk_noises.append(y)
+
+    # Concatenate to get shape (n_chunks, N)
+    chunk_noises = np.array(chunk_noises)
+
+    # Sum across chunks for each N, shape (N,) now
+    aggregated_noise_total = np.sum(chunk_noises, axis=0)
+    beta = (
+        np.sum(aggregated_noise_total > alpha) + np.sum(aggregated_noise_total < -alpha)
+    ) / N
     return beta
 
 
