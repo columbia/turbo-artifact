@@ -167,13 +167,18 @@ def get_beta_noisedown_montecarlo(
         e1 = existing_epsilons[chunk_id] * n_i
         e2 = new_epsilons[chunk_id] * n_i
 
-        x = existing_noises[chunk_id] * np.ones(N)
+        assert e2 > e1, "You can only increase epsilon"
+
+        x = existing_noises[chunk_id]
         p = np.random.random(N)
 
-        # Compute masks
-        threshold_1 = 0
-        threshold_2 = 0
-        threshold_3 = 0
+        # Compute masks, for a given trial n \in [N] exactly one mask is True, the others are False
+        threshold_1 = (e1 / e2) * np.exp(-(e2 - e1) * abs(x))
+        threshold_2 = threshold_1 + (e2 - e1) / (2 * e2)
+        threshold_3 = threshold_2 + (e2 - e1) / (2 * e2) * np.exp(-(e2 - e1) * abs(x))
+
+        print(f"Thresholds: {threshold_1}, {threshold_2}, {threshold_3}")
+
         below_1 = p < threshold_1
         below_2 = p < threshold_2
         below_3 = p < threshold_3
@@ -206,6 +211,7 @@ def get_beta_noisedown_montecarlo(
 
     # Sum across chunks for each N, shape (N,) now
     aggregated_noise_total = np.sum(chunk_noises, axis=0)
+    print(f"aggregated_noise_total.shape: {aggregated_noise_total.shape}")
     beta = (
         np.sum(aggregated_noise_total > alpha) + np.sum(aggregated_noise_total < -alpha)
     ) / N
