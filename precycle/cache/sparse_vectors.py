@@ -32,10 +32,10 @@ class SparseVector:
     def check(self, true_output, noisy_output):
         assert self.noisy_threshold is not None
         true_error = abs(true_output - noisy_output)
-        print("true_error", true_error)
+        # print("true_error", true_error)
         error_noise = np.random.laplace(loc=0, scale=self.b)
         noisy_error = true_error + error_noise
-        print("noisy_error", noisy_error, "noisy_threshold", self.noisy_threshold)
+        # print("noisy_error", noisy_error, "noisy_threshold", self.noisy_threshold)
         if noisy_error < self.noisy_threshold:
             return True
         else:
@@ -101,8 +101,6 @@ class SparseVectors:
         smallest_request_size = 1 if node_size == 1 else int((node_size / 2) + 1)
         # Find the <smallest-request-size> number of continuous blocks with smallest possible population n
         n = self.min_sum_subarray(covered_blocks, smallest_request_size)
-        # print("smallest size request", n)
-        # n = smallest_request_size * 65318
 
         sparse_vector = SparseVector(
             id=node_id,

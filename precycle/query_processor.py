@@ -20,6 +20,7 @@ class QueryProcessor:
 
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
+        self.counter = 0
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -88,7 +89,9 @@ class QueryProcessor:
                 for budget_per_block in budget_per_block_list:
                     for _, budget in budget_per_block.items():
                         self.total_budget_spent_all_blocks += budget.epsilon
-                mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
+
+                if self.counter % 100 == 0:
+                    mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
 
             status = FINISHED
             # logger.info(
@@ -105,7 +108,7 @@ class QueryProcessor:
                     "red",
                 )
             )
-
+        self.counter += 1
         self.tasks_info.append(
             TaskInfo(task, status, planning_time, run_metadata, result).dump()
         )
