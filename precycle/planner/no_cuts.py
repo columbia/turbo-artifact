@@ -18,10 +18,11 @@ class NoCuts(Planner):
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         if self.mechanism_type == "Laplace" or force_laplace:
             min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
+
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale
-            plan = A(l=[RunLaplace(task.blocks, noise_std)], sv_check=False, cost=0)
+            plan = A(l=[RunLaplace(task.blocks, noise_std, k=1, alpha=alpha, beta=beta)], sv_check=False, cost=0)
 
         elif self.mechanism_type == "PMW":
             # NOTE: This is PMW.To be used only in the Monoblock case
@@ -36,29 +37,29 @@ class NoCuts(Planner):
             min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
             sv_check = False
 
-            # Measure the expected additional budget needed for a Laplace run.
-            node_size = get_blocks_size(task.blocks, self.config.blocks_metadata)
-            sensitivity = 1 / node_size
-            laplace_scale = sensitivity / min_epsilon
-            noise_std = math.sqrt(2) * laplace_scale
+        #     # Measure the expected additional budget needed for a Laplace run.
+        #     node_size = get_blocks_size(task.blocks, self.config.blocks_metadata)
+        #     sensitivity = 1 / node_size
+        #     laplace_scale = sensitivity / min_epsilon
+        #     noise_std = math.sqrt(2) * laplace_scale
 
-            cache_entry = (
-                None
-                if not self.config.exact_match_caching
-                else self.cache.exact_match_cache.read_entry(task.query_id, task.blocks)
-            )
-            if (
-                (cache_entry and noise_std >= cache_entry.noise_std)
-            ) or self.cache.histogram_cache.is_query_hard(task.query, task.blocks):
-                # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
-                # Also choose the Laplace if the histogram is not well trained according to our heuristic
-                run_ops = [RunLaplace(task.blocks, noise_std)]
-            else:
-                sv_check = True
-                run_ops = [RunHistogram(task.blocks)]
+        #     cache_entry = (
+        #         None
+        #         if not self.config.exact_match_caching
+        #         else self.cache.exact_match_cache.read_entry(task.query_id, task.blocks)
+        #     )
+        #     if (
+        #         (cache_entry and noise_std >= cache_entry.noise_std)
+        #     ) or self.cache.histogram_cache.is_query_hard(task.query, task.blocks):
+        #         # If we have a good enough estimate in the cache choose Laplace because it will pay nothing.
+        #         # Also choose the Laplace if the histogram is not well trained according to our heuristic
+        #         run_ops = [RunLaplace(task.blocks, noise_std)]
+        #     else:
+        #         sv_check = True
+        #         run_ops = [RunHistogram(task.blocks)]
 
-            # TODO: before running the query check if there is enough budget
-            # for it because we do not do the check here any more
-            plan = A(l=run_ops, sv_check=sv_check, cost=0)
+        #     # TODO: before running the query check if there is enough budget
+        #     # for it because we do not do the check here any more
+        #     plan = A(l=run_ops, sv_check=sv_check, cost=0)
 
         return plan

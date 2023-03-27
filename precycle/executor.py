@@ -78,6 +78,23 @@ class Executor:
         true_partial_results = []
         noisy_partial_results = []
 
+        if self.config.planner.monte_carlo:
+            # Preprocess the plan: look at the cache for all Laplace, and *jointly* combine the optimal epsilon
+            new_plan = []
+            laplace_ops = []
+            for run_op in plan.l:
+                if isinstance(run_op, RunLaplace):
+                    laplace_ops.append(run_op)
+                else:
+                    new_plan.append(run_op)
+
+            montecarlo_laplace_ops = self.preprocess_montecarlo_laplace_ops(
+                laplace_ops, query_id=task.query_id, N=self.config.planner.monte_carlo_N
+            )
+            new_plan.extend(montecarlo_laplace_ops)
+            plan.l = new_plan
+        logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
+
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
 
@@ -94,6 +111,23 @@ class Executor:
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
+
+            elif self.config.planner.monte_carlo and isinstance(run_op, RunLaplaceMonteCarlo):
+                run_return_value = self.run_laplace_montecarlo(
+                    run_op, task.query_id, task.query_db_format
+                )
+
+                # For the outside world it's just a Laplace
+                run_types[str(run_op.blocks)] = "Laplace"
+
+                # External update
+                if self.config.mechanism.type == "Hybrid":
+                    self.cache.histogram_cache.update_entry_histogram(
+                        task.query,
+                        run_op.blocks,
+                        run_return_value.noisy_result,
+                    )
+                # print("\t\trun laplace monte carol", time.time()-start)
 
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
@@ -330,4 +364,129 @@ class Executor:
         noisy_result, run_budget, _ = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
+        
+        
+    # Unused Monte Carlo code below
+
+    def preprocess_montecarlo_laplace_ops(
+        self, laplace_ops: List[RunLaplace], query_id: int, N: int = 10_000
+    ) -> List[RunLaplaceMonteCarlo]:
+        if len(laplace_ops) == 0:
+            return []
+
+        # Browse cache to populate state
+        existing_epsilons = []
+        chunk_sizes = []
+        for run_op in laplace_ops:
+            node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+            chunk_sizes.append(node_size)
+
+            cache_entry = self.cache.exact_match_cache.read_entry(
+                query_id, run_op.blocks
+            )
+            epsilons = (
+                np.array(cache_entry.epsilons)
+                if cache_entry is not None
+                else np.array([])
+            )
+            existing_epsilons.append(epsilons)
+
+
+        alphas = set(run_op.alpha for run_op in laplace_ops)
+        betas = set(run_op.beta for run_op in laplace_ops)
+
+        assert len(alphas) == 1, f"Alphas are not the same: {alphas}"
+        assert len(betas) == 1, f"Betas are not the same: {betas}"
+
+        alpha = alphas.pop()
+        beta = betas.pop()
+
+        # Drop some epsilons and use binary search monte carlo to find the best fresh epsilon
+        fresh_epsilon, fresh_epsilon_mask = get_epsilon_vr_monte_carlo(
+            existing_epsilons,
+            chunk_sizes,
+            alpha=alpha,
+            beta=beta,
+            N=N,
+            n_processes=self.config.n_processes,
+        )
+        # Completely ignore the noise_std computed by the planner, it's just a loose upper bound
+        laplace_montecarlo_ops = []
+        for i, original_op in enumerate(laplace_ops):
+            blocks = original_op.blocks
+            epsilon = fresh_epsilon if fresh_epsilon_mask[i] else None
+            laplace_montecarlo_ops.append(
+                RunLaplaceMonteCarlo(blocks=blocks, epsilon=epsilon)
+            )
+
+        return laplace_montecarlo_ops
+        
+    def run_laplace_montecarlo(self, run_op, query_id, query_db_format):
+
+        # Get the true result from the cache if possible
+        cache_entry = self.cache.exact_match_cache.read_entry(query_id, run_op.blocks)
+        if cache_entry is None:
+            true_result = self.db.run_query(query_db_format, run_op.blocks)
+            epsilons = []
+            noises = []
+        else:
+            true_result = cache_entry.result
+            epsilons = cache_entry.epsilons
+            noises = cache_entry.noises
+
+        # Just run a Laplace with the MonteCarlo epsilon, and store the result
+        if run_op.epsilon is not None:
+            node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+            sensitivity = 1 / node_size
+            run_budget = (
+                BasicBudget(run_op.epsilon)
+                if self.config.puredp
+                else LaplaceCurve(laplace_noise=1/run_op.epsilon)
+            )
+            fresh_noise = np.random.laplace(scale=sensitivity / run_op.epsilon)
+            
+            # print(f"Run Epsilon: {run_op.epsilon}")
+            # print(f"Fresh noise: {fresh_noise}")
+
+            epsilons.append(run_op.epsilon)
+            noises.append(fresh_noise)
+
+            # Use variance reduction to compute the result
+            sq_eps = np.array(epsilons) ** 2
+            gammas = sq_eps / np.sum(sq_eps)
+            noise_after_vr = np.dot(gammas, np.array(noises))
+            # print(f"Noise after MC VR: {noise_after_vr}")
+            
+            # Variance of each individual Laplace (With the right senstivity)
+            variances = sq_eps * 2 / node_size**2
+
+            # Standard deviation of the linear combination
+            std_after_vr = np.sqrt(np.dot(gammas**2, variances))
+
+            # print(f"Std after MC VR: {std_after_vr}")
+
+            # This is DP (even if we look at true_result internally) because sum_j gamma_j = 1
+            noisy_result = true_result + noise_after_vr
+
+            # Store the result in the cache
+            cache_entry = CacheEntry(
+                result=true_result,
+                noise_std=std_after_vr,
+                noise=noise_after_vr,
+                epsilons=epsilons,
+                noises=noises,
+            )
+            self.cache.exact_match_cache.write_entry(
+                query_id, run_op.blocks, cache_entry
+            )
+
+        # MonteCarlo thinks the existing results are good enough
+        else:
+            print(f"MonteCarlo thinks the existing results are good enough")
+            # TODO: If the cache is already good, do we even need to do VR again? No, if MC was used the whole time.
+            run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
+            noisy_result = true_result + cache_entry.noise
+
+        # time.sleep(4)
+        return RunReturnValue(true_result, noisy_result, run_budget)
 

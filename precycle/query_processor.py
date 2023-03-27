@@ -20,6 +20,7 @@ class QueryProcessor:
 
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
+
         self.counter = 0
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
@@ -80,6 +81,7 @@ class QueryProcessor:
             #         assert (
             #             run_type != "Histogram"
             #         ), f"Should be Laplace. Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}"
+
             round += 1
 
         if result is not None:
