@@ -415,12 +415,20 @@ def binary_search(
     """
     eps_low = 0
     eps_high = epsilon_high
-    # Make sure that the initial upper bound is large enough
 
-    if get_beta_fn(eps_high) < beta:
-        logger.error("Epsilon high was not initialized properly, or Monte Carlo failed")
-        while get_beta_fn(eps_high) < beta:
+    # Make sure that the initial upper bound is large enough
+    if get_beta_fn(eps_high) >= beta:
+        logger.warning(
+            "Epsilon high was not initialized properly, or Monte Carlo failed. I'll try to double it until it works and let you know if it fails again."
+        )
+        for _ in range(3):
             eps_high *= 2
+            if get_beta_fn(eps_high) < beta:
+                break
+        if get_beta_fn(eps_high) >= beta:
+            logger.error(
+                f"Going yolo with epsilon high={eps_high} that gives {get_beta_fn(eps_high)} while we want {beta}"
+            )
 
     real_beta = 0
 
