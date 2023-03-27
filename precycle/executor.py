@@ -79,21 +79,7 @@ class Executor:
         true_partial_results = []
         noisy_partial_results = []
 
-        if self.config.planner.monte_carlo:
-            # Preprocess the plan: look at the cache for all Laplace, and *jointly* combine the optimal epsilon
-            new_plan = []
-            laplace_ops = []
-            for run_op in plan.l:
-                if isinstance(run_op, RunLaplace):
-                    laplace_ops.append(run_op)
-                else:
-                    new_plan.append(run_op)
 
-            montecarlo_laplace_ops = self.preprocess_montecarlo_laplace_ops(
-                laplace_ops, query_id=task.query_id, N=self.config.planner.monte_carlo_N
-            )
-            new_plan.extend(montecarlo_laplace_ops)
-            plan.l = new_plan
         logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
 
         for run_op in plan.l:
@@ -112,25 +98,6 @@ class Executor:
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
-
-            elif self.config.planner.monte_carlo and isinstance(
-                run_op, RunLaplaceMonteCarlo
-            ):
-                run_return_value = self.run_laplace_montecarlo(
-                    run_op, task.query_id, task.query_db_format
-                )
-
-                # For the outside world it's just a Laplace
-                run_types[str(run_op.blocks)] = "Laplace"
-
-                # External update
-                if self.config.mechanism.type == "Hybrid":
-                    self.cache.histogram_cache.update_entry_histogram(
-                        task.query,
-                        run_op.blocks,
-                        run_return_value.noisy_result,
-                    )
-                # print("\t\trun laplace monte carol", time.time()-start)
 
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
