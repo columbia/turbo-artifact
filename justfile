@@ -29,5 +29,9 @@ create_covid_dataset:
 mlflow:
     mlflow ui --backend-store-uri file:///$HOME/precycle/logs/mlruns --port 5003
 
+
+profile:
+    scalene --json --outfile profile.json precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+
 activate:
     poetry shell

@@ -3,6 +3,7 @@ from functools import partial
 from multiprocessing import Pool
 
 import numpy as np
+from loguru import logger
 
 # from ray.util.multiprocessing import Pool
 
@@ -411,7 +412,11 @@ def binary_search(
     eps_low = 0
     eps_high = epsilon_high
     # Make sure that the initial upper bound is large enough
-    # assert get_beta_fn(eps_high) < beta
+
+    if get_beta_fn(eps_high) < beta:
+        logger.error("Epsilon high was not initialized properly, or Monte Carlo failed")
+        while get_beta_fn(eps_high) < beta:
+            eps_high *= 2
 
     real_beta = 0
 

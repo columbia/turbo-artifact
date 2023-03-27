@@ -38,7 +38,7 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 5,
+        "initial_num": 10,
         "max_num": 10,
         "arrival_interval": 1,
         "block_data_path": "/home/pierre/precycle/data/covid19/covid19_data/blocks",
@@ -59,10 +59,10 @@
     "tasks": {
         "path": "/home/pierre/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 1e1,
-        "max_num": 1e2,
+        "avg_num_tasks_per_block": 1e3,
+        "max_num": 5e3,
         "initial_num": 0,
-        "zipf_k": 2
+        "zipf_k": 1.5
     },
     "blocks_server": {
         "host": "localhost",

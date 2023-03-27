@@ -1,12 +1,13 @@
 import math
+
 from sortedcollections import OrderedSet
 
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
-    get_pmw_epsilon,
-    get_epsilon_isotropic_laplace_concentration,
     get_epsilon_generic_union_bound_monte_carlo,
+    get_epsilon_isotropic_laplace_concentration,
+    get_pmw_epsilon,
 )
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
@@ -51,11 +52,8 @@ class MinCuts(Planner):
         beta = self.config.beta  # task.utility_beta
 
         if self.mechanism_type == "Laplace" or force_laplace:
-            min_epsilon = (
-                get_epsilon_isotropic_laplace_concentration(alpha, beta, n, k)
-                if k == 1
-                else get_epsilon_generic_union_bound_monte_carlo(alpha, beta, n, k)
-            )
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, k)
+
             run_ops = []
             for (i, j) in subqueries:
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
@@ -79,11 +77,7 @@ class MinCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
-            min_epsilon = (
-                get_epsilon_isotropic_laplace_concentration(alpha, beta, n, k)
-                if k == 1
-                else get_epsilon_generic_union_bound_monte_carlo(alpha, beta, n, k)
-            )
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, k)
 
             sv_check = False
             run_ops = []
