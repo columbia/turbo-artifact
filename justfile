@@ -26,5 +26,14 @@ create_covid_dataset:
     python data/covid19/covid19_data/dataset_generator.py
     python data/citibike/citibike_data/generate.py
 
+mlflow:
+    mlflow ui --backend-store-uri file:///$HOME/precycle/logs/mlruns --port 5003
+
+
+profile:
+    scalene --json --outfile profile.json precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+    # scalene --cli --html --outfile profile.html precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+
+
 activate:
     poetry shell

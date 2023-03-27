@@ -1,10 +1,41 @@
 import math
 from functools import partial
 from multiprocessing import Pool
+from typing import Dict, Tuple
 
 import numpy as np
+from loguru import logger
 
 # from ray.util.multiprocessing import Pool
+
+
+###############################################################
+def get_epsilon_generic_union_bound_monte_carlo(a, b, n, k):
+    # The actual chunk size doesn't matter here
+    chunk_sizes = [n // k] * k
+    existing_epsilons = [np.array([])] * k
+
+    get_beta_fn = lambda eps: monte_carlo_beta(
+        existing_epsilons=existing_epsilons,
+        chunk_sizes=chunk_sizes,
+        fresh_epsilon=eps,
+        alpha=a,
+        N=10_000,
+    )
+
+    epsilon_high = get_epsilon_generic_union_bound(
+        alpha=a, beta=b, n=sum(chunk_sizes), k=len(chunk_sizes)
+    )
+    epsilon = binary_search(get_beta_fn=get_beta_fn, beta=b, epsilon_high=epsilon_high)
+    # print("k", k, "epsilon high", epsilon_high, "vs epsilon low", epsilon, "laplace", get_epsilon_isotropic_laplace_concentration(a, b,n ,k), "nocutslaplace", get_epsilon_isotropic_laplace_concentration(a, b, k*n, 1))
+    return epsilon
+
+
+def get_epsilon_generic_union_bound(alpha, beta, n, k):
+    return 4 * math.log(k / beta) / (alpha * n)
+
+
+###############################################################
 
 
 def single_process_toplevel(arg_tuple):
@@ -26,6 +57,7 @@ def single_process_toplevel(arg_tuple):
     beta = (
         np.sum(aggregated_noise_total > alpha) + np.sum(aggregated_noise_total < -alpha)
     ) / N_local
+
     return beta
 
 
@@ -100,25 +132,155 @@ def monte_carlo_beta_multieps(
     return beta
 
 
-def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k):
+def get_beta_isotropic_laplace_monte_carlo(epsilon, alpha, n, k, N=1_000_000):
+    """
+    Simplified version of monte_carlo when there is no variance reduction.
+    Isotropic because we use the same budget on each chunk
+    Take k chunks of size n_i with \sum n_i = n
+    Output \sum n_i/n Lap(1/n_i*eps) ~ (1/n) \sum Lap(1/eps)
+    Btw, |(1/n) \sum Lap(1/eps)| > alpha iff |\sum Lap(1/eps)| > n*alpha (for the cache)
+    """
+    laplace_scale = 1 / (n * epsilon)
+    laplace_noises = np.random.laplace(scale=laplace_scale, size=(N, k))
+    aggregated_noise_total = np.sum(laplace_noises, axis=1)
+    beta = np.sum(np.abs(aggregated_noise_total) > alpha) / N
+    return beta
+
+
+def get_beta_noisedown_montecarlo(
+    existing_epsilons,
+    new_epsilons,
+    existing_noises,
+    chunk_sizes,
+    alpha,
+    N=100_000,
+):
+    """
+    Take m chunks of size n_i, with existing epsilons existing_epsilons_i, and existing noise x_i
+    We apply NoiseDown on each chunk so that each chunk spends new_epsilons_i in terms of DP budget
+    It gives us a new_noise_i for each chunk
+    When we aggregate them, we can check whether the new noise is below alpha
+    Repeat many times in parallel to compute beta
+
+
+    Arbitrary sensitivity: the NoiseDown distribution works with epsilon-Lipschitz private mechanisms.
+
+    Prop 6: An eps-Lipschitz private mechanism is esp/n-DP for the following adjacency relation:
+        u and u' are adjacent iif d(u,u') <= 1/n
+
+    Their setting is a bit weird, you release the whole datapoint, not a query with some sensitivity.
+    x and x' are neighboring databases => d(q(x), q(x')) <= 1/n. But the reverse is not true.
+
+    It's not a problem, forget about Prop 6 and prove what you need by hand:
+
+    X -> U -> Y
+    x -> u -> y
+
+    If Q: u |-> u + V is espilon-Lipschitz private
+    then M: x |-> q(x) + V is epsilon/n-DP
+
+    Indeed, for all x, x' neighboring databases and output S, we have d(q(x), q(x')) <= 1/n
+    so |ln P[u + V \in S] - ln P[u' + V \in S]| <= epsilon * 1/n
+    """
+
+    chunk_noises = []
+    for chunk_id, n_i in enumerate(chunk_sizes):
+        e1 = existing_epsilons[chunk_id] * n_i
+        e2 = new_epsilons[chunk_id] * n_i
+
+        assert e2 > e1, "You can only increase epsilon"
+
+        x = existing_noises[chunk_id]
+        p = np.random.random(N)
+
+        # Compute masks, for a given trial n \in [N] exactly one mask is True, the others are False
+        threshold_1 = (e1 / e2) * np.exp(-(e2 - e1) * abs(x))
+        threshold_2 = threshold_1 + (e2 - e1) / (2 * e2)
+        threshold_3 = threshold_2 + (e2 - e1) / (2 * e2) * np.exp(-(e2 - e1) * abs(x))
+
+        print(f"Thresholds: {threshold_1}, {threshold_2}, {threshold_3}")
+
+        below_1 = p < threshold_1
+        below_2 = p < threshold_2
+        below_3 = p < threshold_3
+        mask_1 = below_1
+        mask_2 = below_2 & ~below_1
+        mask_3 = below_3 & ~below_2
+        mask_4 = ~below_3
+
+        # Possible outputs
+        # NOTE: the partial pdfs in Algorithm 1 are not normalized. Should we normalize before sampling?
+        # I assume yes? Reusing the same transformation as Cache DP, assuming they are correct
+
+        # We compute the CDF and use https://en.wikipedia.org/wiki/Inverse_transform_sampling#Formal_statement
+        u = np.random.uniform(0, 1, N)
+        output_2 = np.log(u) / (e1 + e2)
+        output_3 = np.log(u * (np.exp(abs(x) * (e1 - e2)) - 1.0) + 1.0) / (e1 - e2)
+        output_4 = abs(x) - np.log(1.0 - u) / (e2 + e1)
+
+        # Vectorized switch statement
+        y = (
+            mask_1 * x
+            + mask_2 * output_2 * np.sign(x)
+            + mask_3 * output_3 * np.sign(x)
+            + mask_4 * output_4 * np.sign(x)
+        )
+        chunk_noises.append(y)
+
+    # Concatenate to get shape (n_chunks, N)
+    chunk_noises = np.array(chunk_noises)
+
+    # Sum across chunks for each N, shape (N,) now
+    aggregated_noise_total = np.sum(chunk_noises, axis=0)
+    print(f"aggregated_noise_total.shape: {aggregated_noise_total.shape}")
+    beta = (
+        np.sum(aggregated_noise_total > alpha) + np.sum(aggregated_noise_total < -alpha)
+    ) / N
+    return beta
+
+
+cache_monte_carlo = True
+isotropic_laplace_cache: Dict[Tuple[float, float, int, int], float] = {}
+monte_carlo_hits = 0
+
+
+def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k, N):
+
+    global monte_carlo_hits
+
+    if k == 1:
+        # We have a closed-form solution
+        return get_epsilon_isotropic_laplace_concentration(a=a, b=b, n=n, k=k)
+
+    if cache_monte_carlo and (a, b, n, k) in isotropic_laplace_cache:
+        monte_carlo_hits += 1
+        logger.info(f"Got a monte carlo cache hit! {monte_carlo_hits} for far")
+        return isotropic_laplace_cache[(a, b, n, k)]
+
+    get_beta_fn = lambda eps: get_beta_isotropic_laplace_monte_carlo(
+        epsilon=eps, alpha=a, n=n, k=k, N=N
+    )
+
+    epsilon_high = get_epsilon_isotropic_laplace_concentration(a=a, b=b, n=n, k=k)
 
     # The actual chunk size doesn't matter here
-    chunk_sizes = [n // k] * k
-    existing_epsilons = [np.array([])] * k
-
-    get_beta_fn = lambda eps: monte_carlo_beta(
-        existing_epsilons=existing_epsilons,
-        chunk_sizes=chunk_sizes,
-        fresh_epsilon=eps,
-        alpha=a,
-        N=100_000,
-    )
-
-    epsilon_high = get_epsilon_isotropic_laplace_concentration(
-        a=a, b=b, n=sum(chunk_sizes), k=len(chunk_sizes)
-    )
+    # chunk_sizes = [n // k] * k
+    # existing_epsilons = [np.array([])] * k
+    # get_beta_fn = lambda eps: monte_carlo_beta(
+    #     existing_epsilons=existing_epsilons,
+    #     chunk_sizes=chunk_sizes,
+    #     fresh_epsilon=eps,
+    #     alpha=a,
+    #     N=100_000,
+    # )
+    # epsilon_high = get_epsilon_isotropic_laplace_concentration(
+    #     a=a, b=b, n=sum(chunk_sizes), k=len(chunk_sizes)
+    # )
 
     epsilon = binary_search(get_beta_fn=get_beta_fn, beta=b, epsilon_high=epsilon_high)
+
+    if cache_monte_carlo:
+        isotropic_laplace_cache[(a, b, n, k)] = epsilon
 
     return epsilon
 
@@ -288,8 +450,20 @@ def binary_search(
     """
     eps_low = 0
     eps_high = epsilon_high
+
     # Make sure that the initial upper bound is large enough
-    # assert get_beta_fn(eps_high) < beta
+    if get_beta_fn(eps_high) >= beta:
+        logger.warning(
+            "Epsilon high was not initialized properly, or Monte Carlo failed. I'll try to double it until it works and let you know if it fails again."
+        )
+        for _ in range(3):
+            eps_high *= 2
+            if get_beta_fn(eps_high) < beta:
+                break
+        if get_beta_fn(eps_high) >= beta:
+            logger.error(
+                f"Going yolo with epsilon high={eps_high} that gives {get_beta_fn(eps_high)} while we want {beta}"
+            )
 
     real_beta = 0
 

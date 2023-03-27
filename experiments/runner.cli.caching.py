@@ -256,11 +256,12 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         "bootstrapping": [False],
         "exact_match_caching": [True],
     }
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     config["exact_match_caching"] = [True]
 
     config["planner"] = ["MinCuts"]
@@ -270,17 +271,17 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["planner"] = ["MinCuts"]
-    config["mechanism"] = ["Hybrid"]
-    config["heuristic"] = ["bin_visits:100-5"]
-    config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
-    config["bootstrapping"] = [False]
+    # config["planner"] = ["MinCuts"]
+    # config["mechanism"] = ["Hybrid"]
+    # config["heuristic"] = ["bin_visits:100-5"]
+    # config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
+    # config["bootstrapping"] = [False]
 
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     experiments_start_and_join(experiments)
     analyze_multiblock(logs_dir)
 
@@ -450,11 +451,13 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
     config["exact_match_caching"] = [True]
     config["planner"] = ["MinCuts"]
     config["heuristic"] = [""]
+
     # experiments.append(
     #     multiprocessing.Process(
     #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
     #     )
     # )
+
     config["planner"] = ["MinCuts"]
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:2-5", "bin_visits:5-5"]

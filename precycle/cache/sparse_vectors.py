@@ -102,8 +102,6 @@ class SparseVectors:
         smallest_request_size = 1 if node_size == 1 else int((node_size / 2) + 1)
         # Find the <smallest-request-size> number of continuous blocks with smallest possible population n
         n = self.min_sum_subarray(covered_blocks, smallest_request_size)
-        # print("smallest size request", n)
-        # n = smallest_request_size * 65318
 
         sparse_vector = SparseVector(
             id=node_id,

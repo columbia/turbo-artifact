@@ -19,7 +19,8 @@ class QueryProcessor:
         self.executor = Executor(self.cache, self.db, self.budget_accountant, config)
 
         self.tasks_info = []
-        self.total_budget_spent_all_blocks = 0
+        self.total_budget_spent_all_blocks = 0  # ZeroCurve()
+
         self.counter = 0
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
@@ -49,6 +50,14 @@ class QueryProcessor:
 
             # Get a DP execution plan for query.
             plan = self.planner.get_execution_plan(task, force_laplace=force_laplace)
+
+            # print(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
+            #         "green",
+            #     )
+            # )
+
             assert plan is not None
             planning_time = time.time() - start_planning
             # print("Planning", planning_time)
@@ -61,6 +70,18 @@ class QueryProcessor:
                     "green",
                 )
             )
+
+            # # Sanity checks
+            # # Second try must always use Laplaces so we can't reach third trial
+            # # NOTE: What if one Laplace in the first round bumped a histogram so that it becomes ready?
+            # # The second try **of a given subquery** shouldn't be Histogram again
+            # assert round < 2
+            # if round == 1:
+            #     for run_type in run_metadata["run_types"][round].values():
+            #         assert (
+            #             run_type != "Histogram"
+            #         ), f"Should be Laplace. Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}"
+
             round += 1
 
         if result is not None:
@@ -70,6 +91,7 @@ class QueryProcessor:
                 for budget_per_block in budget_per_block_list:
                     for _, budget in budget_per_block.items():
                         self.total_budget_spent_all_blocks += budget.epsilon
+
                 if self.counter % 100 == 0:
                     mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
 

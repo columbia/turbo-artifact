@@ -93,9 +93,12 @@ class Simulator:
     def run(self):
         logs = None
         with mlflow.start_run():
+
             config = OmegaConf.to_object(self.config)
             config["blocks_metadata"] = {}
             config["blocks"]["block_requests_pattern"] = {}
+
+            # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
 
             self.env.run()

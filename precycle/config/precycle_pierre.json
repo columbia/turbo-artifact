@@ -21,8 +21,8 @@
     },
     "planner": {
         "method": "MinCuts",
-        "monte_carlo": true,
-        "monte_carlo_N": 200000
+        "monte_carlo": false,
+        "monte_carlo_N": 1000000
     },
     "budget_accountant": {
         "host": "localhost",
@@ -38,19 +38,31 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 5,
+        "initial_num": 10,
         "max_num": 10,
         "arrival_interval": 1,
-        "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json"
+        "block_data_path": "/home/pierre/precycle/data/covid19/covid19_data/blocks",
+        "block_metadata_path": "/home/pierre/precycle/data/covid19/covid19_data/blocks/metadata.json",
+        "block_requests_pattern": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+        ]
     },
     "tasks": {
-        "path": "/home/kelly/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/pierre/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 1e1,
-        "max_num": 1e2,
+        "avg_num_tasks_per_block": 1e3,
+        "max_num": 2e3,
         "initial_num": 0,
-        "zipf_k": 2
+        "zipf_k": 1.5
     },
     "blocks_server": {
         "host": "localhost",

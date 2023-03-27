@@ -351,6 +351,7 @@ def analyze_multiblock(experiment_path):
                 LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization_zipf_{key}.csv"),
                 index=False,
             )
+
         fig = px.bar(
             df,
             x="block",
