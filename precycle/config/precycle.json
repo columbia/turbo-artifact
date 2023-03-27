@@ -21,7 +21,7 @@
     },
     "planner": {
         "method": "MinCuts",
-        "monte_carlo": true,
+        "monte_carlo": false,
         "monte_carlo_N": 10000
     },
     "budget_accountant": {
@@ -43,7 +43,18 @@
         "arrival_interval": 1,
         "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
         "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json",
-        "block_requests_pattern": [1,2,3,4,5,6,7,8,9,10]
+        "block_requests_pattern": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+        ]
     },
     "tasks": {
         "path": "/home/kelly/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
