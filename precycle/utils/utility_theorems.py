@@ -225,6 +225,10 @@ def get_beta_noisedown_montecarlo(
 
 def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k):
 
+    if k == 1:
+        # We have a closed-form solution
+        return get_epsilon_isotropic_laplace_concentration(a=a, b=b, n=n, k=k)
+
     # The actual chunk size doesn't matter here
     chunk_sizes = [n // k] * k
     existing_epsilons = [np.array([])] * k
