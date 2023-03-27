@@ -5,7 +5,7 @@ import time
 import numpy as np
 from loguru import logger
 
-from precycle.cache.histogram import k_way_marginal_query_list
+from precycle.cache.histogram import query_dict_to_list
 from precycle.query_converter import QueryConverter
 from precycle.task import Task
 
@@ -66,11 +66,8 @@ class TaskGenerator:
 
         # Read compressed rectangle or PyTorch slice, output a query vector
         if isinstance(query, dict):
-            # NOTE: we only support pure k-way marginals for now
             attribute_sizes = self.config.blocks_metadata["attributes_domain_sizes"]
-            query_vector = k_way_marginal_query_list(
-                query, attribute_sizes=attribute_sizes
-            )
+            query_vector = query_dict_to_list(query, attribute_sizes=attribute_sizes)
         else:
             query_vector = query
 
