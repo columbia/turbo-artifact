@@ -57,7 +57,7 @@
         ]
     },
     "tasks": {
-        "path": "/home/pierre/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/pierre/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
         "avg_num_tasks_per_block": 1e3,
         "max_num": 2e3,
