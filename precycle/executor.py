@@ -79,6 +79,8 @@ class Executor:
         true_partial_results = []
         noisy_partial_results = []
 
+        logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
+
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
 

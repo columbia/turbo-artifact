@@ -9,35 +9,6 @@ from loguru import logger
 # from ray.util.multiprocessing import Pool
 
 
-###############################################################
-def get_epsilon_generic_union_bound_monte_carlo(a, b, n, k):
-    # The actual chunk size doesn't matter here
-    chunk_sizes = [n // k] * k
-    existing_epsilons = [np.array([])] * k
-
-    get_beta_fn = lambda eps: monte_carlo_beta(
-        existing_epsilons=existing_epsilons,
-        chunk_sizes=chunk_sizes,
-        fresh_epsilon=eps,
-        alpha=a,
-        N=10_000,
-    )
-
-    epsilon_high = get_epsilon_generic_union_bound(
-        alpha=a, beta=b, n=sum(chunk_sizes), k=len(chunk_sizes)
-    )
-    epsilon = binary_search(get_beta_fn=get_beta_fn, beta=b, epsilon_high=epsilon_high)
-    # print("k", k, "epsilon high", epsilon_high, "vs epsilon low", epsilon, "laplace", get_epsilon_isotropic_laplace_concentration(a, b,n ,k), "nocutslaplace", get_epsilon_isotropic_laplace_concentration(a, b, k*n, 1))
-    return epsilon
-
-
-def get_epsilon_generic_union_bound(alpha, beta, n, k):
-    return 4 * math.log(k / beta) / (alpha * n)
-
-
-###############################################################
-
-
 def single_process_toplevel(arg_tuple):
     N_local, n_chunks, epsilons, alpha, n = arg_tuple
     chunk_noises = np.zeros((N_local, n_chunks))
