@@ -79,23 +79,6 @@ class Executor:
         true_partial_results = []
         noisy_partial_results = []
 
-        if self.config.planner.monte_carlo:
-            # Preprocess the plan: look at the cache for all Laplace, and *jointly* combine the optimal epsilon
-            new_plan = []
-            laplace_ops = []
-            for run_op in plan.l:
-                if isinstance(run_op, RunLaplace):
-                    laplace_ops.append(run_op)
-                else:
-                    new_plan.append(run_op)
-
-            montecarlo_laplace_ops = self.preprocess_montecarlo_laplace_ops(
-                laplace_ops, query_id=task.query_id, N=self.config.planner.monte_carlo_N
-            )
-            new_plan.extend(montecarlo_laplace_ops)
-            plan.l = new_plan
-        logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
-
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
 

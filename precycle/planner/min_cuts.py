@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Tuple
 
 from sortedcollections import OrderedSet
 
@@ -15,6 +16,11 @@ from precycle.utils.utils import get_blocks_size, satisfies_constraint
 class MinCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
+
+        if config.planner.monte_carlo_cache:
+            self.monte_carlo_cache: Dict[Tuple[float, float, int, int], float] = {}
+        else:
+            self.monte_carlo_cache = None
 
     def get_min_cuts(self, blocks):
         """
@@ -53,7 +59,12 @@ class MinCuts(Planner):
 
         if self.mechanism_type == "Laplace" or force_laplace:
             min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
-                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+                alpha,
+                beta,
+                n,
+                k,
+                N=self.config.planner.monte_carlo_N,
+                monte_carlo_cache=self.monte_carlo_cache,
             )
 
             run_ops = []
@@ -80,7 +91,12 @@ class MinCuts(Planner):
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
             min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
-                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+                alpha,
+                beta,
+                n,
+                k,
+                N=self.config.planner.monte_carlo_N,
+                monte_carlo_cache=self.monte_carlo_cache,
             )
 
             sv_check = False
