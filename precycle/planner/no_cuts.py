@@ -18,8 +18,6 @@ class NoCuts(Planner):
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         if self.mechanism_type == "Laplace" or force_laplace:
             min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
-            # print(task.id, "SIMPLE k", 1, "epsilon ", min_epsilon)
-
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale

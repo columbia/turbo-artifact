@@ -271,34 +271,16 @@ class Executor:
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
             else:
-                # Do Variance Reduction using Kougofiannis et al: Privacy Relaxation
-                # https://journalprivacyconfidentiality.org/index.php/jpc/article/view/649/632
-                cached_laplace_scale = cache_entry.noise_std / np.sqrt(2)
-                cached_pure_epsilon = sensitivity / cached_laplace_scale
-
-                target_laplace_scale = run_op.noise_std / np.sqrt(2)
-                target_pure_epsilon = sensitivity / target_laplace_scale
-
-                # Run epsilon is the difference between the target_epsilon and cached_epsilon
-                run_pure_epsilon = target_pure_epsilon - cached_pure_epsilon
-                run_laplace_scale = sensitivity / run_pure_epsilon
+                laplace_scale = run_op.noise_std / np.sqrt(2)
+                epsilon = sensitivity / laplace_scale
+                run_op.epsilon = epsilon
                 run_budget = (
-                    BasicBudget(run_pure_epsilon)
+                    BasicBudget(epsilon)
                     if self.config.puredp
-                    else LaplaceCurve(laplace_noise=run_laplace_scale / sensitivity)
+                    else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                 )
-                run_op.epsilon = run_pure_epsilon
-
-                # The new noise sample is computed as per Algorithm 1 in the above paper page 37
-                # NOTE: noise-down assumes sensitivity = 1 so here I scale the cached noise by n, 
-                # I compute the new noise using noise-down  and then I scale down the new noise by n again
-                scaled_noise = cache_entry.noise / sensitivity
-                noise = self.noise_down(scaled_noise, cached_pure_epsilon, target_pure_epsilon)
-                noise = noise * sensitivity
-
-                print(colored(f"\n\n\ne_old: {cached_pure_epsilon}, e_new: {target_pure_epsilon}, old_noise: {cache_entry.noise}, new_noise: {noise}\n", "blue"))
-                time.sleep(2)
-
+                noise = np.random.laplace(scale=laplace_scale)
+                
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
@@ -315,31 +297,6 @@ class Executor:
         noisy_result = true_result + noise
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
-
-    # https://journalprivacyconfidentiality.org/index.php/jpc/article/view/649/632
-    # https://gitlab.uwaterloo.ca/m2mazmud/cachedp-public/-/blob/main/apex/privacy/func/LCM_MP.py#L118
-    def noise_down(self, lap_noise, eps_old, eps_new):
-        assert eps_new > eps_old
-
-        pdf = [eps_old / eps_new * np.exp((eps_old - eps_new) * abs(lap_noise)),
-            (eps_new - eps_old) / (2.0 * eps_new),
-            (eps_old + eps_new) / (2.0 * eps_new) * (1.0 - np.exp((eps_old - eps_new) * abs(lap_noise)))]
-
-        p = np.random.random_sample()
-
-        if p <= pdf[0]:
-            z = lap_noise
-
-        elif p <= pdf[0] + pdf[1]:
-            z = np.log(p) / (eps_old + eps_new)
-
-        elif p <= pdf[0] + pdf[1] + pdf[2]:
-            z = np.log(p * (np.exp(abs(lap_noise) * (eps_old - eps_new)) - 1.0) + 1.0) / (eps_old - eps_new)
-
-        else:
-            z = abs(lap_noise) - np.log(1.0 - p) / (eps_new + eps_old)
-
-        return z
 
 
     def run_histogram(self, run_op, query, query_db_format):
