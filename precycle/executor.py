@@ -41,6 +41,15 @@ class RunPMW:
     def __str__(self):
         return f"RunPMW({self.blocks}, {self.alpha}, {self.epsilon})"
 
+class RunTimestampsPMW:
+    def __init__(self, blocks, task_blocks, alpha, epsilon) -> None:
+        self.blocks = blocks    # All blocks in the system
+        self.task_blocks = task_blocks
+        self.alpha = alpha
+        self.epsilon = epsilon
+
+    def __str__(self):
+        return f"RunTimestampsPMW({self.blocks}, {self.task_blocks}, {self.alpha}, {self.epsilon})"
 
 class A:
     def __init__(self, l, sv_check, cost=None) -> None:
@@ -84,7 +93,6 @@ class Executor:
 
         for run_op in plan.l:
             if isinstance(run_op, RunLaplace):
-
                 run_return_value = self.run_laplace(
                     run_op, task.query_id, task.query_db_format
                 )
@@ -110,6 +118,13 @@ class Executor:
                     run_op, task.query, task.query_db_format
                 )
                 run_types[str(run_op.blocks)] = "PMW"
+
+            elif isinstance(run_op, RunTimestampsPMW):
+                run_return_value = self.run_pmw(
+                    run_op, task.query, task.query_db_format
+                )
+                run_types[str(run_op.blocks)] = "PMW"
+
 
             # Set run budgets for participating blocks
             for block in range(run_op.blocks[0], run_op.blocks[1] + 1):
@@ -332,6 +347,26 @@ class Executor:
         noisy_result, run_budget, _ = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
+
+    def run_timestamps_pmw(self, run_op, query, query_db_format):
+        # Run_op blocks contains all system's blocks in this case
+        pmw = self.cache.pmw_cache.get_entry(run_op.blocks)
+        if not pmw:
+            pmw = self.cache.pmw_cache.add_entry(run_op.blocks)
+
+        # True output never released except in debugging logs
+        true_result = self.db.run_query(query_db_format, run_op.task_blocks)
+
+        # We can't run a powerful query using a weaker PMW
+        assert run_op.alpha <= pmw.alpha
+        assert run_op.epsilon <= pmw.epsilon
+
+        noisy_result, run_budget, _ = pmw.run(query, true_result)
+        rv = RunReturnValue(true_result, noisy_result, run_budget)
+        return rv
+
+
+
 
     # # Unused Monte Carlo code below
 

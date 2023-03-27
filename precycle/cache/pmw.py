@@ -79,7 +79,7 @@ class PMW:
             # Easy query, just output the histogram prediction
             output = predicted_output
             run_metadata["hard_query"] = False
-            logger.info(
+            print(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, epsilon: {self.epsilon}"
             )
         else:

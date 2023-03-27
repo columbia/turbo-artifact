@@ -5,9 +5,10 @@ import time
 import numpy as np
 from loguru import logger
 
-from precycle.cache.histogram import k_way_marginal_query_list
+from precycle.cache.histogram import query_dict_to_list
 from precycle.query_converter import QueryConverter
 from precycle.task import Task
+import copy
 
 
 def Zipf(a: np.float64, min: np.uint64, max: np.uint64, size=None):
@@ -29,7 +30,6 @@ class TaskGenerator:
         self.config = config
         self.tasks = df_tasks
         self.query_converter = QueryConverter(self.config.blocks_metadata)
-        self.query_pool = {}
 
     def sample_task_row(self, config):
         raise NotImplementedError("Must override")
@@ -49,8 +49,6 @@ class TaskGenerator:
         num_requested_blocks = random.choice(eligible_block_requests)
         query_id = int(task_row["query_id"])
         name = task_id if "task_name" not in task_row else task_row["task_name"]
-        # We sample only tasks whose n_blocks is <= num_blocks
-        # num_requested_blocks = int(task_row["n_blocks"])
 
         if self.config.tasks.block_selection_policy == "LatestBlocks":
             requested_blocks = (num_blocks - num_requested_blocks, num_blocks - 1)
@@ -58,49 +56,49 @@ class TaskGenerator:
             start = np.random.randint(0, num_blocks - num_requested_blocks + 1)
             requested_blocks = (start, start + num_requested_blocks - 1)
 
-        # t = time.time()
-        # Query may be either a query_vector (covid19) or a dict format (citibike)
         query = eval(task_row["query"])
 
-        # print(f"Read query from csv: {query} of type {type(query)}")
-
         # Read compressed rectangle or PyTorch slice, output a query vector
-        if isinstance(query, dict):
-            # NOTE: we only support pure k-way marginals for now
-            attribute_sizes = self.config.blocks_metadata["attributes_domain_sizes"]
-            query_vector = k_way_marginal_query_list(
-                query, attribute_sizes=attribute_sizes
-            )
+        attribute_sizes = self.config.blocks_metadata.attributes_domain_sizes
+        query_vector = query_dict_to_list(
+            query, attribute_sizes=attribute_sizes
+        )
+        # Query format for running on histograms
+        if "query_path" in task_row and not self.config.mechanism.type == "PMW-Timestamps":
+            # Load tensor/query from disk if stored
+            with open(task_row["query_path"], "rb") as f:
+                query_tensor = pickle.load(f)
         else:
-            query_vector = query
+            query_tensor = self.query_converter.convert_to_sparse_tensor(query_vector).to_dense()
 
-        if query_id in self.query_pool:
-            query_tensor = self.query_pool[query_id]
-        else:
-            # Load tensor /query from disk if stored
-            if "query_path" in task_row:
-                with open(task_row["query_path"], "rb") as f:
-                    query_tensor = pickle.load(f)
-            else:
-                query_tensor = self.query_converter.convert_to_sparse_tensor(query)
-
-            # Converting to dense tensor to facilitate future tensor operations
-            # TODO: Maybe this is unecessary? I'm not very familiar with PyTorch.
-            query_tensor = query_tensor.to_dense()
-            # self.query_pool[query_id] = query_tensor
-
+        # Query format for running using PSQL module (runs on blocks)
         query_db_format = (
             query_tensor
             if self.config.mock
             else self.query_converter.convert_to_sql(query_vector, task.blocks)
         )
-        # print("Query Prep Time", time.time() - t)
+
+        if self.config.mechanism.type == "TimestampsPMW":
+            # Extend the query dictionary with the blocks attribute
+            new_attr_offset = len(self.config.blocks_metadata.attribute_names)
+            requested_blocks_list = list(range(requested_blocks[0], requested_blocks[1]+1))
+            query.update({str(new_attr_offset): requested_blocks_list})
+            pmw_attribute_sizes = self.config.blocks_metadata.pmw_attributes_domain_sizes
+            # print(pmw_attribute_sizes)
+            pmw_query_vector = query_dict_to_list(
+                query, attribute_sizes=pmw_attribute_sizes
+            )
+            pmw_query_tensor = self.query_converter.convert_to_sparse_tensor(pmw_query_vector, pmw_attribute_sizes).to_dense()
+            query = pmw_query_tensor
+        else:
+            query = query_tensor
+
 
         task = Task(
             id=task_id,
             query_id=query_id,
             query_type=task_row["query_type"],
-            query=query_tensor,
+            query=query,
             query_db_format=query_db_format,
             blocks=requested_blocks,
             n_blocks=num_requested_blocks,
