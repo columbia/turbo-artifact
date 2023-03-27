@@ -61,16 +61,6 @@ class QueryProcessor:
                     "green",
                 )
             )
-            # # Sanity checks
-            # # Second try must always use Laplaces so we can't reach third trial
-            # # NOTE: What if one Laplace in the first round bumped a histogram so that it becomes ready?
-            # # The second try **of a given subquery** shouldn't be Histogram again
-            # assert round < 2
-            # if round == 1:
-            #     for run_type in run_metadata["run_types"][round].values():
-            #         assert (
-            #             run_type != "Histogram"
-            #         ), f"Should be Laplace. Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}"
             round += 1
 
         if result is not None:

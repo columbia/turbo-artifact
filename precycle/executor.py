@@ -108,7 +108,6 @@ class Executor:
             )
             new_plan.extend(montecarlo_laplace_ops)
             plan.l = new_plan
-
         logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
 
         for run_op in plan.l:
@@ -143,7 +142,7 @@ class Executor:
                         run_op.blocks,
                         run_return_value.noisy_result,
                     )
-
+                # print("\t\trun laplace monte carol", time.time()-start)
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
                     run_op, task.query, task.query_db_format
@@ -205,7 +204,7 @@ class Executor:
         return noisy_result, status_message
 
     def preprocess_montecarlo_laplace_ops(
-        self, laplace_ops: List[RunLaplace], query_id: int, N: int = 100_000
+        self, laplace_ops: List[RunLaplace], query_id: int, N: int = 10_000
     ) -> List[RunLaplaceMonteCarlo]:
         if len(laplace_ops) == 0:
             return []
@@ -231,8 +230,6 @@ class Executor:
         alphas = set(run_op.alpha for run_op in laplace_ops)
         betas = set(run_op.beta for run_op in laplace_ops)
 
-        print(alphas)
-        print(betas)
         assert len(alphas) == 1, f"Alphas are not the same: {alphas}"
         assert len(betas) == 1, f"Betas are not the same: {betas}"
 
@@ -248,7 +245,6 @@ class Executor:
             N=N,
             n_processes=self.config.n_processes,
         )
-
         # Completely ignore the noise_std computed by the planner, it's just a loose upper bound
         laplace_montecarlo_ops = []
         for i, original_op in enumerate(laplace_ops):
@@ -356,8 +352,8 @@ class Executor:
             )
             fresh_noise = np.random.laplace(scale=sensitivity / run_op.epsilon)
             
-            print(f"Run Epsilon: {run_op.epsilon}")
-            print(f"Fresh noise: {fresh_noise}")
+            # print(f"Run Epsilon: {run_op.epsilon}")
+            # print(f"Fresh noise: {fresh_noise}")
 
             epsilons.append(run_op.epsilon)
             noises.append(fresh_noise)
@@ -366,7 +362,7 @@ class Executor:
             sq_eps = np.array(epsilons) ** 2
             gammas = sq_eps / np.sum(sq_eps)
             noise_after_vr = np.dot(gammas, np.array(noises))
-            print(f"Noise after MC VR: {noise_after_vr}")
+            # print(f"Noise after MC VR: {noise_after_vr}")
             
             # Variance of each individual Laplace (With the right senstivity)
             variances = sq_eps * 2 / node_size**2

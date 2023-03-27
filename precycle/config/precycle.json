@@ -22,7 +22,7 @@
     "planner": {
         "method": "MinCuts",
         "monte_carlo": true,
-        "monte_carlo_N": 200000
+        "monte_carlo_N": 10000
     },
     "budget_accountant": {
         "host": "localhost",
@@ -48,10 +48,10 @@
     "tasks": {
         "path": "/home/kelly/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 100,
-        "max_num": 1e3,
+        "avg_num_tasks_per_block": 2000,
+        "max_num": 20e3,
         "initial_num": 0,
-        "zipf_k": 1.5
+        "zipf_k": 1
     },
     "blocks_server": {
         "host": "localhost",

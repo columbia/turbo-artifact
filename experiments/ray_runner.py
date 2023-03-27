@@ -63,6 +63,7 @@ def grid_online(
         },
         "planner": {
             "method": tune.grid_search(planner),
+            "monte_carlo": True,
             "monte_carlo_N": 10000,
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},
@@ -92,12 +93,6 @@ def grid_online(
             "print_pid": False,
         },
     }
-
-    if enable_mlflow:
-        path = LOGS_PATH.joinpath("mlruns")
-        os.environ["MLFLOW_TRACKING_URI"] = str(path)
-        os.environ["MLFLOW_EXPERIMENT_NAME"] = exp_name
-        mlflow.create_experiment(exp_name, artifact_location=str(path))
 
     logger.info(f"Tune config: {config}")
 

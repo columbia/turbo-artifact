@@ -289,7 +289,7 @@ def binary_search(
     eps_low = 0
     eps_high = epsilon_high
     # Make sure that the initial upper bound is large enough
-    assert get_beta_fn(eps_high) < beta
+    # assert get_beta_fn(eps_high) < beta
 
     real_beta = 0
 

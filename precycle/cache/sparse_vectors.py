@@ -1,6 +1,7 @@
 import numpy as np
 from precycle.utils.utils import satisfies_constraint, get_blocks_size
 from precycle.utils.utility_theorems import get_sv_epsilon
+from termcolor import colored
 import redis
 import time
 
@@ -32,10 +33,10 @@ class SparseVector:
     def check(self, true_output, noisy_output):
         assert self.noisy_threshold is not None
         true_error = abs(true_output - noisy_output)
-        # print("true_error", true_error)
+        print(colored(f"true_error, {true_error}", "yellow"))
         error_noise = np.random.laplace(loc=0, scale=self.b)
         noisy_error = true_error + error_noise
-        # print("noisy_error", noisy_error, "noisy_threshold", self.noisy_threshold)
+        print(colored(f"noisy_error, {noisy_error}, noisy_threshold, {self.noisy_threshold}", "yellow"))
         if noisy_error < self.noisy_threshold:
             return True
         else:
