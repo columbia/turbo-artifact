@@ -52,7 +52,9 @@ class MinCuts(Planner):
         beta = self.config.beta  # task.utility_beta
 
         if self.mechanism_type == "Laplace" or force_laplace:
-            min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(alpha, beta, n, k)
+            min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
+                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+            )
 
             run_ops = []
             for (i, j) in subqueries:
@@ -77,7 +79,9 @@ class MinCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
-            min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(alpha, beta, n, k)
+            min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
+                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+            )
 
             sv_check = False
             run_ops = []

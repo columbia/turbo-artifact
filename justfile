@@ -32,6 +32,8 @@ mlflow:
 
 profile:
     scalene --json --outfile profile.json precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+    # scalene --cli --html --outfile profile.html precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+
 
 activate:
     poetry shell
