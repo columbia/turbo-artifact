@@ -31,7 +31,7 @@ def caching_static_multiblock_PMW_time_covid19(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"test-pmw-timestamps/{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"LR2-test-pmw-timestamps/{dataset}/static_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
         "global_seed": 64,
@@ -67,15 +67,15 @@ def caching_static_multiblock_PMW_time_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["planner"] = ["MinCuts"]
-    config["mechanism"] = ["Hybrid"]
-    config["heuristic"] = ["bin_visits:100-5"]
-    config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    # config["planner"] = ["MinCuts"]
+    # config["mechanism"] = ["Hybrid"]
+    # config["heuristic"] = ["bin_visits:100-5"]
+    # config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     experiments_start_and_join(experiments)
     analyze_multiblock(logs_dir)
 
@@ -395,6 +395,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:100-5"]
     config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
+    config["bootstrapping"] = [True, False]
+
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)

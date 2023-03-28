@@ -196,6 +196,43 @@ def get_logs(
     config = {}
 
     # Fix a key for each run
+    key, mechanism_type, heuristic, warmup, learning_rate = set_run_key(config_dict)
+
+    config.update(
+        {
+            "n_allocated_tasks": n_allocated_tasks,
+            "total_tasks": len(tasks_info),
+            "total_sv_misses": total_sv_misses,
+            "total_sv_checks": total_sv_checks,
+            "total_histogram_runs": total_histogram_runs,
+            "total_laplace_runs": total_laplace_runs,
+            "mechanism": mechanism_type,
+            "planner": config_dict["planner"]["method"],
+            "workload_path": config_dict["tasks"]["path"],
+            "query_pool_size": query_pool_size,
+            "tasks_info": tasks_to_log,
+            "block_budgets_info": block_budgets_info,
+            "blocks_initial_budget": blocks_initial_budget,
+            "zipf_k": config_dict["tasks"]["zipf_k"],
+            "heuristic": heuristic,
+            "direct_match_caching": config_dict["exact_match_caching"],
+            "config": config_dict,
+            "learning_rate": learning_rate,
+            "warmup": warmup,
+            "global_budget": global_budget,
+            "chunks": chunks,
+            "sv_misses": sv_misses,
+            "key": key,
+        }
+    )
+
+    # Any other thing to log
+    for key, value in kwargs.items():
+        config[key] = value
+    return config
+
+def set_run_key(config_dict):
+        # Fix a key for each run
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
@@ -242,40 +279,7 @@ def get_logs(
         key = mechanism_type + "+" + heuristic + "+lr" + learning_rate
         if warmup == "True":
             key += "+warmup"
-
-    config.update(
-        {
-            "n_allocated_tasks": n_allocated_tasks,
-            "total_tasks": len(tasks_info),
-            "total_sv_misses": total_sv_misses,
-            "total_sv_checks": total_sv_checks,
-            "total_histogram_runs": total_histogram_runs,
-            "total_laplace_runs": total_laplace_runs,
-            "mechanism": mechanism_type,
-            "planner": config_dict["planner"]["method"],
-            "workload_path": config_dict["tasks"]["path"],
-            "query_pool_size": query_pool_size,
-            "tasks_info": tasks_to_log,
-            "block_budgets_info": block_budgets_info,
-            "blocks_initial_budget": blocks_initial_budget,
-            "zipf_k": config_dict["tasks"]["zipf_k"],
-            "heuristic": heuristic,
-            "direct_match_caching": config_dict["exact_match_caching"],
-            "config": config_dict,
-            "learning_rate": learning_rate,
-            "warmup": warmup,
-            "global_budget": global_budget,
-            "chunks": chunks,
-            "sv_misses": sv_misses,
-            "key": key,
-        }
-    )
-
-    # Any other thing to log
-    for key, value in kwargs.items():
-        config[key] = value
-    return config
-
+    return key, mechanism_type, heuristic, warmup, learning_rate
 
 def save_logs(log_dict):
     log_path = LOGS_PATH.joinpath(
