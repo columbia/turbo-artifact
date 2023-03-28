@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Tuple
 
 from sortedcollections import OrderedSet
 
@@ -14,6 +15,11 @@ from precycle.utils.utils import get_blocks_size, satisfies_constraint
 class MinCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
+
+        if config.planner.monte_carlo_cache:
+            self.monte_carlo_cache: Dict[Tuple[float, float, int, int], float] = {}
+        else:
+            self.monte_carlo_cache = None
 
     def get_min_cuts(self, blocks):
         """
@@ -52,7 +58,12 @@ class MinCuts(Planner):
 
         if self.mechanism_type == "Laplace" or force_laplace:
             min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
-                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+                alpha,
+                beta,
+                n,
+                k,
+                N=self.config.planner.monte_carlo_N,
+                monte_carlo_cache=self.monte_carlo_cache,
             )
 
             run_ops = []
@@ -79,7 +90,12 @@ class MinCuts(Planner):
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
             min_epsilon = get_epsilon_isotropic_laplace_monte_carlo(
-                alpha, beta, n, k, N=self.config.planner.monte_carlo_N
+                alpha,
+                beta,
+                n,
+                k,
+                N=self.config.planner.monte_carlo_N,
+                monte_carlo_cache=self.monte_carlo_cache,
             )
 
             sv_check = False
@@ -110,59 +126,5 @@ class MinCuts(Planner):
 
         elif self.mechanism_type == "TimestampsPMW":
             raise NotImplementedError
-
-
-        # elif (
-        #     self.mechanism_type == "Hybrid" and self.config.planner.monte_carlo == True
-        # ):
-
-        #     # Decide where to run the Laplace and where to run the Histogram
-        #     # We look at the histogram heuristic only, not at the cache
-        #     sv_check = False
-        #     laplace_size = 0
-        #     histogram_size = 0
-        #     run_type: Dict[Tuple[int, int], str] = {}
-        #     for (i, j) in subqueries:
-        #         node_size = get_blocks_size((i, j), self.config.blocks_metadata)
-        #         if self.cache.histogram_cache.is_query_hard(task.query, (i, j)):
-        #             run_type[(i, j)] = "Laplace"
-        #             laplace_size += node_size
-        #         else:
-        #             sv_check = True
-        #             run_type[(i, j)] = "Histogram"
-        #             #
-        #             histogram_size += node_size
-
-        #     # Split alpha and beta between both. Heuristic: weight by node size
-        #     # It doesn't really matter when we do a global SV check
-        #     # that covers the Laplace too (using too large alpha or beta will just result in more SV resets)
-        #     # TODO: if Laplace are too noisy, you can increase alpha_laplace to have more precise PMW updates
-        #     alpha_laplace = alpha * laplace_size / n
-        #     beta_laplace = beta * laplace_size / n
-
-        #     # print("alpha laplace", alpha_laplace)
-        #     # print("beta laplace", beta_laplace)
-
-        #     # NOTE: If you don't do global check, use triangle inequality for alpha and union bound for beta
-        #     # and pass the remaining alpha/beta to the SV check
-
-        #     # Instantiate the plan
-        #     run_ops = []
-        #     for (i, j) in subqueries:
-        #         if run_type[(i, j)] == "Laplace":
-        #             # The executor will look at the cache and compute the exact budget needed for each subquery
-        #             run_ops += [
-        #                 RunLaplace(
-        #                     (i, j),
-        #                     noise_std=None,
-        #                     k=None,
-        #                     alpha=alpha_laplace,
-        #                     beta=beta_laplace,
-        #                 )
-        #             ]
-        #         else:
-        #             run_ops += [RunHistogram((i, j))]
-
-        #     plan = A(l=run_ops, sv_check=sv_check, cost=0)
-
+            
         return plan

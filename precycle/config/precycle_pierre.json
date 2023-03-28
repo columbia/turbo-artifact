@@ -21,8 +21,9 @@
     },
     "planner": {
         "method": "MinCuts",
-        "monte_carlo": false,
-        "monte_carlo_N": 1000000
+        "monte_carlo": true,
+        "monte_carlo_N": 10000,
+        "monte_carlo_cache": true
     },
     "budget_accountant": {
         "host": "localhost",
@@ -57,7 +58,7 @@
         ]
     },
     "tasks": {
-        "path": "/home/pierre/precycle/data/covid19/covid19_workload/1:2:3:4:5blocks_34425queries.privacy_tasks.csv",
+        "path": "/home/pierre/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
         "avg_num_tasks_per_block": 1e3,
         "max_num": 2e3,
