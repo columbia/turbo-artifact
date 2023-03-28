@@ -22,7 +22,7 @@ class NoCuts(Planner):
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale
-            plan = A(l=[RunLaplace(task.blocks, noise_std, k=1, alpha=alpha, beta=beta)], sv_check=False, cost=0)
+            plan = A(l=[RunLaplace(task.blocks, noise_std)], sv_check=False, cost=0)
 
         elif self.mechanism_type == "PMW":
             # NOTE: This is PMW.To be used only in the Monoblock case

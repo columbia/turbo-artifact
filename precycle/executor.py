@@ -1,17 +1,16 @@
-import math
 import time
 from collections import namedtuple
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 from loguru import logger
-from scipy.stats import rv_continuous
 from termcolor import colored
 
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 from precycle.cache.exact_match_cache import CacheEntry
 from precycle.utils.utils import get_blocks_size
+from precycle.utils.utils import mlflow_log
 
 
 class RunLaplace:
@@ -77,6 +76,7 @@ class Executor:
         self.cache = cache
         self.config = config
         self.budget_accountant = budget_accountant
+        self.count = 0
 
     def execute_plan(self, plan: A, task, run_metadata) -> Tuple[float, Dict]:
         total_size = 0
@@ -134,7 +134,7 @@ class Executor:
             noisy_partial_results += [run_return_value.noisy_result * node_size]
             true_partial_results += [run_return_value.true_result * node_size]
             total_size += node_size
-
+        
         if noisy_partial_results:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
@@ -223,9 +223,11 @@ class Executor:
                     and self.budget_accountant.get_block_budget(block) is not None
                 ):
                     # Make block pay for all outstanding payments
-                    budget_per_block[block] = (
-                        initialization_budget * sv.outstanding_payment_blocks[block]
-                    )
+                    pay = initialization_budget * sv.outstanding_payment_blocks[block]
+                    if block not in budget_per_block:
+                        budget_per_block[block] = pay
+                    else:
+                        budget_per_block[block] += pay
                     del sv.outstanding_payment_blocks[block]
 
         # Now check whether we pass or fail the SV check
@@ -356,7 +358,13 @@ class Executor:
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query_db_format, run_op.task_blocks)
+        
+        task_blocks_size = get_blocks_size(run_op.task_blocks, self.config.blocks_metadata)
+        absolute_true_result = true_result * task_blocks_size
 
+        total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+        true_result = absolute_true_result / total_blocks_size
+        
         # We can't run a powerful query using a weaker PMW
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon

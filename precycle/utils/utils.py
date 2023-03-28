@@ -218,6 +218,13 @@ def get_logs(
         warmup = ""
         key = mechanism_type
 
+    elif config_dict["mechanism"]["type"] == "TimestampsPMW":
+        mechanism_type = "TimestampsPMW"
+        heuristic = ""
+        learning_rate = ""
+        warmup = ""
+        key = mechanism_type
+
     else:
         mechanism_type = "Hybrid"
         warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
