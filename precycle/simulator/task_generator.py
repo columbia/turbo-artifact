@@ -68,6 +68,7 @@ class TaskGenerator:
             # Load tensor/query from disk if stored
             with open(task_row["query_path"], "rb") as f:
                 query_tensor = pickle.load(f)
+
         else:
             query_tensor = self.query_converter.convert_to_sparse_tensor(query_vector).to_dense()
 
@@ -134,12 +135,21 @@ class PoissonTaskGenerator(TaskGenerator):
 
     def sample_task_row(self, config):
         next_sample_idx = int(next(self.zipf_sampling)) - 1
-        next_query_id = self.tasks.iloc[[next_sample_idx]]["query_id"].values[0]
-        # next_query_id = next_sample_idx
-        # Sample only from tasks that request no more than existing blocks
-        return self.tasks.query(f"query_id == {next_query_id}").sample(
-            1, random_state=int(random.random() * 100)
-        )
+        return self.tasks.iloc[[next_sample_idx]]
+        # next_query_id = self.tasks.iloc[[next_sample_idx]]["query_id"].values[0]
+        # # next_query_id = next_sample_idx
+        # # Sample only from tasks that request no more than existing blocks
+
+        # elibible_tasks = self.tasks.query(f"query_id == {next_query_id}")
+        # sampled = elibible_tasks.sample(1)
+        # print(f"eligible tasks: {elibible_tasks} sampled: {sampled}")
+
+        # next_query = self.tasks.iloc[[next_sample_idx]]
+        # print(f"Next query: {next_query}")
+
+        # return self.tasks.query(f"query_id == {next_query_id}").sample(
+        #     1, random_state=int(random.random() * 100)
+        # )
 
     def get_task_arrival_interval_time(self):
         return random.expovariate(self.avg_num_tasks_per_block)

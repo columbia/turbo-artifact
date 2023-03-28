@@ -2,6 +2,7 @@ import math
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW, RunTimestampsPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import get_pmw_epsilon, get_epsilon_isotropic_laplace_concentration
+
 from precycle.utils.utils import get_blocks_size
 
 
@@ -23,6 +24,7 @@ class NoCuts(Planner):
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale
             plan = A(l=[RunLaplace(task.blocks, noise_std)], sv_check=False, cost=0)
+
 
         elif self.mechanism_type == "PMW":
             # NOTE: This is PMW.To be used only in the Monoblock case

@@ -210,23 +210,27 @@ def get_beta_noisedown_montecarlo(
     return beta
 
 
-cache_monte_carlo = True
-isotropic_laplace_cache: Dict[Tuple[float, float, int, int], float] = {}
-monte_carlo_hits = 0
-
-
-def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k, N):
-
-    global monte_carlo_hits
+def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k, N, monte_carlo_cache=None):
 
     if k == 1:
         # We have a closed-form solution
         return get_epsilon_isotropic_laplace_concentration(a=a, b=b, n=n, k=k)
 
-    if cache_monte_carlo and (a, b, n, k) in isotropic_laplace_cache:
-        monte_carlo_hits += 1
-        logger.info(f"Got a monte carlo cache hit! {monte_carlo_hits} for far")
-        return isotropic_laplace_cache[(a, b, n, k)]
+    if monte_carlo_cache is not None and (a, b, n, k) in monte_carlo_cache:
+        # Cache stored in the planner
+        n_hits = monte_carlo_cache.get("n_hits", 0) + 1
+        monte_carlo_cache["n_hits"] = n_hits
+
+        # Check how we are doing, once in a while
+        if n_hits % 100 == 0:
+            n_calls = (
+                len(monte_carlo_cache) - 1 + n_hits
+            )  # One entry is for the hits counter
+            logger.info(
+                f"Monte Carlo cache hits: {n_hits}. Calls to utility function: {n_calls}. Hit rate: {n_hits / n_calls}"
+            )
+
+        return monte_carlo_cache[(a, b, n, k)]
 
     get_beta_fn = lambda eps: get_beta_isotropic_laplace_monte_carlo(
         epsilon=eps, alpha=a, n=n, k=k, N=N
@@ -234,24 +238,10 @@ def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k, N):
 
     epsilon_high = get_epsilon_isotropic_laplace_concentration(a=a, b=b, n=n, k=k)
 
-    # The actual chunk size doesn't matter here
-    # chunk_sizes = [n // k] * k
-    # existing_epsilons = [np.array([])] * k
-    # get_beta_fn = lambda eps: monte_carlo_beta(
-    #     existing_epsilons=existing_epsilons,
-    #     chunk_sizes=chunk_sizes,
-    #     fresh_epsilon=eps,
-    #     alpha=a,
-    #     N=100_000,
-    # )
-    # epsilon_high = get_epsilon_isotropic_laplace_concentration(
-    #     a=a, b=b, n=sum(chunk_sizes), k=len(chunk_sizes)
-    # )
-
     epsilon = binary_search(get_beta_fn=get_beta_fn, beta=b, epsilon_high=epsilon_high)
 
-    if cache_monte_carlo:
-        isotropic_laplace_cache[(a, b, n, k)] = epsilon
+    if monte_carlo_cache is not None:
+        monte_carlo_cache[(a, b, n, k)] = epsilon
 
     return epsilon
 

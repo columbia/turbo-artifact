@@ -1,6 +1,7 @@
 import json
 import math
 from pathlib import Path
+
 import pandas as pd
 import typer
 from loguru import logger
@@ -116,8 +117,8 @@ def main(
     requests_type: str = "1",  # 1:1:1:2:4:8:16:32  # 3/8 to select 1 block
     utility: float = 0.05,
     utility_beta: float = 0.001,
-    queries: str = "covid19/covid19_queries/all.queries.json",
-    workload_dir: str = "covid19/covid19_workload",
+    queries: str = REPO_ROOT.joinpath("data/covid19/covid19_queries/all.queries.json"),
+    workload_dir: str = REPO_ROOT.joinpath("data/covid19/covid19_workload"),
     blocks_metadata_path: str = REPO_ROOT.joinpath(
         "data/covid19/covid19_data/blocks/metadata.json"
     ),
