@@ -120,7 +120,7 @@ class Executor:
                 run_types[str(run_op.blocks)] = "PMW"
 
             elif isinstance(run_op, RunTimestampsPMW):
-                run_return_value = self.run_pmw(
+                run_return_value = self.run_timestamps_pmw(
                     run_op, task.query, task.query_db_format
                 )
                 run_types[str(run_op.blocks)] = "PMW"
@@ -370,6 +370,7 @@ class Executor:
         assert run_op.epsilon <= pmw.epsilon
 
         noisy_result, run_budget, _ = pmw.run(query, true_result)
+        # time.sleep(3)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv
 
