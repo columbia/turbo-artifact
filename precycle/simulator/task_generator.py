@@ -64,7 +64,7 @@ class TaskGenerator:
             query, attribute_sizes=attribute_sizes
         )
         # Query format for running on histograms
-        if "query_path" in task_row and not self.config.mechanism.type == "PMW-Timestamps":
+        if "query_path" in task_row:
             # Load tensor/query from disk if stored
             with open(task_row["query_path"], "rb") as f:
                 query_tensor = pickle.load(f)
