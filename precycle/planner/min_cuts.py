@@ -6,7 +6,6 @@ from sortedcollections import OrderedSet
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
-    get_epsilon_isotropic_laplace_concentration,
     get_epsilon_isotropic_laplace_monte_carlo,
     get_pmw_epsilon,
 )
@@ -125,4 +124,7 @@ class MinCuts(Planner):
             # for it because we do not do the check here any more
             plan = A(l=run_ops, sv_check=sv_check, cost=0)
 
+        elif self.mechanism_type == "TimestampsPMW":
+            raise NotImplementedError
+            
         return plan

@@ -27,7 +27,7 @@ class MockCache:
         if self.mechanism_type == "Laplace":
             if self.config.exact_match_caching:
                 self.exact_match_cache = MockExactMatchCache(config)
-        elif self.mechanism_type == "PMW":
+        elif self.mechanism_type in {"PMW", "TimestampsPMW"}:
             self.pmw_cache = MockPMWCache(config)
         elif self.mechanism_type == "Hybrid":
             if self.config.exact_match_caching:

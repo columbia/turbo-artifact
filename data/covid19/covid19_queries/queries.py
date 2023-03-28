@@ -10,25 +10,27 @@ from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
-
 def powerset(iter):
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
-
+# Compact dictionary representation
 def create_all_queries(attributes_domain_sizes):
     queries = []
     attr_values = []
     for domain_size in attributes_domain_sizes:
         attr_values += [list(powerset(range(domain_size)))[1:]]  # Exclude empty set
     queries = list(product(*attr_values))
-    query_tensors = []
+    query_dicts = []
     for query in queries:
-        query = [list(tup) for tup in query]
-        query = [list(tup) for tup in product(*query)]
-        query_tensors.append(query)
-    return query_tensors
-
+        query_dict = {}
+        for attr, value in enumerate(query):
+            value = value[0] if len(value) == 1 else list(value)
+            query_dict[str(attr)] = value
+        query_dicts.append(query_dict)
+    
+    return query_dicts
+    
 
 def create_all_point_queries(attributes_domain_sizes):
     attribute_values = [
@@ -119,15 +121,6 @@ def create_8_queries():
     return query_tensors
 
 
-def create_compact_marginals(attributes_domain_sizes):
-    query_1 = {0: 1}
-    query_2 = {1: 0, 2: 1}
-
-    # TODO: Add support for OR queries
-    # query_2 = {0: [1,2]}
-    return [query_1, query_2]
-
-
 def write_queries(queries_dir, workload, query_tensors):
     queries_path = Path(queries_dir).joinpath(f"{workload}.queries.json")
 
@@ -159,36 +152,30 @@ def main(
     attributes_domain_sizes = blocks_metadata["attributes_domain_sizes"]
 
     # Create all types
-    query_tensors = create_8_queries()
-    write_queries(queries_dir, "8", query_tensors)
+    # query_tensors = create_8_queries()
+    # write_queries(queries_dir, "8", query_tensors)
 
-    query_tensors = create_all_point_queries(attributes_domain_sizes)
-    write_queries(queries_dir, "all_point_queries", query_tensors)
+    # query_tensors = create_all_point_queries(attributes_domain_sizes)
+    # write_queries(queries_dir, "all_point_queries", query_tensors)
 
-    query_tensors = create_all_2way_marginals(attributes_domain_sizes)
-    write_queries(queries_dir, "all_2way_marginals", query_tensors)
+    # query_tensors = create_all_2way_marginals(attributes_domain_sizes)
+    # write_queries(queries_dir, "all_2way_marginals", query_tensors)
 
-    query_tensors = create_2way_marginal_mix(attributes_domain_sizes)
-    write_queries(queries_dir, "2way_marginal_mix", query_tensors)
+    # query_tensors = create_2way_marginal_mix(attributes_domain_sizes)
+    # write_queries(queries_dir, "2way_marginal_mix", query_tensors)
 
-    query_tensors = create_all_3way_marginals(attributes_domain_sizes)
-    write_queries(queries_dir, "all_3way_marginals", query_tensors)
+    # query_tensors = create_all_3way_marginals(attributes_domain_sizes)
+    # write_queries(queries_dir, "all_3way_marginals", query_tensors)
 
-    query_tensors = create_all_2way_marginals(attributes_domain_sizes)
-    query_tensors += create_all_3way_marginals(attributes_domain_sizes)
-    write_queries(queries_dir, "all_2way_3way_marginals", query_tensors)
+    # query_tensors = create_all_2way_marginals(attributes_domain_sizes)
+    # query_tensors += create_all_3way_marginals(attributes_domain_sizes)
+    # write_queries(queries_dir, "all_2way_3way_marginals", query_tensors)
 
     query_tensors = create_all_queries(attributes_domain_sizes)
     write_queries(queries_dir, "all", query_tensors)
 
-    query_tuples = create_compact_marginals(attributes_domain_sizes)
-    write_queries(queries_dir, "compact_marginals", query_tuples)
-
-    # Using the query tensors from the "all" workload  type to create various synthetic workloads
-    # workload_sizes = [10, 100, 1000, 5000, 10000, 15000, 20000, 25000, 30000, 34000]
-    # for workload_size in workload_sizes:
-    #     sample = random.sample(query_tensors, workload_size)
-    #     write_queries(queries_dir, f"synthetic.{workload_size}", sample)
+    # query_tuples = create_compact_marginals(attributes_domain_sizes)
+    # write_queries(queries_dir, "compact_marginals", query_tuples)
 
 
 if __name__ == "__main__":

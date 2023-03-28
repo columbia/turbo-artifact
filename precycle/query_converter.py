@@ -30,12 +30,14 @@ class QueryConverter:
         )
         return sql
 
-    def convert_to_sparse_tensor(self, query_vector):
+    def convert_to_sparse_tensor(self, query_vector, attribute_domain_sizes=None):
+        if attribute_domain_sizes is None:
+            attribute_domain_sizes = self.attribute_domain_sizes
         # print("length query", len(query_vector))
         tensor = build_sparse_tensor(
             bin_indices=query_vector,
             values=[1.0] * len(query_vector),
-            attribute_sizes=self.attribute_domain_sizes,
+            attribute_sizes=attribute_domain_sizes,
         )
         return tensor
 

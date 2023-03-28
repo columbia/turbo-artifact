@@ -43,7 +43,7 @@ class Simulator:
                     experiment_name=self.config.logs.mlflow_experiment_id
                 )
             except Exception:
-                experiment_id = mlflow.create_experiment(name="precycle")
+                experiment_id = mlflow.create_experiment(name=self.config.logs.mlflow_experiment_id)
                 print(f"New MLflow experiment created: {experiment_id}")
 
         try:
@@ -53,6 +53,29 @@ class Simulator:
             logger.error("Dataset metadata must have be created first..")
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
+        
+        if self.config.mechanism.type == "TimestampsPMW":
+            # Extend the attributes domain sizes with the domain size of the 'blocks' attribute
+            max_blocks = int(self.config.blocks.max_num)
+            # Must run only in the static case
+            assert max_blocks == int(self.config.blocks.initial_num)
+            pmw_attribute_names = self.config.blocks_metadata.attribute_names + ["blocks"]
+            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
+            pmw_domain_size = self.config.blocks_metadata.domain_size * max_blocks
+
+        else:
+            pmw_attribute_names = self.config.blocks_metadata.attribute_names
+            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes
+            pmw_domain_size = self.config.blocks_metadata.domain_size
+
+            
+        self.config.blocks_metadata.update({"pmw_attribute_names": pmw_attribute_names,
+                                            "pmw_attributes_domain_sizes": pmw_attributes_domain_sizes,
+                                            "pmw_domain_size": pmw_domain_size})
+        
+        print(self.config.blocks_metadata.pmw_attribute_names)
+        print(self.config.blocks_metadata.pmw_attributes_domain_sizes)
+        print(self.config.blocks_metadata.pmw_domain_size)
 
         if self.config.enable_random_seed:
             random.seed(None)
@@ -104,10 +127,6 @@ class Simulator:
             self.env.run()
 
             if self.config.logs.save:
-                # config = OmegaConf.to_object(self.config)
-                # config["blocks_metadata"] = {}
-                # config["blocks"]["block_requests_pattern"] = {}
-                # mlflow.log_params(config)
                 logs = get_logs(
                     self.rm.query_processor.tasks_info,
                     self.rm.budget_accountant.dump(),
