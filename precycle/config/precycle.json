@@ -8,11 +8,11 @@
     "beta": 0.001,
     "n_processes": 1,
     "mechanism": {
-        "type": "TimestampsPMW",
+        "type": "Laplace",
         "probabilistic_cfg": {
-            "learning_rate": 0.2,
+            "learning_rate": "0:2_50:0.5_100:0.1",
             "heuristic": "bin_visits:100-10",
-            "bootstrapping": false
+            "bootstrapping": true
         }
     },
     "cache": {
@@ -20,10 +20,9 @@
         "port": 6379
     },
     "planner": {
-        "method": "NoCuts",
+        "method": "MinCuts",
         "monte_carlo": true,
-        "monte_carlo_N": 10000,
-        "monte_carlo_cache": true
+        "monte_carlo_N": 10000
     },
     "budget_accountant": {
         "host": "localhost",
@@ -39,29 +38,18 @@
         "password": "postgres"
     },
     "blocks": {
-        "initial_num": 10,
-        "max_num": 10,
+        "initial_num": 1,
+        "max_num": 50,
         "arrival_interval": 1,
         "block_data_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks",
         "block_metadata_path": "/home/kelly/precycle/data/covid19/covid19_data/blocks/metadata.json",
-        "block_requests_pattern": [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10
-        ]
+        "block_requests_pattern": [1, 1, 1, 1, 1, 2, 4, 8, 16, 32, 50]
     },
     "tasks": {
         "path": "/home/kelly/precycle/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
-        "block_selection_policy": "RandomBlocks",
-        "avg_num_tasks_per_block": 2000,
-        "max_num": 20e3,
+        "block_selection_policy": "LatestBlocks",
+        "avg_num_tasks_per_block": 6e3,
+        "max_num": 300e3,
         "initial_num": 0,
         "zipf_k": 0
     },
@@ -77,7 +65,7 @@
         "verbose": false,
         "save": true,
         "mlflow": true,
-        "mlflow_experiment_id": "timestamps-pmw",
+        "mlflow_experiment_id": "precycle-2",
         "loguru_level": "INFO",
         "log_every_n_tasks": 100,
         "print_pid": false

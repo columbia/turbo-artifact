@@ -156,9 +156,7 @@ class Executor:
                     status_message = "sv_failed"
                     print("sv failed, task: ", task.id)
                 run_metadata["sv_check_status"].append(status)
-                sv_id = self.cache.sparse_vectors.get_lowest_common_ancestor(
-                    task.blocks
-                )
+                sv_id = task.blocks
                 run_metadata["sv_node_id"].append(sv_id)
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
@@ -183,14 +181,12 @@ class Executor:
         4) Increases the heuristic threshold of participating histograms if check failed.
         """
 
-        # Fetches the SV of the lowest common ancestor of <blocks>
-        node_id = self.cache.sparse_vectors.get_lowest_common_ancestor(blocks)
-        sv = self.cache.sparse_vectors.read_entry(node_id)
+        sv = self.cache.sparse_vectors.read_entry(blocks)
         if not sv:
-            sv = self.cache.sparse_vectors.create_new_entry(node_id)
+            sv = self.cache.sparse_vectors.create_new_entry(blocks)
 
         # All blocks covered by the SV must pay
-        blocks_to_pay = range(node_id[0], node_id[1] + 1)
+        blocks_to_pay = range(blocks[0], blocks[1] + 1)
         initialization_budget = (
             BasicBudget(3 * sv.epsilon)
             if self.config.puredp
@@ -200,35 +196,15 @@ class Executor:
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
         if not sv.initialized:
             sv.initialize()
+            print("\n\nSV Initialization")
             for block in blocks_to_pay:
-                # If the block exists it has to pay, if it doesn't exist it will pay the first time the SV will be used again after it arrives
-                if self.budget_accountant.get_block_budget(block) is not None:
-                    if block not in budget_per_block:
-                        budget_per_block[block] = initialization_budget
-                    else:
-                        budget_per_block[block] += initialization_budget
-                        # print(budget_per_block)
+                if block not in budget_per_block:
+                    budget_per_block[block] = initialization_budget
                 else:
-                    # Set future block's outstanding payment
-                    if block not in sv.outstanding_payment_blocks:
-                        sv.outstanding_payment_blocks[block] = 0
-                    sv.outstanding_payment_blocks[block] += 1
-        else:
-            # If it has been initialized but not all the blocks it covers had the opportunity to pay because they didn't exist yet let them pay now
-            for block in blocks_to_pay:
-                # If block hasn't paid yet and it now exists in the system make it pay now
-                if (
-                    block in sv.outstanding_payment_blocks
-                    and self.budget_accountant.get_block_budget(block) is not None
-                ):
-                    # Make block pay for all outstanding payments
-                    pay = initialization_budget * sv.outstanding_payment_blocks[block]
-                    if block not in budget_per_block:
-                        budget_per_block[block] = pay
-                    else:
-                        budget_per_block[block] += pay
-                    del sv.outstanding_payment_blocks[block]
-
+                    budget_per_block[block] += initialization_budget
+                print(f'\tblock {block}, pays {initialization_budget.epsilon}')
+                # print(budget_per_block)
+   
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
@@ -363,6 +339,8 @@ class Executor:
 
         total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         true_result = absolute_true_result / total_blocks_size
+        print("true_result", true_result)
+
         
         # We can't run a powerful query using a weaker PMW
         assert run_op.alpha <= pmw.alpha
