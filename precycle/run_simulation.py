@@ -2,6 +2,7 @@ import json
 import os
 import random
 import time
+from pathlib import Path
 
 import mlflow
 import numpy as np
@@ -17,7 +18,8 @@ from precycle.planner.no_cuts import NoCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, get_logs, save_logs, set_run_key
+from precycle.utils.utils import (DEFAULT_CONFIG_FILE, LOGS_PATH, REPO_ROOT,
+                                  get_logs, save_logs, set_run_key)
 
 app = typer.Typer()
 
@@ -46,11 +48,19 @@ class Simulator:
                 experiment_id = mlflow.create_experiment(name=self.config.logs.mlflow_experiment_id)
                 print(f"New MLflow experiment created: {experiment_id}")
 
+        # Retrocompatible with hardcoded paths
+        for a,b in [("blocks", "block_data_path"), ("blocks", "block_metadata_path"), ("tasks", "path")]:
+            p = Path(self.config[a][b])
+            if not p.exists():
+                self.config[a][b] = REPO_ROOT.joinpath(p)
+
         try:
             with open(self.config.blocks.block_metadata_path) as f:
                 blocks_metadata = json.load(f)
-        except NameError:
+        except Exception as e:
             logger.error("Dataset metadata must have be created first..")
+            raise e
+        
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
         
