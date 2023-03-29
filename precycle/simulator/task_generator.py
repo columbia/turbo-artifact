@@ -68,9 +68,9 @@ class TaskGenerator:
             # Load tensor/query from disk if stored
             with open(task_row["query_path"], "rb") as f:
                 query_tensor = pickle.load(f)
-
         else:
-            query_tensor = self.query_converter.convert_to_sparse_tensor(query_vector).to_dense()
+            query_tensor = self.query_converter.convert_to_sparse_tensor(query_vector)
+        query_tensor = query_tensor.to_dense()
 
         # Query format for running using PSQL module (runs on blocks)
         query_db_format = (

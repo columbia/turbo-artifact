@@ -196,15 +196,14 @@ class Executor:
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
         if not sv.initialized:
             sv.initialize()
-            print("\n\nSV Initialization")
+            # print("\n\nSV Initialization")
             for block in blocks_to_pay:
                 if block not in budget_per_block:
                     budget_per_block[block] = initialization_budget
                 else:
                     budget_per_block[block] += initialization_budget
-                print(f'\tblock {block}, pays {initialization_budget.epsilon}')
-                # print(budget_per_block)
-   
+                # print(f'\tblock {block}, pays {initialization_budget.epsilon}')
+            # print(budget_per_block, "n")
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it

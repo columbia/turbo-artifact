@@ -66,7 +66,6 @@ class PMW:
 
         # Check the public histogram for free. Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
-        print("noisy result", predicted_output)
 
         # Add the sparse vector noise
         true_error = abs(true_output - predicted_output)

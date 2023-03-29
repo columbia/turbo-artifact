@@ -59,7 +59,7 @@ class SparseVectors:
         # node id covers exactly the requested blocks
         (i, j) = node_id
         n = get_blocks_size((i, j), self.blocks_metadata)
-        print("\n\t\tSV new entry on", (i,j), "n", n)
+        # print("\n\t\tSV new entry on", (i,j), "n", n)
        
         sparse_vector = SparseVector(
             id=node_id,
