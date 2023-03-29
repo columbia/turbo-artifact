@@ -23,6 +23,7 @@ def experiments_start_and_join(experiments):
     for p in experiments:
         p.join()
 
+
 def caching_static_multiblock_PMW_time_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["34425queries.privacy_tasks.csv"]
@@ -31,7 +32,7 @@ def caching_static_multiblock_PMW_time_covid19(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"LR2-test-pmw-timestamps/{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"{dataset}/timestampsPMW"
     experiments = []
     config = {
         "global_seed": 64,
@@ -56,7 +57,7 @@ def caching_static_multiblock_PMW_time_covid19(dataset):
         "bootstrapping": [False],
         "exact_match_caching": [True],
     }
-    
+
     config["exact_match_caching"] = [True]
     config["mechanism"] = ["TimestampsPMW"]
     config["planner"] = ["NoCuts"]
@@ -77,7 +78,6 @@ def caching_static_multiblock_PMW_time_covid19(dataset):
     # )
     experiments_start_and_join(experiments)
     analyze_multiblock(logs_dir)
-
 
 
 # Covid19 Dataset Experiments
@@ -245,7 +245,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"test/{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
         "global_seed": 64,
@@ -270,7 +270,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         "bootstrapping": [False],
         "exact_match_caching": [True],
     }
-    
+
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
@@ -306,7 +306,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
-    block_requests_pattern = [1]*10 + list(range(2, 51))
+    block_requests_pattern = [1] * 10 + list(range(2, 51))
     logs_dir = f"{dataset}/streaming_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
@@ -346,7 +346,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    
+
     config["planner"] = ["MinCuts"]
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:100-5"]
@@ -448,7 +448,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         "initial_tasks": [0],
         "alpha": [0.05],
         "beta": [0.001],
-        "zipf_k": [0], #, 1],
+        "zipf_k": [0],
         "heuristic": [""],
         "log_every_n_tasks": 500,
         "learning_rate": [2],
@@ -472,7 +472,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
 
     config["planner"] = ["MinCuts"]
     config["mechanism"] = ["Hybrid"]
-    config["heuristic"] = ["bin_visits:2-5", "bin_visits:5-5"]
+    config["heuristic"] = ["bin_visits:2-5"]
     config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
     config["bootstrapping"] = [False]
 
@@ -485,7 +485,6 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
     analyze_multiblock(f"ray/{logs_dir}")
 
 
-
 def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["2485queries.privacy_tasks.csv"]
@@ -493,7 +492,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
     logs_dir = f"{dataset}/streaming_multiblock_laplace_vs_hybrid"
-    block_requests_pattern = [1]*10 + list(range(2, 51))
+    block_requests_pattern = [1] * 10 + list(range(2, 51))
     experiments = []
     config = {
         "global_seed": 64,

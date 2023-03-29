@@ -231,8 +231,9 @@ def get_logs(
         config[key] = value
     return config
 
+
 def set_run_key(config_dict):
-        # Fix a key for each run
+    # Fix a key for each run
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
@@ -280,6 +281,7 @@ def set_run_key(config_dict):
         if warmup == "True":
             key += "+warmup"
     return key, mechanism_type, heuristic, warmup, learning_rate
+
 
 def save_logs(log_dict):
     log_path = LOGS_PATH.joinpath(

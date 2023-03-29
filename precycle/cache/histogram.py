@@ -182,6 +182,7 @@ def k_way_marginal_query_list(
     # Now we take the cartesian product of the attributes domains
     return list(product(*domain_per_attribute))
 
+
 def query_dict_to_list(
     attribute_to_value: Dict[int, int],
     attribute_sizes: List[int],
@@ -217,6 +218,7 @@ def query_dict_to_list(
 
     # Now we take the cartesian product of the attributes domains
     return list(product(*domain_per_attribute))
+
 
 def query_dict_to_list(
     attribute_to_value: Dict[int, int],

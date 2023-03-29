@@ -17,7 +17,13 @@ from precycle.planner.no_cuts import NoCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, get_logs, save_logs, set_run_key
+from precycle.utils.utils import (
+    DEFAULT_CONFIG_FILE,
+    LOGS_PATH,
+    get_logs,
+    save_logs,
+    set_run_key,
+)
 
 app = typer.Typer()
 
@@ -43,7 +49,9 @@ class Simulator:
                     experiment_name=self.config.logs.mlflow_experiment_id
                 )
             except Exception:
-                experiment_id = mlflow.create_experiment(name=self.config.logs.mlflow_experiment_id)
+                experiment_id = mlflow.create_experiment(
+                    name=self.config.logs.mlflow_experiment_id
+                )
                 print(f"New MLflow experiment created: {experiment_id}")
 
         try:
@@ -53,26 +61,35 @@ class Simulator:
             logger.error("Dataset metadata must have be created first..")
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
-        
+
         if self.config.mechanism.type == "TimestampsPMW":
             # Extend the attributes domain sizes with the domain size of the 'blocks' attribute
             max_blocks = int(self.config.blocks.max_num)
             # Must run only in the static case
             assert max_blocks == int(self.config.blocks.initial_num)
-            pmw_attribute_names = self.config.blocks_metadata.attribute_names + ["blocks"]
-            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
+            pmw_attribute_names = self.config.blocks_metadata.attribute_names + [
+                "blocks"
+            ]
+            pmw_attributes_domain_sizes = (
+                self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
+            )
             pmw_domain_size = self.config.blocks_metadata.domain_size * max_blocks
 
         else:
             pmw_attribute_names = self.config.blocks_metadata.attribute_names
-            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes
+            pmw_attributes_domain_sizes = (
+                self.config.blocks_metadata.attributes_domain_sizes
+            )
             pmw_domain_size = self.config.blocks_metadata.domain_size
 
-            
-        self.config.blocks_metadata.update({"pmw_attribute_names": pmw_attribute_names,
-                                            "pmw_attributes_domain_sizes": pmw_attributes_domain_sizes,
-                                            "pmw_domain_size": pmw_domain_size})
-        
+        self.config.blocks_metadata.update(
+            {
+                "pmw_attribute_names": pmw_attribute_names,
+                "pmw_attributes_domain_sizes": pmw_attributes_domain_sizes,
+                "pmw_domain_size": pmw_domain_size,
+            }
+        )
+
         print(self.config.blocks_metadata.pmw_attribute_names)
         print(self.config.blocks_metadata.pmw_attributes_domain_sizes)
         print(self.config.blocks_metadata.pmw_domain_size)
@@ -120,7 +137,7 @@ class Simulator:
         config["blocks"]["block_requests_pattern"] = {}
 
         key, _, _, _, _ = set_run_key(config)
-        key += "_zip_" + str(config['tasks']['zipf_k'])
+        key += "_zip_" + str(config["tasks"]["zipf_k"])
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)

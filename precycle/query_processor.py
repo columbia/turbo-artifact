@@ -56,7 +56,7 @@ class QueryProcessor:
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
             result, status = self.executor.execute_plan(plan, task, run_metadata)
-            print(
+            logger.info(
                 colored(
                     f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
                     "green",
@@ -73,7 +73,9 @@ class QueryProcessor:
                         self.total_budget_spent_all_blocks += budget.epsilon
 
                 if self.counter % 100 == 0:
-                    mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
+                    mlflow_log(
+                        f"AllBlocks", self.total_budget_spent_all_blocks, task.id
+                    )
 
             status = FINISHED
             # logger.info(
@@ -84,12 +86,12 @@ class QueryProcessor:
             # )
         else:
             status = FAILED
-            logger.info(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
-                    "red",
-                )
-            )
+            # logger.info(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
+            #         "red",
+            #     )
+            # )
         self.counter += 1
         self.tasks_info.append(
             TaskInfo(task, status, planning_time, run_metadata, result).dump()

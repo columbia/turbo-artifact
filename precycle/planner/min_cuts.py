@@ -126,5 +126,5 @@ class MinCuts(Planner):
 
         elif self.mechanism_type == "TimestampsPMW":
             raise NotImplementedError
-            
+
         return plan
