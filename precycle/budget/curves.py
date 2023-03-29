@@ -3,8 +3,8 @@ import warnings
 from typing import List
 
 import numpy as np
-from autodp.mechanism_zoo import LaplaceMechanism
-from autodp.transformer_zoo import AmplificationBySampling
+# from autodp.mechanism_zoo import LaplaceMechanism
+# from autodp.transformer_zoo import AmplificationBySampling
 from opacus.accountants.analysis.rdp import compute_rdp
 
 from precycle.budget import ALPHAS, RenyiBudget
@@ -215,18 +215,18 @@ class SubsampledGaussianCurve(RenyiBudget):
         return cls(sampling_probability, sigma, steps, alpha_list)
 
 
-class SubsampledLaplaceCurve(RenyiBudget):
-    def __init__(
-        self,
-        sampling_probability: float,
-        noise_multiplier: float,
-        steps: int,
-        alpha_list: List[float] = ALPHAS,
-    ) -> None:
+# class SubsampledLaplaceCurve(RenyiBudget):
+#     def __init__(
+#         self,
+#         sampling_probability: float,
+#         noise_multiplier: float,
+#         steps: int,
+#         alpha_list: List[float] = ALPHAS,
+#     ) -> None:
 
-        curve = AmplificationBySampling(PoissonSampling=True)(
-            LaplaceMechanism(b=noise_multiplier), sampling_probability
-        )
+#         curve = AmplificationBySampling(PoissonSampling=True)(
+#             LaplaceMechanism(b=noise_multiplier), sampling_probability
+#         )
 
-        orders = {alpha: curve.get_RDP(alpha) * steps for alpha in alpha_list}
-        super().__init__(orders)
+#         orders = {alpha: curve.get_RDP(alpha) * steps for alpha in alpha_list}
+#         super().__init__(orders)

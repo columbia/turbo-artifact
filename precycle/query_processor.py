@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 from typing import Dict, Optional
 
 from loguru import logger
@@ -20,6 +21,7 @@ class QueryProcessor:
 
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
+        self.counters = defaultdict(int)
 
         self.counter = 0
 
@@ -55,6 +57,7 @@ class QueryProcessor:
             # print("Planning", planning_time)
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            # Hmm status seems unused?
             result, status = self.executor.execute_plan(plan, task, run_metadata)
             print(
                 colored(
@@ -67,6 +70,11 @@ class QueryProcessor:
         if result is not None:
 
             if self.config.logs.mlflow:
+                
+                print("run_metadata", run_metadata)
+                1/0
+                
+                
                 budget_per_block_list = run_metadata["budget_per_block"]
                 for budget_per_block in budget_per_block_list:
                     for _, budget in budget_per_block.items():
