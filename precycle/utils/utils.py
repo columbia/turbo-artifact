@@ -3,6 +3,7 @@ import math
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import mlflow
 import pandas as pd
@@ -20,6 +21,15 @@ FAILED = "failed"
 PENDING = "pending"
 FINISHED = "finished"
 
+LAPLACE_RUNTYPE = "Laplace"
+HISTOGRAM_RUNTYPE = "Histogram"
+PMW_RUNTYPE = "PMW"
+
+def get_node_key(blocks: Tuple[int, int]) -> str:
+    """For some reason logs are using strings. 
+       You can use this for cache keys too.
+    """
+    return str(blocks)
 
 def mlflow_log(key, value, step):
     mlflow_run = mlflow.active_run()

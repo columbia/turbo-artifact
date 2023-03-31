@@ -2,11 +2,13 @@ import time
 from collections import defaultdict
 from typing import Dict, Optional
 
+import numpy as np
 from loguru import logger
 from termcolor import colored
 
 from precycle.executor import Executor
 from precycle.task import Task, TaskInfo
+from precycle.utils.logs import compute_hit_scores
 from precycle.utils.utils import FAILED, FINISHED, mlflow_log
 
 
@@ -21,8 +23,10 @@ class QueryProcessor:
 
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
-        self.counters = defaultdict(int)
-
+        
+        
+        self.score_counters = defaultdict(int)
+        self.score_sliding_windows = defaultdict(list)
         self.counter = 0
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
@@ -39,7 +43,9 @@ class QueryProcessor:
             "sv_node_id": [],
             "run_types": [],
             "budget_per_block": [],
+            "laplace_hits":[],
         }
+
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while result is None and (not status or status == "sv_failed"):
@@ -68,12 +74,21 @@ class QueryProcessor:
             round += 1
 
         if result is not None:
-
+ 
             if self.config.logs.mlflow:
                 
-                print("run_metadata", run_metadata)
-                1/0
+                hit_scores = compute_hit_scores(**run_metadata)
                 
+                for score_name, score_value in hit_scores.items():
+                    if not np.isnan(score_value):
+                        # Not so meaningful for cumulative SV or Laplace score
+                        self.score_counters[f"cumulative_{score_name}"] += score_value
+                                
+                    # Sliding averages
+                    if len(self.score_sliding_windows[score_name]) >= 100:
+                        self.score_sliding_windows[score_name].pop(0) # Drop oldest score
+                    self.score_sliding_windows[score_name].append(score_value)
+                    
                 
                 budget_per_block_list = run_metadata["budget_per_block"]
                 for budget_per_block in budget_per_block_list:
@@ -82,6 +97,12 @@ class QueryProcessor:
 
                 if self.counter % 100 == 0:
                     mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
+                    
+                    for score_name in hit_scores.keys():
+                        # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
+                        non_nan_scores = np.array([score for score in self.score_sliding_windows[score_name] if not np.isnan(score)])
+                        mlflow_log(f"sliding_{score_name}", np.mean(non_nan_scores), task.id)
+                        mlflow_log(f"cumulative_{score_name}", self.score_counters[f"cumulative_{score_name}"], task.id)
 
             status = FINISHED
             # logger.info(
