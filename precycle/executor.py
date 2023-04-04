@@ -93,6 +93,7 @@ class Executor:
 
         node_sizes = {}
         laplace_hits = {}
+        pmw_hits = {}
         for run_op in plan.l:
             
             node_key = get_node_key(run_op.blocks)
@@ -120,16 +121,19 @@ class Executor:
                 run_types[node_key] = HISTOGRAM_RUNTYPE
 
             elif isinstance(run_op, RunPMW):
-                run_return_value = self.run_pmw(
+                run_return_value, pmw_metadata = self.run_pmw(
                     run_op, task.query, task.query_db_format
                 )
                 run_types[node_key] = PMW_RUNTYPE
+                pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
+                
 
             elif isinstance(run_op, RunTimestampsPMW):
-                run_return_value = self.run_timestamps_pmw(
+                run_return_value, pmw_metadata = self.run_timestamps_pmw(
                     run_op, task.query, task.query_db_format
                 )
                 run_types[node_key] = PMW_RUNTYPE
+                pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
 
 
             # Set run budgets for participating blocks
@@ -147,6 +151,8 @@ class Executor:
         run_metadata["node_sizes"] = node_sizes
         run_metadata["total_size"] = total_size
         run_metadata["laplace_hits"].append(laplace_hits)
+        run_metadata["pmw_hits"].append(pmw_hits)
+        
         
         
         if noisy_partial_results:
@@ -169,7 +175,7 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
-                    print("sv failed, task: ", task.id)
+                    logger.debug("sv failed, task: ", task.id)
                 run_metadata["sv_check_status"].append(status)
                 sv_id = task.blocks
                 run_metadata["sv_node_id"].append(sv_id)
@@ -213,13 +219,13 @@ class Executor:
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
         if not sv.initialized:
             sv.initialize()
-            print("\n\nSV Initialization")
+            # print("\n\nSV Initialization")
             for block in blocks_to_pay:
                 if block not in budget_per_block:
                     budget_per_block[block] = initialization_budget
                 else:
                     budget_per_block[block] += initialization_budget
-                print(f'\tblock {block}, pays {initialization_budget.epsilon}')
+                # print(f'\tblock {block}, pays {initialization_budget.epsilon}')
                 # print(budget_per_block)
    
         # Now check whether we pass or fail the SV check
@@ -234,7 +240,7 @@ class Executor:
                     )
         else:
             sv_check_status = True
-            print(colored("FREE LUNCH - yum yum\n", "blue"))
+            logger.debug("FREE LUNCH - yum yum\n", "blue")
 
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
@@ -350,9 +356,9 @@ class Executor:
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon
 
-        noisy_result, run_budget, _ = pmw.run(query, true_result)
+        noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_metadata
 
     def run_timestamps_pmw(self, run_op, query, query_db_format):
         # Run_op blocks contains all system's blocks in this case
@@ -375,8 +381,8 @@ class Executor:
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon
 
-        noisy_result, run_budget, _ = pmw.run(query, true_result)
+        noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
         # time.sleep(3)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_metadata
 

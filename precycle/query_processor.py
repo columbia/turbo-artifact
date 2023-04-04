@@ -65,7 +65,7 @@ class QueryProcessor:
             # NOTE: if status is sth else like "out-of-budget" then it stops
             # Hmm status seems unused?
             result, status = self.executor.execute_plan(plan, task, run_metadata)
-            print(
+            logger.debug(
                 colored(
                     f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
                     "green",
@@ -101,7 +101,8 @@ class QueryProcessor:
                     for score_name in hit_scores.keys():
                         # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
                         non_nan_scores = np.array([score for score in self.score_sliding_windows[score_name] if not np.isnan(score)])
-                        mlflow_log(f"sliding_{score_name}", np.mean(non_nan_scores), task.id)
+                        if len(non_nan_scores) > 0:
+                            mlflow_log(f"sliding_{score_name}", np.mean(non_nan_scores), task.id)
                         mlflow_log(f"cumulative_{score_name}", self.score_counters[f"cumulative_{score_name}"], task.id)
 
             status = FINISHED

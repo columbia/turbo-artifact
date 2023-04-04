@@ -2,13 +2,15 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-from precycle.utils.utils import HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE, LOGS_PATH
+from precycle.utils.utils import (HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE,
+                                  LOGS_PATH, PMW_RUNTYPE)
 
 
 def compute_hit_scores(
     sv_check_status: List,
     sv_node_id: List,
     laplace_hits: Dict[str, float],
+    pmw_hits: Dict[str, float],
     run_types: List,
     budget_per_block: List[Dict],
     node_sizes: List[int],
@@ -52,9 +54,13 @@ def compute_hit_scores(
         elif run_type == HISTOGRAM_RUNTYPE:
             # Hit = 1 if the global SV returns True (easy query), 0 otherwise, for every histogram node
             sv_score += node_size * int(sv_check_status[0])
-            sv_size += sv_score
+            sv_size += node_size
+        elif run_type == PMW_RUNTYPE:
+            # No histograms, only a single PMW or a tree of PMWs. One SV per PMW.
+            sv_score += node_size * pmw_hits[0][node_key]
+            sv_size += node_size
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Run type {run_type} not implemented")
             
     total_score = (laplace_score + sv_score) / total_size
     laplace_score /= laplace_size if laplace_size > 0 else np.NaN
