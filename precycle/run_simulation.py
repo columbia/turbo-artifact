@@ -19,7 +19,7 @@ from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
 from precycle.utils.utils import (DEFAULT_CONFIG_FILE, LOGS_PATH, REPO_ROOT,
-                                  get_logs, save_logs, set_run_key)
+                                  get_logs, mlflow_log, save_logs, set_run_key)
 
 app = typer.Typer()
 
@@ -134,6 +134,10 @@ class Simulator:
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
+            try:
+                mlflow_log(f"lr", self.config.mechanism.probabilistic_cfg.learning_rate, 0)
+            except Exception as e:
+                logger.warning(e)
             self.env.run()
 
             if self.config.logs.save:

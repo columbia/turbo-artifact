@@ -150,9 +150,10 @@ class Executor:
         # Modify metadata inplace (a bit ugly)
         run_metadata["node_sizes"] = node_sizes
         run_metadata["total_size"] = total_size
+        
+        # We append to the metadata because after SV resets we need to repeat the same query
         run_metadata["laplace_hits"].append(laplace_hits)
         run_metadata["pmw_hits"].append(pmw_hits)
-        
         
         
         if noisy_partial_results:
@@ -182,7 +183,6 @@ class Executor:
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
             
-            # NOTE: why are we appending to the metadata, always lists of one element?
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():

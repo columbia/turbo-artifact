@@ -1,10 +1,12 @@
-import os
-import ray
-import mlflow
 import datetime
-from ray import tune
+import os
+from typing import Any, Dict, List
+
+import mlflow
+import ray
 from loguru import logger
-from typing import List, Any, Dict
+from ray import tune
+
 from precycle.run_simulation import Simulator
 from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 
@@ -39,6 +41,7 @@ def grid_online(
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
     exact_match_caching: bool = [True],
+    mlflow_random_prefix: bool = [False]
 ):
 
     # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -91,6 +94,7 @@ def grid_online(
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
             "print_pid": False,
+            "mlflow_random_prefix": mlflow_random_prefix
         },
     }
 

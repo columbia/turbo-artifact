@@ -80,6 +80,7 @@
         "mlflow_experiment_id": "precycle",
         "loguru_level": "INFO",
         "log_every_n_tasks": 500,
-        "print_pid": true
+        "print_pid": true,
+        "mlflow_random_prefix": true
     }
 }

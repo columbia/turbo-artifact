@@ -242,7 +242,15 @@ def get_logs(
     return config
 
 def set_run_key(config_dict):
-        # Fix a key for each run
+    # Fix a key for each run
+    
+    
+    if config_dict["logs"].get("mlflow_random_prefix", False):
+        # Short nickname to identify runs, especially on long names that get cut by Plotly
+        key = str(uuid.uuid4())[:4]
+    else:
+        key = ""
+        
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
@@ -256,21 +264,21 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+TreeCache"
-        key = mechanism_type
+        key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        key = mechanism_type
+        key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "TimestampsPMW":
         mechanism_type = "TimestampsPMW"
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        key = mechanism_type
+        key += mechanism_type
 
     else:
         mechanism_type = "Hybrid"
@@ -286,7 +294,7 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+TreeCache"
-        key = mechanism_type + "+" + heuristic + "+lr" + learning_rate
+        key += mechanism_type + "+" + heuristic + "+lr" + learning_rate
         if warmup == "True":
             key += "+warmup"
     return key, mechanism_type, heuristic, warmup, learning_rate

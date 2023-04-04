@@ -11,6 +11,7 @@ from precycle.task import Task, TaskInfo
 from precycle.utils.logs import compute_hit_scores
 from precycle.utils.utils import FAILED, FINISHED, mlflow_log
 
+SLIDING_WINDOW_LENGTH = 1_000
 
 class QueryProcessor:
     def __init__(self, db, cache, planner, budget_accountant, config):
@@ -28,6 +29,13 @@ class QueryProcessor:
         self.score_counters = defaultdict(int)
         self.score_sliding_windows = defaultdict(list)
         self.counter = 0
+        
+        self.score_thresholds = {
+            0.5: False,
+            0.9: False,
+            0.95: False,
+            0.99: False,
+        }
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -43,7 +51,8 @@ class QueryProcessor:
             "sv_node_id": [],
             "run_types": [],
             "budget_per_block": [],
-            "laplace_hits":[],
+            "laplace_hits": [],
+            "pmw_hits": [],
         }
 
 
@@ -85,7 +94,7 @@ class QueryProcessor:
                         self.score_counters[f"cumulative_{score_name}"] += score_value
                                 
                     # Sliding averages
-                    if len(self.score_sliding_windows[score_name]) >= 100:
+                    if len(self.score_sliding_windows[score_name]) >= SLIDING_WINDOW_LENGTH:
                         self.score_sliding_windows[score_name].pop(0) # Drop oldest score
                     self.score_sliding_windows[score_name].append(score_value)
                     
@@ -102,7 +111,15 @@ class QueryProcessor:
                         # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
                         non_nan_scores = np.array([score for score in self.score_sliding_windows[score_name] if not np.isnan(score)])
                         if len(non_nan_scores) > 0:
-                            mlflow_log(f"sliding_{score_name}", np.mean(non_nan_scores), task.id)
+                            sliding_score = np.mean(non_nan_scores)
+                            
+                            for score_threshold in self.score_thresholds.keys():
+                                if self.score_thresholds[score_threshold] == False and sliding_score >= score_threshold:
+                                    # We passed a threshold for the first time
+                                    mlflow_log(f"sliding_{score_name}_threshold_{score_threshold}", self.counter, task.id)
+                                    self.score_thresholds[score_threshold] = True
+                            
+                            mlflow_log(f"sliding_{score_name}", sliding_score, task.id)
                         mlflow_log(f"cumulative_{score_name}", self.score_counters[f"cumulative_{score_name}"], task.id)
 
             status = FINISHED

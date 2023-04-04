@@ -1,10 +1,13 @@
-import os
-import typer
 import multiprocessing
-from experiments.ray_runner import grid_online
-from precycle.utils.utils import REPO_ROOT
-from notebooks.caching.utils import get_df, analyze_monoblock, analyze_multiblock
+import os
 from copy import deepcopy
+
+import typer
+
+from experiments.ray_runner import grid_online
+from notebooks.caching.utils import (analyze_monoblock, analyze_multiblock,
+                                     get_df)
+from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
@@ -217,6 +220,59 @@ def caching_monoblock_heuristics_covid19(dataset):
     )
     config["mechanism"] = ["Laplace"]
     config["heuristic"] = [""]
+    config["exact_match_caching"] = [True]
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
+    experiments_start_and_join(experiments)
+    analyze_monoblock(logs_dir)
+
+
+def convergence_covid19(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    task_paths = ["34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+    block_requests_pattern = [1]
+
+    logs_dir = f"{dataset}/monoblock/convergence"
+    experiments = []
+    config = {
+        "global_seed": 64,
+        "logs_dir": logs_dir,
+        "tasks_path": task_paths,
+        "blocks_path": blocks_path,
+        "blocks_metadata": blocks_metadata,
+        "block_requests_pattern": block_requests_pattern,
+        "planner": ["NoCuts"],
+        "mechanism": ["Hybrid"],
+        "initial_blocks": [1],
+        "max_blocks": [1],
+        "avg_num_tasks_per_block": [7e4],
+        "max_tasks": [7e4],
+        "initial_tasks": [0],
+        "alpha": [0.05],
+        "beta": [0.001],
+        "zipf_k": [1],
+        "heuristic": ["bin_visits:100-5", "bin_visits:0-0"],
+        "variance_reduction": [False],
+        "log_every_n_tasks": 100,
+        "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.4, 1],
+        "bootstrapping": [False],
+        "exact_match_caching": [False],
+        "mlflow_random_prefix": [True],
+    }
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
+    config["mechanism"] = ["Laplace"]
+    config["heuristic"] = [""]
+    config["learning_rate"] = [None]
     config["exact_match_caching"] = [True]
     experiments.append(
         multiprocessing.Process(
