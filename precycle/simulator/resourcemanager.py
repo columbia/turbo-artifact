@@ -1,5 +1,9 @@
+import pandas as pd
 import simpy
 from loguru import logger
+
+from precycle.simulator.task_generator import PoissonTaskGenerator
+from precycle.utils.utils import mlflow_log
 
 
 class LastItem:
@@ -31,6 +35,14 @@ class ResourceManager:
         self.task_production_terminated = self.env.event()
         self.block_consumption_terminated = self.env.event()
         self.task_consumption_terminated = self.env.event()
+ 
+        # Dirty validation metadata       
+        self.score_thresholds = {
+            0.5: False,
+            0.9: False,
+            0.95: False,
+            0.99: False,
+        }
 
     def start(self):
         self.daemon_clock = self.env.process(self.daemon_clock())
@@ -82,3 +94,35 @@ class ResourceManager:
 
             task = task_message
             self.query_processor.try_run_task(task)
+            
+            # Validation. Pretty ugly way to plug things...
+            if self.config.logs.validation_interval and (task.id % self.config.logs.validation_interval) == 0 and task.id > 0:
+                if not hasattr(self, "validation_task_pool"):
+                    # Generate tasks only once
+                    self.validation_task_pool = self.generate_validation_task_pool()
+                validation_hit_rate = self.query_processor.validate(self.validation_task_pool)
+                mlflow_log("validation_hit_rate", validation_hit_rate, task.id)
+
+                for score_threshold in self.score_thresholds.keys():
+                    if self.score_thresholds[score_threshold] == False and validation_hit_rate >= score_threshold:
+                        # We passed a threshold for the first time
+                        mlflow_log(f"validation_hit_rate_threshold_{score_threshold}_time", task.id, 0)
+                        mlflow_log(f"validation_hit_rate_threshold_{score_threshold}_budget", self.query_processor.total_budget_spent_all_blocks, 0)
+                        
+                        self.score_thresholds[score_threshold] = True
+
+    def generate_validation_task_pool(self):
+        # Dummy version of task_producer
+        task_pool = []
+        tasks_df = pd.read_csv(self.config.tasks.path)
+        
+        task_generator = PoissonTaskGenerator(
+                tasks_df, self.config.tasks.avg_num_tasks_per_block, self.config
+            )
+        for _ in range(self.config.logs.max_validation_tasks):
+
+            blocks_count = self.budget_accountant.get_blocks_count()
+            task_id = -1
+            task = task_generator.create_task(task_id, blocks_count)
+            task_pool.append(task)
+        return task_pool

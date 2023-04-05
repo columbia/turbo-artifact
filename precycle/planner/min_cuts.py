@@ -6,9 +6,7 @@ from sortedcollections import OrderedSet
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
-    get_epsilon_isotropic_laplace_monte_carlo,
-    get_pmw_epsilon,
-)
+    get_epsilon_isotropic_laplace_monte_carlo, get_pmw_epsilon)
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
 
@@ -128,3 +126,10 @@ class MinCuts(Planner):
             raise NotImplementedError
             
         return plan
+
+    def get_execution_plan(self, task):
+        subqueries = self.get_min_cuts(task.blocks)
+        n = get_blocks_size(task.blocks, self.config.blocks_metadata)
+        k = len(subqueries)
+        for (i, j) in subqueries:
+            run_ops += [RunHistogram((i, j))]

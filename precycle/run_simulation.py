@@ -32,6 +32,8 @@ class Simulator:
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
+        
+        # logger.info(f"Configuration: {self.config}")
 
         if self.config.logs.print_pid:
             # PID for profiling, sleep a bit to give time to attach the profiler
@@ -99,6 +101,7 @@ class Simulator:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
             cache = MockCache(self.config)
+            
         else:
             db = PSQL(self.config)
             budget_accountant = BudgetAccountant(self.config)

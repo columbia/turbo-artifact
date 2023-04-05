@@ -2,6 +2,7 @@ import multiprocessing
 import os
 from copy import deepcopy
 
+import numpy as np
 import typer
 
 from experiments.ray_runner import grid_online
@@ -260,25 +261,27 @@ def convergence_covid19(dataset):
         "heuristic": ["bin_visits:100-5", "bin_visits:0-0"],
         "variance_reduction": [False],
         "log_every_n_tasks": 100,
-        "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.4, 1],
+        # "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.4, 1, 2, 4],
+        "learning_rate": [float(lr) for lr in np.geomspace(0.005, 5, num=20)],
         "bootstrapping": [False],
         "exact_match_caching": [False],
         "mlflow_random_prefix": [True],
+        "validation_interval": 500
     }
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["mechanism"] = ["Laplace"]
-    config["heuristic"] = [""]
-    config["learning_rate"] = [None]
-    config["exact_match_caching"] = [True]
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    # config["mechanism"] = ["Laplace"]
+    # config["heuristic"] = [""]
+    # config["learning_rate"] = [None]
+    # config["exact_match_caching"] = [True]
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     experiments_start_and_join(experiments)
     analyze_monoblock(logs_dir)
 

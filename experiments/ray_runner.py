@@ -41,7 +41,9 @@ def grid_online(
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
     exact_match_caching: bool = [True],
-    mlflow_random_prefix: bool = [False]
+    mlflow_random_prefix: bool = False,
+    validation_interval: int = 0,
+    
 ):
 
     # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -94,7 +96,9 @@ def grid_online(
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
             "print_pid": False,
-            "mlflow_random_prefix": mlflow_random_prefix
+            "mlflow_random_prefix": mlflow_random_prefix,
+            "validation_interval": validation_interval,
+            "max_validation_tasks": 1000,
         },
     }
 

@@ -1,12 +1,12 @@
 import time
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 from loguru import logger
 from termcolor import colored
 
-from precycle.executor import Executor
+from precycle.executor import A, Executor, RunHistogram
 from precycle.task import Task, TaskInfo
 from precycle.utils.logs import compute_hit_scores
 from precycle.utils.utils import FAILED, FINISHED, mlflow_log
@@ -142,3 +142,29 @@ class QueryProcessor:
             TaskInfo(task, status, planning_time, run_metadata, result).dump()
         )
         return run_metadata
+
+
+    def validate(self, task_pool: List[Task]):
+                
+        # Perform a fake SV check on each subquery histogram
+        n_hits = 0
+        for task in task_pool:
+            (i,j) = task.blocks
+            assert i == j
+            
+            run_op = RunHistogram((i, j))
+            run_return_value = self.executor.run_histogram(
+                run_op, task.query, task.query_db_format
+            )
+            
+            true_error = abs(run_return_value.true_result - run_return_value.noisy_result)
+            if true_error < self.config.alpha / 2:
+                n_hits += 1
+                
+        validation_hit_rate = n_hits / len(task_pool)
+        return validation_hit_rate
+            
+            # subqueries = self.get_min_cuts(task.blocks)
+            # for (i, j) in subqueries:
+            #     # TODO: basic executor, assume we have only one block
+            #     raise NotImplementedError
