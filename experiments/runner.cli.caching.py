@@ -262,26 +262,18 @@ def convergence_covid19(dataset):
         "variance_reduction": [False],
         "log_every_n_tasks": 100,
         # "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.4, 1, 2, 4],
-        "learning_rate": [float(lr) for lr in np.geomspace(0.005, 5, num=20)],
+        "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=20)],
         "bootstrapping": [False],
         "exact_match_caching": [False],
         "mlflow_random_prefix": [True],
-        "validation_interval": 500
+        "validation_interval": 500,
+        "mlflow_experiment_id": "convergence",
     }
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    # config["mechanism"] = ["Laplace"]
-    # config["heuristic"] = [""]
-    # config["learning_rate"] = [None]
-    # config["exact_match_caching"] = [True]
-    # experiments.append(
-    #     multiprocessing.Process(
-    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
-    #     )
-    # )
     experiments_start_and_join(experiments)
     analyze_monoblock(logs_dir)
 

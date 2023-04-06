@@ -121,6 +121,10 @@ class QueryProcessor:
                             
                             mlflow_log(f"sliding_{score_name}", sliding_score, task.id)
                         mlflow_log(f"cumulative_{score_name}", self.score_counters[f"cumulative_{score_name}"], task.id)
+                        
+                    # Each miss is an update (either SV update or Laplace update, without the check)
+                    num_updates_monoblock = task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                    mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
 
             status = FINISHED
             # logger.info(

@@ -137,10 +137,9 @@ class Simulator:
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
-            try:
-                mlflow_log(f"lr", self.config.mechanism.probabilistic_cfg.learning_rate, 0)
-            except Exception as e:
-                logger.warning(e)
+            mlflow.log_param("lr", self.config.mechanism.probabilistic_cfg.learning_rate)
+            mlflow.log_param("heuristic", self.config.mechanism.probabilistic_cfg.heuristic)
+            
             self.env.run()
 
             if self.config.logs.save:

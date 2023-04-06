@@ -43,7 +43,7 @@ def grid_online(
     exact_match_caching: bool = [True],
     mlflow_random_prefix: bool = False,
     validation_interval: int = 0,
-    
+    mlflow_experiment_id: str = "precycle-2"
 ):
 
     # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -92,7 +92,7 @@ def grid_online(
             "verbose": False,
             "save": True,
             "mlflow": enable_mlflow,
-            "mlflow_experiment_id": "precycle-2",
+            "mlflow_experiment_id": mlflow_experiment_id,
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
             "print_pid": False,
