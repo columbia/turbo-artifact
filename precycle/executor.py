@@ -374,7 +374,9 @@ class Executor:
 
         total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         true_result = absolute_true_result / total_blocks_size
-        print("true_result", true_result)
+        # print("true_result", true_result)
+        
+        # TODO: check accuracy here
 
         
         # We can't run a powerful query using a weaker PMW

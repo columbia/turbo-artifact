@@ -13,6 +13,7 @@ from omegaconf import OmegaConf
 
 from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.cache import Cache, MockCache
+from precycle.planner.max_cuts import MaxCuts
 from precycle.planner.min_cuts import MinCuts
 from precycle.planner.no_cuts import NoCuts
 from precycle.psql import PSQL, MockPSQL
@@ -111,7 +112,9 @@ class Simulator:
             planner = MinCuts(cache, budget_accountant, self.config)
         elif self.config.planner.method == "NoCuts":
             planner = NoCuts(cache, budget_accountant, self.config)
-
+        elif self.config.planner.method == "MaxCuts":
+            planner = MaxCuts(cache, budget_accountant, self.config)
+            
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config
         )
@@ -139,6 +142,8 @@ class Simulator:
             mlflow.log_params(config)
             mlflow.log_param("lr", self.config.mechanism.probabilistic_cfg.learning_rate)
             mlflow.log_param("heuristic", self.config.mechanism.probabilistic_cfg.heuristic)
+            mlflow.log_param("block_requests_pattern", str(self.config.blocks.block_requests_pattern))
+            
             
             self.env.run()
 

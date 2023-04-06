@@ -70,6 +70,7 @@ def grid_online(
             "method": tune.grid_search(planner),
             "monte_carlo": False,
             "monte_carlo_N": 10000,
+            "monte_carlo_cache": True
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},
         "blocks": {

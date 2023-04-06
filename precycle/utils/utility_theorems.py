@@ -226,7 +226,7 @@ def get_epsilon_isotropic_laplace_monte_carlo(a, b, n, k, N, monte_carlo_cache=N
             n_calls = (
                 len(monte_carlo_cache) - 1 + n_hits
             )  # One entry is for the hits counter
-            logger.info(
+            logger.debug(
                 f"Monte Carlo cache hits: {n_hits}. Calls to utility function: {n_calls}. Hit rate: {n_hits / n_calls}"
             )
 
