@@ -43,7 +43,8 @@ def grid_online(
     exact_match_caching: bool = [True],
     mlflow_random_prefix: bool = False,
     validation_interval: int = 0,
-    mlflow_experiment_id: str = "precycle-2"
+    mlflow_experiment_id: str = "precycle-2",
+    save_logs: bool = True,
 ):
 
     # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
@@ -79,7 +80,7 @@ def grid_online(
             "arrival_interval": 1,
             "block_data_path": blocks_path,
             "block_metadata_path": blocks_metadata,
-            "block_requests_pattern": block_requests_pattern,
+            "block_requests_pattern": tune.grid_search(block_requests_pattern) if isinstance(block_requests_pattern[0], list) else block_requests_pattern
         },
         "tasks": {
             "path": tune.grid_search(tasks_path),
@@ -91,7 +92,7 @@ def grid_online(
         },
         "logs": {
             "verbose": False,
-            "save": True,
+            "save": save_logs,
             "mlflow": enable_mlflow,
             "mlflow_experiment_id": mlflow_experiment_id,
             "loguru_level": "INFO",

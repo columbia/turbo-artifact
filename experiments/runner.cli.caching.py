@@ -388,7 +388,17 @@ def caching_monoblock_learning_rates_covid19(dataset):
 def tree_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["34425queries.privacy_tasks.csv"]
-    block_requests_pattern = list(range(1, 51))
+    # block_requests_pattern = list(range(1, 51))
+    
+    block_requests_pattern = [
+        [1],
+        [2],
+        [4],
+        [8],
+        [16],
+        [32]
+    ]
+    
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -402,6 +412,7 @@ def tree_covid19(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
+        "block_selection_policy": ["LatestBlocks", "RandomBlocks"],
         "planner": ["MinCuts", "MaxCuts"],
         "mechanism": ["Hybrid"],
         "initial_blocks": [50],
@@ -419,6 +430,8 @@ def tree_covid19(dataset):
         "bootstrapping": [False],
         "exact_match_caching": [False],
         "mlflow_experiment_id": "tree",
+        "mlflow_random_prefix": [True],
+        "save_logs": False,
     }
     
     experiments.append(
@@ -656,6 +669,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
+        "block_selection_policy": ["LatestBlocks"],
         "planner": ["NoCuts"],
         "mechanism": ["Laplace"],
         "initial_blocks": [50],

@@ -257,14 +257,16 @@ def set_run_key(config_dict):
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
-            mechanism_type += "+Cache"
-        if (
-            config_dict["planner"]["method"] == "MinCuts"
-            and exact_match_caching == True
-        ):
-            mechanism_type += "+TreeCache"
-        key += mechanism_type
+        key += "+" + config_dict["planner"]["method"]
+
+        # if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
+        #     mechanism_type += "+Cache"
+        # if (
+        #     config_dict["planner"]["method"] == "MinCuts"
+        #     and exact_match_caching == True
+        # ):
+        #     mechanism_type += "+TreeCache"
+        # key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
@@ -287,14 +289,16 @@ def set_run_key(config_dict):
         learning_rate = str(
             config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
         )
-        if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
-            mechanism_type += "+Cache"
-        if (
-            config_dict["planner"]["method"] == "MinCuts"
-            and exact_match_caching == True
-        ):
-            mechanism_type += "+TreeCache"
-        key += mechanism_type + "+" + heuristic + "+lr" + learning_rate
+        # if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
+        #     mechanism_type += "+Cache"
+        # if (
+        #     config_dict["planner"]["method"] == "MinCuts"
+        #     and exact_match_caching == True
+        # ):
+        #     mechanism_type += "+TreeCache"
+        key += "+" + config_dict["planner"]["method"]
+        key += "+" + ("ExacMatch" if exact_match_caching else "NoExactMatch") 
+        key += "+" + heuristic + "+lr" + learning_rate
         if warmup == "True":
             key += "+warmup"
     return key, mechanism_type, heuristic, warmup, learning_rate
