@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Tuple
 
 import mlflow
+import numpy as np
 import pandas as pd
+import scipy
 
 # from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
 from precycle.budget.renyi_budget import RenyiBudget
@@ -40,6 +42,32 @@ def mlflow_log(key, value, step):
             step=step,
         )
 
+
+def parse_block_requests_pattern(block_requests_pattern, max_blocks=50):
+    # Just a regular distribution
+    if isinstance(block_requests_pattern, list) and isinstance(block_requests_pattern[0], int):
+        return block_requests_pattern
+    
+    # Parameters for a discrete Gaussian
+    distribution, std, mean = block_requests_pattern.split("-")
+    std, mean = int(std), int(mean)
+    assert distribution == "dgaussian"
+    # mean = tmax - 2*std
+    f = np.array([scipy.stats.norm.pdf(k, mean, std) for k in range(1, max_blocks+1)])
+    
+    # Truncate after 2 stdev
+    f = f/scipy.stats.norm.pdf(2*std, 0, std)
+    f = np.floor(f)
+    
+    # Frequency encoded by repetition (yes)
+    blocks = []
+    for i in range(1, 51):
+        blocks.extend(
+            [i] * int(f[i-1])
+        )
+    return blocks
+    
+    
 
 def satisfies_constraint(blocks, branching_factor=2):
     """

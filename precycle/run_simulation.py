@@ -143,6 +143,15 @@ class Simulator:
             mlflow.log_param("lr", self.config.mechanism.probabilistic_cfg.learning_rate)
             mlflow.log_param("heuristic", self.config.mechanism.probabilistic_cfg.heuristic)
             mlflow.log_param("block_requests_pattern", str(self.config.blocks.block_requests_pattern))
+            
+            if isinstance(self.config.blocks.block_requests_pattern, str):
+                distribution, std, mean = self.config.blocks.block_requests_pattern.split("-")
+                std, mean = int(std), int(mean)
+                assert distribution == "dgaussian"
+                mlflow.log_param("block_requests_pattern_std", std)
+                mlflow.log_param("block_requests_pattern_mean", mean)
+                
+            
             mlflow.log_param("block_selection_policy", self.config.tasks.block_selection_policy)
             
             mlflow.log_param("planner_method", self.config.planner.method)

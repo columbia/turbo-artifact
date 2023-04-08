@@ -1,3 +1,4 @@
+import copy
 import pickle
 import random
 import time
@@ -8,7 +9,7 @@ from loguru import logger
 from precycle.cache.histogram import query_dict_to_list
 from precycle.query_converter import QueryConverter
 from precycle.task import Task
-import copy
+from precycle.utils.utils import parse_block_requests_pattern
 
 
 def Zipf(a: np.float64, min: np.uint64, max: np.uint64, size=None):
@@ -118,7 +119,10 @@ class PoissonTaskGenerator(TaskGenerator):
         self.tasks = self.tasks.sample(
             frac=1, random_state=config.global_seed
         ).reset_index()
-        self.block_requests_pattern = self.config.blocks.block_requests_pattern
+        
+        self.block_requests_pattern = parse_block_requests_pattern(self.config.blocks.block_requests_pattern)
+        
+        logger.info(f"Parsed block requests pattern:{self.block_requests_pattern}")
 
         def zipf():
             query_pool_size = len(self.tasks["query_id"].unique())

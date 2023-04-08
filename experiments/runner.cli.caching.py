@@ -390,14 +390,16 @@ def tree_covid19(dataset):
     task_paths = ["34425queries.privacy_tasks.csv"]
     # block_requests_pattern = list(range(1, 51))
     
-    block_requests_pattern = [
-        [1],
-        [2],
-        [4],
-        [8],
-        [16],
-        [32]
-    ]
+    # block_requests_pattern = [
+    #     [1],
+    #     [2],
+    #     [4],
+    #     [8],
+    #     [16],
+    #     [32]
+    # ]
+    
+    block_requests_pattern = [f"dgaussian-{std}-{tmax}" for tmax in [1,5,10,15,20,25,30,40,50] for std in [1, 3, 5,10,15]]
     
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
@@ -412,8 +414,10 @@ def tree_covid19(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
-        "block_selection_policy": ["LatestBlocks", "RandomBlocks"],
+        "block_selection_policy": ["LatestBlocks"],
+        # "block_selection_policy": ["LatestBlocks"],
         "planner": ["MinCuts", "MaxCuts"],
+        # "planner": ["MinCuts"],
         "mechanism": ["Hybrid"],
         "initial_blocks": [50],
         "max_blocks": [50],
@@ -429,7 +433,7 @@ def tree_covid19(dataset):
         "learning_rate": [0.2],
         "bootstrapping": [False],
         "exact_match_caching": [False],
-        "mlflow_experiment_id": "tree",
+        "mlflow_experiment_id": "tree3",
         "mlflow_random_prefix": [True],
         "save_logs": False,
     }

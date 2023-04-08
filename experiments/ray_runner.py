@@ -13,7 +13,9 @@ from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 
 def run_and_report(config: dict, replace=False) -> None:
     logs = Simulator(config).run()
-    tune.report(**logs)
+    
+    if logs:
+        tune.report(**logs)
 
 
 def grid_online(
@@ -80,7 +82,7 @@ def grid_online(
             "arrival_interval": 1,
             "block_data_path": blocks_path,
             "block_metadata_path": blocks_metadata,
-            "block_requests_pattern": tune.grid_search(block_requests_pattern) if isinstance(block_requests_pattern[0], list) else block_requests_pattern
+            "block_requests_pattern": tune.grid_search(block_requests_pattern) if not isinstance(block_requests_pattern[0], int) else block_requests_pattern
         },
         "tasks": {
             "path": tune.grid_search(tasks_path),
