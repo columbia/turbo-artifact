@@ -29,14 +29,15 @@ class RedisHelper:
 
 
 class PostgresHelper:
-    def __init__(self, config) -> None:
+    def __init__(self, config, database) -> None:
         self.config = config
+        self.database = database
         # Initialize the PSQL connection
         try:
             # Connect to the PostgreSQL database server
             self.psql_conn = psycopg2.connect(
                 host=config.host,
-                database=config.database,
+                database=database,
                 user=config.username,
                 password=config.password,
             )
@@ -47,7 +48,7 @@ class PostgresHelper:
     def get(self, key):
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""SELECT COUNT(*) FROM covid_data WHERE time >= {key} AND time <= {key} GROUP BY time;"""
+            cmd = f"""SELECT COUNT(*) FROM {self.database}_data WHERE time >= {key} AND time <= {key} GROUP BY time;"""
             cur.execute(cmd)
             res = cur.fetchall()
             cur.close()
@@ -61,7 +62,7 @@ class PostgresHelper:
         status = "success"
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""DELETE FROM covid_data;"""
+            cmd = f"""DELETE FROM {self.database}_data;"""
             cur.execute(cmd)
             cur.close()
             self.psql_conn.commit()
@@ -74,7 +75,7 @@ class PostgresHelper:
     def get_all(self):
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""SELECT time, COUNT(*) FROM covid_data GROUP BY time;"""
+            cmd = f"""SELECT time, COUNT(*) FROM {self.database}_data GROUP BY time;"""
             cur.execute(cmd)
             res = cur.fetchall()
             cur.close()
@@ -90,6 +91,7 @@ def run(
     omegaconf: str = "precycle/config/precycle.json",
     storage: str = "redis-budgets",  # "redis-budgets", 'postgres', '*'
     function: str = "delete-all",  # "get", "size", "get-all", "delete-all-caches"
+    database: str = "covid",
     key: str = "",
 ):
     omegaconf = OmegaConf.load(omegaconf)
@@ -101,7 +103,7 @@ def run(
         if function == "delete-all":
             res = "success"
             try:
-                PostgresHelper(config.postgres).delete_all()
+                PostgresHelper(config.postgres, database).delete_all()
                 RedisHelper(config.cache).delete_all()
                 RedisHelper(config.budget_accountant).delete_all()
             except Exception as error:
@@ -109,7 +111,7 @@ def run(
                 print(error)
 
     elif storage == "postgres":
-        postgres_helper = PostgresHelper(config.postgres)
+        postgres_helper = PostgresHelper(config.postgres, database)
         if function == "delete-all":
             res = postgres_helper.delete_all()
         elif function == "get":

@@ -56,12 +56,12 @@ class QueryProcessor:
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
             result, status = self.executor.execute_plan(plan, task, run_metadata)
-            logger.info(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
-                    "green",
-                )
-            )
+            # logger.info(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
+            #         "green",
+            #     )
+            # )
             round += 1
 
         if result is not None:

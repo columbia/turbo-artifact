@@ -28,9 +28,17 @@ class PSQL:
         status = b"success"
         try:
             cur = self.psql_conn.cursor()
-            cmd = f"""
-                    COPY covid_data(time, positive, gender, age, ethnicity)
-                    FROM '{block_data_path}'
+            if self.config.postgres.database == "covid":
+                cmd = f"""
+                        COPY covid_data(time, positive, gender, age, ethnicity)
+                        FROM '{block_data_path}.csv'
+                        DELIMITER ','
+                        CSV HEADER;
+                    """
+            elif self.config.postgres.database == "citibike":
+                cmd = f"""
+                    COPY citibike_data(time, weekday, hour, duration_minutes, start_station, end_station, usertype, gender, age)
+                    FROM '{block_data_path}.csv'
                     DELIMITER ','
                     CSV HEADER;
                 """
@@ -43,10 +51,13 @@ class PSQL:
         return status
 
     def run_query(self, query, blocks):
+
+        sql_query = query + f" AND time>={blocks[0]} AND time<={blocks[1]};"
         try:
             cur = self.psql_conn.cursor()
-            cur.execute(query)
+            cur.execute(sql_query)
             true_result = float(cur.fetchone()[0])
+            # print("query", sql_query, "true result", true_result)
             cur.close()
         except (Exception, psycopg2.DatabaseError) as error:
             logger.info(error)
@@ -54,7 +65,7 @@ class PSQL:
 
         blocks_size = get_blocks_size(blocks, self.config.blocks_metadata)
         true_result /= blocks_size
-        # print("result:", true_result, "total-size:", blocks_size)
+        # print("result:", true_result, "total-size:", blocks_size, "\n")
         return true_result
 
     def close(self):

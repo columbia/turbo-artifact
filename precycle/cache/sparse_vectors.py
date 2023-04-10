@@ -11,15 +11,16 @@ class SparseVector:
     def __init__(self, id, alpha=None, beta=None, n=None, sv_state=None) -> None:
         self.n = n
         self.id = id
-        self.alpha = alpha
         self.beta = beta
 
         if not sv_state:
+            self.alpha = alpha
             self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)
             self.b = 1 / (self.n * self.epsilon)
             self.noisy_threshold = None
             self.initialized = False
         else:
+            self.alpha = sv_state["alpha"]
             self.epsilon = sv_state["epsilon"]
             self.b = sv_state["b"]
             self.noisy_threshold = sv_state["noisy_threshold"]
@@ -78,6 +79,7 @@ class SparseVectors:
         key = CacheKey(cache_entry.id).key
         self.kv_store.hset(key + ":sparse_vector", "epsilon", cache_entry.epsilon)
         self.kv_store.hset(key + ":sparse_vector", "b", cache_entry.b)
+        self.kv_store.hset(key + ":sparse_vector", "alpha", cache_entry.alpha)
         self.kv_store.hset(
             key + ":sparse_vector", "noisy_threshold", str(cache_entry.noisy_threshold)
         )
@@ -92,6 +94,7 @@ class SparseVectors:
         if sv_info:
             sv_state["epsilon"] = float(sv_info[b"epsilon"])
             sv_state["b"] = float(sv_info[b"b"])
+            sv_state["alpha"] = float(sv_info[b"alpha"])
             sv_state["noisy_threshold"] = float(sv_info[b"noisy_threshold"])
             sv_state["initialized"] = (
                 True if str(sv_info[b"initialized"]) == "1" else False

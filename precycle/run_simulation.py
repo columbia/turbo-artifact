@@ -14,6 +14,7 @@ from precycle.budget_accountant import BudgetAccountant, MockBudgetAccountant
 from precycle.cache.cache import Cache, MockCache
 from precycle.planner.min_cuts import MinCuts
 from precycle.planner.no_cuts import NoCuts
+from precycle.planner.max_cuts import MaxCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
@@ -90,10 +91,6 @@ class Simulator:
             }
         )
 
-        print(self.config.blocks_metadata.pmw_attribute_names)
-        print(self.config.blocks_metadata.pmw_attributes_domain_sizes)
-        print(self.config.blocks_metadata.pmw_domain_size)
-
         if self.config.enable_random_seed:
             random.seed(None)
             np.random.seed(None)
@@ -115,6 +112,8 @@ class Simulator:
             planner = MinCuts(cache, budget_accountant, self.config)
         elif self.config.planner.method == "NoCuts":
             planner = NoCuts(cache, budget_accountant, self.config)
+        elif self.config.planner.method == "MaxCuts":
+            planner = MaxCuts(cache, budget_accountant, self.config)
 
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config

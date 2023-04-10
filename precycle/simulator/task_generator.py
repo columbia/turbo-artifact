@@ -29,7 +29,7 @@ class TaskGenerator:
     def __init__(self, df_tasks, config) -> None:
         self.config = config
         self.tasks = df_tasks
-        self.query_converter = QueryConverter(self.config.blocks_metadata)
+        self.query_converter = QueryConverter(self.config)
 
     def sample_task_row(self, config):
         raise NotImplementedError("Must override")
@@ -74,7 +74,7 @@ class TaskGenerator:
         query_db_format = (
             query_tensor
             if self.config.mock
-            else self.query_converter.convert_to_sql(query_vector, task.blocks)
+            else self.query_converter.convert_to_sql(query_vector, requested_blocks)
         )
 
         if self.config.mechanism.type == "TimestampsPMW":

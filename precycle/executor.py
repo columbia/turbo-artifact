@@ -138,6 +138,15 @@ class Executor:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
+            # print(
+            #     "noisy",
+            #     noisy_result,
+            #     "true",
+            #     true_result,
+            #     "err",
+            #     true_result - noisy_result,
+            # )
+            run_metadata["error"] = true_result - noisy_result
 
             # TODO: do the check only on histogram partial results, not Direct Laplace ones
             # Do the final SV check if there is at least one Histogram run involved

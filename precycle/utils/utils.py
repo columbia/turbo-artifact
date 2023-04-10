@@ -247,6 +247,11 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+TreeCache"
+        if (
+            config_dict["planner"]["method"] == "MaxCuts"
+            and exact_match_caching == True
+        ):
+            mechanism_type += "+PerPartitionCache"
         key = mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
@@ -277,6 +282,11 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+TreeCache"
+        if (
+            config_dict["planner"]["method"] == "MaxCuts"
+            and exact_match_caching == True
+        ):
+            mechanism_type += "+PerPartitionCache"
         key = mechanism_type + "+" + heuristic + "+lr" + learning_rate
         if warmup == "True":
             key += "+warmup"

@@ -2,9 +2,10 @@ from precycle.cache.histogram import build_sparse_tensor
 
 
 class QueryConverter:
-    def __init__(self, blocks_metadata) -> None:
-        self.attribute_names = blocks_metadata["attribute_names"]
-        self.attribute_domain_sizes = blocks_metadata["attributes_domain_sizes"]
+    def __init__(self, config) -> None:
+        self.config = config
+        self.attribute_names = config.blocks_metadata["attribute_names"]
+        self.attribute_domain_sizes = config.blocks_metadata["attributes_domain_sizes"]
 
     def convert_to_sql(self, query_vector, blocks):
         p = [set() for _ in self.attribute_names]
@@ -22,12 +23,9 @@ class QueryConverter:
                 else:
                     in_clauses += [f"{self.attribute_names[i]} IN {tuple(s)} "]
         where_clause = "AND ".join(in_clauses)
-        if where_clause:
-            where_clause += "AND "
-        time_window_clause = f"time>={blocks[0]} AND time<={blocks[1]}"
-        sql = (
-            f"SELECT COUNT(*) FROM covid_data WHERE {where_clause}{time_window_clause};"
-        )
+        if not where_clause:
+            where_clause = " TRUE"
+        sql = f"SELECT COUNT(*) FROM {self.config.postgres.database}_data WHERE {where_clause}"  # {time_window_clause};"
         return sql
 
     def convert_to_sparse_tensor(self, query_vector, attribute_domain_sizes=None):

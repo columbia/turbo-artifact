@@ -23,6 +23,7 @@ def grid_online(
     blocks_path: str,
     blocks_metadata: str,
     mechanism: List[str],
+    mock: int = True,
     block_requests_pattern: List[int] = [1],
     planner: List[str] = ["MinCuts"],
     avg_num_tasks_per_block: List[int] = [100],
@@ -43,7 +44,7 @@ def grid_online(
 
     enable_mlflow = True
     config = {
-        "mock": True,  # Never disable "mock" when running with ray
+        "mock": mock,
         "puredp": True,
         "n_processes": 1,
         "exact_match_caching": tune.grid_search(exact_match_caching),
