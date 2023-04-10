@@ -15,7 +15,7 @@ def get_df(path):
     return df
 
 
-def get_budgets_information(df):
+def get_budgets_information(df, num_blocks):
     dfs = []
     global_dfs = []
 
@@ -52,6 +52,7 @@ def get_budgets_information(df):
                 task_budget_per_block[block] = budget["epsilon"]
 
             sum_budget_across_blocks = 0
+            average_budget_across_blocks = 0
             cumulative_budget_per_block = run_metadata["cumulative_budget_per_block"]
             for block, budget in cumulative_budget_per_block.items():
                 cumulative_budget = budget["epsilon"]
@@ -81,12 +82,14 @@ def get_budgets_information(df):
                     )
                 )
 
+            average_budget_across_blocks = sum_budget_across_blocks / num_blocks
             global_dfs.append(
                 pd.DataFrame(
                     [
                         {
                             "task": task["id"],
                             "sum_budget_across_blocks": sum_budget_across_blocks,
+                            "average_budget_across_blocks": average_budget_across_blocks,
                             "mechanism": mechanism,
                             "zipf_k": zipf_k,
                             "key": key,
@@ -94,6 +97,7 @@ def get_budgets_information(df):
                             "warmup": warmup,
                             "planner": planner,
                             "heuristic": heuristic,
+                            "error": run_metadata["error"],
                         }
                     ]
                 )
@@ -312,7 +316,7 @@ def analyze_monoblock(experiment_path):
     iplot(plot_total_sv_checks(df, total_tasks))
     iplot(plot_total_sv_misses(df, total_tasks))
     iplot(plot_budget_utilization(blocks, total_tasks))
-    time_budgets, _ = get_budgets_information(df)
+    time_budgets, _ = get_budgets_information(df, 1)
     iplot(plot_cumulative_budget_utilization_time(time_budgets, total_tasks))
     iplot(plot_budget_utilization_time(time_budgets, total_tasks))
 
@@ -398,7 +402,7 @@ def analyze_multiblock(experiment_path):
         return fig
 
     def plot_global_budget_utilization_time(df, total_tasks):
-        df["cumulative_budget"] = df["sum_budget_across_blocks"]
+        df["cumulative_budget"] = df["average_budget_across_blocks"]
         df.to_csv(
             LOGS_PATH.joinpath(
                 f"ray/{experiment_path}/cumulative_budget_utilization.csv"
@@ -429,11 +433,19 @@ def analyze_multiblock(experiment_path):
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
     iplot(plot_num_allocated_tasks(df, total_tasks))
     blocks = get_blocks_information(df)
-    iplot(plot_budget_utilization(blocks, total_tasks))
+    num_blocks = blocks["block"].nunique()
+    print(num_blocks)
+
+    iplot(
+        plot_budget_utilization(
+            blocks,
+            total_tasks,
+        )
+    )
     iplot(plot_total_sv_checks(df, total_tasks))
     iplot(plot_total_sv_misses(df, total_tasks))
 
-    _, global_time_budgets = get_budgets_information(df)
+    _, global_time_budgets = get_budgets_information(df, num_blocks)
     iplot(plot_global_budget_utilization_time(global_time_budgets, total_tasks))
 
 
@@ -460,6 +472,28 @@ def analyze_sv_misses(experiment_path):
     total_tasks = df["total_tasks"].max()
     sv_misses = get_sv_misses_information(df)
     iplot(plot_sv_misses_per_node(sv_misses, total_tasks))
+
+
+def analyze_error(experiment_path):
+    def plot_error(df):
+        fig = px.scatter(
+            df,
+            x="task",
+            y="error",
+            color="key",
+            title=f"error",
+            width=1000,
+            height=600,
+            facet_row="zipf_k",
+        )
+        return fig
+
+    df = get_df(experiment_path)
+    total_tasks = df["total_tasks"].max()
+    df["zipf_k"] = df["zipf_k"].astype(float)
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
+    _, errors = get_budgets_information(df, 50)
+    iplot(plot_error(errors))
 
 
 def analyze_num_cuts(experiment_path):
@@ -489,89 +523,3 @@ def analyze_num_cuts(experiment_path):
     df.sort_values(["chunk_size"], ascending=[False], inplace=True)
 
     iplot(plot_num_cuts(df))
-
-
-# def analyze_query_types(experiment_path):
-#     def plot_query_per_task(df):
-
-#         # fig = px.histogram(
-#         #     df,
-#         #     x="query_id",
-#         #     title="Query Pool Histograms",
-#         #     # color="query_id",
-#         #     width=800,
-#         #     height=500,
-#         #     facet_row="zipf_k",
-#         # )
-#         # return fig
-
-#         fig = px.bar(
-#             df,
-#             x="zipf_k",
-#             y="count",
-#             title="Num Different queries",
-#             # color="query_id",
-#             width=800,
-#             height=500,
-#             # facet_row="zipf_k",
-#         )
-#         return fig
-
-#     df = get_df(experiment_path)
-#     df["zipf_k"] = df["zipf_k"].astype(float)
-#     df = df.query("mechanism == 'DirectLaplace'")
-#     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
-
-#     tasks = get_tasks_information(df)
-#     tasks = tasks[["id", "key", "query_id", "zipf_k"]]
-#     print(tasks.groupby("zipf_k")["query_id"].nunique())
-# iplot(plot_query_per_task(tasks))
-
-
-# def analyze_mechanism_type_use_bar(df):
-#     def plot_mechanism_type_use(df):
-#         fig = px.bar(
-#             df,
-#             x="id",
-#             y="count",
-#             color="type",
-#             title="Laplace vs PMW runs for mechanism",
-#             width=3500,
-#             height=800,
-#             facet_row="zipf_k",
-#             color_discrete_sequence=["red", "black"],
-#             # color_discrete_map={
-#             #     'Deterministicmechanism': 'red',
-#             #     'Probabilisticmechanism': 'black'
-#             # }
-#         )
-#         return fig
-
-#     df = df.query("mechanism == 'MixedRuns'")
-#     tasks = get_tasks_information(df)
-#     tasks_deterministic = tasks[["id", "laplace_runs", "zipf_k"]]
-#     tasks_deterministic.insert(0, "type", "LaplaceRuns")
-#     tasks_deterministic = tasks_deterministic.rename(columns={"laplace_runs": "count"})
-#     tasks_probabilistic = tasks[["id", "pmw_runs", "zipf_k"]]
-#     tasks_probabilistic.insert(0, "type", "PMWRuns")
-#     tasks_probabilistic = tasks_probabilistic.rename(columns={"pmw_runs": "count"})
-#     tasks_new = pd.concat([tasks_deterministic, tasks_probabilistic])
-#     iplot(plot_mechanism_type_use(tasks_new))
-
-
-# def analyze_mechanism_type_use(df):
-#     def plot_mechanism_type_use(df):
-#         fig = px.line(
-#             df,
-#             x="id",
-#             y="total_pmw_runs",
-#             color="zipf_k",
-#             title="PMW runs",
-#             width=3500,
-#             height=800,
-#         )
-#         return fig
-
-#     df = df.query("mechanism == 'MixedRuns'")
-#     tasks = get_tasks_information(df)
-#     iplot(plot_mechanism_type_use(tasks))
