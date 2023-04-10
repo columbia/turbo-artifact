@@ -10,9 +10,11 @@ from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
+
 def powerset(iter):
     s = list(iter)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
 
 # Compact dictionary representation
 def create_all_queries(attributes_domain_sizes):
@@ -28,9 +30,9 @@ def create_all_queries(attributes_domain_sizes):
             value = value[0] if len(value) == 1 else list(value)
             query_dict[str(attr)] = value
         query_dicts.append(query_dict)
-    
+
     return query_dicts
-    
+
 
 def create_all_point_queries(attributes_domain_sizes):
     attribute_values = [

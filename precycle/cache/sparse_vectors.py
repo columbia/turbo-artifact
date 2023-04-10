@@ -1,9 +1,11 @@
 import time
 
 import numpy as np
-import redis
-from loguru import logger
+from precycle.utils.utils import get_blocks_size
+from precycle.utils.utility_theorems import get_sv_epsilon
 from termcolor import colored
+from loguru import logger
+import redis
 
 from precycle.utils.utility_theorems import get_sv_epsilon
 from precycle.utils.utils import get_blocks_size
@@ -13,15 +15,16 @@ class SparseVector:
     def __init__(self, id, alpha=None, beta=None, n=None, sv_state=None) -> None:
         self.n = n
         self.id = id
-        self.alpha = alpha
         self.beta = beta
 
         if not sv_state:
+            self.alpha = alpha
             self.epsilon = get_sv_epsilon(self.alpha, self.beta, self.n)
             self.b = 1 / (self.n * self.epsilon)
             self.noisy_threshold = None
             self.initialized = False
         else:
+            self.alpha = sv_state["alpha"]
             self.epsilon = sv_state["epsilon"]
             self.b = sv_state["b"]
             self.noisy_threshold = sv_state["noisy_threshold"]
@@ -59,11 +62,9 @@ class SparseVectors:
         return redis.Redis(host=config.cache.host, port=config.cache.port, db=0)
 
     def create_new_entry(self, node_id):
-        # node id covers exactly the requested blocks
+        # node_id covers exactly the requested blocks
         (i, j) = node_id
         n = get_blocks_size((i, j), self.blocks_metadata)
-        # logger.info("\n\t\tSV new entry on", (i,j), "n", n)
-       
         sparse_vector = SparseVector(
             id=node_id,
             beta=self.config.beta,
@@ -76,13 +77,13 @@ class SparseVectors:
         key = CacheKey(cache_entry.id).key
         self.kv_store.hset(key + ":sparse_vector", "epsilon", cache_entry.epsilon)
         self.kv_store.hset(key + ":sparse_vector", "b", cache_entry.b)
+        self.kv_store.hset(key + ":sparse_vector", "alpha", cache_entry.alpha)
         self.kv_store.hset(
             key + ":sparse_vector", "noisy_threshold", str(cache_entry.noisy_threshold)
         )
         self.kv_store.hset(
             key + ":sparse_vector", "initialized", int(cache_entry.initialized)
         )
-
 
     def read_entry(self, node_id):
         key = CacheKey(node_id).key
@@ -91,6 +92,7 @@ class SparseVectors:
         if sv_info:
             sv_state["epsilon"] = float(sv_info[b"epsilon"])
             sv_state["b"] = float(sv_info[b"b"])
+            sv_state["alpha"] = float(sv_info[b"alpha"])
             sv_state["noisy_threshold"] = float(sv_info[b"noisy_threshold"])
             sv_state["initialized"] = (
                 True if str(sv_info[b"initialized"]) == "1" else False

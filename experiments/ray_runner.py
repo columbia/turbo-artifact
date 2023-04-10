@@ -27,6 +27,7 @@ def grid_online(
     blocks_path: str,
     blocks_metadata: str,
     mechanism: List[str],
+    mock: int = True,
     block_requests_pattern: List[int] = [1],
     planner: List[str] = ["MinCuts"],
     avg_num_tasks_per_block: List[int] = [100],
@@ -39,7 +40,7 @@ def grid_online(
     learning_rate: List[int] = [0.1],
     heuristic: str = "bin_updates:100:5",
     zipf_k: List[int] = [0.5],
-    variance_reduction: List[bool] = True,
+    variance_reduction: List[bool] = False,
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
     exact_match_caching: bool = [True],
@@ -49,10 +50,9 @@ def grid_online(
     save_logs: bool = True,
 ):
 
-    # exp_name = datetime.datetime.now().strftime("%m-%d-%Y-%H-%M-%S")
     enable_mlflow = True
     config = {
-        "mock": True,  # Never disable "mock" when running with ray
+        "mock": mock,
         "puredp": True,
         "n_processes": 1,
         "exact_match_caching": tune.grid_search(exact_match_caching),
@@ -73,7 +73,7 @@ def grid_online(
             "method": tune.grid_search(planner),
             "monte_carlo": False,
             "monte_carlo_N": 10000,
-            "monte_carlo_cache": True
+            "monte_carlo_cache": True,
         },
         "budget_accountant": {"epsilon": 10, "delta": 1e-07},
         "blocks": {

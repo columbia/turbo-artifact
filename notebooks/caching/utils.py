@@ -10,7 +10,7 @@ from precycle.utils.utils import HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE, LOGS_PATH
 
 
 def get_df(path):
-    logs = LOGS_PATH.joinpath("ray/" + path)
+    logs = LOGS_PATH.joinpath(path)
     df = load_ray_experiment(logs)
     return df
 
@@ -205,7 +205,7 @@ def analyze_monoblock(experiment_path):
             height=500,
         )
         fig.write_image(
-            LOGS_PATH.joinpath(f"ray/{experiment_path}/num_allocated_tasks.png")
+            LOGS_PATH.joinpath(f"{experiment_path}/num_allocated_tasks.png")
         )
         return fig
 
@@ -249,7 +249,7 @@ def analyze_monoblock(experiment_path):
             aggfunc=np.sum,
         ).reset_index("zipf_k")
         pivoted_df.to_csv(
-            LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization.csv"),
+            LOGS_PATH.joinpath(f"{experiment_path}/budget_utilization.csv"),
             index=False,
         )
 
@@ -263,16 +263,12 @@ def analyze_monoblock(experiment_path):
             width=900,
             height=500,
         )
-        fig.write_image(
-            LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization.png")
-        )
+        fig.write_image(LOGS_PATH.joinpath(f"{experiment_path}/budget_utilization.png"))
         return fig
 
     def plot_cumulative_budget_utilization_time(df, total_tasks):
         df.to_csv(
-            LOGS_PATH.joinpath(
-                f"ray/{experiment_path}/cumulative_budget_utilization.csv"
-            ),
+            LOGS_PATH.joinpath(f"{experiment_path}/cumulative_budget_utilization.csv"),
             index=False,
         )
         fig = px.line(
@@ -287,9 +283,7 @@ def analyze_monoblock(experiment_path):
             facet_row="zipf_k",
         )
         fig.write_image(
-            LOGS_PATH.joinpath(
-                f"ray/{experiment_path}/cumulative_budget_utilization.png"
-            )
+            LOGS_PATH.joinpath(f"{experiment_path}/cumulative_budget_utilization.png")
         )
         return fig
 
@@ -355,7 +349,9 @@ def analyze_multiblock(experiment_path):
             pivoted_df["block"] = pivoted_df["block"].astype(int)
             pivoted_df = pivoted_df.sort_values(["block"])
             pivoted_df.to_csv(
-                LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization_zipf_{key}.csv"),
+                LOGS_PATH.joinpath(
+                    f"{experiment_path}/budget_utilization_zipf_{key}.csv"
+                ),
                 index=False,
             )
 
@@ -370,9 +366,7 @@ def analyze_multiblock(experiment_path):
             height=600,
             facet_row="zipf_k",
         )
-        fig.write_image(
-            LOGS_PATH.joinpath(f"ray/{experiment_path}/budget_utilization.png")
-        )
+        fig.write_image(LOGS_PATH.joinpath(f"{experiment_path}/budget_utilization.png"))
         return fig
 
     def plot_total_sv_checks(df, total_tasks):
@@ -404,9 +398,7 @@ def analyze_multiblock(experiment_path):
     def plot_global_budget_utilization_time(df, total_tasks):
         df["cumulative_budget"] = df["average_budget_across_blocks"]
         df.to_csv(
-            LOGS_PATH.joinpath(
-                f"ray/{experiment_path}/cumulative_budget_utilization.csv"
-            ),
+            LOGS_PATH.joinpath(f"{experiment_path}/cumulative_budget_utilization.csv"),
             index=False,
         )
 
@@ -421,9 +413,7 @@ def analyze_multiblock(experiment_path):
             facet_row="zipf_k",
         )
         fig.write_image(
-            LOGS_PATH.joinpath(
-                f"ray/{experiment_path}/cumulative_budget_utilization.png"
-            )
+            LOGS_PATH.joinpath(f"{experiment_path}/cumulative_budget_utilization.png")
         )
         return fig
 

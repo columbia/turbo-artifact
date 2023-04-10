@@ -74,12 +74,13 @@ class QueryProcessor:
             # NOTE: if status is sth else like "out-of-budget" then it stops
             # Hmm status seems unused?
             result, status = self.executor.execute_plan(plan, task, run_metadata)
-            logger.debug(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
-                    "green",
-                )
-            )
+
+            # logger.info(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
+            #         "green",
+            #     )
+            # )
             round += 1
 
         if result is not None:
@@ -135,12 +136,12 @@ class QueryProcessor:
             # )
         else:
             status = FAILED
-            logger.info(
-                colored(
-                    f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
-                    "red",
-                )
-            )
+            # logger.info(
+            #     colored(
+            #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, can't run query.",
+            #         "red",
+            #     )
+            # )
         self.counter += 1
         self.tasks_info.append(
             TaskInfo(task, status, planning_time, run_metadata, result).dump()

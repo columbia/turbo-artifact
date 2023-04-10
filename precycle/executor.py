@@ -41,15 +41,17 @@ class RunPMW:
     def __str__(self):
         return f"RunPMW({self.blocks}, {self.alpha}, {self.epsilon})"
 
+
 class RunTimestampsPMW:
     def __init__(self, blocks, task_blocks, alpha, epsilon) -> None:
-        self.blocks = blocks    # All blocks in the system
+        self.blocks = blocks  # All blocks in the system
         self.task_blocks = task_blocks
         self.alpha = alpha
         self.epsilon = epsilon
 
     def __str__(self):
         return f"RunTimestampsPMW({self.blocks}, {self.task_blocks}, {self.alpha}, {self.epsilon})"
+
 
 class A:
     def __init__(self, l, sv_check, cost=None) -> None:
@@ -135,7 +137,6 @@ class Executor:
                 run_types[node_key] = PMW_RUNTYPE
                 pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
 
-
             # Set run budgets for participating blocks
             for block in range(run_op.blocks[0], run_op.blocks[1] + 1):
                 budget_per_block[block] = run_return_value.run_budget
@@ -154,12 +155,20 @@ class Executor:
         # We append to the metadata because after SV resets we need to repeat the same query
         run_metadata["laplace_hits"].append(laplace_hits)
         run_metadata["pmw_hits"].append(pmw_hits)
-        
-        
+
         if noisy_partial_results:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
+            # print(
+            #     "noisy",
+            #     noisy_result,
+            #     "true",
+            #     true_result,
+            #     "err",
+            #     true_result - noisy_result,
+            # )
+            run_metadata["error"] = true_result - noisy_result
 
             # TODO: do the check only on histogram partial results, not Direct Laplace ones
             # Do the final SV check if there is at least one Histogram run involved
@@ -219,15 +228,11 @@ class Executor:
         # Check if SV is initialized and set the initialization budgets to be consumed by blocks
         if not sv.initialized:
             sv.initialize()
-            # print("\n\nSV Initialization")
             for block in blocks_to_pay:
                 if block not in budget_per_block:
                     budget_per_block[block] = initialization_budget
                 else:
                     budget_per_block[block] += initialization_budget
-                # print(f'\tblock {block}, pays {initialization_budget.epsilon}')
-                # print(budget_per_block)
-   
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
@@ -318,7 +323,7 @@ class Executor:
         ):
             cache_entry = CacheEntry(
                 result=true_result,
-                noise_std=run_op.noise_std,  # It's the true std of our new linear combination
+                noise_std=run_op.noise_std,
                 noise=noise,
             )
             self.cache.exact_match_cache.write_entry(
@@ -368,17 +373,18 @@ class Executor:
 
         # True output never released except in debugging logs
         true_result = self.db.run_query(query_db_format, run_op.task_blocks)
-        
-        task_blocks_size = get_blocks_size(run_op.task_blocks, self.config.blocks_metadata)
+
+        task_blocks_size = get_blocks_size(
+            run_op.task_blocks, self.config.blocks_metadata
+        )
         absolute_true_result = true_result * task_blocks_size
 
         total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         true_result = absolute_true_result / total_blocks_size
         # print("true_result", true_result)
-        
         # TODO: check accuracy here
 
-        
+
         # We can't run a powerful query using a weaker PMW
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon
@@ -387,4 +393,3 @@ class Executor:
         # time.sleep(3)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv, run_metadata
-

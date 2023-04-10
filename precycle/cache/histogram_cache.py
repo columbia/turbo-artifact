@@ -165,13 +165,10 @@ class HistogramCache:
             min_num_updates = torch.min(
                 cache_entry.bin_updates[query_tensor_dense > 0]
             ).item()
-            # print("min", min_num_updates, "\n")
             for t in reversed(sorted(list(self.learning_rate.keys()))):
-                # print("t", t, self.learning_rate[t])
                 if min_num_updates >= t:
                     learning_rate = learning_rate[t]
                     break
-        # print("LEARNING RATE", learning_rate, "\n\n")
         # Increase weights if predicted_output is too small
         lr = learning_rate / 8
         if noisy_result < predicted_output:

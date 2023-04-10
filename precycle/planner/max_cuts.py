@@ -10,9 +10,11 @@ from precycle.utils.utility_theorems import (
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
 
+
 class MaxCuts(Planner):
     def __init__(self, cache, budget_accountant, config):
         super().__init__(cache, budget_accountant, config)
+
         if config.planner.monte_carlo_cache:
             self.monte_carlo_cache: Dict[Tuple[float, float, int, int], float] = {}
         else:
@@ -27,7 +29,6 @@ class MaxCuts(Planner):
         ]
         return indices
 
-
     def get_execution_plan(self, task, force_laplace=False):
         """
         Picks a plan with minimal number of cuts that satisfies the binary constraint.
@@ -35,7 +36,7 @@ class MaxCuts(Planner):
         """
 
         subqueries = self.get_max_cuts(task.blocks)
-        
+
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         k = len(subqueries)
 
@@ -114,5 +115,4 @@ class MaxCuts(Planner):
 
         elif self.mechanism_type == "TimestampsPMW":
             raise NotImplementedError
-            
         return plan

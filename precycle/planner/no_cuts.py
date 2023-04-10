@@ -1,7 +1,10 @@
 import math
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW, RunTimestampsPMW
 from precycle.planner.planner import Planner
-from precycle.utils.utility_theorems import get_pmw_epsilon, get_epsilon_isotropic_laplace_concentration
+from precycle.utils.utility_theorems import (
+    get_pmw_epsilon,
+    get_epsilon_isotropic_laplace_concentration,
+)
 
 from precycle.utils.utils import get_blocks_size
 
@@ -16,15 +19,15 @@ class NoCuts(Planner):
         beta = self.config.beta  # task.utility_beta
         node_size = get_blocks_size(task.blocks, self.config.blocks_metadata)
 
-        n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         if self.mechanism_type == "Laplace" or force_laplace:
-            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(
+                alpha, beta, node_size, 1
+            )
 
             sensitivity = 1 / node_size
             laplace_scale = sensitivity / min_epsilon
             noise_std = math.sqrt(2) * laplace_scale
             plan = A(l=[RunLaplace(task.blocks, noise_std)], sv_check=False, cost=0)
-
 
         elif self.mechanism_type == "PMW":
             # NOTE: This is PMW.To be used only in the Monoblock case
@@ -36,7 +39,9 @@ class NoCuts(Planner):
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
             # In case a subquery is assigned to a Histogram run instead of a Laplace run
             # a final check must be done by a SV on the aggregated output to assess its quality.
-            min_epsilon = get_epsilon_isotropic_laplace_concentration(alpha, beta, n, 1)
+            min_epsilon = get_epsilon_isotropic_laplace_concentration(
+                alpha, beta, node_size, 1
+            )
             sv_check = False
 
             # Measure the expected additional budget needed for a Laplace run.
@@ -68,9 +73,13 @@ class NoCuts(Planner):
             # Plan requests always all blocks
             # The query has been extended internally with the block request
             total_blocks = self.config.blocks.max_num
-            blocks = (0, total_blocks-1)
+            blocks = (0, total_blocks - 1)
             node_size = get_blocks_size(blocks, self.config.blocks_metadata)
             epsilon = get_pmw_epsilon(alpha, beta, node_size)
-            plan = A(l=[RunTimestampsPMW(blocks, task.blocks, alpha, epsilon)], sv_check=False, cost=0)
+            plan = A(
+                l=[RunTimestampsPMW(blocks, task.blocks, alpha, epsilon)],
+                sv_check=False,
+                cost=0,
+            )
 
         return plan

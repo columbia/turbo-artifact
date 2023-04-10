@@ -16,11 +16,13 @@ from precycle.cache.cache import Cache, MockCache
 from precycle.planner.max_cuts import MaxCuts
 from precycle.planner.min_cuts import MinCuts
 from precycle.planner.no_cuts import NoCuts
+from precycle.planner.max_cuts import MaxCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
 from precycle.utils.utils import (DEFAULT_CONFIG_FILE, LOGS_PATH, REPO_ROOT,
                                   get_logs, mlflow_log, save_logs, set_run_key)
+
 
 app = typer.Typer()
 
@@ -48,7 +50,9 @@ class Simulator:
                     experiment_name=self.config.logs.mlflow_experiment_id
                 )
             except Exception:
-                experiment_id = mlflow.create_experiment(name=self.config.logs.mlflow_experiment_id)
+                experiment_id = mlflow.create_experiment(
+                    name=self.config.logs.mlflow_experiment_id
+                )
                 print(f"New MLflow experiment created: {experiment_id}")
 
         # Retrocompatible with hardcoded paths
@@ -66,29 +70,34 @@ class Simulator:
         
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
-        
+
         if self.config.mechanism.type == "TimestampsPMW":
             # Extend the attributes domain sizes with the domain size of the 'blocks' attribute
             max_blocks = int(self.config.blocks.max_num)
             # Must run only in the static case
             assert max_blocks == int(self.config.blocks.initial_num)
-            pmw_attribute_names = self.config.blocks_metadata.attribute_names + ["blocks"]
-            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
+            pmw_attribute_names = self.config.blocks_metadata.attribute_names + [
+                "blocks"
+            ]
+            pmw_attributes_domain_sizes = (
+                self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
+            )
             pmw_domain_size = self.config.blocks_metadata.domain_size * max_blocks
 
         else:
             pmw_attribute_names = self.config.blocks_metadata.attribute_names
-            pmw_attributes_domain_sizes = self.config.blocks_metadata.attributes_domain_sizes
+            pmw_attributes_domain_sizes = (
+                self.config.blocks_metadata.attributes_domain_sizes
+            )
             pmw_domain_size = self.config.blocks_metadata.domain_size
 
-            
-        self.config.blocks_metadata.update({"pmw_attribute_names": pmw_attribute_names,
-                                            "pmw_attributes_domain_sizes": pmw_attributes_domain_sizes,
-                                            "pmw_domain_size": pmw_domain_size})
-        
-        print(self.config.blocks_metadata.pmw_attribute_names)
-        print(self.config.blocks_metadata.pmw_attributes_domain_sizes)
-        print(self.config.blocks_metadata.pmw_domain_size)
+        self.config.blocks_metadata.update(
+            {
+                "pmw_attribute_names": pmw_attribute_names,
+                "pmw_attributes_domain_sizes": pmw_attributes_domain_sizes,
+                "pmw_domain_size": pmw_domain_size,
+            }
+        )
 
         if self.config.enable_random_seed:
             random.seed(None)
@@ -114,7 +123,7 @@ class Simulator:
             planner = NoCuts(cache, budget_accountant, self.config)
         elif self.config.planner.method == "MaxCuts":
             planner = MaxCuts(cache, budget_accountant, self.config)
-            
+
         query_processor = QueryProcessor(
             db, cache, planner, budget_accountant, self.config
         )
@@ -136,7 +145,7 @@ class Simulator:
         config["blocks"]["block_requests_pattern"] = {}
 
         key, _, _, _, _ = set_run_key(config)
-        key += "zip_" + str(config['tasks']['zipf_k'])
+        key += "_zip_" + str(config["tasks"]["zipf_k"])
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
