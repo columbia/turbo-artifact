@@ -1,10 +1,14 @@
+import time
+
 import numpy as np
 from precycle.utils.utils import get_blocks_size
 from precycle.utils.utility_theorems import get_sv_epsilon
 from termcolor import colored
 from loguru import logger
 import redis
-import time
+
+from precycle.utils.utility_theorems import get_sv_epsilon
+from precycle.utils.utils import get_blocks_size
 
 
 class SparseVector:
@@ -33,15 +37,10 @@ class SparseVector:
     def check(self, true_output, noisy_output):
         assert self.noisy_threshold is not None
         true_error = abs(true_output - noisy_output)
+        logger.debug(colored(f"true_error, {true_error}", "yellow"))
         error_noise = np.random.laplace(loc=0, scale=self.b)
         noisy_error = true_error + error_noise
-        logger.info(colored(f"true_error, {true_error}", "yellow"))
-        logger.info(
-            colored(
-                f"noisy_error, {noisy_error}, noisy_threshold, {self.noisy_threshold}",
-                "yellow",
-            )
-        )
+        logger.debug(colored(f"noisy_error, {noisy_error}, noisy_threshold, {self.noisy_threshold}", "yellow"))
         if noisy_error < self.noisy_threshold:
             return True
         else:
@@ -66,7 +65,6 @@ class SparseVectors:
         # node_id covers exactly the requested blocks
         (i, j) = node_id
         n = get_blocks_size((i, j), self.blocks_metadata)
-
         sparse_vector = SparseVector(
             id=node_id,
             beta=self.config.beta,

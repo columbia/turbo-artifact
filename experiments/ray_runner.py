@@ -1,17 +1,21 @@
-import os
-import ray
-import mlflow
 import datetime
-from ray import tune
+import os
+from typing import Any, Dict, List
+
+import mlflow
+import ray
 from loguru import logger
-from typing import List, Any, Dict
+from ray import tune
+
 from precycle.run_simulation import Simulator
 from precycle.utils.utils import LOGS_PATH, RAY_LOGS
 
 
 def run_and_report(config: dict, replace=False) -> None:
     logs = Simulator(config).run()
-    tune.report(**logs)
+    
+    if logs:
+        tune.report(**logs)
 
 
 def grid_online(
@@ -40,6 +44,10 @@ def grid_online(
     log_every_n_tasks: int = 100,
     bootstrapping: bool = [True],
     exact_match_caching: bool = [True],
+    mlflow_random_prefix: bool = False,
+    validation_interval: int = 0,
+    mlflow_experiment_id: str = "precycle-2",
+    save_logs: bool = True,
 ):
 
     enable_mlflow = True
@@ -74,7 +82,7 @@ def grid_online(
             "arrival_interval": 1,
             "block_data_path": blocks_path,
             "block_metadata_path": blocks_metadata,
-            "block_requests_pattern": block_requests_pattern,
+            "block_requests_pattern": tune.grid_search(block_requests_pattern) if not isinstance(block_requests_pattern[0], int) else block_requests_pattern
         },
         "tasks": {
             "path": tune.grid_search(tasks_path),
@@ -86,12 +94,15 @@ def grid_online(
         },
         "logs": {
             "verbose": False,
-            "save": True,
+            "save": save_logs,
             "mlflow": enable_mlflow,
-            "mlflow_experiment_id": "precycle-2",
+            "mlflow_experiment_id": mlflow_experiment_id,
             "loguru_level": "INFO",
             "log_every_n_tasks": log_every_n_tasks,
             "print_pid": False,
+            "mlflow_random_prefix": mlflow_random_prefix,
+            "validation_interval": validation_interval,
+            "max_validation_tasks": 1000,
         },
     }
 

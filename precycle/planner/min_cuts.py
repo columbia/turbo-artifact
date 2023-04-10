@@ -6,9 +6,7 @@ from sortedcollections import OrderedSet
 from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
-    get_epsilon_isotropic_laplace_monte_carlo,
-    get_pmw_epsilon,
-)
+    get_epsilon_isotropic_laplace_monte_carlo, get_pmw_epsilon)
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
 
 
@@ -104,7 +102,7 @@ class MinCuts(Planner):
                 # Measure the expected additional budget needed for a Laplace run.
                 cache_entry = self.cache.exact_match_cache.read_entry(
                     task.query_id, (i, j)
-                )
+                )if self.config.exact_match_caching else None
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
@@ -128,3 +126,4 @@ class MinCuts(Planner):
             raise NotImplementedError
 
         return plan
+

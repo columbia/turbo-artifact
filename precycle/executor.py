@@ -9,7 +9,9 @@ from termcolor import colored
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 from precycle.cache.exact_match_cache import CacheEntry
-from precycle.utils.utils import get_blocks_size
+from precycle.utils.utils import (HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE,
+                                  PMW_RUNTYPE, get_blocks_size, get_node_key,
+                                  mlflow_log)
 
 
 class RunLaplace:
@@ -91,12 +93,19 @@ class Executor:
 
         logger.debug(f"Executing plan:\n{[str(op) for op in plan.l]}")
 
+        node_sizes = {}
+        laplace_hits = {}
+        pmw_hits = {}
         for run_op in plan.l:
+            
+            node_key = get_node_key(run_op.blocks)
+            
             if isinstance(run_op, RunLaplace):
-                run_return_value = self.run_laplace(
+                run_return_value, run_laplace_metadata = self.run_laplace(
                     run_op, task.query_id, task.query_db_format
                 )
-                run_types[str(run_op.blocks)] = "Laplace"
+                run_types[node_key] = LAPLACE_RUNTYPE
+                laplace_hits[node_key] = run_laplace_metadata.get("hit", 0)
 
                 # External Update to the Histogram
                 # TODO: Add the convergence check, right now we have zero guarantees
@@ -111,28 +120,41 @@ class Executor:
                 run_return_value = self.run_histogram(
                     run_op, task.query, task.query_db_format
                 )
-                run_types[str(run_op.blocks)] = "Histogram"
+                run_types[node_key] = HISTOGRAM_RUNTYPE
 
             elif isinstance(run_op, RunPMW):
-                run_return_value = self.run_pmw(
+                run_return_value, pmw_metadata = self.run_pmw(
                     run_op, task.query, task.query_db_format
                 )
-                run_types[str(run_op.blocks)] = "PMW"
+                run_types[node_key] = PMW_RUNTYPE
+                pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
+                
 
             elif isinstance(run_op, RunTimestampsPMW):
-                run_return_value = self.run_timestamps_pmw(
+                run_return_value, pmw_metadata = self.run_timestamps_pmw(
                     run_op, task.query, task.query_db_format
                 )
-                run_types[str(run_op.blocks)] = "PMW"
+                run_types[node_key] = PMW_RUNTYPE
+                pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
 
             # Set run budgets for participating blocks
             for block in range(run_op.blocks[0], run_op.blocks[1] + 1):
                 budget_per_block[block] = run_return_value.run_budget
 
             node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
+            node_sizes[node_key] = node_size
+            
             noisy_partial_results += [run_return_value.noisy_result * node_size]
             true_partial_results += [run_return_value.true_result * node_size]
             total_size += node_size
+            
+        # Modify metadata inplace (a bit ugly)
+        run_metadata["node_sizes"] = node_sizes
+        run_metadata["total_size"] = total_size
+        
+        # We append to the metadata because after SV resets we need to repeat the same query
+        run_metadata["laplace_hits"].append(laplace_hits)
+        run_metadata["pmw_hits"].append(pmw_hits)
 
         if noisy_partial_results:
             # Aggregate outputs
@@ -163,12 +185,13 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
-                    print("sv failed, task: ", task.id)
+                    logger.debug("sv failed, task: ", task.id)
                 run_metadata["sv_check_status"].append(status)
                 sv_id = task.blocks
                 run_metadata["sv_node_id"].append(sv_id)
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
+            
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
@@ -210,8 +233,6 @@ class Executor:
                     budget_per_block[block] = initialization_budget
                 else:
                     budget_per_block[block] += initialization_budget
-            # print(budget_per_block, "n")
-
         # Now check whether we pass or fail the SV check
         if sv.check(true_result, noisy_result) == False:
             # Flag SV as uninitialized so that we pay again for its initialization next time we use it
@@ -224,12 +245,15 @@ class Executor:
                     )
         else:
             sv_check_status = True
-            print(colored("FREE LUNCH - yum yum\n", "blue"))
+            logger.debug("FREE LUNCH - yum yum\n", "blue")
 
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
 
     def run_laplace(self, run_op, query_id, query_db_format):
+        
+        run_laplace_metadata = {}
+        
         node_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         sensitivity = 1 / node_size
 
@@ -247,10 +271,11 @@ class Executor:
             noise = np.random.laplace(scale=laplace_scale)
             noisy_result = true_result + noise
             rv = RunReturnValue(true_result, noisy_result, run_budget)
-            return rv
+            return rv,run_laplace_metadata
 
         # Check for the entry inside the cache
         cache_entry = self.cache.exact_match_cache.read_entry(query_id, run_op.blocks)
+
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
@@ -264,6 +289,8 @@ class Executor:
                 else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
             )
             noise = np.random.laplace(scale=laplace_scale)
+            
+            run_laplace_metadata["hit"] = 0
 
         else:  # Cached
             true_result = cache_entry.result
@@ -273,6 +300,9 @@ class Executor:
                 run_op.epsilon = 0
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
+                
+                run_laplace_metadata["hit"] = 1
+                
             else:
                 laplace_scale = run_op.noise_std / np.sqrt(2)
                 epsilon = sensitivity / laplace_scale
@@ -283,6 +313,9 @@ class Executor:
                     else LaplaceCurve(laplace_noise=laplace_scale / sensitivity)
                 )
                 noise = np.random.laplace(scale=laplace_scale)
+                
+                # NOTE: if you do VR you can use hit = (new_eps - old_eps) / old_eps
+                run_laplace_metadata["hit"] = 0
 
         # If we used any fresh noise we need to update the cache
         if (not self.config.puredp and not isinstance(run_budget, ZeroCurve)) or (
@@ -298,7 +331,7 @@ class Executor:
             )
         noisy_result = true_result + noise
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_laplace_metadata
 
     def run_histogram(self, run_op, query, query_db_format):
         cache_entry = self.cache.histogram_cache.read_entry(run_op.blocks)
@@ -328,9 +361,9 @@ class Executor:
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon
 
-        noisy_result, run_budget, _ = pmw.run(query, true_result)
+        noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_metadata
 
     def run_timestamps_pmw(self, run_op, query, query_db_format):
         # Run_op blocks contains all system's blocks in this case
@@ -349,11 +382,14 @@ class Executor:
         total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
         true_result = absolute_true_result / total_blocks_size
         # print("true_result", true_result)
+        # TODO: check accuracy here
+
 
         # We can't run a powerful query using a weaker PMW
         assert run_op.alpha <= pmw.alpha
         assert run_op.epsilon <= pmw.epsilon
 
-        noisy_result, run_budget, _ = pmw.run(query, true_result)
+        noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
+        # time.sleep(3)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_metadata

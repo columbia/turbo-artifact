@@ -1,12 +1,14 @@
 import math
 from typing import Dict, Tuple
 
-from precycle.executor import A, RunHistogram, RunLaplace
+from precycle.executor import (A, RunHistogram, RunLaplace, RunPMW,
+                               RunTimestampsPMW)
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
-    get_epsilon_isotropic_laplace_monte_carlo,
-)
-from precycle.utils.utils import get_blocks_size
+    get_epsilon_isotropic_laplace_concentration,
+    get_epsilon_isotropic_laplace_monte_carlo, get_pmw_epsilon)
+from precycle.utils.utils import get_blocks_size, satisfies_constraint
+
 
 
 class MaxCuts(Planner):
@@ -17,10 +19,14 @@ class MaxCuts(Planner):
             self.monte_carlo_cache: Dict[Tuple[float, float, int, int], float] = {}
         else:
             self.monte_carlo_cache = None
-
+        
     def get_max_cuts(self, blocks):
-        blocks_list = list(range(blocks[0], blocks[1] + 1))
-        indices = [(i, i) for i in blocks_list]
+        """
+        Returns the minimum number of nodes in the binary tree that can construct <blocks>
+        """
+        indices = [
+            (i,i) for i in range(blocks[0], blocks[1]+1)
+        ]
         return indices
 
     def get_execution_plan(self, task, force_laplace=False):
@@ -30,6 +36,7 @@ class MaxCuts(Planner):
         """
 
         subqueries = self.get_max_cuts(task.blocks)
+
         n = get_blocks_size(task.blocks, self.config.blocks_metadata)
         k = len(subqueries)
 
@@ -56,6 +63,15 @@ class MaxCuts(Planner):
                 run_ops += [RunLaplace((i, j), noise_std)]
             plan = A(l=run_ops, sv_check=False, cost=0)
 
+        elif self.mechanism_type == "PMW":
+            # TODO: Extend this to not work only in monoblock setting
+            assert len(subqueries) == 1
+            (i, j) = subqueries[0]
+            node_size = get_blocks_size((i, j), self.config.blocks_metadata)
+            epsilon = get_pmw_epsilon(alpha, beta, node_size)
+            run_ops = [RunPMW((i, j), alpha, epsilon)]
+            plan = A(l=run_ops, sv_check=False, cost=0)
+
         elif self.mechanism_type == "Hybrid":
             # Assign a Mechanism to each subquery
             # Using the Laplace Utility bound get the minimum epsilon that should be used by each subquery
@@ -76,7 +92,8 @@ class MaxCuts(Planner):
                 # Measure the expected additional budget needed for a Laplace run.
                 cache_entry = self.cache.exact_match_cache.read_entry(
                     task.query_id, (i, j)
-                )
+                ) if self.config.exact_match_caching else None
+                
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon
@@ -98,5 +115,4 @@ class MaxCuts(Planner):
 
         elif self.mechanism_type == "TimestampsPMW":
             raise NotImplementedError
-
         return plan

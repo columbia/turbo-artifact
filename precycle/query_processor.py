@@ -1,13 +1,17 @@
 import time
-from typing import Dict, Optional
+from collections import defaultdict
+from typing import Dict, List, Optional
 
+import numpy as np
 from loguru import logger
 from termcolor import colored
 
-from precycle.executor import Executor
+from precycle.executor import A, Executor, RunHistogram
 from precycle.task import Task, TaskInfo
+from precycle.utils.logs import compute_hit_scores
 from precycle.utils.utils import FAILED, FINISHED, mlflow_log
 
+SLIDING_WINDOW_LENGTH = 1_000
 
 class QueryProcessor:
     def __init__(self, db, cache, planner, budget_accountant, config):
@@ -20,8 +24,18 @@ class QueryProcessor:
 
         self.tasks_info = []
         self.total_budget_spent_all_blocks = 0  # ZeroCurve()
-
+        
+        
+        self.score_counters = defaultdict(int)
+        self.score_sliding_windows = defaultdict(list)
         self.counter = 0
+        
+        self.score_thresholds = {
+            0.5: False,
+            0.9: False,
+            0.95: False,
+            0.99: False,
+        }
 
     def try_run_task(self, task: Task) -> Optional[Dict]:
         """
@@ -37,7 +51,10 @@ class QueryProcessor:
             "sv_node_id": [],
             "run_types": [],
             "budget_per_block": [],
+            "laplace_hits": [],
+            "pmw_hits": [],
         }
+
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while result is None and (not status or status == "sv_failed"):
@@ -55,7 +72,9 @@ class QueryProcessor:
             # print("Planning", planning_time)
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
+            # Hmm status seems unused?
             result, status = self.executor.execute_plan(plan, task, run_metadata)
+
             # logger.info(
             #     colored(
             #         f"Task: {task.id}, Query: {task.query_id}, on blocks: {task.blocks}, Plan: {plan}.",
@@ -65,17 +84,48 @@ class QueryProcessor:
             round += 1
 
         if result is not None:
-
+ 
             if self.config.logs.mlflow:
+                
+                hit_scores = compute_hit_scores(**run_metadata)
+                
+                for score_name, score_value in hit_scores.items():
+                    if not np.isnan(score_value):
+                        # Not so meaningful for cumulative SV or Laplace score
+                        self.score_counters[f"cumulative_{score_name}"] += score_value
+                                
+                    # Sliding averages
+                    if len(self.score_sliding_windows[score_name]) >= SLIDING_WINDOW_LENGTH:
+                        self.score_sliding_windows[score_name].pop(0) # Drop oldest score
+                    self.score_sliding_windows[score_name].append(score_value)
+                    
+                
                 budget_per_block_list = run_metadata["budget_per_block"]
                 for budget_per_block in budget_per_block_list:
                     for _, budget in budget_per_block.items():
                         self.total_budget_spent_all_blocks += budget.epsilon
 
                 if self.counter % 100 == 0:
-                    mlflow_log(
-                        f"AllBlocks", self.total_budget_spent_all_blocks, task.id
-                    )
+                    mlflow_log(f"AllBlocks", self.total_budget_spent_all_blocks, task.id)
+                    
+                    for score_name in hit_scores.keys():
+                        # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
+                        non_nan_scores = np.array([score for score in self.score_sliding_windows[score_name] if not np.isnan(score)])
+                        if len(non_nan_scores) > 0:
+                            sliding_score = np.mean(non_nan_scores)
+                            
+                            for score_threshold in self.score_thresholds.keys():
+                                if self.score_thresholds[score_threshold] == False and sliding_score >= score_threshold:
+                                    # We passed a threshold for the first time
+                                    mlflow_log(f"sliding_{score_name}_threshold_{score_threshold}", self.counter, task.id)
+                                    self.score_thresholds[score_threshold] = True
+                            
+                            mlflow_log(f"sliding_{score_name}", sliding_score, task.id)
+                        mlflow_log(f"cumulative_{score_name}", self.score_counters[f"cumulative_{score_name}"], task.id)
+                        
+                    # Each miss is an update (either SV update or Laplace update, without the check)
+                    num_updates_monoblock = task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                    mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
 
             status = FINISHED
             # logger.info(
@@ -97,3 +147,29 @@ class QueryProcessor:
             TaskInfo(task, status, planning_time, run_metadata, result).dump()
         )
         return run_metadata
+
+
+    def validate(self, task_pool: List[Task]):
+                
+        # Perform a fake SV check on each subquery histogram
+        n_hits = 0
+        for task in task_pool:
+            (i,j) = task.blocks
+            assert i == j
+            
+            run_op = RunHistogram((i, j))
+            run_return_value = self.executor.run_histogram(
+                run_op, task.query, task.query_db_format
+            )
+            
+            true_error = abs(run_return_value.true_result - run_return_value.noisy_result)
+            if true_error < self.config.alpha / 2:
+                n_hits += 1
+                
+        validation_hit_rate = n_hits / len(task_pool)
+        return validation_hit_rate
+            
+            # subqueries = self.get_min_cuts(task.blocks)
+            # for (i, j) in subqueries:
+            #     # TODO: basic executor, assume we have only one block
+            #     raise NotImplementedError

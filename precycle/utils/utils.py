@@ -3,9 +3,12 @@ import math
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 import mlflow
+import numpy as np
 import pandas as pd
+import scipy
 
 # from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
 from precycle.budget.renyi_budget import RenyiBudget
@@ -20,6 +23,15 @@ FAILED = "failed"
 PENDING = "pending"
 FINISHED = "finished"
 
+LAPLACE_RUNTYPE = "Laplace"
+HISTOGRAM_RUNTYPE = "Histogram"
+PMW_RUNTYPE = "PMW"
+
+def get_node_key(blocks: Tuple[int, int]) -> str:
+    """For some reason logs are using strings. 
+       You can use this for cache keys too.
+    """
+    return str(blocks)
 
 def mlflow_log(key, value, step):
     mlflow_run = mlflow.active_run()
@@ -30,6 +42,32 @@ def mlflow_log(key, value, step):
             step=step,
         )
 
+
+def parse_block_requests_pattern(block_requests_pattern, max_blocks=50):
+    # Just a regular distribution
+    if isinstance(block_requests_pattern, list) and isinstance(block_requests_pattern[0], int):
+        return block_requests_pattern
+    
+    # Parameters for a discrete Gaussian
+    distribution, std, mean = block_requests_pattern.split("-")
+    std, mean = int(std), int(mean)
+    assert distribution == "dgaussian"
+    # mean = tmax - 2*std
+    f = np.array([scipy.stats.norm.pdf(k, mean, std) for k in range(1, max_blocks+1)])
+    
+    # Truncate after 2 stdev
+    f = f/scipy.stats.norm.pdf(2*std, 0, std)
+    f = np.floor(f)
+    
+    # Frequency encoded by repetition (yes)
+    blocks = []
+    for i in range(1, 51):
+        blocks.extend(
+            [i] * int(f[i-1])
+        )
+    return blocks
+    
+    
 
 def satisfies_constraint(blocks, branching_factor=2):
     """
@@ -234,12 +272,19 @@ def get_logs(
 
 def set_run_key(config_dict):
     # Fix a key for each run
+    if config_dict["logs"].get("mlflow_random_prefix", False):
+        # Short nickname to identify runs, especially on long names that get cut by Plotly
+        key = str(uuid.uuid4())[:4]
+    else:
+        key = ""
+        
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
         heuristic = ""
         learning_rate = ""
         warmup = ""
+
         if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
             mechanism_type += "+Cache"
         if (
@@ -259,14 +304,14 @@ def set_run_key(config_dict):
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        key = mechanism_type
+        key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "TimestampsPMW":
         mechanism_type = "TimestampsPMW"
         heuristic = ""
         learning_rate = ""
         warmup = ""
-        key = mechanism_type
+        key += mechanism_type
 
     else:
         mechanism_type = "Hybrid"
@@ -275,6 +320,7 @@ def set_run_key(config_dict):
         learning_rate = str(
             config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
         )
+
         if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
             mechanism_type += "+Cache"
         if (

@@ -1,10 +1,14 @@
-import os
-import typer
 import multiprocessing
-from experiments.ray_runner import grid_online
-from precycle.utils.utils import REPO_ROOT
-from notebooks.caching.utils import get_df, analyze_monoblock, analyze_multiblock
+import os
 from copy import deepcopy
+
+import numpy as np
+import typer
+
+from experiments.ray_runner import grid_online
+from notebooks.caching.utils import (analyze_monoblock, analyze_multiblock,
+                                     get_df)
+from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 
@@ -130,6 +134,53 @@ def caching_monoblock_heuristics_covid19(dataset):
     analyze_monoblock(f"ray/{logs_dir}")
 
 
+def convergence_covid19(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    task_paths = ["34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+    block_requests_pattern = [1]
+
+    logs_dir = f"{dataset}/monoblock/convergence"
+    experiments = []
+    config = {
+        "global_seed": 64,
+        "logs_dir": logs_dir,
+        "tasks_path": task_paths,
+        "blocks_path": blocks_path,
+        "blocks_metadata": blocks_metadata,
+        "block_requests_pattern": block_requests_pattern,
+        "planner": ["NoCuts"],
+        "mechanism": ["Hybrid"],
+        "initial_blocks": [1],
+        "max_blocks": [1],
+        "avg_num_tasks_per_block": [7e4],
+        "max_tasks": [7e4],
+        "initial_tasks": [0],
+        "alpha": [0.05],
+        "beta": [0.001],
+        "zipf_k": [1],
+        "heuristic": ["bin_visits:100-5", "bin_visits:0-0"],
+        "variance_reduction": [False],
+        "log_every_n_tasks": 100,
+        # "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.4, 1, 2, 4],
+        "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=20)],
+        "bootstrapping": [False],
+        "exact_match_caching": [False],
+        "mlflow_random_prefix": [True],
+        "validation_interval": 500,
+        "mlflow_experiment_id": "convergence",
+    }
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
+    experiments_start_and_join(experiments)
+    analyze_monoblock(logs_dir)
+
+
 def caching_monoblock_learning_rates_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["34425queries.privacy_tasks.csv"]
@@ -179,6 +230,88 @@ def caching_monoblock_learning_rates_covid19(dataset):
     )
     experiments_start_and_join(experiments)
     analyze_monoblock(f"ray/{logs_dir}")
+
+
+def tree_covid19(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    task_paths = ["34425queries.privacy_tasks.csv"]
+    # block_requests_pattern = list(range(1, 51))
+    
+    # block_requests_pattern = [
+    #     [1],
+    #     [2],
+    #     [4],
+    #     [8],
+    #     [16],
+    #     [32]
+    # ]
+    
+    block_requests_pattern = [f"dgaussian-{std}-{tmax}" for tmax in [1,5,10,15,20,25,30,40,50] for std in [1, 3, 5,10,15]]
+    
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+
+    logs_dir = f"test/{dataset}/static_multiblock/tree"
+    experiments = []
+    config = {
+        "global_seed": 64,
+        "logs_dir": logs_dir,
+        "tasks_path": task_paths,
+        "blocks_path": blocks_path,
+        "blocks_metadata": blocks_metadata,
+        "block_requests_pattern": block_requests_pattern,
+        "block_selection_policy": ["LatestBlocks"],
+        # "block_selection_policy": ["LatestBlocks"],
+        "planner": ["MinCuts", "MaxCuts"],
+        # "planner": ["MinCuts"],
+        "mechanism": ["Hybrid"],
+        "initial_blocks": [50],
+        "max_blocks": [50],
+        "avg_num_tasks_per_block": [6e3],
+        "max_tasks": [300e3],
+        "initial_tasks": [0],
+        "alpha": [0.05],
+        "beta": [0.001],
+        "zipf_k": [1],
+        "heuristic": ["bin_visits:100-5"],
+        "variance_reduction": [True],
+        "log_every_n_tasks": 500,
+        "learning_rate": [0.2],
+        "bootstrapping": [False],
+        "exact_match_caching": [False],
+        "mlflow_experiment_id": "tree_zipf1",
+        "mlflow_random_prefix": [True],
+        "save_logs": False,
+    }
+    
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
+    # config["exact_match_caching"] = [True]
+
+    # config["planner"] = ["MinCuts"]
+    # config["heuristic"] = [""]
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
+    # config["planner"] = ["MinCuts"]
+    # config["mechanism"] = ["Hybrid"]
+    # config["heuristic"] = ["bin_visits:100-5"]
+    # config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
+    # config["bootstrapping"] = [False]
+
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
+    experiments_start_and_join(experiments)
+    analyze_multiblock(logs_dir)
 
 
 def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
@@ -394,6 +527,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
+        "block_selection_policy": ["LatestBlocks"],
         "planner": ["NoCuts"],
         "mechanism": ["Laplace"],
         "initial_blocks": [50],

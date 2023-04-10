@@ -2,17 +2,11 @@ import numpy as np
 import torch
 from loguru import logger
 
-from precycle.budget import Budget
-from precycle.budget.curves import (
-    BoundedOneShotSVT,
-    GaussianCurve,
-    LaplaceCurve,
-    PureDPtoRDP,
-    ZeroCurve,
-)
+from precycle.budget import BasicBudget, Budget
+from precycle.budget.curves import (BoundedOneShotSVT, GaussianCurve,
+                                    LaplaceCurve, PureDPtoRDP, ZeroCurve)
 from precycle.cache.histogram import DenseHistogram, flat_indices
 from precycle.utils.utils import mlflow_log
-from precycle.budget import BasicBudget
 
 """
 Trimmed-down implementation of PMW, following Salil's pseudocode
@@ -66,6 +60,7 @@ class PMW:
 
         # Check the public histogram for free. Always normalized, outputs fractions
         predicted_output = self.histogram.run(query)
+        logger.debug("noisy result", predicted_output)
 
         # Add the sparse vector noise
         true_error = abs(true_output - predicted_output)
@@ -79,7 +74,7 @@ class PMW:
             # Easy query, just output the histogram prediction
             output = predicted_output
             run_metadata["hard_query"] = False
-            logger.info(
+            logger.debug(
                 f"Easy query - Predicted: {predicted_output}, true: {true_output}, true error: {true_error}, noisy error: {noisy_error}, epsilon: {self.epsilon}"
             )
         else:
@@ -105,7 +100,7 @@ class PMW:
 
             # We'll start a new sparse vector at the beginning of the next query (and pay for it)
             run_metadata["hard_query"] = True
-            logger.info(
+            logger.debug(
                 f"Hard query - Predicted: {predicted_output}, true: {true_output}"
             )
             self.local_svt_queries_ran = 0
