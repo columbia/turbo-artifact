@@ -20,8 +20,15 @@ from precycle.planner.max_cuts import MaxCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
-from precycle.utils.utils import (DEFAULT_CONFIG_FILE, LOGS_PATH, REPO_ROOT,
-                                  get_logs, mlflow_log, save_logs, set_run_key)
+from precycle.utils.utils import (
+    DEFAULT_CONFIG_FILE,
+    LOGS_PATH,
+    REPO_ROOT,
+    get_logs,
+    mlflow_log,
+    save_logs,
+    set_run_key,
+)
 
 
 app = typer.Typer()
@@ -35,7 +42,7 @@ class Simulator:
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
-        
+
         # logger.info(f"Configuration: {self.config}")
 
         if self.config.logs.print_pid:
@@ -56,7 +63,11 @@ class Simulator:
                 print(f"New MLflow experiment created: {experiment_id}")
 
         # Retrocompatible with hardcoded paths
-        for a,b in [("blocks", "block_data_path"), ("blocks", "block_metadata_path"), ("tasks", "path")]:
+        for a, b in [
+            ("blocks", "block_data_path"),
+            ("blocks", "block_metadata_path"),
+            ("tasks", "path"),
+        ]:
             p = Path(self.config[a][b])
             if not p.exists():
                 self.config[a][b] = REPO_ROOT.joinpath(p)
@@ -67,7 +78,7 @@ class Simulator:
         except Exception as e:
             logger.error("Dataset metadata must have be created first..")
             raise e
-        
+
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
 
@@ -111,7 +122,7 @@ class Simulator:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
             cache = MockCache(self.config)
-            
+
         else:
             db = PSQL(self.config)
             budget_accountant = BudgetAccountant(self.config)
@@ -149,23 +160,33 @@ class Simulator:
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
-            mlflow.log_param("lr", self.config.mechanism.probabilistic_cfg.learning_rate)
-            mlflow.log_param("heuristic", self.config.mechanism.probabilistic_cfg.heuristic)
-            mlflow.log_param("block_requests_pattern", str(self.config.blocks.block_requests_pattern))
-            
+            mlflow.log_param(
+                "lr", self.config.mechanism.probabilistic_cfg.learning_rate
+            )
+            mlflow.log_param(
+                "heuristic", self.config.mechanism.probabilistic_cfg.heuristic
+            )
+            mlflow.log_param(
+                "block_requests_pattern", str(self.config.blocks.block_requests_pattern)
+            )
+
             if isinstance(self.config.blocks.block_requests_pattern, str):
-                distribution, std, mean = self.config.blocks.block_requests_pattern.split("-")
+                (
+                    distribution,
+                    std,
+                    mean,
+                ) = self.config.blocks.block_requests_pattern.split("-")
                 std, mean = int(std), int(mean)
                 assert distribution == "dgaussian"
                 mlflow.log_param("block_requests_pattern_std", std)
                 mlflow.log_param("block_requests_pattern_mean", mean)
-                
-            
-            mlflow.log_param("block_selection_policy", self.config.tasks.block_selection_policy)
-            
+
+            mlflow.log_param(
+                "block_selection_policy", self.config.tasks.block_selection_policy
+            )
+
             mlflow.log_param("planner_method", self.config.planner.method)
-            
-            
+
             self.env.run()
 
             if self.config.logs.save:

@@ -81,6 +81,7 @@
         "loguru_level": "INFO",
         "log_every_n_tasks": 500,
         "print_pid": true,
-        "mlflow_random_prefix": true
+        "mlflow_random_prefix": true,
+        "validation_interval": 0
     }
 }

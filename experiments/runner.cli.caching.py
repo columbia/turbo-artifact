@@ -6,8 +6,7 @@ import numpy as np
 import typer
 
 from experiments.ray_runner import grid_online
-from notebooks.caching.utils import (analyze_monoblock, analyze_multiblock,
-                                     get_df)
+from notebooks.caching.utils import analyze_monoblock, analyze_multiblock, get_df
 from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
@@ -236,7 +235,7 @@ def tree_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["34425queries.privacy_tasks.csv"]
     # block_requests_pattern = list(range(1, 51))
-    
+
     # block_requests_pattern = [
     #     [1],
     #     [2],
@@ -245,9 +244,13 @@ def tree_covid19(dataset):
     #     [16],
     #     [32]
     # ]
-    
-    block_requests_pattern = [f"dgaussian-{std}-{tmax}" for tmax in [1,5,10,15,20,25,30,40,50] for std in [1, 3, 5,10,15]]
-    
+
+    block_requests_pattern = [
+        f"dgaussian-{std}-{tmax}"
+        for tmax in [1, 5, 10, 15, 20, 25, 30, 40, 50]
+        for std in [1, 3, 5, 10, 15]
+    ]
+
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
@@ -284,7 +287,7 @@ def tree_covid19(dataset):
         "mlflow_random_prefix": [True],
         "save_logs": False,
     }
-    
+
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)

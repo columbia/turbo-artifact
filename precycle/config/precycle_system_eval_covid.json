@@ -51,7 +51,7 @@
         "avg_num_tasks_per_block": 200,
         "max_num": 10000,
         "initial_num": 0,
-        "zipf_k": 0
+        "zipf_k": 1
     },
     "blocks_server": {
         "host": "localhost",
@@ -68,6 +68,7 @@
         "mlflow_experiment_id": "",
         "loguru_level": "INFO",
         "log_every_n_tasks": 10000,
-        "print_pid": false
+        "print_pid": false,
+        "validation_interval": 0
     }
 }

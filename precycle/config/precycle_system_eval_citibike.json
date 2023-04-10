@@ -68,6 +68,7 @@
         "mlflow_experiment_id": "",
         "loguru_level": "INFO",
         "log_every_n_tasks": 10000,
-        "print_pid": false
+        "print_pid": false,
+        "validation_interval": 0
     }
 }

@@ -1,14 +1,14 @@
 import math
 from typing import Dict, Tuple
 
-from precycle.executor import (A, RunHistogram, RunLaplace, RunPMW,
-                               RunTimestampsPMW)
+from precycle.executor import A, RunHistogram, RunLaplace, RunPMW, RunTimestampsPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
     get_epsilon_isotropic_laplace_concentration,
-    get_epsilon_isotropic_laplace_monte_carlo, get_pmw_epsilon)
+    get_epsilon_isotropic_laplace_monte_carlo,
+    get_pmw_epsilon,
+)
 from precycle.utils.utils import get_blocks_size, satisfies_constraint
-
 
 
 class MaxCuts(Planner):
@@ -19,14 +19,12 @@ class MaxCuts(Planner):
             self.monte_carlo_cache: Dict[Tuple[float, float, int, int], float] = {}
         else:
             self.monte_carlo_cache = None
-        
+
     def get_max_cuts(self, blocks):
         """
         Returns the minimum number of nodes in the binary tree that can construct <blocks>
         """
-        indices = [
-            (i,i) for i in range(blocks[0], blocks[1]+1)
-        ]
+        indices = [(i, i) for i in range(blocks[0], blocks[1] + 1)]
         return indices
 
     def get_execution_plan(self, task, force_laplace=False):
@@ -90,10 +88,12 @@ class MaxCuts(Planner):
             run_ops = []
             for (i, j) in subqueries:
                 # Measure the expected additional budget needed for a Laplace run.
-                cache_entry = self.cache.exact_match_cache.read_entry(
-                    task.query_id, (i, j)
-                ) if self.config.exact_match_caching else None
-                
+                cache_entry = (
+                    self.cache.exact_match_cache.read_entry(task.query_id, (i, j))
+                    if self.config.exact_match_caching
+                    else None
+                )
+
                 node_size = get_blocks_size((i, j), self.config.blocks_metadata)
                 sensitivity = 1 / node_size
                 laplace_scale = sensitivity / min_epsilon

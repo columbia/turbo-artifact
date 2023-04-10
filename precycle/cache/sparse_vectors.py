@@ -40,7 +40,12 @@ class SparseVector:
         logger.debug(colored(f"true_error, {true_error}", "yellow"))
         error_noise = np.random.laplace(loc=0, scale=self.b)
         noisy_error = true_error + error_noise
-        logger.debug(colored(f"noisy_error, {noisy_error}, noisy_threshold, {self.noisy_threshold}", "yellow"))
+        logger.debug(
+            colored(
+                f"noisy_error, {noisy_error}, noisy_threshold, {self.noisy_threshold}",
+                "yellow",
+            )
+        )
         if noisy_error < self.noisy_threshold:
             return True
         else:
