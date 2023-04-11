@@ -9,14 +9,9 @@ from termcolor import colored
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 from precycle.cache.exact_match_cache import CacheEntry
-from precycle.utils.utils import (
-    HISTOGRAM_RUNTYPE,
-    LAPLACE_RUNTYPE,
-    PMW_RUNTYPE,
-    get_blocks_size,
-    get_node_key,
-    mlflow_log,
-)
+from precycle.utils.utils import (HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE,
+                                  PMW_RUNTYPE, get_blocks_size, get_node_key,
+                                  mlflow_log)
 
 
 class RunLaplace:
@@ -112,13 +107,13 @@ class Executor:
                 run_types[node_key] = LAPLACE_RUNTYPE
                 laplace_hits[node_key] = run_laplace_metadata.get("hit", 0)
 
-                # External Update to the Histogram
-                # TODO: Add the convergence check, right now we have zero guarantees
+                # External Update to the Histogram (will do the check inside)
                 if self.config.mechanism.type == "Hybrid":
                     self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
+                        epsilon=run_op.epsilon,
                     )
 
             elif isinstance(run_op, RunHistogram):

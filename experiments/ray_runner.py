@@ -48,6 +48,8 @@ def grid_online(
     validation_interval: int = 0,
     mlflow_experiment_id: str = "precycle-2",
     save_logs: bool = True,
+    tau: List[int] = [0],
+    gamma: List[int] = [0],
 ):
 
     enable_mlflow = True
@@ -67,6 +69,8 @@ def grid_online(
                 "learning_rate": tune.grid_search(learning_rate),
                 "heuristic": tune.grid_search(heuristic),
                 "bootstrapping": tune.grid_search(bootstrapping),
+                "tau": tune.grid_search(tau),
+                "gamma": tune.grid_search(gamma),
             },
         },
         "planner": {

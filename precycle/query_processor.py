@@ -86,7 +86,14 @@ class QueryProcessor:
 
             if self.config.logs.mlflow:
 
-                hit_scores = compute_hit_scores(**run_metadata)
+                hit_scores = compute_hit_scores(
+                    sv_check_status=run_metadata["sv_check_status"],
+                    laplace_hits=run_metadata["laplace_hits"],
+                    pmw_hits=run_metadata["pmw_hits"],
+                    run_types=run_metadata["run_types"],
+                    node_sizes=run_metadata["node_sizes"],
+                    total_size=run_metadata["total_size"],
+                )
 
                 for score_name, score_value in hit_scores.items():
                     if not np.isnan(score_value):

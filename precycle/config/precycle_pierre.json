@@ -12,7 +12,9 @@
         "probabilistic_cfg": {
             "learning_rate": 0.2,
             "heuristic": "bin_visits:5-5",
-            "bootstrapping": false
+            "bootstrapping": false,
+            "tau": 0.5,
+            "gamma": 0.5
         }
     },
     "cache": {

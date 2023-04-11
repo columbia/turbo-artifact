@@ -12,11 +12,9 @@ from precycle.utils.utils import (
 
 def compute_hit_scores(
     sv_check_status: List,
-    sv_node_id: List,
     laplace_hits: Dict[str, float],
     pmw_hits: Dict[str, float],
     run_types: List,
-    budget_per_block: List[Dict],
     node_sizes: List[int],
     total_size: int,
 ) -> float:
