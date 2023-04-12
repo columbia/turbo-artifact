@@ -151,7 +151,19 @@ class HistogramCache:
             )
         return new_cache_entry
 
-    def update_entry_histogram(self, query, blocks, noisy_result, epsilon):
+    def update_entry_histogram(self, query, blocks, noisy_result, epsilon) -> int:
+        """_summary_
+
+        Args:
+            query (_type_): _description_
+            blocks (_type_): _description_
+            noisy_result (_type_): _description_
+            epsilon (_type_): _description_
+
+        Returns:
+            int: -1 or 1 depending on the direction
+                0 if no external update (skipped because of the check)
+        """
 
         # External updates only with fresh noise
         if epsilon == 0:
@@ -177,10 +189,7 @@ class HistogramCache:
         elif noisy_result < predicted_output - safety_margin:
             lr = -self.learning_rate / 8
         else:
-            print("No update")
-            # TODO: log update frequency and margin maybe
-            return
-        print("External update")
+            return 0
 
         learning_rate = self.learning_rate
         if isinstance(self.learning_rate, dict):
@@ -202,6 +211,8 @@ class HistogramCache:
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)
+
+        return int(lr / abs(lr))
 
     def update_entry_threshold(self, blocks, query):
         cache_entry = self.read_entry(blocks)

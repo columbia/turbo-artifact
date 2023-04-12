@@ -52,6 +52,7 @@ class QueryProcessor:
             "run_types": [],
             "budget_per_block": [],
             "laplace_hits": [],
+            "external_updates": [],
             "pmw_hits": [],
         }
 
@@ -93,6 +94,7 @@ class QueryProcessor:
                     run_types=run_metadata["run_types"],
                     node_sizes=run_metadata["node_sizes"],
                     total_size=run_metadata["total_size"],
+                    external_updates=run_metadata["external_updates"],
                 )
 
                 for score_name, score_value in hit_scores.items():

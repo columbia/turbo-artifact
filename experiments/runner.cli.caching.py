@@ -217,8 +217,8 @@ def external_check_covid19(dataset):
         "mlflow_random_prefix": [True],
         "validation_interval": 500,
         "mlflow_experiment_id": "external_check",
-        "tau": [0.5],
-        "gamma": [0.5],
+        "tau": [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
+        "gamma": [0, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15],
     }
     experiments.append(
         multiprocessing.Process(
@@ -226,7 +226,7 @@ def external_check_covid19(dataset):
         )
     )
     experiments_start_and_join(experiments)
-    analyze_monoblock(logs_dir)
+    # analyze_monoblock(logs_dir)
 
 
 def caching_monoblock_learning_rates_covid19(dataset):

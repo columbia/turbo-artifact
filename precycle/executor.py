@@ -9,9 +9,14 @@ from termcolor import colored
 from precycle.budget import BasicBudget
 from precycle.budget.curves import LaplaceCurve, PureDPtoRDP, ZeroCurve
 from precycle.cache.exact_match_cache import CacheEntry
-from precycle.utils.utils import (HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE,
-                                  PMW_RUNTYPE, get_blocks_size, get_node_key,
-                                  mlflow_log)
+from precycle.utils.utils import (
+    HISTOGRAM_RUNTYPE,
+    LAPLACE_RUNTYPE,
+    PMW_RUNTYPE,
+    get_blocks_size,
+    get_node_key,
+    mlflow_log,
+)
 
 
 class RunLaplace:
@@ -96,6 +101,7 @@ class Executor:
         node_sizes = {}
         laplace_hits = {}
         pmw_hits = {}
+        external_updates = {}
         for run_op in plan.l:
 
             node_key = get_node_key(run_op.blocks)
@@ -109,12 +115,13 @@ class Executor:
 
                 # External Update to the Histogram (will do the check inside)
                 if self.config.mechanism.type == "Hybrid":
-                    self.cache.histogram_cache.update_entry_histogram(
+                    update = self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
                         epsilon=run_op.epsilon,
                     )
+                    external_updates[node_key] = update
 
             elif isinstance(run_op, RunHistogram):
                 run_return_value = self.run_histogram(
@@ -154,19 +161,20 @@ class Executor:
         # We append to the metadata because after SV resets we need to repeat the same query
         run_metadata["laplace_hits"].append(laplace_hits)
         run_metadata["pmw_hits"].append(pmw_hits)
+        run_metadata["external_updates"].append(external_updates)
 
         if noisy_partial_results:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
-            print(
-                "noisy",
-                noisy_result,
-                "true",
-                true_result,
-                "err",
-                true_result - noisy_result,
-            )
+            # print(
+            #     "noisy",
+            #     noisy_result,
+            #     "true",
+            #     true_result,
+            #     "err",
+            #     true_result - noisy_result,
+            # )
             run_metadata["error"] = true_result - noisy_result
 
             # TODO: do the check only on histogram partial results, not Direct Laplace ones
@@ -184,7 +192,7 @@ class Executor:
                     # In case of failure we will try to run again the task
                     noisy_result = None
                     status_message = "sv_failed"
-                    logger.info("sv failed, task: ", task.id)
+                    logger.debug("sv failed, task: ", task.id)
                 run_metadata["sv_check_status"].append(status)
                 sv_id = task.blocks
                 run_metadata["sv_node_id"].append(sv_id)
@@ -243,7 +251,7 @@ class Executor:
                     )
         else:
             sv_check_status = True
-            logger.info("FREE LUNCH - yum yum\n", "blue")
+            logger.debug("FREE LUNCH - yum yum\n", "blue")
 
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
