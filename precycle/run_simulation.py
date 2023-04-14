@@ -16,7 +16,6 @@ from precycle.cache.cache import Cache, MockCache
 from precycle.planner.max_cuts import MaxCuts
 from precycle.planner.min_cuts import MinCuts
 from precycle.planner.no_cuts import NoCuts
-from precycle.planner.max_cuts import MaxCuts
 from precycle.psql import PSQL, MockPSQL
 from precycle.query_processor import QueryProcessor
 from precycle.simulator import Blocks, ResourceManager, Tasks
@@ -29,7 +28,6 @@ from precycle.utils.utils import (
     save_logs,
     set_run_key,
 )
-
 
 app = typer.Typer()
 
@@ -160,12 +158,14 @@ class Simulator:
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params
             mlflow.log_params(config)
-            mlflow.log_param(
-                "lr", self.config.mechanism.probabilistic_cfg.learning_rate
-            )
-            mlflow.log_param(
-                "heuristic", self.config.mechanism.probabilistic_cfg.heuristic
-            )
+            for (k, v) in self.config.mechanism.probabilistic_cfg.items():
+                mlflow.log_param(k, v)
+            # mlflow.log_param(
+            #     "lr", self.config.mechanism.probabilistic_cfg.learning_rate
+            # )
+            # mlflow.log_param(
+            #     "heuristic", self.config.mechanism.probabilistic_cfg.heuristic
+            # )
             mlflow.log_param(
                 "block_requests_pattern", str(self.config.blocks.block_requests_pattern)
             )

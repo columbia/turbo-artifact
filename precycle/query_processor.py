@@ -52,6 +52,7 @@ class QueryProcessor:
             "run_types": [],
             "budget_per_block": [],
             "laplace_hits": [],
+            "external_updates": [],
             "pmw_hits": [],
             "db_runtimes": [],
             "true_result_per_node": {},
@@ -92,7 +93,15 @@ class QueryProcessor:
 
             if self.config.logs.mlflow:
 
-                hit_scores = compute_hit_scores(**run_metadata)
+                hit_scores = compute_hit_scores(
+                    sv_check_status=run_metadata["sv_check_status"],
+                    laplace_hits=run_metadata["laplace_hits"],
+                    pmw_hits=run_metadata["pmw_hits"],
+                    run_types=run_metadata["run_types"],
+                    node_sizes=run_metadata["node_sizes"],
+                    total_size=run_metadata["total_size"],
+                    external_updates=run_metadata["external_updates"],
+                )
 
                 for score_name, score_value in hit_scores.items():
                     if not np.isnan(score_value):

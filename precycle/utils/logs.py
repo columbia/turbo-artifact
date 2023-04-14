@@ -12,17 +12,17 @@ from precycle.utils.utils import (
 
 def compute_hit_scores(
     sv_check_status: List,
-    sv_node_id: List,
     laplace_hits: Dict[str, float],
     pmw_hits: Dict[str, float],
     run_types: List,
-    budget_per_block: List[Dict],
     node_sizes: List[int],
     total_size: int,
+    external_updates: List[int],
     error: float,
     db_runtimes: List[float],
     true_result_per_node: Dict[str, float],
     runtime: float,
+    
 ) -> float:
     """
     Given some run metadata, compute how much of the output came from the cache.
@@ -53,12 +53,19 @@ def compute_hit_scores(
     run_types = run_types[0]
 
     laplace_score = sv_score = laplace_size = sv_size = 0
+    total_external_updates = total_attempted_external_updates = 0
     for node_key, run_type in run_types.items():
         node_size = node_sizes[node_key]
 
         if run_type == LAPLACE_RUNTYPE:
             laplace_score += node_size * laplace_hits[0][node_key]
             laplace_size += node_size
+
+            if node_key in external_updates[0]:
+                # We don't weight by node size, each Laplace counts for one
+                total_external_updates += abs(external_updates[0][node_key])
+                total_attempted_external_updates += 1
+
         elif run_type == HISTOGRAM_RUNTYPE:
             # Hit = 1 if the global SV returns True (easy query), 0 otherwise, for every histogram node
             sv_score += node_size * int(sv_check_status[0])
@@ -73,12 +80,18 @@ def compute_hit_scores(
     total_score = (laplace_score + sv_score) / total_size
     laplace_score /= laplace_size if laplace_size > 0 else np.NaN
     sv_score /= sv_size if sv_size > 0 else np.NaN
-
     sv_ratio = sv_size / total_size
+    external_updates_ratio = (
+        total_external_updates / total_attempted_external_updates
+        if total_attempted_external_updates > 0
+        else np.NaN
+    )
 
     return dict(
         total_hit_score=total_score,
         laplace_hit_score=laplace_score,
         sv_hit_score=sv_score,
         sv_ratio=sv_ratio,
+        total_external_updates=total_external_updates,
+        external_updates_ratio=external_updates_ratio,
     )

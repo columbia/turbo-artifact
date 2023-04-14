@@ -5,6 +5,7 @@ import redisai as rai
 import torch
 
 from precycle.cache.histogram import DenseHistogram
+from precycle.utils.utils import get_blocks_size
 
 
 class CacheKey:
@@ -150,7 +151,24 @@ class HistogramCache:
             )
         return new_cache_entry
 
-    def update_entry_histogram(self, query, blocks, noisy_result):
+    def update_entry_histogram(self, query, blocks, noisy_result, epsilon) -> int:
+        """_summary_
+
+        Args:
+            query (_type_): _description_
+            blocks (_type_): _description_
+            noisy_result (_type_): _description_
+            epsilon (_type_): _description_
+
+        Returns:
+            int: -1 or 1 depending on the direction
+                0 if no external update (skipped because of the check)
+        """
+
+        # External updates only with fresh noise
+        if epsilon == 0:
+            return
+
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
             cache_entry = self.create_new_entry(blocks)
@@ -159,6 +177,19 @@ class HistogramCache:
 
         # Do External Update on the histogram - update bin counts too
         predicted_output = cache_entry.histogram.run(query)
+        n = get_blocks_size(blocks, self.blocks_metadata)
+
+        tau = self.config.mechanism.probabilistic_cfg.tau
+        gamma = self.config.mechanism.probabilistic_cfg.gamma
+        safety_margin = tau * self.config.alpha + gamma / (n * epsilon)
+        if noisy_result > predicted_output + safety_margin:
+            # TODO: remove this stupid factor 8
+            # Increase weights if predicted_output is too small
+            lr = self.learning_rate / 8
+        elif noisy_result < predicted_output - safety_margin:
+            lr = -self.learning_rate / 8
+        else:
+            return 0
 
         learning_rate = self.learning_rate
         if isinstance(self.learning_rate, dict):
@@ -169,12 +200,7 @@ class HistogramCache:
                 if min_num_updates >= t:
                     learning_rate = learning_rate[t]
                     break
-        # Increase weights if predicted_output is too small
-        lr = learning_rate / 8
-        if noisy_result < predicted_output:
-            lr *= -1
 
-        # t = time.time()
         # Multiplicative weights update for the relevant bins
         cache_entry.histogram.tensor = torch.mul(
             cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
@@ -185,6 +211,8 @@ class HistogramCache:
 
         # Write updated entry
         self.write_entry(blocks, cache_entry)
+
+        return int(lr / abs(lr))
 
     def update_entry_threshold(self, blocks, query):
         cache_entry = self.read_entry(blocks)

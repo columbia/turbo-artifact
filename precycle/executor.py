@@ -101,6 +101,7 @@ class Executor:
         node_sizes = {}
         laplace_hits = {}
         pmw_hits = {}
+        external_updates = {}
         db_runtime = {}
 
         for run_op in plan.l:
@@ -119,14 +120,15 @@ class Executor:
                 laplace_hits[node_key] = run_laplace_metadata.get("hit", 0)
                 db_runtime[node_key] = run_laplace_metadata.get("db_runtime", 0)
 
-                # External Update to the Histogram
-                # TODO: Add the convergence check, right now we have zero guarantees
+                # External Update to the Histogram (will do the check inside)
                 if self.config.mechanism.type == "Hybrid":
-                    self.cache.histogram_cache.update_entry_histogram(
+                    update = self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
                         run_return_value.noisy_result,
+                        epsilon=run_op.epsilon,
                     )
+                    external_updates[node_key] = update
 
             elif isinstance(run_op, RunHistogram):
                 run_return_value, run_histogram_metadata = self.run_histogram(
@@ -171,6 +173,7 @@ class Executor:
         # We append to the metadata because after SV resets we need to repeat the same query
         run_metadata["laplace_hits"].append(laplace_hits)
         run_metadata["pmw_hits"].append(pmw_hits)
+        run_metadata["external_updates"].append(external_updates)
         run_metadata["db_runtimes"].append(db_runtime)
 
         if noisy_partial_results:

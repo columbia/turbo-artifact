@@ -180,6 +180,58 @@ def convergence_covid19(dataset):
     analyze_monoblock(logs_dir)
 
 
+def external_check_covid19(dataset):
+    blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
+    task_paths = ["34425queries.privacy_tasks.csv"]
+    task_paths = [
+        str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
+    ]
+    block_requests_pattern = [1]
+
+    logs_dir = f"{dataset}/monoblock/external_check"
+    experiments = []
+    config = {
+        "global_seed": 64,
+        "logs_dir": logs_dir,
+        "tasks_path": task_paths,
+        "blocks_path": blocks_path,
+        "blocks_metadata": blocks_metadata,
+        "block_requests_pattern": block_requests_pattern,
+        "planner": ["NoCuts"],
+        "mechanism": ["Hybrid"],
+        "initial_blocks": [1],
+        "max_blocks": [1],
+        "avg_num_tasks_per_block": [7e4],
+        "max_tasks": [7e4],
+        "initial_tasks": [0],
+        "alpha": [0.05],
+        "beta": [0.001],
+        "zipf_k": [1],
+        "heuristic": ["bin_visits:100-5"],
+        "variance_reduction": [False],
+        "log_every_n_tasks": 100,
+        "learning_rate": [0.1],
+        # "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=20)],
+        "bootstrapping": [False],
+        "exact_match_caching": [False],
+        "mlflow_random_prefix": [True],
+        "validation_interval": 500,
+        "mlflow_experiment_id": "external_new_tau_lr01",
+        "tau": [0]
+        + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
+        + [0.125, 0.15, 0.175]
+        + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],
+        "gamma": [0],  # Always keep it to zero!
+    }
+    experiments.append(
+        multiprocessing.Process(
+            target=lambda config: grid_online(**config), args=(deepcopy(config),)
+        )
+    )
+    experiments_start_and_join(experiments)
+    # analyze_monoblock(logs_dir)
+
+
 def caching_monoblock_learning_rates_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
     task_paths = ["34425queries.privacy_tasks.csv"]
