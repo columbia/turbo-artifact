@@ -111,7 +111,7 @@ class Executor:
             if isinstance(run_op, RunLaplace):
                 cached_true_result = None
                 # if node_key in run_metadata["true_result_per_node"]:
-                    # cached_true_result = run_metadata["true_result_per_node"][node_key]
+                # cached_true_result = run_metadata["true_result_per_node"][node_key]
 
                 run_return_value, run_laplace_metadata = self.run_laplace(
                     run_op, task.query_id, task.query_db_format, cached_true_result
@@ -121,7 +121,9 @@ class Executor:
                 db_runtime[node_key] = run_laplace_metadata.get("db_runtime", 0)
 
                 # External Update to the Histogram (will do the check inside)
-                if self.config.mechanism.type == "Hybrid": #and run_laplace_metadata["hit"] == 0:
+                if (
+                    self.config.mechanism.type == "Hybrid"
+                ):  # and run_laplace_metadata["hit"] == 0:
                     update = self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
@@ -331,7 +333,9 @@ class Executor:
 
             if run_op.noise_std >= cache_entry.noise_std:
                 # We already have a good estimate in the cache
-                run_op.epsilon = 0
+                laplace_scale = run_op.noise_std / np.sqrt(2)
+                epsilon = sensitivity / laplace_scale
+                run_op.epsilon = epsilon
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
 

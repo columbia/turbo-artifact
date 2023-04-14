@@ -235,7 +235,9 @@ def get_logs(
     config = {}
 
     # Fix a key for each run
-    key, mechanism_type, heuristic, warmup, learning_rate, tau = set_run_key(config_dict)
+    key, mechanism_type, heuristic, warmup, learning_rate, tau = set_run_key(
+        config_dict
+    )
 
     config.update(
         {

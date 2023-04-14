@@ -166,8 +166,10 @@ class HistogramCache:
         """
 
         # External updates only with fresh noise
-        if epsilon == 0:
-            return
+        # if epsilon == 0:
+        # return
+        # epsilon is now the target epsilon (never 0 even if lapace run was cached)
+        assert epsilon > 0
 
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
@@ -179,18 +181,7 @@ class HistogramCache:
         predicted_output = cache_entry.histogram.run(query)
         n = get_blocks_size(blocks, self.blocks_metadata)
 
-        tau = self.config.mechanism.probabilistic_cfg.tau
-        gamma = self.config.mechanism.probabilistic_cfg.gamma
-        safety_margin = tau * self.config.alpha + gamma / (n * epsilon)
-        if noisy_result > predicted_output + safety_margin:
-            # TODO: remove this stupid factor 8
-            # Increase weights if predicted_output is too small
-            lr = self.learning_rate / 8
-        elif noisy_result < predicted_output - safety_margin:
-            lr = -self.learning_rate / 8
-        else:
-            return 0
-
+        # Parse learning rate
         learning_rate = self.learning_rate
         if isinstance(self.learning_rate, dict):
             min_num_updates = torch.min(
@@ -200,6 +191,18 @@ class HistogramCache:
                 if min_num_updates >= t:
                     learning_rate = learning_rate[t]
                     break
+
+        tau = self.config.mechanism.probabilistic_cfg.tau
+        gamma = self.config.mechanism.probabilistic_cfg.gamma
+        safety_margin = tau * self.config.alpha + gamma / (n * epsilon)
+        if noisy_result > predicted_output + safety_margin:
+            # TODO: remove this stupid factor 8
+            # Increase weights if predicted_output is too small
+            lr = learning_rate / 8
+        elif noisy_result < predicted_output - safety_margin:
+            lr = -learning_rate / 8
+        else:
+            return 0
 
         # Multiplicative weights update for the relevant bins
         cache_entry.histogram.tensor = torch.mul(

@@ -22,7 +22,6 @@ def compute_hit_scores(
     db_runtimes: List[float] = None,
     true_result_per_node: Dict[str, float] = None,
     runtime: float = None,
-    
 ) -> float:
     """
     Given some run metadata, compute how much of the output came from the cache.

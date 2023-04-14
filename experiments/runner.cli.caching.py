@@ -58,7 +58,7 @@ def caching_monoblock_covid19(dataset):
         "heuristic": ["bin_visits:100-5"],
         "log_every_n_tasks": 100,
         "learning_rate": [0.2],
-        "tau": [0],
+        "tau": [0, 0.1],
         "bootstrapping": [False],
         "exact_match_caching": [True],
     }
