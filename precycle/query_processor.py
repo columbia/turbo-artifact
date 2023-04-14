@@ -196,7 +196,7 @@ class QueryProcessor:
             assert i == j
 
             run_op = RunHistogram((i, j))
-            run_return_value = self.executor.run_histogram(
+            run_return_value, _ = self.executor.run_histogram(
                 run_op, task.query, task.query_db_format
             )
 

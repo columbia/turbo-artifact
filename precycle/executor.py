@@ -182,7 +182,7 @@ class Executor:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
-            print(
+            logger.debug(
                 "noisy",
                 noisy_result,
                 "true",
@@ -335,7 +335,13 @@ class Executor:
                 # We already have a good estimate in the cache
                 laplace_scale = run_op.noise_std / np.sqrt(2)
                 epsilon = sensitivity / laplace_scale
-                run_op.epsilon = epsilon
+
+                if (
+                    self.config.mechanism.probabilistic_cfg.external_update_on_cached_results
+                ):
+                    run_op.epsilon = epsilon
+                else:
+                    run_op.epsilon = 0
                 run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
                 noise = cache_entry.noise
 

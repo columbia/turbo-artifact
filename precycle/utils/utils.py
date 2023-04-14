@@ -4,9 +4,10 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple
-import omegaconf
+
 import mlflow
 import numpy as np
+import omegaconf
 import pandas as pd
 import scipy
 
@@ -17,7 +18,7 @@ CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
 LOGS_PATH = REPO_ROOT.joinpath("logs")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
-DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.yaml")
+DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.json")
 
 FAILED = "failed"
 PENDING = "pending"

@@ -165,11 +165,13 @@ class HistogramCache:
                 0 if no external update (skipped because of the check)
         """
 
-        # External updates only with fresh noise
-        # if epsilon == 0:
-        # return
-        # epsilon is now the target epsilon (never 0 even if lapace run was cached)
-        assert epsilon > 0
+        if self.config.mechanism.probabilistic_cfg.external_update_on_cached_results:
+            # epsilon is now the target epsilon (never 0 even if lapace run was cached)
+            assert epsilon > 0
+        else:
+            # External updates only with fresh noise
+            if epsilon == 0:
+                return
 
         cache_entry = self.read_entry(blocks)
         if not cache_entry:
@@ -193,8 +195,7 @@ class HistogramCache:
                     break
 
         tau = self.config.mechanism.probabilistic_cfg.tau
-        gamma = self.config.mechanism.probabilistic_cfg.gamma
-        safety_margin = tau * self.config.alpha + gamma / (n * epsilon)
+        safety_margin = tau * self.config.alpha
         if noisy_result > predicted_output + safety_margin:
             # TODO: remove this stupid factor 8
             # Increase weights if predicted_output is too small

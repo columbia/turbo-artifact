@@ -222,7 +222,6 @@ def external_check_covid19(dataset):
         + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
         + [0.125, 0.15, 0.175]
         + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],
-        "gamma": [0],  # Always keep it to zero!
     }
     experiments.append(
         multiprocessing.Process(
