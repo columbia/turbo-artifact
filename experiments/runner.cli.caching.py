@@ -207,7 +207,7 @@ def external_check_covid19(dataset):
         "initial_tasks": [0],
         "alpha": [0.05],
         "beta": [0.001],
-        "zipf_k": [0],
+        "zipf_k": [1],
         "heuristic": ["bin_visits:100-5"],
         "variance_reduction": [False],
         "log_every_n_tasks": 100,
@@ -217,9 +217,9 @@ def external_check_covid19(dataset):
         "exact_match_caching": [True],
         "mlflow_random_prefix": [True],
         "validation_interval": 500,
-        "mlflow_experiment_id": "past_results_cached_zipf0",
+        "mlflow_experiment_id": "past_results_cached_zipf1_tau",
         "external_update_on_cached_results": [True, False],
-        "tau": [0]
+        "tau": [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3],
         # + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
         # + [0.125, 0.15, 0.175]
         # + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],

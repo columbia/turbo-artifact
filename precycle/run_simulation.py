@@ -186,6 +186,7 @@ class Simulator:
             )
 
             mlflow.log_param("planner_method", self.config.planner.method)
+            mlflow.log_param("zipf_k", self.config.tasks.zipf_k)
 
             self.env.run()
 
