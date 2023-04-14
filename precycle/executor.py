@@ -102,16 +102,23 @@ class Executor:
         laplace_hits = {}
         pmw_hits = {}
         external_updates = {}
+        db_runtime = {}
+
         for run_op in plan.l:
 
             node_key = get_node_key(run_op.blocks)
 
             if isinstance(run_op, RunLaplace):
+                cached_true_result = None
+                if node_key in run_metadata["true_result_per_node"]:
+                    cached_true_result = run_metadata["true_result_per_node"][node_key]
+
                 run_return_value, run_laplace_metadata = self.run_laplace(
-                    run_op, task.query_id, task.query_db_format
+                    run_op, task.query_id, task.query_db_format, cached_true_result
                 )
                 run_types[node_key] = LAPLACE_RUNTYPE
                 laplace_hits[node_key] = run_laplace_metadata.get("hit", 0)
+                db_runtime[node_key] = run_laplace_metadata.get("db_runtime", 0)
 
                 # External Update to the Histogram (will do the check inside)
                 if self.config.mechanism.type == "Hybrid":
@@ -124,10 +131,11 @@ class Executor:
                     external_updates[node_key] = update
 
             elif isinstance(run_op, RunHistogram):
-                run_return_value = self.run_histogram(
+                run_return_value, run_histogram_metadata = self.run_histogram(
                     run_op, task.query, task.query_db_format
                 )
                 run_types[node_key] = HISTOGRAM_RUNTYPE
+                db_runtime[node_key] = run_histogram_metadata.get("db_runtime", 0)
 
             elif isinstance(run_op, RunPMW):
                 run_return_value, pmw_metadata = self.run_pmw(
@@ -154,6 +162,10 @@ class Executor:
             true_partial_results += [run_return_value.true_result * node_size]
             total_size += node_size
 
+            run_metadata["true_result_per_node"][
+                node_key
+            ] = run_return_value.true_result
+
         # Modify metadata inplace (a bit ugly)
         run_metadata["node_sizes"] = node_sizes
         run_metadata["total_size"] = total_size
@@ -162,6 +174,7 @@ class Executor:
         run_metadata["laplace_hits"].append(laplace_hits)
         run_metadata["pmw_hits"].append(pmw_hits)
         run_metadata["external_updates"].append(external_updates)
+        run_metadata["db_runtimes"].append(db_runtime)
 
         if noisy_partial_results:
             # Aggregate outputs
@@ -198,6 +211,7 @@ class Executor:
                 run_metadata["sv_node_id"].append(sv_id)
             run_metadata["run_types"].append(run_types)
             run_metadata["budget_per_block"].append(budget_per_block)
+            # run_metadata["heuristic_update_runtime"].append(heuristic_runtime)
 
             # Consume budget from blocks if necessary - we consume even if the check failed
             for block, run_budget in budget_per_block.items():
@@ -256,7 +270,7 @@ class Executor:
         self.cache.sparse_vectors.write_entry(sv)
         return sv_check_status
 
-    def run_laplace(self, run_op, query_id, query_db_format):
+    def run_laplace(self, run_op, query_id, query_db_format, cached_true_result):
 
         run_laplace_metadata = {}
 
@@ -265,7 +279,14 @@ class Executor:
 
         if self.config.exact_match_caching == False:
             # Run from scratch - don't look into the cache
-            true_result = self.db.run_query(query_db_format, run_op.blocks)
+            start_time = time.time()
+            true_result = (
+                self.db.run_query(query_db_format, run_op.blocks)
+                if cached_true_result is None
+                else cached_true_result
+            )
+            run_laplace_metadata["db_runtime"] = time.time() - start_time
+
             laplace_scale = run_op.noise_std / np.sqrt(2)
             epsilon = sensitivity / laplace_scale
             run_op.epsilon = epsilon
@@ -284,7 +305,14 @@ class Executor:
 
         if not cache_entry:  # Not cached
             # True output never released except in debugging logs
-            true_result = self.db.run_query(query_db_format, run_op.blocks)
+            start_time = time.time()
+            true_result = (
+                self.db.run_query(query_db_format, run_op.blocks)
+                if cached_true_result is None
+                else cached_true_result
+            )
+            run_laplace_metadata["db_runtime"] = time.time() - start_time
+
             laplace_scale = run_op.noise_std / np.sqrt(2)
             epsilon = sensitivity / laplace_scale
             run_op.epsilon = epsilon
@@ -339,20 +367,25 @@ class Executor:
         return rv, run_laplace_metadata
 
     def run_histogram(self, run_op, query, query_db_format):
+        run_histogram_metadata = {}
+
         cache_entry = self.cache.histogram_cache.read_entry(run_op.blocks)
         if not cache_entry:
             cache_entry = self.cache.histogram_cache.create_new_entry(run_op.blocks)
             self.cache.histogram_cache.write_entry(run_op.blocks, cache_entry)
 
         # True output never released except in debugging logs
+        start_time = time.time()
         true_result = self.db.run_query(query_db_format, run_op.blocks)
+        run_histogram_metadata["db_runtime"] = time.time() - start_time
+
         # Run histogram to get the predicted output
         noisy_result = cache_entry.histogram.run(query)
         # Histogram prediction doesn't cost anything
         run_budget = BasicBudget(0) if self.config.puredp else ZeroCurve()
 
         rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv
+        return rv, run_histogram_metadata
 
     def run_pmw(self, run_op, query, query_db_format):
         pmw = self.cache.pmw_cache.get_entry(run_op.blocks)

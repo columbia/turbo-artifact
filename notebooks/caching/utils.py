@@ -6,13 +6,59 @@ import plotly.express as px
 from plotly.offline import iplot
 
 from experiments.ray.analysis import load_ray_experiment
-from precycle.utils.utils import HISTOGRAM_RUNTYPE, LAPLACE_RUNTYPE, LOGS_PATH
+from precycle.utils.utils import LOGS_PATH
 
 
 def get_df(path):
     logs = LOGS_PATH.joinpath(path)
     df = load_ray_experiment(logs)
     return df
+
+
+def get_runtimes(df):
+
+    for (tasks,) in df[
+        [
+            "tasks_info",
+        ]
+    ].values:
+        query_execution_path_runtimes = {}
+        query_execution_path_db_runtimes = {}
+
+        for i, task in enumerate(tasks):
+            run_metadata = task["run_metadata"]
+            laplace_hits_list = run_metadata["laplace_hits"]
+            sv_check_status_list = run_metadata["sv_check_status"]
+            assert len(sv_check_status_list) <= 1
+            key = (
+                "sv_check_status"
+                + str([sv_check_status for sv_check_status in sv_check_status_list])
+                + "laplace_hit"
+                + str([laplace_hit for laplace_hit in laplace_hits_list])
+            )
+            if key not in query_execution_path_runtimes:
+                query_execution_path_runtimes[key] = []
+            query_execution_path_runtimes[key].append(run_metadata["runtime"])
+
+            if key not in query_execution_path_db_runtimes:
+                query_execution_path_db_runtimes[key] = []
+            query_execution_path_db_runtimes[key].append(run_metadata["db_runtimes"])
+
+    for key in query_execution_path_runtimes:
+        runtimes = query_execution_path_runtimes[key]
+        query_execution_path_runtimes[key] = sum(runtimes) / len(runtimes)
+
+    for key in query_execution_path_db_runtimes:
+        # print(query_execution_path_db_runtimes[key])
+        runtimes = [
+            list(x[0].values())[0] for x in query_execution_path_db_runtimes[key]
+        ]
+        # print(runtimes)
+        query_execution_path_db_runtimes[key] = sum(runtimes) / len(runtimes)
+
+    print("query_execution_path_runtimes", query_execution_path_runtimes)
+    print("\nquery_execution_path_db_runtimes", query_execution_path_db_runtimes)
+    return query_execution_path_runtimes
 
 
 def get_budgets_information(df, num_blocks):
@@ -97,7 +143,7 @@ def get_budgets_information(df, num_blocks):
                             "warmup": warmup,
                             "planner": planner,
                             "heuristic": heuristic,
-                            "error": run_metadata["error"],
+                            # "error": run_metadata["error"],
                         }
                     ]
                 )
@@ -484,6 +530,28 @@ def analyze_error(experiment_path):
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
     _, errors = get_budgets_information(df, 50)
     iplot(plot_error(errors))
+
+
+def analyze_runtime(experiment_path):
+    def plot_error(df):
+        fig = px.scatter(
+            df,
+            x="task",
+            y="error",
+            color="key",
+            title=f"error",
+            width=1000,
+            height=600,
+            facet_row="zipf_k",
+        )
+        return fig
+
+    df = get_df(experiment_path)
+    total_tasks = df["total_tasks"].max()
+    df["zipf_k"] = df["zipf_k"].astype(float)
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
+    runtimes = get_runtimes(df)
+    # iplot(plot_error(errors))
 
 
 def analyze_num_cuts(experiment_path):

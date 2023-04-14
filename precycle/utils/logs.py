@@ -18,6 +18,11 @@ def compute_hit_scores(
     node_sizes: List[int],
     total_size: int,
     external_updates: List[int],
+    error: float,
+    db_runtimes: List[float],
+    true_result_per_node: Dict[str, float],
+    runtime: float,
+    
 ) -> float:
     """
     Given some run metadata, compute how much of the output came from the cache.
