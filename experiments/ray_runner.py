@@ -49,7 +49,7 @@ def grid_online(
     mlflow_experiment_id: str = "precycle-2",
     save_logs: bool = True,
     tau: List[int] = [0],
-    gamma: List[int] = [0],
+    external_update_on_cached_results: List[bool] = [True],
 ):
 
     enable_mlflow = True
@@ -70,7 +70,9 @@ def grid_online(
                 "heuristic": tune.grid_search(heuristic),
                 "bootstrapping": tune.grid_search(bootstrapping),
                 "tau": tune.grid_search(tau),
-                "gamma": tune.grid_search(gamma),
+                "external_update_on_cached_results": tune.grid_search(
+                    external_update_on_cached_results
+                ),
             },
         },
         "planner": {

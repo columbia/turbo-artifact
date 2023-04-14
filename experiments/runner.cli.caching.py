@@ -207,21 +207,22 @@ def external_check_covid19(dataset):
         "initial_tasks": [0],
         "alpha": [0.05],
         "beta": [0.001],
-        "zipf_k": [1],
+        "zipf_k": [0],
         "heuristic": ["bin_visits:100-5"],
         "variance_reduction": [False],
         "log_every_n_tasks": 100,
-        "learning_rate": [0.1],
-        # "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=20)],
+        # "learning_rate": [0.1],
+        "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=30)],
         "bootstrapping": [False],
-        "exact_match_caching": [False],
+        "exact_match_caching": [True],
         "mlflow_random_prefix": [True],
         "validation_interval": 500,
-        "mlflow_experiment_id": "external_new_tau_lr01",
+        "mlflow_experiment_id": "past_results_cached_zipf0",
+        "external_update_on_cached_results": [True, False],
         "tau": [0]
-        + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
-        + [0.125, 0.15, 0.175]
-        + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],
+        # + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
+        # + [0.125, 0.15, 0.175]
+        # + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],
     }
     experiments.append(
         multiprocessing.Process(

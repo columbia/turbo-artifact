@@ -282,6 +282,7 @@ def set_run_key(config_dict):
         key = str(uuid.uuid4())[:4]
     else:
         key = ""
+
     tau = ""
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
@@ -302,7 +303,7 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+PerPartitionCache"
-        key = mechanism_type
+        key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
         mechanism_type = "PMW"
@@ -340,7 +341,7 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+PerPartitionCache"
-        key = mechanism_type + "+" + heuristic + "+lr" + learning_rate + "+tau" + tau
+        key += mechanism_type + "+" + heuristic + "+lr" + learning_rate + "+tau" + tau
         if warmup == "True":
             key += "+warmup"
     return key, mechanism_type, heuristic, warmup, learning_rate, tau

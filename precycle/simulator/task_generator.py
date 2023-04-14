@@ -127,7 +127,7 @@ class PoissonTaskGenerator(TaskGenerator):
             self.config.blocks.block_requests_pattern
         )
 
-        logger.info(f"Parsed block requests pattern:{self.block_requests_pattern}")
+        logger.debug(f"Parsed block requests pattern:{self.block_requests_pattern}")
 
         def zipf():
             query_pool_size = len(self.tasks["query_id"].unique())
