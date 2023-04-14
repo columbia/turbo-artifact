@@ -110,8 +110,8 @@ class Executor:
 
             if isinstance(run_op, RunLaplace):
                 cached_true_result = None
-                # if node_key in run_metadata["true_result_per_node"]:
-                # cached_true_result = run_metadata["true_result_per_node"][node_key]
+                if node_key in run_metadata["true_result_per_node"]:
+                    cached_true_result = run_metadata["true_result_per_node"][node_key]
 
                 run_return_value, run_laplace_metadata = self.run_laplace(
                     run_op, task.query_id, task.query_db_format, cached_true_result
