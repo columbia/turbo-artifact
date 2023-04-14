@@ -210,15 +210,18 @@ def external_check_covid19(dataset):
         "heuristic": ["bin_visits:100-5"],
         "variance_reduction": [False],
         "log_every_n_tasks": 100,
-        "learning_rate": [0.2],
+        "learning_rate": [0.1],
         # "learning_rate": [float(lr) for lr in np.geomspace(0.01, 10, num=20)],
         "bootstrapping": [False],
         "exact_match_caching": [False],
         "mlflow_random_prefix": [True],
         "validation_interval": 500,
-        "mlflow_experiment_id": "external_check",
-        "tau": [0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1],
-        "gamma": [0, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15],
+        "mlflow_experiment_id": "external_new_tau_lr01",
+        "tau": [0]
+        + [float(t) for t in np.linspace(0.005, 0.1, num=30)]
+        + [0.125, 0.15, 0.175]
+        + [0.2, 0.225, 0.25, 0.275, 0.3, 0.35, 0.4, 0.45],
+        "gamma": [0],  # Always keep it to zero!
     }
     experiments.append(
         multiprocessing.Process(
