@@ -106,10 +106,10 @@ def caching_monoblock_heuristics_covid19(dataset):
         "beta": [0.001],
         "zipf_k": [1],
         "heuristic": [
-            "bin_visits:1-1",
+            "bin_visits:1-5",
             "bin_visits:100-5",
-            "bin_visits:1000-100",
-            "bin_visits:10000-100",
+            "bin_visits:1000-5",
+            "bin_visits:10000-5",
         ],
         "log_every_n_tasks": 100,
         "learning_rate": [0.2],

@@ -53,7 +53,11 @@ class QueryProcessor:
             "budget_per_block": [],
             "laplace_hits": [],
             "pmw_hits": [],
+            "db_runtimes": [],
+            "true_result_per_node": {},
         }
+
+        runtime_start = time.time()
 
         # Execute the plan to run the query # TODO: check if there is enough budget before running
         while result is None and (not status or status == "sv_failed"):
@@ -71,7 +75,6 @@ class QueryProcessor:
             # print("Planning", planning_time)
 
             # NOTE: if status is sth else like "out-of-budget" then it stops
-            # Hmm status seems unused?
             result, status = self.executor.execute_plan(plan, task, run_metadata)
 
             # logger.info(
@@ -81,6 +84,9 @@ class QueryProcessor:
             #     )
             # )
             round += 1
+
+        query_runtime = time.time() - runtime_start
+        run_metadata["runtime"] = query_runtime
 
         if result is not None:
 
