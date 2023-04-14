@@ -110,8 +110,8 @@ class Executor:
 
             if isinstance(run_op, RunLaplace):
                 cached_true_result = None
-                if node_key in run_metadata["true_result_per_node"]:
-                    cached_true_result = run_metadata["true_result_per_node"][node_key]
+                # if node_key in run_metadata["true_result_per_node"]:
+                    # cached_true_result = run_metadata["true_result_per_node"][node_key]
 
                 run_return_value, run_laplace_metadata = self.run_laplace(
                     run_op, task.query_id, task.query_db_format, cached_true_result
@@ -121,7 +121,7 @@ class Executor:
                 db_runtime[node_key] = run_laplace_metadata.get("db_runtime", 0)
 
                 # External Update to the Histogram (will do the check inside)
-                if self.config.mechanism.type == "Hybrid":
+                if self.config.mechanism.type == "Hybrid": #and run_laplace_metadata["hit"] == 0:
                     update = self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
@@ -180,14 +180,14 @@ class Executor:
             # Aggregate outputs
             noisy_result = sum(noisy_partial_results) / total_size
             true_result = sum(true_partial_results) / total_size
-            # print(
-            #     "noisy",
-            #     noisy_result,
-            #     "true",
-            #     true_result,
-            #     "err",
-            #     true_result - noisy_result,
-            # )
+            print(
+                "noisy",
+                noisy_result,
+                "true",
+                true_result,
+                "err",
+                true_result - noisy_result,
+            )
             run_metadata["error"] = true_result - noisy_result
 
             # TODO: do the check only on histogram partial results, not Direct Laplace ones
@@ -285,6 +285,7 @@ class Executor:
                 if cached_true_result is None
                 else cached_true_result
             )
+            run_laplace_metadata["hit"] = 0
             run_laplace_metadata["db_runtime"] = time.time() - start_time
 
             laplace_scale = run_op.noise_std / np.sqrt(2)
@@ -400,33 +401,5 @@ class Executor:
         assert run_op.epsilon <= pmw.epsilon
 
         noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
-        rv = RunReturnValue(true_result, noisy_result, run_budget)
-        return rv, run_metadata
-
-    def run_timestamps_pmw(self, run_op, query, query_db_format):
-        # Run_op blocks contains all system's blocks in this case
-        pmw = self.cache.pmw_cache.get_entry(run_op.blocks)
-        if not pmw:
-            pmw = self.cache.pmw_cache.add_entry(run_op.blocks)
-
-        # True output never released except in debugging logs
-        true_result = self.db.run_query(query_db_format, run_op.task_blocks)
-
-        task_blocks_size = get_blocks_size(
-            run_op.task_blocks, self.config.blocks_metadata
-        )
-        absolute_true_result = true_result * task_blocks_size
-
-        total_blocks_size = get_blocks_size(run_op.blocks, self.config.blocks_metadata)
-        true_result = absolute_true_result / total_blocks_size
-        # print("true_result", true_result)
-        # TODO: check accuracy here
-
-        # We can't run a powerful query using a weaker PMW
-        assert run_op.alpha <= pmw.alpha
-        assert run_op.epsilon <= pmw.epsilon
-
-        noisy_result, run_budget, run_metadata = pmw.run(query, true_result)
-        # time.sleep(3)
         rv = RunReturnValue(true_result, noisy_result, run_budget)
         return rv, run_metadata

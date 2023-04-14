@@ -153,7 +153,7 @@ class Simulator:
         config["blocks_metadata"] = {}
         config["blocks"]["block_requests_pattern"] = {}
 
-        key, _, _, _, _ = set_run_key(config)
+        key, _, _, _, _, _ = set_run_key(config)
         key += "_zip_" + str(config["tasks"]["zipf_k"])
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params

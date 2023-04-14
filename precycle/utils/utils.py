@@ -235,7 +235,7 @@ def get_logs(
     config = {}
 
     # Fix a key for each run
-    key, mechanism_type, heuristic, warmup, learning_rate = set_run_key(config_dict)
+    key, mechanism_type, heuristic, warmup, learning_rate, tau = set_run_key(config_dict)
 
     config.update(
         {
@@ -254,6 +254,7 @@ def get_logs(
             "blocks_initial_budget": blocks_initial_budget,
             "zipf_k": config_dict["tasks"]["zipf_k"],
             "heuristic": heuristic,
+            "tau": tau,
             "direct_match_caching": config_dict["exact_match_caching"],
             "config": config_dict,
             "learning_rate": learning_rate,
@@ -278,7 +279,7 @@ def set_run_key(config_dict):
         key = str(uuid.uuid4())[:4]
     else:
         key = ""
-
+    tau = ""
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
@@ -318,6 +319,8 @@ def set_run_key(config_dict):
         mechanism_type = "Hybrid"
         warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
         heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
+        tau = str(config_dict["mechanism"]["probabilistic_cfg"]["tau"])
+
         learning_rate = str(
             config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
         )
@@ -334,10 +337,10 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+PerPartitionCache"
-        key = mechanism_type + "+" + heuristic + "+lr" + learning_rate
+        key = mechanism_type + "+" + heuristic + "+lr" + learning_rate + "+tau" + tau
         if warmup == "True":
             key += "+warmup"
-    return key, mechanism_type, heuristic, warmup, learning_rate
+    return key, mechanism_type, heuristic, warmup, learning_rate, tau
 
 
 def save_logs(log_dict):

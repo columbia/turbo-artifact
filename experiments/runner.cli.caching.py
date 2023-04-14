@@ -36,7 +36,7 @@ def caching_monoblock_covid19(dataset):
     ]
     block_requests_pattern = [1]
 
-    logs_dir = f"{dataset}/monoblock/laplace_vs_hybrid"
+    logs_dir = f"tauu/{dataset}/monoblock/laplace_vs_hybrid"
     experiments = []
     config = {
         "global_seed": 64,
@@ -58,22 +58,23 @@ def caching_monoblock_covid19(dataset):
         "heuristic": ["bin_visits:100-5"],
         "log_every_n_tasks": 100,
         "learning_rate": [0.2],
+        "tau": [0],
         "bootstrapping": [False],
-        "exact_match_caching": [True, False],
+        "exact_match_caching": [True],
     }
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["mechanism"] = ["PMW"]
-    config["heuristic"] = [""]
-    config["exact_match_caching"] = [False]
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    # config["mechanism"] = ["PMW"]
+    # config["heuristic"] = [""]
+    # config["exact_match_caching"] = [False]
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     experiments_start_and_join(experiments)
     analyze_monoblock(f"ray/{logs_dir}")
 
@@ -493,17 +494,6 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
 
     experiments_start_and_join(experiments)
     analyze_multiblock(f"ray/{logs_dir}")
-
-
-# def caching_streaming_multiblock_system_evaluation_covid19(dataset):
-
-#     clean_stoarge_cmd = """python3 precycle/db-functions.py --storage"*" --function "delete-all""""
-#     os.system(clean_stoarge_cmd)
-
-#     covid_runtime_cmd = """
-#     scalene --json --outfile profile_runtime_covid.json precycle/run_simulation.py --omegaconf precycle/config/precycle_runtime_covid.json
-#     """
-#     os.system(covid_runtime_cmd)
 
 
 # Citibike Dataset Experiments

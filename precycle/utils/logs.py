@@ -18,10 +18,10 @@ def compute_hit_scores(
     node_sizes: List[int],
     total_size: int,
     external_updates: List[int],
-    error: float,
-    db_runtimes: List[float],
-    true_result_per_node: Dict[str, float],
-    runtime: float,
+    error: float = None,
+    db_runtimes: List[float] = None,
+    true_result_per_node: Dict[str, float] = None,
+    runtime: float = None,
     
 ) -> float:
     """
@@ -61,7 +61,7 @@ def compute_hit_scores(
             laplace_score += node_size * laplace_hits[0][node_key]
             laplace_size += node_size
 
-            if node_key in external_updates[0]:
+            if 0 in external_updates and node_key in external_updates[0]:
                 # We don't weight by node size, each Laplace counts for one
                 total_external_updates += abs(external_updates[0][node_key])
                 total_attempted_external_updates += 1
