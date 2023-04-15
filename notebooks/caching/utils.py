@@ -74,6 +74,7 @@ def get_budgets_information(df, num_blocks):
         warmup,
         planner,
         heuristic,
+        config,
     ) in df[
         [
             "tasks_info",
@@ -84,6 +85,7 @@ def get_budgets_information(df, num_blocks):
             "warmup",
             "planner",
             "heuristic",
+            "config",
         ]
     ].values:
 
@@ -123,6 +125,12 @@ def get_budgets_information(df, num_blocks):
                                 "warmup": warmup,
                                 "planner": planner,
                                 "heuristic": heuristic,
+                                "tau": config["mechanism"]["probabilistic_cfg"]["tau"],
+                                "external_update_on_cached_results": config[
+                                    "mechanism"
+                                ]["probabilistic_cfg"][
+                                    "external_update_on_cached_results"
+                                ],
                             }
                         ]
                     )
@@ -143,6 +151,10 @@ def get_budgets_information(df, num_blocks):
                             "warmup": warmup,
                             "planner": planner,
                             "heuristic": heuristic,
+                            "tau": config["mechanism"]["probabilistic_cfg"]["tau"],
+                            "external_update_on_cached_results": config["mechanism"][
+                                "probabilistic_cfg"
+                            ]["external_update_on_cached_results"],
                             # "error": run_metadata["error"],
                         }
                     ]
@@ -175,6 +187,7 @@ def get_blocks_information(df):
         warmup,
         planner,
         heuristic,
+        config,
     ) in df[
         [
             "block_budgets_info",
@@ -187,6 +200,7 @@ def get_blocks_information(df):
             "warmup",
             "planner",
             "heuristic",
+            "config",
         ]
     ].values:
         for block_id, budget in blocks:
@@ -205,6 +219,10 @@ def get_blocks_information(df):
                             "warmup": warmup,
                             "planner": planner,
                             "heuristic": heuristic,
+                            "tau": config["mechanism"]["probabilistic_cfg"]["tau"],
+                            "external_update_on_cached_results": config["mechanism"][
+                                "probabilistic_cfg"
+                            ]["external_update_on_cached_results"],
                         }
                     ]
                 )

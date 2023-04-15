@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import uuid
 from copy import deepcopy
 
 import numpy as np
@@ -378,7 +379,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid_{str(uuid.uuid4())[:4]}"
     experiments = []
     config = {
         "global_seed": 64,
@@ -387,6 +388,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         "blocks_path": blocks_path,
         "blocks_metadata": blocks_metadata,
         "block_requests_pattern": block_requests_pattern,
+        "block_selection_policy": ["RandomBlocks"],
         "planner": ["NoCuts"],
         "mechanism": ["Laplace"],
         "initial_blocks": [50],
@@ -399,9 +401,10 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         "zipf_k": [0, 1],
         "heuristic": [""],
         "log_every_n_tasks": 500,
-        "learning_rate": [0.2],
+        "learning_rate": [0.4],
         "bootstrapping": [False],
         "exact_match_caching": [True],
+        "mlflow_experiment_id": logs_dir,
     }
 
     experiments.append(
@@ -409,8 +412,8 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
-    config["exact_match_caching"] = [True]
 
+    config["exact_match_caching"] = [True]
     config["planner"] = ["MinCuts"]
     config["heuristic"] = [""]
     experiments.append(
@@ -418,11 +421,14 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
         )
     )
+
     config["planner"] = ["MinCuts"]
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:100-5"]
-    config["learning_rate"] = ["0:2_50:0.5_100:0.1"]
+    config["learning_rate"] = ["0:2_50:0.5_100:0.2"]
     config["bootstrapping"] = [False]
+    config["external_update_on_cached_results"] = [True, False]
+    config["tau"] = [0, 0.05, 0.1]
 
     experiments.append(
         multiprocessing.Process(
@@ -485,6 +491,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     config["heuristic"] = ["bin_visits:100-5"]
     config["learning_rate"] = ["0:0.2_100:0.1"]
     config["bootstrapping"] = [True, False]
+    config["external_update_on_cached_results"] = [True, False]
+    config["tau"] = [0, 0.1]
 
     experiments.append(
         multiprocessing.Process(
@@ -563,7 +571,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid"
+    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid_{str(uuid.uuid4())[:4]}"
     experiments = []
     config = {
         "global_seed": 64,
@@ -588,6 +596,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         "learning_rate": [2],
         "bootstrapping": [False],
         "exact_match_caching": [True],
+        "mlflow_experiment_id": logs_dir,
     }
     experiments.append(
         multiprocessing.Process(
@@ -606,9 +615,14 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
 
     config["planner"] = ["MinCuts"]
     config["mechanism"] = ["Hybrid"]
-    config["heuristic"] = ["bin_visits:2-5"]
-    config["learning_rate"] = ["0:2_10:0.5_50:0.1"]
+    # config["heuristic"] = ["bin_visits:2-5"]
+    config["heuristic"] = ["bin_visits:5-1"]
+    # config["learning_rate"] = ["0:2_10:0.5_50:0.1"]
+    config["learning_rate"] = ["0:4_10:2_50:0.5"]
+
     config["bootstrapping"] = [False]
+    config["external_update_on_cached_results"] = [True, False]
+    config["tau"] = [0, 0.01, 0.05, 0.1]
 
     experiments.append(
         multiprocessing.Process(
@@ -662,6 +676,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     config["heuristic"] = ["bin_visits:2-5"]
     config["learning_rate"] = ["0:2_10:0.5_50:0.1"]
     config["bootstrapping"] = [True, False]
+    config["external_update_on_cached_results"] = [True, False]
+    config["tau"] = [0, 0.1]
 
     experiments.append(
         multiprocessing.Process(

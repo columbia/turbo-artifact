@@ -117,12 +117,15 @@ def main(
     requests_type: str = "1",  # 1:1:1:2:4:8:16:32  # 3/8 to select 1 block
     utility: float = 0.05,
     utility_beta: float = 0.001,
-    queries: str = REPO_ROOT.joinpath("data/covid19/covid19_queries/all.queries.json"),
-    workload_dir: str = REPO_ROOT.joinpath("data/covid19/covid19_workload"),
-    blocks_metadata_path: str = REPO_ROOT.joinpath(
-        "data/covid19/covid19_data/blocks/metadata.json"
-    ),
+    queries: str = "data/covid19/covid19_queries/all.queries.json",
+    workload_dir: str = "data/covid19/covid19_workload",
+    blocks_metadata_path: str = "data/covid19/covid19_data/blocks/metadata.json",
 ) -> None:
+
+    queries = REPO_ROOT.joinpath(queries)
+    blocks_metadata_path = REPO_ROOT.joinpath(blocks_metadata_path)
+    workload_dir = REPO_ROOT.joinpath(workload_dir)
+    workload_dir.mkdir(parents=True, exist_ok=True)
 
     privacy_workload = PrivacyWorkload(blocks_metadata_path, queries)
     rangelist = list(requests_type.split(":"))

@@ -17,15 +17,18 @@ create_queries:
     python data/citibike/citibike_queries/queries.py
 
 create_workload:
-    python workload_generator.py --queries /citibike_queries/stories.queries.json --workload-dir citibike/citibike_workload/ --blocks-metadata-path citibike/citibike_data/blocks/metadata.json --requests-type "1"
+    python data/workload_generator.py --queries data/citibike/citibike_queries/stories.queries.json --workload-dir data/citibike/citibike_workload/ --blocks-metadata-path data/citibike/citibike_data/blocks/metadata.json --requests-type "1"
 
     # Creates covid queries by default
-    python workload_generator.py
+    python data/workload_generator.py
 
 create_covid_dataset:
     # A bit buggy script? Doesn't write metadata at the right place too 
     # (Kelly: I moved metadata.json in the <blocks> dir on purpose a while back I think. but the script is very messy indeed)
-    python data/covid19/covid19_data/dataset_generator.py
+    # python data/covid19/covid19_data/dataset_generator.py
+    cd data/covid19/covid19_data ; python dataset_generator.py
+    
+create_citibike_dataset:
     python data/citibike/citibike_data/generate.py
 
 mlflow:

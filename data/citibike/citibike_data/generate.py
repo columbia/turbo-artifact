@@ -1,22 +1,23 @@
-import os
-import ray
 import json
+import os
 import pickle
-import numpy as np
-import pandas as pd
+from multiprocessing import Manager, Process
 from pathlib import Path
-from loguru import logger
-from geopy import distance
+from urllib.request import urlretrieve
 from zipfile import ZipFile
 
 # import modin.pandas as pd
 import matplotlib.pyplot as plt
-from urllib.request import urlretrieve
-from precycle.utils.utils import REPO_ROOT
-from multiprocessing import Manager, Process
+import numpy as np
+import pandas as pd
+import ray
+from geopy import distance
+from loguru import logger
 from scipy.cluster.vq import kmeans2, whiten
-from precycle.cache.histogram import get_domain_size
+
 from precycle.cache import SparseHistogram
+from precycle.cache.histogram import get_domain_size
+from precycle.utils.utils import REPO_ROOT
 
 # ray.init(runtime_env={"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}})
 
@@ -342,7 +343,7 @@ def split_months_into_week_blocks(months_dir, blocks_dir):
         outfile.write(json_object)
 
 
-def main(re_preprocess_months=False):
+def main(re_preprocess_months=True):
     months_dir = Path(REPO_ROOT).joinpath("data/citibike/citibike_data/months")
     months_dir.mkdir(parents=True, exist_ok=True)
 
