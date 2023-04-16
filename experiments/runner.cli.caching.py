@@ -171,7 +171,8 @@ def convergence_covid19(dataset):
         "exact_match_caching": [False],
         "mlflow_random_prefix": [True],
         "validation_interval": 500,
-        "mlflow_experiment_id": "convergence",
+        "tau": [0.05],
+        "mlflow_experiment_id": "convergence_new2",
     }
     experiments.append(
         multiprocessing.Process(
@@ -334,11 +335,12 @@ def tree_covid19(dataset):
         "heuristic": ["bin_visits:100-5"],
         "variance_reduction": [True],
         "log_every_n_tasks": 500,
-        "learning_rate": [0.2],
+        "learning_rate": ["0:2_50:0.5_100:0.2"],
         "bootstrapping": [False],
         "exact_match_caching": [False],
-        "mlflow_experiment_id": "tree_zipf1",
+        "mlflow_experiment_id": "tree_zipf1_new",
         "mlflow_random_prefix": [True],
+        "tau": [0.05],
         "save_logs": False,
     }
 
