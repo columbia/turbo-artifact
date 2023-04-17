@@ -1,5 +1,6 @@
 {
     "mock": true,
+    "enable_random_seed": false,
     "exact_match_caching": true,
     "puredp": true,
     "global_seed": 64,

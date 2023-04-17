@@ -62,7 +62,7 @@ def caching_monoblock_covid19(dataset):
         "exact_match_caching": [True, False],
         "tau": [0.05],
         "mlflow_experiment_id": "monoblock_covid",
-        "external_update_on_cached_results": [False]
+        "external_update_on_cached_results": [False],
     }
     experiments.append(
         multiprocessing.Process(
@@ -109,18 +109,18 @@ def caching_monoblock_heuristics_covid19(dataset):
         "beta": [0.001],
         "zipf_k": [1],
         "heuristic": [
-            "bin_visits:1-5",
-            "bin_visits:100-5",
-            "bin_visits:1000-5",
-            "bin_visits:10000-5",
+            "bin_visits:1-1",
+            "bin_visits:10-1",
+            "bin_visits:100-1",
+            "bin_visits:1000-1",
         ],
         "log_every_n_tasks": 100,
-        "learning_rate": [0.2],
+        "learning_rate": ["0:2_50:0.5_100:0.2"],
         "bootstrapping": [False],
         "exact_match_caching": [False],
         "tau": [0.05],
         "mlflow_experiment_id": "monoblock_covid_heuristics",
-        "external_update_on_cached_results": [False]
+        "external_update_on_cached_results": [False],
     }
     experiments.append(
         multiprocessing.Process(
@@ -173,7 +173,7 @@ def caching_monoblock_learning_rates_covid19(dataset):
         "exact_match_caching": [False],
         "tau": [0.05],
         "mlflow_experiment_id": "monoblock_covid_learning_rates",
-        "external_update_on_cached_results": [False]
+        "external_update_on_cached_results": [False],
     }
     experiments.append(
         multiprocessing.Process(
@@ -191,6 +191,7 @@ def caching_monoblock_learning_rates_covid19(dataset):
     )
     experiments_start_and_join(experiments)
     analyze_monoblock(f"ray/{logs_dir}")
+
 
 def convergence_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
@@ -237,6 +238,7 @@ def convergence_covid19(dataset):
     )
     experiments_start_and_join(experiments)
     analyze_monoblock(logs_dir)
+
 
 def tree_covid19(dataset):
     blocks_path, blocks_metadata, tasks_path_prefix = get_paths(dataset)
@@ -396,7 +398,9 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     task_paths = [
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
-    block_requests_pattern = [1] * 10 + list(range(2, 51))
+    # block_requests_pattern = [1] * 10 + list(range(2, 51))
+    block_requests_pattern = list(range(1, 51))
+
     logs_dir = f"{dataset}/streaming_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
@@ -490,8 +494,7 @@ def caching_monoblock_citibike(dataset):
         "exact_match_caching": [True],
         "tau": [0.01],
         "mlflow_experiment_id": "monoblock_citibike",
-        "external_update_on_cached_results": [False]
-
+        "external_update_on_cached_results": [False],
     }
     experiments.append(
         multiprocessing.Process(
@@ -511,7 +514,7 @@ def caching_monoblock_citibike(dataset):
     config["external_update_on_cached_results"] = [False]
     config["heuristic"] = [""]
     config["learning_rate"] = [None]
-    config["exact_match_caching"] = [True] #, False]
+    config["exact_match_caching"] = [True]  # , False]
     experiments.append(
         multiprocessing.Process(
             target=lambda config: grid_online(**config), args=(deepcopy(config),)
@@ -555,7 +558,7 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
         "exact_match_caching": [True],
         "tau": [0.01],
         "external_update_on_cached_results": [False],
-        "mlflow_experiment_id": "multiblock_static_citibike"
+        "mlflow_experiment_id": "multiblock_static_citibike",
     }
     experiments.append(
         multiprocessing.Process(
@@ -593,7 +596,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
     logs_dir = f"{dataset}/streaming_multiblock/laplace_vs_hybrid"
-    block_requests_pattern = [1] * 10 + list(range(2, 51))
+    # block_requests_pattern = [1] * 10 + list(range(2, 51))
+    block_requests_pattern = list(range(1, 51))
     experiments = []
     config = {
         "global_seed": 64,
@@ -620,7 +624,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
         "exact_match_caching": [True],
         "tau": [0.01],
         "mlflow_experiment_id": "multiblock_streaming_citibike",
-        "external_update_on_cached_results": [False]
+        "external_update_on_cached_results": [False],
     }
     experiments.append(
         multiprocessing.Process(

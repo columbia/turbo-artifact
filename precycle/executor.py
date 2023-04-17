@@ -47,17 +47,6 @@ class RunPMW:
         return f"RunPMW({self.blocks}, {self.alpha}, {self.epsilon})"
 
 
-class RunTimestampsPMW:
-    def __init__(self, blocks, task_blocks, alpha, epsilon) -> None:
-        self.blocks = blocks  # All blocks in the system
-        self.task_blocks = task_blocks
-        self.alpha = alpha
-        self.epsilon = epsilon
-
-    def __str__(self):
-        return f"RunTimestampsPMW({self.blocks}, {self.task_blocks}, {self.alpha}, {self.epsilon})"
-
-
 class A:
     def __init__(self, l, sv_check, cost=None) -> None:
         self.l = l
@@ -121,9 +110,7 @@ class Executor:
                 db_runtime[node_key] = run_laplace_metadata.get("db_runtime", 0)
 
                 # External Update to the Histogram (will do the check inside)
-                if (
-                    self.config.mechanism.type == "Hybrid"
-                ):  # and run_laplace_metadata["hit"] == 0:
+                if self.config.mechanism.type == "Hybrid":
                     update = self.cache.histogram_cache.update_entry_histogram(
                         task.query,
                         run_op.blocks,
@@ -141,13 +128,6 @@ class Executor:
 
             elif isinstance(run_op, RunPMW):
                 run_return_value, pmw_metadata = self.run_pmw(
-                    run_op, task.query, task.query_db_format
-                )
-                run_types[node_key] = PMW_RUNTYPE
-                pmw_hits[node_key] = 0 if pmw_metadata["hard_query"] else 1
-
-            elif isinstance(run_op, RunTimestampsPMW):
-                run_return_value, pmw_metadata = self.run_timestamps_pmw(
                     run_op, task.query, task.query_db_format
                 )
                 run_types[node_key] = PMW_RUNTYPE

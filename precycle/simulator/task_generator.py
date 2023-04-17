@@ -78,26 +78,7 @@ class TaskGenerator:
             else self.query_converter.convert_to_sql(query_vector, requested_blocks)
         )
 
-        if self.config.mechanism.type == "TimestampsPMW":
-            # Extend the query dictionary with the blocks attribute
-            new_attr_offset = len(self.config.blocks_metadata.attribute_names)
-            requested_blocks_list = list(
-                range(requested_blocks[0], requested_blocks[1] + 1)
-            )
-            query.update({str(new_attr_offset): requested_blocks_list})
-            pmw_attribute_sizes = (
-                self.config.blocks_metadata.pmw_attributes_domain_sizes
-            )
-            # print(pmw_attribute_sizes)
-            pmw_query_vector = query_dict_to_list(
-                query, attribute_sizes=pmw_attribute_sizes
-            )
-            pmw_query_tensor = self.query_converter.convert_to_sparse_tensor(
-                pmw_query_vector, pmw_attribute_sizes
-            ).to_dense()
-            query = pmw_query_tensor
-        else:
-            query = query_tensor
+        query = query_tensor
 
         task = Task(
             id=task_id,

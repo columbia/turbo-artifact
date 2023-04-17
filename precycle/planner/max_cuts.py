@@ -1,7 +1,7 @@
 import math
 from typing import Dict, Tuple
 
-from precycle.executor import A, RunHistogram, RunLaplace, RunPMW, RunTimestampsPMW
+from precycle.executor import A, RunHistogram, RunLaplace, RunPMW
 from precycle.planner.planner import Planner
 from precycle.utils.utility_theorems import (
     get_epsilon_isotropic_laplace_concentration,

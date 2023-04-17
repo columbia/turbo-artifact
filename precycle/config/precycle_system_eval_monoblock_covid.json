@@ -9,9 +9,10 @@
     "mechanism": {
         "type": "Hybrid",
         "probabilistic_cfg": {
-            "learning_rate": 0.2,
+            "learning_rate": "0:2_50:0.5_100:0.2",
             "heuristic": "bin_visits:100-5",
-            "bootstrapping": false
+            "bootstrapping": false,
+            "tau": 0.05
         }
     },
     "cache": {

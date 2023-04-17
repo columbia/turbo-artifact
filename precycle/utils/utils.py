@@ -236,9 +236,15 @@ def get_logs(
     config = {}
 
     # Fix a key for each run
-    key, mechanism_type, heuristic, warmup, learning_rate, tau, external_update_on_cached_results = set_run_key(
-        config_dict
-    )
+    (
+        key,
+        mechanism_type,
+        heuristic,
+        warmup,
+        learning_rate,
+        tau,
+        external_update_on_cached_results,
+    ) = set_run_key(config_dict)
 
     config.update(
         {
@@ -327,7 +333,11 @@ def set_run_key(config_dict):
         warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
         heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
         tau = str(config_dict["mechanism"]["probabilistic_cfg"]["tau"])
-        external_update_on_cached_results = str(config_dict["mechanism"]["probabilistic_cfg"]["external_update_on_cached_results"])
+        external_update_on_cached_results = str(
+            config_dict["mechanism"]["probabilistic_cfg"][
+                "external_update_on_cached_results"
+            ]
+        )
 
         learning_rate = str(
             config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
@@ -345,10 +355,28 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+PerPartitionCache"
-        key += mechanism_type + "+" + heuristic + "+lr" + learning_rate + "+tau" + tau + "+cachedupdates" + external_update_on_cached_results
+        key += (
+            mechanism_type
+            + "+"
+            + heuristic
+            + "+lr"
+            + learning_rate
+            + "+tau"
+            + tau
+            + "+cachedupdates"
+            + external_update_on_cached_results
+        )
         if warmup == "True":
             key += "+warmup"
-    return key, mechanism_type, heuristic, warmup, learning_rate, tau, external_update_on_cached_results
+    return (
+        key,
+        mechanism_type,
+        heuristic,
+        warmup,
+        learning_rate,
+        tau,
+        external_update_on_cached_results,
+    )
 
 
 def save_logs(log_dict):
