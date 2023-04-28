@@ -5,20 +5,12 @@ from copy import deepcopy
 
 import numpy as np
 import typer
+from utils import get_paths
 
 from experiments.ray_runner import grid_online
 from notebooks.caching.utils import analyze_monoblock, analyze_multiblock, get_df
-from precycle.utils.utils import REPO_ROOT
 
 app = typer.Typer()
-
-
-def get_paths(dataset):
-    tasks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_workload/")
-    blocks_path_prefix = REPO_ROOT.joinpath(f"data/{dataset}/{dataset}_data/")
-    blocks_metadata = str(blocks_path_prefix.joinpath("blocks/metadata.json"))
-    blocks_path = str(blocks_path_prefix.joinpath("blocks"))
-    return blocks_path, blocks_metadata, tasks_path_prefix
 
 
 def experiments_start_and_join(experiments):
