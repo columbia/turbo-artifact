@@ -236,9 +236,15 @@ def get_logs(
     config = {}
 
     # Fix a key for each run
-    key, mechanism_type, heuristic, warmup, learning_rate, tau = set_run_key(
-        config_dict
-    )
+    (
+        key,
+        mechanism_type,
+        heuristic,
+        warmup,
+        learning_rate,
+        tau,
+        external_update_on_cached_results,
+    ) = set_run_key(config_dict)
 
     config.update(
         {
@@ -262,6 +268,7 @@ def get_logs(
             "config": config_dict,
             "learning_rate": learning_rate,
             "warmup": warmup,
+            "external_update_on_cached_results": external_update_on_cached_results,
             "global_budget": global_budget,
             "chunks": chunks,
             "sv_misses": sv_misses,
@@ -284,13 +291,14 @@ def set_run_key(config_dict):
         key = ""
 
     tau = ""
+
     exact_match_caching = config_dict["exact_match_caching"]
     if config_dict["mechanism"]["type"] == "Laplace":
         mechanism_type = "Laplace"
         heuristic = ""
         learning_rate = ""
         warmup = ""
-
+        external_update_on_cached_results = ""
         if config_dict["planner"]["method"] == "NoCuts" and exact_match_caching == True:
             mechanism_type += "+Cache"
         if (
@@ -306,24 +314,30 @@ def set_run_key(config_dict):
         key += mechanism_type
 
     elif config_dict["mechanism"]["type"] == "PMW":
+        external_update_on_cached_results = ""
         mechanism_type = "PMW"
         heuristic = ""
         learning_rate = ""
         warmup = ""
         key += mechanism_type
 
-    elif config_dict["mechanism"]["type"] == "TimestampsPMW":
-        mechanism_type = "TimestampsPMW"
-        heuristic = ""
-        learning_rate = ""
-        warmup = ""
-        key += mechanism_type
+    # elif config_dict["mechanism"]["type"] == "TimestampsPMW":
+    #     mechanism_type = "TimestampsPMW"
+    #     heuristic = ""
+    #     learning_rate = ""
+    #     warmup = ""
+    #     key += mechanism_type
 
     else:
         mechanism_type = "Hybrid"
         warmup = str(config_dict["mechanism"]["probabilistic_cfg"]["bootstrapping"])
         heuristic = config_dict["mechanism"]["probabilistic_cfg"]["heuristic"]
         tau = str(config_dict["mechanism"]["probabilistic_cfg"]["tau"])
+        external_update_on_cached_results = str(
+            config_dict["mechanism"]["probabilistic_cfg"][
+                "external_update_on_cached_results"
+            ]
+        )
 
         learning_rate = str(
             config_dict["mechanism"]["probabilistic_cfg"]["learning_rate"]
@@ -341,10 +355,28 @@ def set_run_key(config_dict):
             and exact_match_caching == True
         ):
             mechanism_type += "+PerPartitionCache"
-        key += mechanism_type + "+" + heuristic + "+lr" + learning_rate + "+tau" + tau
+        key += (
+            mechanism_type
+            + "+"
+            + heuristic
+            + "+lr"
+            + learning_rate
+            + "+tau"
+            + tau
+            + "+cachedupdates"
+            + external_update_on_cached_results
+        )
         if warmup == "True":
             key += "+warmup"
-    return key, mechanism_type, heuristic, warmup, learning_rate, tau
+    return (
+        key,
+        mechanism_type,
+        heuristic,
+        warmup,
+        learning_rate,
+        tau,
+        external_update_on_cached_results,
+    )
 
 
 def save_logs(log_dict):

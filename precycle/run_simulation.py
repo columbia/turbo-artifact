@@ -80,25 +80,11 @@ class Simulator:
         assert blocks_metadata is not None
         self.config.update({"blocks_metadata": blocks_metadata})
 
-        if self.config.mechanism.type == "TimestampsPMW":
-            # Extend the attributes domain sizes with the domain size of the 'blocks' attribute
-            max_blocks = int(self.config.blocks.max_num)
-            # Must run only in the static case
-            assert max_blocks == int(self.config.blocks.initial_num)
-            pmw_attribute_names = self.config.blocks_metadata.attribute_names + [
-                "blocks"
-            ]
-            pmw_attributes_domain_sizes = (
-                self.config.blocks_metadata.attributes_domain_sizes + [max_blocks]
-            )
-            pmw_domain_size = self.config.blocks_metadata.domain_size * max_blocks
-
-        else:
-            pmw_attribute_names = self.config.blocks_metadata.attribute_names
-            pmw_attributes_domain_sizes = (
-                self.config.blocks_metadata.attributes_domain_sizes
-            )
-            pmw_domain_size = self.config.blocks_metadata.domain_size
+        pmw_attribute_names = self.config.blocks_metadata.attribute_names
+        pmw_attributes_domain_sizes = (
+            self.config.blocks_metadata.attributes_domain_sizes
+        )
+        pmw_domain_size = self.config.blocks_metadata.domain_size
 
         self.config.blocks_metadata.update(
             {
@@ -153,7 +139,7 @@ class Simulator:
         config["blocks_metadata"] = {}
         config["blocks"]["block_requests_pattern"] = {}
 
-        key, _, _, _, _, _ = set_run_key(config)
+        key, _, _, _, _, _, _ = set_run_key(config)
         key += "_zip_" + str(config["tasks"]["zipf_k"])
         with mlflow.start_run(run_name=key):
             # TODO: flatten dict to compare nested params

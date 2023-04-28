@@ -126,7 +126,4 @@ class MinCuts(Planner):
             # for it because we do not do the check here any more
             plan = A(l=run_ops, sv_check=sv_check, cost=0)
 
-        elif self.mechanism_type == "TimestampsPMW":
-            raise NotImplementedError
-
         return plan
