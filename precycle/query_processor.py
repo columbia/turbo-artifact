@@ -9,7 +9,15 @@ from termcolor import colored
 from precycle.executor import A, Executor, RunHistogram
 from precycle.task import Task, TaskInfo
 from precycle.utils.logs import compute_hit_scores
-from precycle.utils.utils import FAILED, FINISHED, mlflow_log
+from precycle.utils.utils import (
+    FAILED,
+    FINISHED,
+    HISTOGRAM_RUNTYPE,
+    LAPLACE_RUNTYPE,
+    LOGS_PATH,
+    PMW_RUNTYPE,
+    mlflow_log,
+)
 
 SLIDING_WINDOW_LENGTH = 1_000
 
@@ -123,6 +131,36 @@ class QueryProcessor:
                     for _, budget in budget_per_block.items():
                         self.total_budget_spent_all_blocks += budget.epsilon
 
+                if self.config.blocks.max_num == 1:
+                    # TODO: put this in hit scores with weighted number of updates? We only plot it for monoblock in the paper anyway
+
+                    block_key = "(0, 0)"
+
+                    assert len(run_metadata["run_types"][0]) == 1, run_metadata
+
+                    run_type = run_metadata["run_types"][0][block_key]
+                    if run_type == LAPLACE_RUNTYPE:
+                        update = (
+                            1
+                            if run_metadata["external_updates"][0].get(block_key, 0)
+                            != 0
+                            else 0
+                        )
+
+                    elif run_type == HISTOGRAM_RUNTYPE:
+                        update = 1 if run_metadata["sv_check_status"][0] == False else 0
+                    elif run_type == PMW_RUNTYPE:
+                        update = (
+                            1
+                            if run_metadata["pmw_hits"][0].get(block_key, None) == 0
+                            else 0
+                        )
+                    else:
+                        raise NotImplementedError(
+                            f"Run type {run_type} not implemented"
+                        )
+                    self.score_counters[f"num_updates_monoblock"] += update
+
                 if self.counter % 100 == 0:
                     mlflow_log(
                         f"AllBlocks", self.total_budget_spent_all_blocks, task.id
@@ -160,11 +198,16 @@ class QueryProcessor:
                             task.id,
                         )
 
-                    # Each miss is an update (either SV update or Laplace update, without the check)
-                    num_updates_monoblock = (
-                        task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                    # # Each miss is an update (either SV update or Laplace update, without the check)
+                    # num_updates_monoblock = (
+                    #     task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                    # )
+                    # mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
+                    mlflow_log(
+                        f"num_updates_monoblock",
+                        self.score_counters[f"num_updates_monoblock"],
+                        task.id,
                     )
-                    mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
 
             status = FINISHED
             # logger.info(
