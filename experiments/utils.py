@@ -1,4 +1,4 @@
-from precycle.utils.utils import REPO_ROOT
+from turbo.utils.utils import REPO_ROOT
 
 
 def get_paths(dataset):

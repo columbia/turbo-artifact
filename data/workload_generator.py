@@ -6,7 +6,7 @@ import pandas as pd
 import typer
 from loguru import logger
 
-from precycle.utils.utils import REPO_ROOT
+from turbo.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 

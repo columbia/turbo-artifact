@@ -7,8 +7,8 @@ import ray
 from loguru import logger
 from ray import tune
 
-from precycle.run_simulation import Simulator
-from precycle.utils.utils import LOGS_PATH, RAY_LOGS
+from turbo.run_simulation import Simulator
+from turbo.utils.utils import LOGS_PATH, RAY_LOGS
 
 
 def run_and_report(config: dict, replace=False) -> None:
@@ -46,7 +46,7 @@ def grid_online(
     exact_match_caching: bool = [True],
     mlflow_random_prefix: bool = False,
     validation_interval: int = 0,
-    mlflow_experiment_id: str = "precycle-2",
+    mlflow_experiment_id: str = "turbo",
     save_logs: bool = True,
     tau: List[int] = [0],
     external_update_on_cached_results: List[bool] = [True],

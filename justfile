@@ -2,13 +2,13 @@
 # Run with https://github.com/casey/just or copy-paste
 
 run_one:
-    python precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+    python turbo/run_simulation.py --omegaconf turbo/config/turbo_pierre.json
 
 run_monoblock_covid19:
     python experiments/runner.cli.caching.py --exp caching_monoblock --dataset covid19 --loguru-level DEBUG
 
 corner_case_pmw: activate
-    python precycle/start_precycle.py --omegaconf precycle/config/corner_case_pmw.json
+    python turbo/start_turbo.py --omegaconf turbo/config/corner_case_pmw.json
 
 create_queries: create_covid_queries create_citibike_queries
 
@@ -33,11 +33,11 @@ create_citibike_dataset:
     python data/citibike/citibike_data/generate.py
 
 mlflow:
-    mlflow ui --backend-store-uri file:///$HOME/precycle/logs/mlruns --port 5003
+    mlflow ui --backend-store-uri file:///$HOME/turbo/logs/mlruns --port 5003
 
 profile:
-    scalene --json --outfile profile.json precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
-    # scalene --cli --html --outfile profile.html precycle/run_simulation.py --omegaconf precycle/config/precycle_pierre.json
+    scalene --json --outfile profile.json turbo/run_simulation.py --omegaconf turbo/config/turbo_pierre.json
+    # scalene --cli --html --outfile profile.html turbo/run_simulation.py --omegaconf turbo/config/turbo_pierre.json
 
 run:
     #!/usr/bin/env python

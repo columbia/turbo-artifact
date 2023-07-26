@@ -8,8 +8,8 @@ from ray import tune
 from ray_runner import CustomLoggerCallback
 from utils import get_paths
 
-from precycle.run_simulation import Simulator
-from precycle.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, RAY_LOGS
+from turbo.run_simulation import Simulator
+from turbo.utils.utils import DEFAULT_CONFIG_FILE, LOGS_PATH, RAY_LOGS
 
 app = typer.Typer()
 

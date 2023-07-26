@@ -4,9 +4,9 @@ import typer
 import pickle
 from loguru import logger
 from pathlib import Path
-from precycle.utils.utils import REPO_ROOT
-from precycle.cache.histogram import k_way_marginal_query_list
-from precycle.cache.histogram import build_sparse_tensor
+from turbo.utils.utils import REPO_ROOT
+from turbo.cache.histogram import k_way_marginal_query_list
+from turbo.cache.histogram import build_sparse_tensor
 from multiprocessing import Process
 
 app = typer.Typer()

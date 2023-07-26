@@ -6,7 +6,7 @@ from typing import Union
 import pandas as pd
 import yaml
 
-from precycle.utils.utils import LOGS_PATH
+from turbo.utils.utils import LOGS_PATH
 
 
 def load_ray_experiment(logs: Union[Path, str]) -> pd.DataFrame:

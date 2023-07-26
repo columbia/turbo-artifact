@@ -5,8 +5,8 @@ from pathlib import Path
 import typer
 from loguru import logger
 
-from precycle.cache.histogram import k_way_marginal_query_list
-from precycle.utils.utils import REPO_ROOT
+from turbo.cache.histogram import k_way_marginal_query_list
+from turbo.utils.utils import REPO_ROOT
 
 app = typer.Typer()
 

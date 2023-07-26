@@ -15,9 +15,9 @@ from geopy import distance
 from loguru import logger
 from scipy.cluster.vq import kmeans2, whiten
 
-from precycle.cache import SparseHistogram
-from precycle.cache.histogram import get_domain_size
-from precycle.utils.utils import REPO_ROOT
+from turbo.cache import SparseHistogram
+from turbo.cache.histogram import get_domain_size
+from turbo.utils.utils import REPO_ROOT
 
 # ray.init(runtime_env={"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}})
 

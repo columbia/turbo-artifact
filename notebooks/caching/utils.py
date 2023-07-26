@@ -6,7 +6,7 @@ import plotly.express as px
 from plotly.offline import iplot
 
 from experiments.ray.analysis import load_ray_experiment
-from precycle.utils.utils import LOGS_PATH
+from turbo.utils.utils import LOGS_PATH
 
 
 def get_df(path):
