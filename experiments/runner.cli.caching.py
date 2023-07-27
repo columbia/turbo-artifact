@@ -52,7 +52,7 @@ def caching_monoblock_covid19(dataset):
         "log_every_n_tasks": 100,
         "learning_rate": ["0:2_50:0.5_100:0.2"],
         "bootstrapping": [False],
-        "exact_match_caching": [True, False],
+        "exact_match_caching": [True], #, False],
         "tau": [0.05],
         "mlflow_experiment_id": "monoblock_covid",
         "external_update_on_cached_results": [False],
@@ -496,11 +496,11 @@ def caching_monoblock_citibike(dataset):
         "mlflow_experiment_id": "monoblock_citibike",
         "external_update_on_cached_results": [False],
     }
-    experiments.append(
-        multiprocessing.Process(
-            target=lambda config: grid_online(**config), args=(deepcopy(config),)
-        )
-    )
+    # experiments.append(
+    #     multiprocessing.Process(
+    #         target=lambda config: grid_online(**config), args=(deepcopy(config),)
+    #     )
+    # )
     config["mechanism"] = ["Hybrid"]
     config["heuristic"] = ["bin_visits:5-1"]
     config["external_update_on_cached_results"] = [False]
