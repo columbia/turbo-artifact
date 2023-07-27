@@ -189,7 +189,7 @@ class Simulator:
 
 @app.command()
 def run_simulation(
-    omegaconf: str = "precycle/config/precycle.json",
+    omegaconf: str = "turbo/config/turbo.json",
     loguru_level: str = "INFO",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level

@@ -13,8 +13,8 @@
 - `db-functions.py`: If not using the mock versions of the above modules, this file contains functions that help checking/modifying the state of them (TimeScaleDB, Redis instances)
 - `query_processor.py`: Finds a DP plan for the query if possible, runs it, consumes budget if necessary and stores metadata.
 - `executor.py`: executes the DP plan of a query using the caches and the PSQL module.
-- `simulator`: a simulation of the execution of precycle implemented using Simpy. It generates a workload and data blocks given the configuration in `precycle.json`. It bypasses the blocks/tasks servers API and directly uses the rest of the package modules to execute queries and store data blocks and block budgets.
-- `run_simulation.py`: Entrypoint for running precycle in a simulation.
-- `precycle.json`: configuration file to setup the precycle execution. Contains configuration for the simulation as well. 
+- `simulator`: a simulation of the execution of turbo implemented using Simpy. It generates a workload and data blocks given the configuration in `turbo.json`. It bypasses the blocks/tasks servers API and directly uses the rest of the package modules to execute queries and store data blocks and block budgets.
+- `run_simulation.py`: Entrypoint for running turbo in a simulation.
+- `turbo.json`: configuration file to setup the turbo execution. Contains configuration for the simulation as well. 
 
 To run everything using the mock modules set the flag `"mock": true`.

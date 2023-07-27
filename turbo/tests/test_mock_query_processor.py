@@ -21,7 +21,7 @@ test = typer.Typer()
 
 @test.command()
 def test(
-    omegaconf: str = "precycle/config/precycle.json",
+    omegaconf: str = "turbo/config/turbo.json",
 ):
     omegaconf = OmegaConf.load(omegaconf)
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)

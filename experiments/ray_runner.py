@@ -121,7 +121,7 @@ def grid_online(
         config=config,
         # resources_per_trial={"cpu": 1},
         resources_per_trial={"cpu": 1},
-        local_dir=RAY_LOGS.joinpath(logs_dir),
+        storage_path=RAY_LOGS.joinpath(logs_dir),
         resume=False,
         verbose=1,
         callbacks=[

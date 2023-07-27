@@ -88,7 +88,7 @@ class PostgresHelper:
 
 @app.command()
 def run(
-    omegaconf: str = "precycle/config/precycle.json",
+    omegaconf: str = "turbo/config/turbo.json",
     storage: str = "redis-budgets",  # "redis-budgets", 'postgres', '*'
     function: str = "delete-all",  # "get", "size", "get-all", "delete-all-caches"
     database: str = "covid",

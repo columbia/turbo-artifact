@@ -11,14 +11,14 @@ import omegaconf
 import pandas as pd
 import scipy
 
-# from precycle.utils.plot import plot_budget_utilization_per_block, plot_task_status
+# from turbo.utils.plot import plot_budget_utilization_per_block, plot_task_status
 from turbo.budget.renyi_budget import RenyiBudget
 
 CUSTOM_LOG_PREFIX = "custom_log_prefix"
 REPO_ROOT = Path(__file__).parent.parent.parent
 LOGS_PATH = REPO_ROOT.joinpath("logs")
 RAY_LOGS = LOGS_PATH.joinpath("ray")
-DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("precycle/config/default.json")
+DEFAULT_CONFIG_FILE = REPO_ROOT.joinpath("turbo/config/default.json")
 
 FAILED = "failed"
 PENDING = "pending"

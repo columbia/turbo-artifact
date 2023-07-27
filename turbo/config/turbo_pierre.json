@@ -79,7 +79,7 @@
         "verbose": false,
         "save": true,
         "mlflow": true,
-        "mlflow_experiment_id": "precycle",
+        "mlflow_experiment_id": "turbo",
         "loguru_level": "INFO",
         "log_every_n_tasks": 500,
         "print_pid": true,

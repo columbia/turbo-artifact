@@ -21,7 +21,7 @@ from turbo.utils.utils import DEFAULT_CONFIG_FILE
 app = typer.Typer()
 
 
-def precycle(custom_config):
+def turbo(custom_config):
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
     omegaconfig = OmegaConf.create(custom_config)
     config = OmegaConf.merge(default_config, omegaconfig)
@@ -46,7 +46,7 @@ def precycle(custom_config):
 
 @app.command()
 def run(
-    omegaconf: str = "precycle/config/precycle.json",
+    omegaconf: str = "turbo/config/turbo.json",
     loguru_level: str = "INFO",
 ):
 
@@ -58,7 +58,7 @@ def run(
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
     omegaconf = OmegaConf.load(omegaconf)
-    precycle(omegaconf)
+    turbo(omegaconf)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import ray
-from geopy import distance
+# from geopy import distance
 from loguru import logger
 from scipy.cluster.vq import kmeans2, whiten
 

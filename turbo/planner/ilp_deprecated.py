@@ -15,7 +15,7 @@ from turbo.planner.planner import Planner
 
 from turbo.budget.curves import ZeroCurve
 
-# from precycle.utils.utils import get_blocks_size
+# from turbo.utils.utils import get_blocks_size
 from turbo.utils.utility_theorems import (
     deterministic_compute_utility_curve,
     probabilistic_compute_utility_curve,

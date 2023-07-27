@@ -8,7 +8,7 @@ app = typer.Typer()
 
 @app.command()
 def run(
-    omegaconf: str = "precycle/config/precycle.json",
+    omegaconf: str = "turbo/config/turbo.json",
 ):
     omegaconf = OmegaConf.load(omegaconf)
     default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)

@@ -9,11 +9,12 @@ import pandas as pd
 import typer
 from loguru import logger
 
+path = "data/covid19/covid19_data/"
 
 def load_and_preprocess_datasets(metadata):
 
     # --- Covid dataset --- #
-    covid = pd.read_csv("./covid19cases_test.csv")
+    covid = pd.read_csv(f"{path}covid19cases_test.csv")
     covid = covid.loc[covid["area"] == "California"]
     covid = covid[covid["date"].notna()]
     covid = covid[covid["total_tests"].notna()]
@@ -23,7 +24,7 @@ def load_and_preprocess_datasets(metadata):
     covid = covid.reset_index(drop=True)
 
     # --- Covid ages dataset --- #
-    age = pd.read_csv("./covidage.csv")
+    age = pd.read_csv(f"{path}/covidage.csv")
     age.rename(columns={"Age Group": "age_group"}, inplace=True)
     age.replace(metadata["age_mapping"], inplace=True)
 
@@ -44,7 +45,7 @@ def load_and_preprocess_datasets(metadata):
     age["age_based_case_rate"] /= ageGroup["age_based_case_rate"].values
 
     # --- Covid genders dataset --- #
-    gender = pd.read_csv("./covidgender.csv")
+    gender = pd.read_csv(f"{path}/covidgender.csv")
     gender.replace(metadata["gender_mapping"], inplace=True)
     gender.drop(
         columns=[
@@ -68,7 +69,7 @@ def load_and_preprocess_datasets(metadata):
     gender["gender_based_case_rate"] /= genderGroup["gender_based_case_rate"].values
 
     # --- Covid ethnicities dataset --- #
-    ethnicity = pd.read_csv("./covidethnicity.csv")
+    ethnicity = pd.read_csv(f"{path}/covidethnicity.csv")
     ethnicity.replace(metadata["ethnicity_mapping"], inplace=True)
 
     ethnicity.drop(
@@ -325,7 +326,8 @@ app = typer.Typer()
 @app.command()
 def main(
     same_size_blocks: bool = True,
-    output_dir="blocks",
+    output_dir=f"{path}/blocks",
+    num_blocks_cutoff=None,
 ):
     metadata = {}
     attribute_names = ["positive", "gender", "age", "ethnicity"]
@@ -445,7 +447,12 @@ def main(
         block_size = total_size // k
         metadata["block_size"] = block_size
         metadata["blocks"] = dict()
-        for idx in range(k):
+
+        nblocks = k
+        if num_blocks_cutoff:
+            nblocks = min(k, int(num_blocks_cutoff))
+
+        for idx in range(nblocks):
             metadata["blocks"][idx] = dict()
             metadata["blocks"][idx]["size"] = block_size
 

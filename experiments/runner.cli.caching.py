@@ -8,7 +8,7 @@ import typer
 from utils import get_paths
 
 from experiments.ray_runner import grid_online
-from notebooks.caching.utils import analyze_monoblock, analyze_multiblock, get_df
+from notebooks.caching.utils import analyze_monoblock, analyze_multiblock
 
 app = typer.Typer()
 
