@@ -17,7 +17,7 @@
     },
     "cache": {
         "host": "localhost",
-        "port": 6379
+        "port": 6371
     },
     "planner": {
         "method": "NoCuts",
@@ -27,13 +27,13 @@
     },
     "budget_accountant": {
         "host": "localhost",
-        "port": 6378,
+        "port": 6370,
         "epsilon": 10,
         "delta": 1e-07
     },
     "postgres": {
         "host": "localhost",
-        "port": 5432,
+        "port": 5430,
         "database": "covid",
         "username": "postgres",
         "password": "postgres"
@@ -42,12 +42,12 @@
         "initial_num": 1,
         "max_num": 1,
         "arrival_interval": 1,
-        "block_data_path": "/home/kelly/turbo/data/covid19/covid19_data/blocks",
-        "block_metadata_path": "/home/kelly/turbo/data/covid19/covid19_data/blocks/metadata.json",
+        "block_data_path": "data/covid19/covid19_data/blocks",
+        "block_metadata_path": "data/covid19/covid19_data/blocks/metadata.json",
         "block_requests_pattern": [1]
     },
     "tasks": {
-        "path": "/home/kelly/turbo/data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
+        "path": "data/covid19/covid19_workload/34425queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
         "avg_num_tasks_per_block": 2e3,
         "max_num": 2e3,
@@ -65,6 +65,7 @@
     "logs": {
         "verbose": false,
         "save": true,
+        "save_dir": "system_runtime_covid",
         "mlflow": false,
         "mlflow_experiment_id": "",
         "loguru_level": "INFO",

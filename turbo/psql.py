@@ -28,21 +28,12 @@ class PSQL:
         status = b"success"
         try:
             cur = self.psql_conn.cursor()
-            if self.config.postgres.database == "covid":
-                cmd = f"""
-                        COPY covid_data(time, positive, gender, age, ethnicity)
-                        FROM '{block_data_path}.csv'
-                        DELIMITER ','
-                        CSV HEADER;
-                    """
-            elif self.config.postgres.database == "citibike":
-                cmd = f"""
-                    COPY citibike_data(time, weekday, hour, duration_minutes, start_station, end_station, usertype, gender, age)
-                    FROM '{block_data_path}.csv'
-                    DELIMITER ','
-                    CSV HEADER;
-                """
-            cur.execute(cmd)
+            with open(f'{block_data_path}.csv', 'r') as file:
+                next(file)  # Skip the header
+                if self.config.postgres.database == "covid":
+                    cur.copy_from(file, 'covid_data', sep=',', columns=['time', 'positive', 'gender', 'age', 'ethnicity'])
+                elif self.config.postgres.database == "citibike":
+                    cur.copy_from(file, 'citibike_data', sep=',', columns=['time', 'weekday', 'hour', 'duration_minutes', 'start_station', 'end_station', 'usertype', 'gender', 'age'])
             cur.close()
             self.psql_conn.commit()
         except (Exception, psycopg2.DatabaseError) as error:

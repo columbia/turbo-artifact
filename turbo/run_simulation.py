@@ -60,15 +60,13 @@ class Simulator:
                 )
                 print(f"New MLflow experiment created: {experiment_id}")
 
-        # Retrocompatible with hardcoded paths
         for a, b in [
             ("blocks", "block_data_path"),
             ("blocks", "block_metadata_path"),
             ("tasks", "path"),
         ]:
             p = Path(self.config[a][b])
-            if not p.exists():
-                self.config[a][b] = REPO_ROOT.joinpath(p)
+            self.config[a][b] = str(REPO_ROOT.joinpath(p))
 
         try:
             with open(self.config.blocks.block_metadata_path) as f:
@@ -182,7 +180,8 @@ class Simulator:
                     self.rm.budget_accountant.dump(),
                     config,
                 )
-                save_logs(logs)
+                save_dir = self.config.logs.save_dir if self.config.logs.save_dir else ""
+                save_logs(logs, save_dir)
 
         return logs
 

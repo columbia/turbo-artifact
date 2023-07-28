@@ -26,3 +26,12 @@ python experiments/runner.cli.caching.py --exp caching_streaming_multiblock_lapl
 
 echo "Running Figure 10.c (streaming-partitioned citibike zipf 0)"
 python experiments/runner.cli.caching.py --exp caching_streaming_multiblock_laplace_vs_hybrid --dataset citibike
+
+echo "Running Figure 10.d (system runtime evaluation)"
+python run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json
+
+mkdir logs/figures
+
+python notebooks/caching/utils.py --function analyze_runtime --experiment-path system_runtime_covid > logs/figures/figure_10d.txt
+python notebooks/caching/utils.py --function analyze_runtime --experiment-path system_runtime_citibike >> logs/figures/figure_10d.txt
+

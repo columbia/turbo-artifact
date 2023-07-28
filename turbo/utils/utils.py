@@ -379,9 +379,9 @@ def set_run_key(config_dict):
     )
 
 
-def save_logs(log_dict):
-    log_path = LOGS_PATH.joinpath(
-        f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}.json"
+def save_logs(log_dict, save_dir):
+    log_path = LOGS_PATH.joinpath(save_dir).joinpath(
+        f"{datetime.now().strftime('%m%d-%H%M%S')}_{str(uuid.uuid4())[:6]}/result.json"
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "w") as fp:

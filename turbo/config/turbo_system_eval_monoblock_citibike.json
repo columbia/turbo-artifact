@@ -43,12 +43,12 @@
         "initial_num": 1,
         "max_num": 1,
         "arrival_interval": 1,
-        "block_data_path": "/home/kelly/turbo/data/citibike/citibike_data/blocks",
-        "block_metadata_path": "/home/kelly/turbo/data/citibike/citibike_data/blocks/metadata.json",
+        "block_data_path": "data/citibike/citibike_data/blocks",
+        "block_metadata_path": "data/citibike/citibike_data/blocks/metadata.json",
         "block_requests_pattern": [1]
     },
     "tasks": {
-        "path": "/home/kelly/turbo/data/citibike/citibike_workload/2485queries.privacy_tasks.csv",
+        "path": "data/citibike/citibike_workload/2485queries.privacy_tasks.csv",
         "block_selection_policy": "RandomBlocks",
         "avg_num_tasks_per_block": 2e3,
         "max_num": 2e3,
@@ -66,6 +66,7 @@
     "logs": {
         "verbose": false,
         "save": true,
+        "save_dir": "system_runtime_citibike",
         "mlflow": false,
         "mlflow_experiment_id": "",
         "loguru_level": "INFO",

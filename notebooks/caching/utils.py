@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple
+import typer
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,8 @@ from plotly.offline import iplot
 
 from experiments.ray.analysis import load_ray_experiment
 from turbo.utils.utils import LOGS_PATH
+
+app = typer.Typer()
 
 
 def get_df(path):
@@ -29,13 +32,26 @@ def get_runtimes(df):
             run_metadata = task["run_metadata"]
             laplace_hits_list = run_metadata["laplace_hits"]
             sv_check_status_list = run_metadata["sv_check_status"]
+            # simplifying function for now
             assert len(sv_check_status_list) <= 1
+        
             key = (
                 "sv_check_status"
                 + str([sv_check_status for sv_check_status in sv_check_status_list])
                 + "laplace_hit"
                 + str([laplace_hit for laplace_hit in laplace_hits_list])
             )
+
+            # Messy patch
+            if key == "sv_check_status[]laplace_hit[{'(0, 0)': 1}]":
+                key = "Exact-Cache hit"
+            elif key == "sv_check_status[True]laplace_hit[{}]":
+                key = "R1 output path"
+            elif key == "sv_check_status[]laplace_hit[{'(0, 0)': 0}]":
+                key = "R3 output path"
+            else:
+                key = "R2 output path"
+            
             if key not in query_execution_path_runtimes:
                 query_execution_path_runtimes[key] = []
             query_execution_path_runtimes[key].append(run_metadata["runtime"])
@@ -56,8 +72,7 @@ def get_runtimes(df):
         # print(runtimes)
         query_execution_path_db_runtimes[key] = sum(runtimes) / len(runtimes)
 
-    print("query_execution_path_runtimes", query_execution_path_runtimes)
-    print("\nquery_execution_path_db_runtimes", query_execution_path_db_runtimes)
+    # print("\nquery_execution_path_db_runtimes", query_execution_path_db_runtimes)
     return query_execution_path_runtimes
 
 
@@ -551,25 +566,27 @@ def analyze_error(experiment_path):
 
 
 def analyze_runtime(experiment_path):
-    def plot_error(df):
-        fig = px.scatter(
-            df,
-            x="task",
-            y="error",
-            color="key",
-            title=f"error",
-            width=1000,
-            height=600,
-            facet_row="zipf_k",
-        )
-        return fig
+    # def plot_error(df):
+    #     fig = px.scatter(
+    #         df,
+    #         x="task",
+    #         y="error",
+    #         color="key",
+    #         title=f"error",
+    #         width=1000,
+    #         height=600,
+    #         facet_row="zipf_k",
+    #     )
+    #     return fig
 
     df = get_df(experiment_path)
     total_tasks = df["total_tasks"].max()
     df["zipf_k"] = df["zipf_k"].astype(float)
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
     runtimes = get_runtimes(df)
-    # iplot(plot_error(errors))
+    print(f"Avg. Query Runtime per execution path for {experiment_path}:")
+    for k,v in runtimes.items():
+        print("\t", k, v)
 
 
 def analyze_num_cuts(experiment_path):
@@ -599,3 +616,11 @@ def analyze_num_cuts(experiment_path):
     df.sort_values(["chunk_size"], ascending=[False], inplace=True)
 
     iplot(plot_num_cuts(df))
+
+@app.command()
+def main(function: str = "", experiment_path: str = ""):
+    globals()[f"{function}"](experiment_path)
+
+
+if __name__ == "__main__":
+    app()

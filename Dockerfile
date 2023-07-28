@@ -17,11 +17,9 @@ RUN curl -sSL https://install.python-poetry.org | python - --git https://github.
 RUN poetry config installer.max-workers 10
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-ansi -vvv
-# RUN poetry shell
 
 RUN chmod 777 ./packaging/create_benchmarks.sh
 
 # Create datasets for covid and citibike
 RUN ./packaging/create_benchmarks.sh
-
 ENTRYPOINT ["/bin/bash"]
