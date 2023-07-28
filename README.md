@@ -30,13 +30,11 @@ Make sure you have a working installation of `docker`.
 ### Download the code
 
 Clone this repository on your machine:
-
 ```bash
 git clone https://github.com/columbia/turbo.git
 ```
 
 Enter the repository:
-
 ```bash
 cd turbo
 ```
@@ -44,7 +42,6 @@ cd turbo
 ### Build the Turbo docker
 
 Build the docker image for Turbo. This will automatically install all dependencies required for the Turbo system as well as the datasets, queries and workloads used in the evaluation section of the paper. This step takes several minutes to finish (~20') due to the processing and generation of the datasets.
-
 ``` bash 
 sudo docker build -t turbo -f Dockerfile .
 ```
@@ -73,19 +70,16 @@ Setup TimescaleDB by creating the databases and hypertables. Use the following c
 sudo docker exec -i timescaledb psql -U postgres < packaging/timescaledb.sql
 ```
 
-If you have changed the default addresses of TimeScaleDB, Redis and RedisAI in the previous steps then update the addresses inside these configuration files, too: `turbo/config/turbo_system_eval_monoblock_covid.json` and `turbo/config/turbo_system_eval_monoblock_citibike.json`. They will be used by experiments that evaluate the system runtime performance!
+If you have changed the default addresses of TimeScaleDB, Redis and RedisAI in the previous steps then update the addresses inside these configuration files, too: `turbo/config/turbo_system_eval_monoblock_covid.json` and `turbo/config/turbo_system_eval_monoblock_citibike.json`. They will be used by experiments that evaluate the system's runtime performance!
 
 ### 4.2. Run all experiments
 
 
 Now, reproduce all Turbo experiments by running the turbo docker with the following command:
-This step takes around XXX' to finish. 
-
 ``` bash 
 sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/ray/run_all.sh
 ```
-
-<!-- sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --name turbo --shm-size=204.89gb --rm turbo `chmod 777 turbo/run_simulation.py && /bin/bash python turbo/run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json` -->
+This step takes around XXX' to finish. 
 
 With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that the we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
 
@@ -111,6 +105,9 @@ For example the following command runs the experiment for Figure 10.d.:
 python run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json
 ```
 
+Note that, for system's performance evaluation we bypass `runner.cli.caching.py` since we do not wish to parallelize the experiments.
+
+`run_simulation` is the official entrypoing for running microbenchmarks under controled simulation settings.
 
 
 ##  4.4. Analyze results
