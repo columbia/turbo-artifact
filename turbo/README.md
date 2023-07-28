@@ -10,7 +10,6 @@
 - `server_tasks.py`: a Tasks Server listening to a socket for new requests for running a query.
 - `client_blocks.py`: API for sending requests to the Blocks Server
 - `server_blocks.py`: API for sending requests to the Tasks Server
-- `db-functions.py`: If not using the mock versions of the above modules, this file contains functions that help checking/modifying the state of them (TimeScaleDB, Redis instances)
 - `query_processor.py`: Finds a DP plan for the query if possible, runs it, consumes budget if necessary and stores metadata.
 - `executor.py`: executes the DP plan of a query using the caches and the PSQL module.
 - `simulator`: a simulation of the execution of turbo implemented using Simpy. It generates a workload and data blocks given the configuration in `turbo.json`. It bypasses the blocks/tasks servers API and directly uses the rest of the package modules to execute queries and store data blocks and block budgets.

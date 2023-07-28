@@ -81,7 +81,7 @@ This step takes around XXX' to finish.
 sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config -v ~/turbo/turbo/data:/turbo/turbo/data --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/ray/run_all.sh
 ```
 
-sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --name turbo --shm-size=204.89gb --rm turbo `chmod 777 turbo/run_simulation.py && /bin/bash python turbo/run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json`
+<!-- sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --name turbo --shm-size=204.89gb --rm turbo `chmod 777 turbo/run_simulation.py && /bin/bash python turbo/run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json` -->
 
 With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that the we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
 
