@@ -103,7 +103,7 @@
         "verbose": false,
         "save": true,
         "save_dir": "",
-        "mlflow": true,
+        "mlflow": false,
         "mlflow_experiment_id": "turbo",
         "loguru_level": "INFO",
         "log_every_n_tasks": 500,

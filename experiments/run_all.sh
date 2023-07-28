@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export LOGURU_LEVEL=ERROR
+
 echo "Running Figures 7.a and 7.b (static-non-partitioned covid zipfs 0/1)"
 python experiments/runner.cli.caching.py --exp caching_monoblock --dataset covid19
 
@@ -28,13 +30,13 @@ python experiments/runner.cli.caching.py --exp caching_monoblock --dataset covid
 # python experiments/runner.cli.caching.py --exp caching_streaming_multiblock_laplace_vs_hybrid --dataset citibike
 
 echo "Running Figure 10.d (system runtime evaluation covid)"
-python run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json
+python turbo/run_simulation.py --omegaconf "turbo/config/turbo_system_eval_monoblock_covid.json"
 
 echo "Clean up Redis/Postgres after the experiment.."
 python packaging/storage_utils.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json --storage "*" --function delete-all --database covid
 
 echo "Running Figure 10.d (system runtime evaluation citibike).."
-python run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_citibike.json
+python turbo/run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_citibike.json
 
 echo "Clean up Redis/Postgres after the experiment.."
 python packaging/storage_utils.py --omegaconf turbo/config/turbo_system_eval_monoblock_citibike.json --storage "*" --function delete-all --database citibike

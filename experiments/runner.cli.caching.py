@@ -652,7 +652,7 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
 
 @app.command()
 def run(
-    exp: str = "caching_monoblock", dataset: str = "covid19", loguru_level: str = "INFO"
+    exp: str = "caching_monoblock", dataset: str = "covid19", loguru_level: str = "ERROR"
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"

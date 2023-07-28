@@ -9,6 +9,7 @@ COPY . .
 SHELL ["/bin/bash", "-c"]
 
 ENV PATH="/root/.local/bin:$PATH"
+ENV LOGURU_LEVEL=ERROR
 
 RUN set -xe
 RUN apt update && apt install nano

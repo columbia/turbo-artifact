@@ -15,10 +15,11 @@ class PSQL:
         try:
             # Connect to the PostgreSQL database server
             self.psql_conn = psycopg2.connect(
-                host=config.postgres.host,
-                database=config.postgres.database,
-                user=config.postgres.username,
-                password=config.postgres.password,
+                host=self.config.postgres.host,
+                port=self.config.postgres.port,
+                database=self.config.postgres.database,
+                user=self.config.postgres.username,
+                password=self.config.postgres.password,
             )
         except (Exception, psycopg2.DatabaseError) as error:
             logger.info(error)

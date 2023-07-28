@@ -15,7 +15,7 @@ class TasksServer:
         self.config = config
         self.host = self.config.tasks_server.host
         self.port = self.config.tasks_server.port
-
+        print(config)
         self.tasks_count = 0
 
         self.query_processor = query_processor

@@ -77,9 +77,17 @@ If you have changed the default addresses of TimeScaleDB, Redis and RedisAI in t
 
 Now, reproduce all Turbo experiments by running the turbo docker with the following command:
 ``` bash 
-sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/run_all.sh
+sudo docker run -v $PWD/logs:/turbo/logs -v $PWD/turbo/config:/turbo/turbo/config -v $PWD/temp:/tmp --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/run_all.sh
 ```
 This step takes around XXX' to finish. 
+
+Make sure that the turbo container has is enough disk space at `/tmp` which Ray uses to store checkpoints and other internal data. If that's not the case then mount the `/tmp` directory on a directory that has enough space. 
+
+For example, use an additional -v flag followed by the directory of your choice:
+
+`-v $PWD/temp:/tmp`
+
+
 
 With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
 
@@ -88,7 +96,7 @@ With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the
 Alternatively, you can also run experiments from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) individually.
 You can enter the Turbo container:
 ``` bash
-sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo -it turbo
+sudo docker run -v $PWD/logs:/turbo/logs -v $PWD/turbo/config:/turbo/turbo/config -v $PWD/temp:/tmp --network=host --name turbo --shm-size=204.89gb -it turbo
 ```
 and simply type the python command from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) that corresponds to the experiment you want to reproduce.
 

@@ -44,7 +44,7 @@ def grid_online(
     mlflow_random_prefix: bool = False,
     validation_interval: int = 0,
     mlflow_experiment_id: str = "turbo",
-    save_logs: bool = True,
+    save_logs: bool = False,
     tau: List[int] = [0],
     external_update_on_cached_results: List[bool] = [True],
 ):

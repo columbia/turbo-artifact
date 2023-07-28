@@ -40,7 +40,6 @@ class Simulator:
         default_config = OmegaConf.load(DEFAULT_CONFIG_FILE)
         omegaconf = OmegaConf.create(omegaconf)
         self.config = OmegaConf.merge(default_config, omegaconf)
-
         # logger.info(f"Configuration: {self.config}")
 
         if self.config.logs.print_pid:
@@ -141,15 +140,15 @@ class Simulator:
         
         def _run():
             self.env.run()
+            logs = get_logs(
+                self.rm.query_processor.tasks_info,
+                self.rm.budget_accountant.dump(),
+                config,
+            )
             if self.config.logs.save:
-                logs = get_logs(
-                    self.rm.query_processor.tasks_info,
-                    self.rm.budget_accountant.dump(),
-                    config,
-                )
                 save_dir = self.config.logs.save_dir if self.config.logs.save_dir else ""
                 save_logs(logs, save_dir)
-                return logs
+            return logs
 
         if self.config.logs.mlflow:
             with mlflow.start_run(run_name=key):
@@ -193,7 +192,7 @@ class Simulator:
 @app.command()
 def run_simulation(
     omegaconf: str = "turbo/config/turbo.json",
-    loguru_level: str = "INFO",
+    loguru_level: str = "ERROR",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level
     os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
