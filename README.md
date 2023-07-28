@@ -6,23 +6,21 @@ Effective caching for linear query workloads over DP databases. Turbo builds upo
 - `data`: scripts for generating the datasets, queries and workloads for the Covid and Citibike datasets.
 - `experiments`: scripts that automate the execution of Turbo experiments concurrently using [Ray](#https://www.ray.io/). You can extend [runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) with your own configuration to generate your own experiments.
 - `notebooks`: notebooks and utils for visualizing and analyzing execution logs.
-- `packaging`: scripts for building Turbo
+- `packaging`: scripts for building Turbo.
 - `turbo`: Turbo's core functionality. Refer [here](/turbo/README.md) for Turbo core's structure.
 
 
 <!-- [For a  guide ](#) -->
   
 ## Packaging
-We package Turbo using the following dockers
-- *Turbo* container includes
+We package Turbo using the following dockers:
+- *Turbo* includes
     - the turbo system
     - the datasets, queries and workloads used in the evaluation for the Covid and Citibike datasets
     - scripts for reproducing all experiments
-
-- *timescaledb* container includes an instance of Postgres running the TimescaleDB extension. This is the DBMS used for storing data and running queries.
-
-- *redis-cache* container for storing differentially-private results and histograms
-- *redis-budgets* container for budget accounting
+- *timescaledb* includes an instance of Postgres running the TimescaleDB extension. This is the DBMS used for storing data and running queries.
+- *redis-cache* includes an instance of RedisAI for storing differentially-private results and histograms (represented as tensors).
+- *redis-budgets* includes an instance of Redis for budget accounting.
 
 ## 1. Requirements
 
