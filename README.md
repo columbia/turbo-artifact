@@ -37,7 +37,6 @@ git clone https://github.com/columbia/turbo.git
 Enter the repository and heckout the `artifact` branch :
 ```bash
 cd turbo
-git checkout artifact
 ```
 
 ### Build the Turbo docker
@@ -128,6 +127,10 @@ Note that, for system's performance evaluation we bypass `runner.cli.caching.py`
 The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
 Note that the terminology used in the labels might differ slightly from that used in the paper. 
 Typically, you will see that here we refer to `Turbo` as `Hybrid` which is an alternative name we use internally to describe Turbo.
+
+Check the `logs/figures` directory for all the outputs.
+Note that for figure_10 (runtime performance) we output the results in a text format (figure_10.txt) here instead of a barplot.
+
 
 <!-- # 5. Interactive use of Turbo
 

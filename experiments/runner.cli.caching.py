@@ -230,7 +230,7 @@ def convergence_covid19(dataset):
         )
     )
     experiments_start_and_join(experiments)
-    analyze_monoblock(logs_dir)
+    analyze_monoblock(f"ray/{logs_dir}")
 
 
 def tree_covid19(dataset):
@@ -328,7 +328,7 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
         str(tasks_path_prefix.joinpath(task_path)) for task_path in task_paths
     ]
 
-    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid_{str(uuid.uuid4())[:4]}"
+    logs_dir = f"{dataset}/static_multiblock/laplace_vs_hybrid"
     experiments = []
     config = {
         "global_seed": 64,
