@@ -72,7 +72,7 @@ class Simulator:
             with open(self.config.blocks.block_metadata_path) as f:
                 blocks_metadata = json.load(f)
         except Exception as e:
-            logger.error("Dataset metadata must have be created first..")
+            logger.error("Dataset metadata must have been created first..")
             raise e
 
         assert blocks_metadata is not None

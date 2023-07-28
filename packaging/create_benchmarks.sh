@@ -1,10 +1,12 @@
 #!/bin/sh
 
 # Create datasets for covid and citibike
-(python data/covid19/covid19_data/generate.py --num-blocks-cutoff 50) & (python data/citibike/citibike_data/generate.py) ; wait
+python data/covid19/covid19_data/generate.py --num-blocks-cutoff 50
+python data/citibike/citibike_data/generate.py
 
 # Create query pools for covid and citibike
-(python data/covid19/covid19_queries/queries.py) & (python data/citibike/citibike_queries/queries.py) ; wait
+python data/covid19/covid19_queries/queries.py
+python data/citibike/citibike_queries/queries.py
 
 # Create workloads for covid and citibike
 python data/workload_generator.py --utility 0.05 \

@@ -4,7 +4,7 @@ Effective caching for linear query workloads over DP databases. Turbo builds upo
 ## Repo Structure
 
 - `data`: scripts for generating the datasets, queries and workloads for the Covid and Citibike datasets.
-- `experiments`: scripts that automate the execution of Turbo experiments concurrently using [Ray](#https://www.ray.io/). You can extend [runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) with your own configuration to generate your own experiments.
+- `experiments`: scripts that automate the execution of Turbo experiments concurrently using [Ray](https://www.ray.io/). You can extend [runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) with your own configuration to generate your own experiments.
 - `notebooks`: notebooks and utils for visualizing and analyzing execution logs.
 - `packaging`: scripts for building Turbo.
 - `turbo`: Turbo's core functionality. Refer [here](/turbo/README.md) for Turbo core's structure.
@@ -48,16 +48,16 @@ sudo docker build -t turbo -f Dockerfile .
 
 ## 3. Deploy Postgres and Redis
 
-Deploy Postgres as well as two Redis instances. Postgres is used for storing the datasets and the execution of queries. The first Redis (RedisAI) instance is used for *caching* the differentially-private results or histograms (stored as tensors using Redis-AI). The second Redis instance is used for *budget accounting*.
+Deploy Postgres as well as two Redis instances. Postgres is used for storing the datasets and the execution of queries. The first Redis (RedisAI) instance is used for *caching* the differentially-private results or histograms (stored as tensors using RedisAI). The second Redis instance is used for *budget accounting*.
 
-Check out the default addresses for the three instances in the `docker-compose.yaml` and change them if they are already in use by other services.
+Check out the default ports for the three instances in the `docker-compose.yaml` and change the host ports if they are already in use by other services.
 
 ``` bash
 sudo docker-compose up -d
 ```
 ## 4. Reproduce experiments
 
-We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo/tree/artifact/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](#https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
+We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo/tree/artifact/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
 
 The script [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
 
@@ -81,7 +81,7 @@ sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo
 ```
 This step takes around XXX' to finish. 
 
-With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that the we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
+With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
 
 ### 4.3. Run individual experiments
 
@@ -92,7 +92,7 @@ sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo
 ```
 and simply type the python command from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) that corresponds to the experiment you want to reproduce.
 
-For example the following command runs the experiment for Figure 8.a.: 
+For example the following command runs the experiment for *Figure 8.a*: 
 
 ``` bash
 python experiments/runner.cli.caching.py --exp caching_monoblock_heuristics --dataset covid19
@@ -100,15 +100,20 @@ python experiments/runner.cli.caching.py --exp caching_monoblock_heuristics --da
 
 If you want to bypass `runner.cli.caching.py` you can directly call the simulation entrypoint with your configuration file as an argument.
 
-For example the following command runs the experiment for Figure 10.d.: 
+For example the following command runs the experiment for *Figure 10.d*: 
 ``` bash
 python run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json
 ```
+Make sure that you clean the state of Postgres/Redis after usage before you start an experiment anew.
+You can do it manually or simply use the `packaging/storage_utils.py` helper functions:
+``` bash
+python packaging/storage_utils.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json --storage "*" --function delete-all --database covid
+```
+Set the `--database` argument to *covid* or *citibike*, depending on which dataset you used for the experiment.
 
 Note that, for system's performance evaluation we bypass `runner.cli.caching.py` since we do not wish to parallelize the experiments.
 
-`run_simulation` is the official entrypoing for running microbenchmarks under controled simulation settings.
-
+`run_simulation` is the official entrypoing for running microbenchmarks under controlled simulation settings.
 
 ##  4.4. Analyze results
 The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
