@@ -2,8 +2,7 @@ import datetime
 import os
 from typing import Any, Dict, List
 
-import mlflow
-import ray
+=import ray
 from loguru import logger
 from ray import tune
 
@@ -52,7 +51,7 @@ def grid_online(
     external_update_on_cached_results: List[bool] = [True],
 ):
 
-    enable_mlflow = True
+    enable_mlflow = False
     config = {
         "mock": mock,
         "puredp": True,

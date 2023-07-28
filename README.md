@@ -53,13 +53,13 @@ Deploy Postgres as well as two Redis instances. Postgres is used for storing the
 Check out the default ports for the three instances in the `docker-compose.yaml` and change the host ports if they are already in use by other services.
 
 ``` bash
-sudo docker-compose up -d
+sudo docker compose up -d
 ```
 ## 4. Reproduce experiments
 
 We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo/tree/artifact/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
 
-The script [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
+The script [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
 
 ### 4.1. Setup
 Run `'sudo docker images'` and verify that there are three containers *turbo*, *postgres*, *redis*.
@@ -77,7 +77,7 @@ If you have changed the default addresses of TimeScaleDB, Redis and RedisAI in t
 
 Now, reproduce all Turbo experiments by running the turbo docker with the following command:
 ``` bash 
-sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/ray/run_all.sh
+sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/run_all.sh
 ```
 This step takes around XXX' to finish. 
 
@@ -85,12 +85,12 @@ With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the
 
 ### 4.3. Run individual experiments
 
-Alternatively, you can also run experiments from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) individually.
+Alternatively, you can also run experiments from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) individually.
 You can enter the Turbo container:
 ``` bash
 sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo -it turbo
 ```
-and simply type the python command from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) that corresponds to the experiment you want to reproduce.
+and simply type the python command from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) that corresponds to the experiment you want to reproduce.
 
 For example the following command runs the experiment for *Figure 8.a*: 
 

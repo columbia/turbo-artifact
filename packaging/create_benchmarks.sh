@@ -1,8 +1,9 @@
 #!/bin/sh
 
 # Create datasets for covid and citibike
-python data/covid19/covid19_data/generate.py --num-blocks-cutoff 50
 python data/citibike/citibike_data/generate.py
+rm -rf data/citibike/citibike_data/months
+python data/covid19/covid19_data/generate.py --num-blocks-cutoff 50
 
 # Create query pools for covid and citibike
 python data/covid19/covid19_queries/queries.py

@@ -98,32 +98,48 @@ def cluster_stations(months_dir):
         df["end_latitude"] = df["end_latitude"].astype("str")
         df["end_longitude"] = df["end_longitude"].astype("str")
         df["start_station"] = df["start_latitude"] + ":" + df["start_longitude"]
-        df["end_station"] = df["end_latitude"] + ":" + df["end_longitude"]
-        df["start_station"] = df.start_station.map(lambda x: station_ids[x])
-        df["end_station"] = df.end_station.map(lambda x: station_ids[x])
         df = df.drop(
             columns=[
                 "start_latitude",
-                "end_latitude",
                 "start_longitude",
+            ]
+        )
+        df["end_station"] = df["end_latitude"] + ":" + df["end_longitude"]
+        df = df.drop(
+            columns=[            
+                "end_latitude",
                 "end_longitude",
             ]
         )
+        df["start_station"] = df.start_station.map(lambda x: station_ids[x])
+        df["end_station"] = df.end_station.map(lambda x: station_ids[x])
+        # df = df.drop(
+        #     columns=[
+        #         "start_latitude",
+        #         "end_latitude",
+        #         "start_longitude",
+        #         "end_longitude",
+        #     ]
+        # )
         df.to_csv(months_dir.joinpath(f"{name}.csv"), index=False)
-
-    # Running in Parallel
-    processes = []
+    
     names = year_month_iterator()
     for i, name in enumerate(names):
-        processes.append(
-            Process(
-                target=update_station_attributes,
-                args=(name, months_dir),
-            )
-        )
-        processes[i].start()
-    for process in processes:
-        process.join()
+        update_station_attributes(name, months_dir)
+
+    # # Running in Parallel
+    # processes = []
+    # names = year_month_iterator()
+    # for i, name in enumerate(names):
+    #     processes.append(
+    #         Process(
+    #             target=update_station_attributes,
+    #             args=(name, months_dir),
+    #         )
+    #     )
+    #     processes[i].start()
+    # for process in processes:
+    #     process.join()
 
 
 def preprocess_month_data(name, months_dir):
@@ -144,7 +160,6 @@ def preprocess_month_data(name, months_dir):
 
     zip_path.unlink()
 
-    # df = df.copy()
     df["starttime"] = pd.to_datetime(df["starttime"])
     # ISO: (year, week, weekday)
     df["year"] = df.starttime.map(lambda x: x.isocalendar()[0])

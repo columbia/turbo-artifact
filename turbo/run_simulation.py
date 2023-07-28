@@ -104,7 +104,6 @@ class Simulator:
             db = MockPSQL(self.config)
             budget_accountant = MockBudgetAccountant(self.config)
             cache = MockCache(self.config)
-
         else:
             db = PSQL(self.config)
             budget_accountant = BudgetAccountant(self.config)
@@ -139,41 +138,9 @@ class Simulator:
 
         key, _, _, _, _, _, _ = set_run_key(config)
         key += "_zip_" + str(config["tasks"]["zipf_k"])
-        with mlflow.start_run(run_name=key):
-            # TODO: flatten dict to compare nested params
-            mlflow.log_params(config)
-            for (k, v) in self.config.mechanism.probabilistic_cfg.items():
-                mlflow.log_param(k, v)
-            # mlflow.log_param(
-            #     "lr", self.config.mechanism.probabilistic_cfg.learning_rate
-            # )
-            # mlflow.log_param(
-            #     "heuristic", self.config.mechanism.probabilistic_cfg.heuristic
-            # )
-            mlflow.log_param(
-                "block_requests_pattern", str(self.config.blocks.block_requests_pattern)
-            )
-
-            if isinstance(self.config.blocks.block_requests_pattern, str):
-                (
-                    distribution,
-                    std,
-                    mean,
-                ) = self.config.blocks.block_requests_pattern.split("-")
-                std, mean = int(std), int(mean)
-                assert distribution == "dgaussian"
-                mlflow.log_param("block_requests_pattern_std", std)
-                mlflow.log_param("block_requests_pattern_mean", mean)
-
-            mlflow.log_param(
-                "block_selection_policy", self.config.tasks.block_selection_policy
-            )
-
-            mlflow.log_param("planner_method", self.config.planner.method)
-            mlflow.log_param("zipf_k", self.config.tasks.zipf_k)
-
+        
+        def _run():
             self.env.run()
-
             if self.config.logs.save:
                 logs = get_logs(
                     self.rm.query_processor.tasks_info,
@@ -182,6 +149,43 @@ class Simulator:
                 )
                 save_dir = self.config.logs.save_dir if self.config.logs.save_dir else ""
                 save_logs(logs, save_dir)
+
+        if self.config.logs.mlflow:
+            with mlflow.start_run(run_name=key):
+                # TODO: flatten dict to compare nested params
+                mlflow.log_params(config)
+                for (k, v) in self.config.mechanism.probabilistic_cfg.items():
+                    mlflow.log_param(k, v)
+                # mlflow.log_param(
+                #     "lr", self.config.mechanism.probabilistic_cfg.learning_rate
+                # )
+                # mlflow.log_param(
+                #     "heuristic", self.config.mechanism.probabilistic_cfg.heuristic
+                # )
+                mlflow.log_param(
+                    "block_requests_pattern", str(self.config.blocks.block_requests_pattern)
+                )
+
+                if isinstance(self.config.blocks.block_requests_pattern, str):
+                    (
+                        distribution,
+                        std,
+                        mean,
+                    ) = self.config.blocks.block_requests_pattern.split("-")
+                    std, mean = int(std), int(mean)
+                    assert distribution == "dgaussian"
+                    mlflow.log_param("block_requests_pattern_std", std)
+                    mlflow.log_param("block_requests_pattern_mean", mean)
+
+                mlflow.log_param(
+                    "block_selection_policy", self.config.tasks.block_selection_policy
+                )
+                mlflow.log_param("planner_method", self.config.planner.method)
+                mlflow.log_param("zipf_k", self.config.tasks.zipf_k)
+
+                _run()
+        else:
+            _run()
 
         return logs
 

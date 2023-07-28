@@ -65,6 +65,7 @@
     "logs": {
         "verbose": false,
         "save": true,
+        "save_dir": "",
         "mlflow": true,
         "mlflow_experiment_id": "turbo",
         "loguru_level": "INFO",
