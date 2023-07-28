@@ -144,7 +144,7 @@ def preprocess_month_data(name, months_dir):
 
     zip_path.unlink()
 
-    df = df.copy()
+    # df = df.copy()
     df["starttime"] = pd.to_datetime(df["starttime"])
     # ISO: (year, week, weekday)
     df["year"] = df.starttime.map(lambda x: x.isocalendar()[0])
