@@ -7,15 +7,17 @@ class BlocksServer:
     """Entrypoint for adding new blocks in Postgres and the 'budget_accountant' KV store."""
 
     def __init__(self, db, budget_accountant, config) -> None:
-        self.config = config
-        self.host = self.config.host
-        self.port = self.config.port
         self.db = db
+        self.config = config
+        self.host = self.config.blocks_server.host
+        self.port = self.config.blocks_server.port
         self.budget_accountant = budget_accountant
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+
             s.bind((self.host, self.port))
+            logger.info(f"Blocks server listening at {self.host}:{self.port}")
             s.listen()
             while True:
                 conn, addr = s.accept()

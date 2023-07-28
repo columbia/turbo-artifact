@@ -113,21 +113,42 @@ def cluster_stations(months_dir):
         )
         df["start_station"] = df.start_station.map(lambda x: station_ids[x])
         df["end_station"] = df.end_station.map(lambda x: station_ids[x])
-        # df = df.drop(
-        #     columns=[
-        #         "start_latitude",
-        #         "end_latitude",
-        #         "start_longitude",
-        #         "end_longitude",
-        #     ]
-        # )
         df.to_csv(months_dir.joinpath(f"{name}.csv"), index=False)
     
-    names = year_month_iterator()
-    for i, name in enumerate(names):
-        update_station_attributes(name, months_dir)
+    # names = year_month_iterator()
+    # for i, name in enumerate(names):
+    #     update_station_attributes(name, months_dir)
 
     # # Running in Parallel
+    def p(start, end, names, months_dir):
+        for i in range(start, end):
+            update_station_attributes(names[i], months_dir)
+
+    processes = []
+    num_processes = 12
+
+    names = list(year_month_iterator())
+    k = len(names) // num_processes
+    for n in range(num_processes - 1):
+        processes.append(
+            Process(
+                target=p,
+                args=(n * k, n * k + k, names, months_dir),
+            )
+        )
+        processes[n].start()
+    n += 1
+
+    processes.append(
+        Process(
+            target=p, args=(n * k, len(names), names, months_dir)
+        )
+    )
+    processes[n].start()
+
+    for n in range(num_processes):
+        processes[n].join()
+
     # processes = []
     # names = year_month_iterator()
     # for i, name in enumerate(names):

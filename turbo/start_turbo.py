@@ -7,6 +7,7 @@ import numpy as np
 from loguru import logger
 from pathlib import Path
 from omegaconf import OmegaConf
+import multiprocessing
 
 from turbo.server_tasks import TasksServer
 from turbo.server_blocks import BlocksServer
@@ -81,7 +82,6 @@ def turbo(omegaconf):
         budget_accountant = BudgetAccountant(config)
         cache = Cache(config)
 
-
     if config.planner.method == "MinCuts":
         planner = MinCuts(cache, budget_accountant, config)
     elif config.planner.method == "NoCuts":
@@ -93,13 +93,21 @@ def turbo(omegaconf):
         db, cache, planner, budget_accountant, config
     )
 
-    BlocksServer(db, budget_accountant, config.blocks_server).run()
-    TasksServer(query_processor, budget_accountant, config.tasks_server).run()
+    blocks_server = multiprocessing.Process(target=BlocksServer(db, budget_accountant, config).run())
+    tasks_server = multiprocessing.Process(target=TasksServer(query_processor, budget_accountant, config).run())
+
+    # Start the processes
+    blocks_server.start()
+    tasks_server.start()
+
+    # Wait for both processes to finish
+    blocks_server.join()
+    tasks_server.join()
 
 
 @app.command()
 def run(
-    omegaconf: str = "turbo/config/turbo.json",
+    omegaconf: str = "turbo/config/turbo_server.json",
     loguru_level: str = "INFO",
 ):
     os.environ["LOGURU_LEVEL"] = loguru_level

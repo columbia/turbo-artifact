@@ -122,3 +122,6 @@ Typically, you will see that here we refer to `Turbo` as `Hybrid` which is an al
 
 # 5. Interactive use of Turbo
 
+``` bash
+python3 turbo/start_turbo.py --omegaconf turbo/config/turbo_server.json
+```
