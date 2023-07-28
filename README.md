@@ -61,6 +61,11 @@ sudo docker-compose up -d
 ```
 # 4. Reproduce experiments
 
+We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo/tree/artifact/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](#https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
+
+The script [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
+
+## 4.1. Setup
 Run `'sudo docker images'` and verify that there are three containers *turbo*, *postgres*, *redis*.
 
 Setup TimescaleDB by creating the databases and hypertables. Use the following command:
@@ -69,24 +74,32 @@ Setup TimescaleDB by creating the databases and hypertables. Use the following c
 sudo docker exec -i timescaledb psql -U postgres < packaging/timescaledb.sql
 ```
 
-
 If you have changed the default addresses of TimeScaleDB, Redis and RedisAI in the previous steps then update the addresses inside these configuration files, too: `turbo/config/turbo_system_eval_monoblock_covid.json` and `turbo/config/turbo_system_eval_monoblock_citibike.json`. They will be used by experiments that evaluate the system runtime performance!
 
+## 4.2. Run all experiments
+
+
 Now, reproduce all Turbo experiments by running the turbo docker with the following command:
-This step takes around XXX' to finish.
+This step takes around XXX' to finish. 
 
 ``` bash 
-sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config -v ~/turbo/turbo/data:/turbo/turbo/data --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/ray/run_all.sh
+sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/ray/run_all.sh
 ```
 
 <!-- sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --name turbo --shm-size=204.89gb --rm turbo `chmod 777 turbo/run_simulation.py && /bin/bash python turbo/run_simulation.py --omegaconf turbo/config/turbo_system_eval_monoblock_covid.json` -->
 
 With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the host into the container so that the we can access the logs from the host even after the container stops and also allow for the container to access user-defined configurations stored in the host.
 
-Here is a useful command for simply entering the docker:
+## 4.3. Run individual experiments
+
+You can also run experiments from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) individually.
+You can enter the Turbo container:
 ``` bash
 sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo/config --network=host --name turbo -it turbo
 ```
+and simply copy-paste the python command from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) that corresponds to the experiment you want to reproduce.
 
 
+
+# 5. Interactive use of Turbo
 
