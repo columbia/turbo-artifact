@@ -37,6 +37,7 @@ class PostgresHelper:
             # Connect to the PostgreSQL database server
             self.psql_conn = psycopg2.connect(
                 host=config.host,
+                port=config.port,
                 database=database,
                 user=config.username,
                 password=config.password,
