@@ -65,7 +65,7 @@ sudo docker-compose up -d
 
 Run `'sudo docker images'` and verify that there are three containers *turbo*, *postgres*, *redis*.
 
-Setup TimescaleDB by creating the databases and hypertables. Use the following script:
+Setup TimescaleDB by creating the databases and hypertables. Use the following command:
 
 ``` bash
 sudo docker exec -i timescaledb psql -U postgres < packaging/timescaledb.sql
