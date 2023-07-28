@@ -149,6 +149,7 @@ class Simulator:
                 )
                 save_dir = self.config.logs.save_dir if self.config.logs.save_dir else ""
                 save_logs(logs, save_dir)
+                return logs
 
         if self.config.logs.mlflow:
             with mlflow.start_run(run_name=key):
@@ -183,10 +184,9 @@ class Simulator:
                 mlflow.log_param("planner_method", self.config.planner.method)
                 mlflow.log_param("zipf_k", self.config.tasks.zipf_k)
 
-                _run()
+                logs = _run()
         else:
-            _run()
-
+            logs = _run()
         return logs
 
 

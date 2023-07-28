@@ -1,5 +1,3 @@
-import datetime
-import os
 from typing import Any, Dict, List
 
 import ray
@@ -102,6 +100,7 @@ def grid_online(
         "logs": {
             "verbose": False,
             "save": save_logs,
+            "save_dir": "",
             "mlflow": enable_mlflow,
             "mlflow_experiment_id": mlflow_experiment_id,
             "loguru_level": "INFO",
