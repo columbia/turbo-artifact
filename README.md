@@ -26,7 +26,7 @@ We package Turbo using the following dockers
 
 # 1. Requirements
 
-Make sure you have a working installation of `docker` and `docker-compose`.
+Make sure you have a working installation of `docker`.
 
 # 2. Install Turbo
 ## Download the code
