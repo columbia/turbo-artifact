@@ -43,3 +43,5 @@ mkdir logs/figures
 python notebooks/caching/utils.py --function analyze_runtime --experiment-path system_runtime_covid > logs/figures/figure_10d.txt
 python notebooks/caching/utils.py --function analyze_runtime --experiment-path system_runtime_citibike >> logs/figures/figure_10d.txt
 
+# Map generated plot to corresponding figures
+cp logs/ray/covid19/monoblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_7a_7_b.png

@@ -62,7 +62,7 @@ We prototype Turbo and perform a microbenchmark evaluation using a [simulator](h
 The script [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
 
 ### 4.1. Setup
-Run `'sudo docker images'` and verify that there are three containers *turbo*, *postgres*, *redis*.
+Run `'sudo docker images'` and verify that there are four images *turbo*, *timescaledb*, *redis* and *redisai*.
 
 Setup TimescaleDB by creating the databases and hypertables. Use the following command:
 
