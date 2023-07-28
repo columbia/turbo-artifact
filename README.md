@@ -99,7 +99,10 @@ sudo docker run -v ~/turbo/logs:/turbo/logs -v ~/turbo/turbo/config:/turbo/turbo
 ```
 and simply copy-paste the python command from [experiments/ray/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/ray/run_all.sh) that corresponds to the experiment you want to reproduce.
 
-
+##  4.4. Analyze results
+The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
+Note that the terminology used in the labels might differ slightly from that used in the paper. 
+Typically, you will see that here we refer to `Turbo` as `Hybrid` which is an alternative name we use internally to describe Turbo.
 
 # 5. Interactive use of Turbo
 
