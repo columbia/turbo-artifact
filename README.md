@@ -34,9 +34,10 @@ Clone this repository on your machine:
 git clone https://github.com/columbia/turbo.git
 ```
 
-Enter the repository:
+Enter the repository and heckout the `artifact` branch :
 ```bash
 cd turbo
+git checkout artifact
 ```
 
 ### Build the Turbo docker
