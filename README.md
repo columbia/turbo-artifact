@@ -1,6 +1,5 @@
 # Turbo
-
-`Effective caching in differentially-private databases`
+Effective caching for linear query workloads over DP databases. Turbo builds upon private multiplicative weights (PMW), a DP mechanism that is powerful in theory but very ineffective in practice, and transforms it into a highly effective caching object. A description of this project can be found on our paper, titled [Turbo: Effective caching in Differentially-Private Databases](https://arxiv.org/abs/2306.16163)
 
 # Repo Structure
 
@@ -61,7 +60,6 @@ Check out the default addresses for the three instances in the `docker-compose.y
 sudo docker-compose up -d
 ```
 # 4. Reproduce experiments
-
 
 Run `'sudo docker images'` and verify that there are three containers *turbo*, *postgres*, *redis*.
 
