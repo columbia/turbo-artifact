@@ -50,11 +50,11 @@ cp logs/ray/covid19/monoblock/laplace_vs_hybrid/cumulative_budget_utilization.pn
 cp logs/ray/citibike/monoblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figure_7c.png
 cp logs/ray/covid19/monoblock/convergence/cumulative_budget_utilization.png logs/figures/figure_7d.png
 
-cp logs/ray/covid/monoblock/heuristics/cumulative_budget_utilization.png logs/figures/figure_8a.png
-cp logs/ray/covid/monoblock/learning_rates/cumulative_budget_utilization.png logs/figures/figure_8b.png
+cp logs/ray/covid19/monoblock/heuristics/cumulative_budget_utilization.png logs/figures/figure_8a.png
+cp logs/ray/covid19/monoblock/learning_rates/cumulative_budget_utilization.png logs/figures/figure_8b.png
 
-cp logs/ray/covid/static_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_9a_9b.png
+cp logs/ray/covid19/static_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_9a_9b.png
 cp logs/ray/citibike/static_multiblock/laplace_vs_hybrid*/cumulative_budget_utilization.png logs/figures/figures_9c.png
 
-cp logs/ray/covid/streaming_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_10a_10b.png
+cp logs/ray/covid19/streaming_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_10a_10b.png
 cp logs/ray/citibike/streaming_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_10c.png
