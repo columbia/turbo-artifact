@@ -54,7 +54,7 @@ cp logs/ray/covid/monoblock/heuristics/cumulative_budget_utilization.png logs/fi
 cp logs/ray/covid/monoblock/learning_rates/cumulative_budget_utilization.png logs/figures/figure_8b.png
 
 cp logs/ray/covid/static_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_9a_9b.png
-cp logs/ray/citibike/static_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_9c.png
+cp logs/ray/citibike/static_multiblock/laplace_vs_hybrid*/cumulative_budget_utilization.png logs/figures/figures_9c.png
 
 cp logs/ray/covid/streaming_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_10a_10b.png
 cp logs/ray/citibike/streaming_multiblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_10c.png

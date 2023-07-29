@@ -81,7 +81,7 @@ sudo docker run -v $PWD/logs:/turbo/logs -v $PWD/turbo/config:/turbo/turbo/confi
 ```
 This step takes around 12 hours to finish. 
 
-Make sure that the turbo container has is enough disk space at `/tmp` which Ray uses to store checkpoints and other internal data. If that's not the case then mount the `/tmp` directory on a directory that has enough space. 
+Make sure that the turbo container has enough disk space at `/tmp` which Ray uses to store checkpoints and other internal data. If that's not the case then mount the `/tmp` directory on a directory that has enough space. 
 
 For example, use an additional -v flag followed by the directory of your choice:
 
@@ -123,7 +123,7 @@ Note that, for system's performance evaluation we bypass `runner.cli.caching.py`
 
 `run_simulation` is the official entrypoing for running microbenchmarks under controlled simulation settings.
 
-##  4.4. Analyze results
+###  4.4. Analyze results
 The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
 Note that the terminology used in the labels might differ slightly from that used in the paper. 
 Typically, you will see that here we refer to `Turbo` as `Hybrid` which is an alternative name we use internally to describe Turbo.
