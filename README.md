@@ -4,7 +4,7 @@ Effective caching for linear query workloads over DP databases. Turbo builds upo
 ## Repo Structure
 
 - `data`: scripts for generating the datasets, queries and workloads for the Covid and Citibike datasets.
-- `experiments`: scripts that automate the execution of Turbo experiments concurrently using [Ray](https://www.ray.io/). You can extend [runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) with your own configuration to generate your own experiments.
+- `experiments`: scripts that automate the execution of Turbo experiments concurrently using [Ray](https://www.ray.io/). You can extend [runner.cli.caching.py](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/runner.cli.caching.py) with your own configuration to generate your own experiments.
 - `notebooks`: notebooks and utils for visualizing and analyzing execution logs.
 - `packaging`: scripts for building Turbo.
 - `turbo`: Turbo's core functionality. Refer [here](/turbo/README.md) for Turbo core's structure.
