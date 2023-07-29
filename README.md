@@ -31,12 +31,12 @@ Make sure you have a working installation of `docker`.
 
 Clone this repository on your machine:
 ```bash
-git clone https://github.com/columbia/turbo.git
+git clone https://github.com/columbia/turbo-artifact.git
 ```
 
-Enter the repository and heckout the `artifact` branch :
+Enter the repository:
 ```bash
-cd turbo
+cd turbo-artifact
 ```
 
 ### Build the Turbo docker
@@ -57,9 +57,9 @@ sudo docker compose up -d
 ```
 ## 4. Reproduce experiments
 
-We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo/tree/artifact/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
+We prototype Turbo and perform a microbenchmark evaluation using a [simulator](https://github.com/columbia/turbo-artifact/tree/artifact-sosp/turbo/simulator). This simulates the execution of Turbo by orchestrating the arrival of new queries and data into the system. You can control the simulation and create your own simulation settings by editing the configuration files. The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/runner.cli.caching.py) script automates the execution of multiple experiments concurrently using [Ray](https://www.ray.io/). You can find the configuration for each experiment hardcoded inside the script.
 
-The script [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
+The script [experiments/run_all.sh](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/run_all.sh) contains a complete list of all the commands that generate the experiments presented in the paper. 
 
 ### 4.1. Setup
 Run `'sudo docker images'` and verify that there are four images *turbo*, *timescaledb*, *redis* and *redisai*.
@@ -79,7 +79,7 @@ Now, reproduce all Turbo experiments by running the turbo docker with the follow
 ``` bash 
 sudo docker run -v $PWD/logs:/turbo/logs -v $PWD/turbo/config:/turbo/turbo/config -v $PWD/temp:/tmp --network=host --name turbo --shm-size=204.89gb --rm turbo experiments/run_all.sh
 ```
-This step takes around XXX' to finish. 
+This step takes around 12 hours to finish. 
 
 Make sure that the turbo container has is enough disk space at `/tmp` which Ray uses to store checkpoints and other internal data. If that's not the case then mount the `/tmp` directory on a directory that has enough space. 
 
@@ -93,12 +93,12 @@ With the `-v` flag we mount directories `turbo/logs` and `turbo/config` from the
 
 ### 4.3. Run individual experiments
 
-Alternatively, you can also run experiments from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) individually.
+Alternatively, you can also run experiments from [experiments/run_all.sh](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/run_all.sh) individually.
 You can enter the Turbo container:
 ``` bash
 sudo docker run -v $PWD/logs:/turbo/logs -v $PWD/turbo/config:/turbo/turbo/config -v $PWD/temp:/tmp --network=host --name turbo --shm-size=204.89gb -it turbo
 ```
-and simply type the python command from [experiments/run_all.sh](https://github.com/columbia/turbo/blob/artifact/experiments/run_all.sh) that corresponds to the experiment you want to reproduce.
+and simply type the python command from [experiments/run_all.sh](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/run_all.sh) that corresponds to the experiment you want to reproduce.
 
 For example the following command runs the experiment for *Figure 8.a*: 
 
@@ -124,7 +124,7 @@ Note that, for system's performance evaluation we bypass `runner.cli.caching.py`
 `run_simulation` is the official entrypoing for running microbenchmarks under controlled simulation settings.
 
 ##  4.4. Analyze results
-The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo/blob/artifact/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
+The [experiments/runner.cli.caching.py](https://github.com/columbia/turbo-artifact/blob/artifact-sosp/experiments/runner.cli.caching.py) script will automatically analyze the execution logs and create plots corresponding to the figures presented in the paper. 
 Note that the terminology used in the labels might differ slightly from that used in the paper. 
 Typically, you will see that here we refer to `Turbo` as `Hybrid` which is an alternative name we use internally to describe Turbo.
 

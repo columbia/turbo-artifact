@@ -5,7 +5,7 @@ export LOGURU_LEVEL=ERROR
 echo "Running Figures 7.a and 7.b (static-non-partitioned covid zipfs 0/1).."
 python experiments/runner.cli.caching.py --exp caching_monoblock --dataset covid19
 
-echo "Running Figure 7.c and 7.b (static-non-partitioned citibike zipf 0).."
+echo "Running Figure 7.c (static-non-partitioned citibike zipf 0).."
 python experiments/runner.cli.caching.py --exp caching_monoblock --dataset citibike
 
 echo "Running Figure 7.d (static-non-partitioned covid empirical convergence).."
