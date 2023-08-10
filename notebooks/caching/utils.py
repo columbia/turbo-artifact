@@ -75,7 +75,44 @@ def get_runtimes(df):
     # print("\nquery_execution_path_db_runtimes", query_execution_path_db_runtimes)
     return query_execution_path_runtimes
 
+def get_convergence_num_updates(df):
 
+    dfs = []
+
+    for (
+        tasks,
+        key,
+        learning_rate,
+        heuristic,
+    ) in df[
+        [
+            "tasks_info",
+            "key",
+            "learning_rate",
+            "heuristic",
+        ]
+    ].values:
+        for task in reversed(tasks):
+            run_metadata = task["run_metadata"]
+            if "num_updates_monoblock" in run_metadata:
+                num_updates = run_metadata["num_updates_monoblock"]        
+                dfs.append(
+                        pd.DataFrame(
+                            [
+                                {
+                                    "key": key,
+                                    "learning_rate": learning_rate,
+                                    "heuristic": heuristic,
+                                    "num_updates": num_updates
+                                }
+                            ]
+                        )
+                    )
+                break
+    if dfs:
+        dfs = pd.concat(dfs).reset_index()
+        return dfs
+            
 def get_budgets_information(df, num_blocks):
     dfs = []
     global_dfs = []
@@ -396,6 +433,39 @@ def analyze_monoblock(experiment_path):
     # analyze_mechanism_type_use(df)
     # analyze_mechanism_type_use_bar(df)
 
+def analyze_convergence(experiment_path):
+    def plot_convergence(df):
+        df.to_csv(
+            LOGS_PATH.joinpath(f"{experiment_path}/cumulative_budget_utilization.csv"),
+            index=False,
+        )
+        fig = px.line(
+            df,
+            x="learning_rate",
+            y="num_updates",
+            color="key",
+            title=f"Empirical Convergence",
+            width=1000,
+            height=600,
+            log_x=True,
+            range_x=[0.001250,1],
+            range_y=[0,25000],
+        )
+        fig.write_image(
+            LOGS_PATH.joinpath(f"{experiment_path}/empirical_convergence.png")
+        )
+        return fig
+    df = get_df(experiment_path)
+    df["learning_rate"] = df["learning_rate"].astype(float)
+    df["learning_rate"] = df["learning_rate"] / 8
+    df["key"] = df["heuristic"]
+    # print(df)
+    for index, _ in df.iterrows():
+        df.loc[index, "key"] = "PMW" if df.loc[index, "heuristic"] == "bin_visits:0-0" else "PMW-Bypass"        
+
+    df.sort_values(["key", "learning_rate"], ascending=[True, True], inplace=True)
+    convergence_df = get_convergence_num_updates(df)
+    iplot(plot_convergence(convergence_df))
 
 def analyze_multiblock(experiment_path):
     def plot_num_allocated_tasks(df, total_tasks):
