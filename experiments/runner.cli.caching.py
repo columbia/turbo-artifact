@@ -8,7 +8,7 @@ import typer
 from utils import get_paths
 
 from experiments.ray_runner import grid_online
-from notebooks.caching.utils import analyze_monoblock, analyze_multiblock
+from notebooks.caching.utils import analyze_monoblock, analyze_multiblock, analyze_convergence
 
 app = typer.Typer()
 
@@ -230,7 +230,7 @@ def convergence_covid19(dataset):
         )
     )
     experiments_start_and_join(experiments)
-    analyze_monoblock(f"ray/{logs_dir}")
+    analyze_convergence(f"ray/{logs_dir}")
 
 
 def tree_covid19(dataset):

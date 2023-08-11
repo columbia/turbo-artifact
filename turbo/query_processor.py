@@ -99,115 +99,116 @@ class QueryProcessor:
 
         if result is not None:
 
-            if self.config.logs.mlflow:
+            # if self.config.logs.mlflow:
 
-                hit_scores = compute_hit_scores(
-                    sv_check_status=run_metadata["sv_check_status"],
-                    laplace_hits=run_metadata["laplace_hits"],
-                    pmw_hits=run_metadata["pmw_hits"],
-                    run_types=run_metadata["run_types"],
-                    node_sizes=run_metadata["node_sizes"],
-                    total_size=run_metadata["total_size"],
-                    external_updates=run_metadata["external_updates"],
-                )
+            hit_scores = compute_hit_scores(
+                sv_check_status=run_metadata["sv_check_status"],
+                laplace_hits=run_metadata["laplace_hits"],
+                pmw_hits=run_metadata["pmw_hits"],
+                run_types=run_metadata["run_types"],
+                node_sizes=run_metadata["node_sizes"],
+                total_size=run_metadata["total_size"],
+                external_updates=run_metadata["external_updates"],
+            )
 
-                for score_name, score_value in hit_scores.items():
-                    if not np.isnan(score_value):
-                        # Not so meaningful for cumulative SV or Laplace score
-                        self.score_counters[f"cumulative_{score_name}"] += score_value
+            for score_name, score_value in hit_scores.items():
+                if not np.isnan(score_value):
+                    # Not so meaningful for cumulative SV or Laplace score
+                    self.score_counters[f"cumulative_{score_name}"] += score_value
 
-                    # Sliding averages
-                    if (
-                        len(self.score_sliding_windows[score_name])
-                        >= SLIDING_WINDOW_LENGTH
-                    ):
-                        self.score_sliding_windows[score_name].pop(
-                            0
-                        )  # Drop oldest score
-                    self.score_sliding_windows[score_name].append(score_value)
+                # Sliding averages
+                if (
+                    len(self.score_sliding_windows[score_name])
+                    >= SLIDING_WINDOW_LENGTH
+                ):
+                    self.score_sliding_windows[score_name].pop(
+                        0
+                    )  # Drop oldest score
+                self.score_sliding_windows[score_name].append(score_value)
 
-                budget_per_block_list = run_metadata["budget_per_block"]
-                for budget_per_block in budget_per_block_list:
-                    for _, budget in budget_per_block.items():
-                        self.total_budget_spent_all_blocks += budget.epsilon
+            budget_per_block_list = run_metadata["budget_per_block"]
+            for budget_per_block in budget_per_block_list:
+                for _, budget in budget_per_block.items():
+                    self.total_budget_spent_all_blocks += budget.epsilon
 
-                if self.config.blocks.max_num == 1:
-                    # TODO: put this in hit scores with weighted number of updates? We only plot it for monoblock in the paper anyway
+            if self.config.blocks.max_num == 1:
+                # TODO: put this in hit scores with weighted number of updates? We only plot it for monoblock in the paper anyway
 
-                    block_key = "(0, 0)"
+                block_key = "(0, 0)"
 
-                    assert len(run_metadata["run_types"][0]) == 1, run_metadata
+                assert len(run_metadata["run_types"][0]) == 1, run_metadata
 
-                    run_type = run_metadata["run_types"][0][block_key]
-                    if run_type == LAPLACE_RUNTYPE:
-                        update = (
-                            1
-                            if run_metadata["external_updates"][0].get(block_key, 0)
-                            != 0
-                            else 0
-                        )
-
-                    elif run_type == HISTOGRAM_RUNTYPE:
-                        update = 1 if run_metadata["sv_check_status"][0] == False else 0
-                    elif run_type == PMW_RUNTYPE:
-                        update = (
-                            1
-                            if run_metadata["pmw_hits"][0].get(block_key, None) == 0
-                            else 0
-                        )
-                    else:
-                        raise NotImplementedError(
-                            f"Run type {run_type} not implemented"
-                        )
-                    self.score_counters[f"num_updates_monoblock"] += update
-
-                if self.counter % 100 == 0:
-                    mlflow_log(
-                        f"AllBlocks", self.total_budget_spent_all_blocks, task.id
+                run_type = run_metadata["run_types"][0][block_key]
+                if run_type == LAPLACE_RUNTYPE:
+                    update = (
+                        1
+                        if run_metadata["external_updates"][0].get(block_key, 0)
+                        != 0
+                        else 0
                     )
 
-                    for score_name in hit_scores.keys():
-                        # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
-                        non_nan_scores = np.array(
-                            [
-                                score
-                                for score in self.score_sliding_windows[score_name]
-                                if not np.isnan(score)
-                            ]
-                        )
-                        if len(non_nan_scores) > 0:
-                            sliding_score = np.mean(non_nan_scores)
+                elif run_type == HISTOGRAM_RUNTYPE:
+                    update = 1 if run_metadata["sv_check_status"][0] == False else 0
+                elif run_type == PMW_RUNTYPE:
+                    update = (
+                        1
+                        if run_metadata["pmw_hits"][0].get(block_key, None) == 0
+                        else 0
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Run type {run_type} not implemented"
+                    )
+                self.score_counters[f"num_updates_monoblock"] += update
 
-                            for score_threshold in self.score_thresholds.keys():
-                                if (
-                                    self.score_thresholds[score_threshold] == False
-                                    and sliding_score >= score_threshold
-                                ):
-                                    # We passed a threshold for the first time
-                                    mlflow_log(
-                                        f"sliding_{score_name}_threshold_{score_threshold}",
-                                        self.counter,
-                                        task.id,
-                                    )
-                                    self.score_thresholds[score_threshold] = True
+            if self.counter % 100 == 0:
+                # mlflow_log(
+                #     f"AllBlocks", self.total_budget_spent_all_blocks, task.id
+                # )
 
-                            mlflow_log(f"sliding_{score_name}", sliding_score, task.id)
-                        mlflow_log(
-                            f"cumulative_{score_name}",
-                            self.score_counters[f"cumulative_{score_name}"],
-                            task.id,
-                        )
+                for score_name in hit_scores.keys():
+                    # Hopefully at least one score is not Nan over the window, otherwise the mean is NaN
+                    non_nan_scores = np.array(
+                        [
+                            score
+                            for score in self.score_sliding_windows[score_name]
+                            if not np.isnan(score)
+                        ]
+                    )
+                    if len(non_nan_scores) > 0:
+                        sliding_score = np.mean(non_nan_scores)
 
-                    # # Each miss is an update (either SV update or Laplace update, without the check)
-                    # num_updates_monoblock = (
-                    #     task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                        for score_threshold in self.score_thresholds.keys():
+                            if (
+                                self.score_thresholds[score_threshold] == False
+                                and sliding_score >= score_threshold
+                            ):
+                                # # We passed a threshold for the first time
+                                # mlflow_log(
+                                #     f"sliding_{score_name}_threshold_{score_threshold}",
+                                #     self.counter,
+                                #     task.id,
+                                # )
+                                self.score_thresholds[score_threshold] = True
+
+                        # mlflow_log(f"sliding_{score_name}", sliding_score, task.id)
+                    # mlflow_log(
+                    #     f"cumulative_{score_name}",
+                    #     self.score_counters[f"cumulative_{score_name}"],
+                    #     task.id,
                     # )
-                    # mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
-                    mlflow_log(
-                        f"num_updates_monoblock",
-                        self.score_counters[f"num_updates_monoblock"],
-                        task.id,
-                    )
+
+                # Each miss is an update (either SV update or Laplace update, without the check)
+                num_updates_monoblock = (
+                    task.id + 1 - self.score_counters[f"cumulative_total_hit_score"]
+                )
+                run_metadata["num_updates_monoblock"] = num_updates_monoblock
+                # mlflow_log(f"num_updates_monoblock", num_updates_monoblock, task.id)
+                # mlflow_log(
+                #     f"num_updates_monoblock",
+                #     self.score_counters[f"num_updates_monoblock"],
+                #     task.id,
+                # )
 
             status = FINISHED
             # logger.info(

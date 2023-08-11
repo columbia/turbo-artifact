@@ -48,7 +48,7 @@ python notebooks/caching/utils.py --function analyze_runtime --experiment-path s
 # Map generated plot to corresponding figures
 cp logs/ray/covid19/monoblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figures_7a_7b.png
 cp logs/ray/citibike/monoblock/laplace_vs_hybrid/cumulative_budget_utilization.png logs/figures/figure_7c.png
-cp logs/ray/covid19/monoblock/convergence/cumulative_budget_utilization.png logs/figures/figure_7d.png
+cp logs/ray/covid19/monoblock/convergence/empirical_convergence.png logs/figures/figure_7d.png
 
 cp logs/ray/covid19/monoblock/heuristics/cumulative_budget_utilization.png logs/figures/figure_8a.png
 cp logs/ray/covid19/monoblock/learning_rates/cumulative_budget_utilization.png logs/figures/figure_8b.png
