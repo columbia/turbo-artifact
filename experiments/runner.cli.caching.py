@@ -378,8 +378,8 @@ def caching_static_multiblock_laplace_vs_hybrid_covid19(dataset):
     config["heuristic"] = ["bin_visits:100-5"]
     config["learning_rate"] = ["0:2_50:0.5_100:0.2"]
     config["bootstrapping"] = [False]
-    config["external_update_on_cached_results"] = [True, False]
-    config["tau"] = [0, 0.05, 0.1]
+    config["external_update_on_cached_results"] = [False]
+    config["tau"] = [0.05]
 
     experiments.append(
         multiprocessing.Process(
@@ -447,8 +447,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_covid19(dataset):
     config["heuristic"] = ["bin_visits:100-5"]
     config["learning_rate"] = ["0:2_50:0.5_100:0.2"]
     config["bootstrapping"] = [True, False]
-    config["external_update_on_cached_results"] = [True, False]
-    config["tau"] = [0, 0.1]
+    config["external_update_on_cached_results"] = [False]
+    config["tau"] = [0.1]
 
     experiments.append(
         multiprocessing.Process(
@@ -579,8 +579,8 @@ def caching_static_multiblock_laplace_vs_hybrid_citibike(dataset):
     config["heuristic"] = ["bin_visits:5-1"]
     config["learning_rate"] = [4]
     config["bootstrapping"] = [False]
-    config["external_update_on_cached_results"] = [True, False]
-    config["tau"] = [0, 0.01, 0.05, 0.1]
+    config["external_update_on_cached_results"] = [False]
+    config["tau"] = [0.01]
 
     experiments.append(
         multiprocessing.Process(
@@ -638,8 +638,8 @@ def caching_streaming_multiblock_laplace_vs_hybrid_citibike(dataset):
     config["heuristic"] = ["bin_visits:5-1"]
     config["learning_rate"] = [4]
     config["bootstrapping"] = [True, False]
-    config["external_update_on_cached_results"] = [True, False]
-    config["tau"] = [0, 0.1]
+    config["external_update_on_cached_results"] = [False]
+    config["tau"] = [0.1]
 
     experiments.append(
         multiprocessing.Process(
