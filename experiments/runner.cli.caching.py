@@ -3,6 +3,7 @@ import os
 import uuid
 from copy import deepcopy
 
+import time
 import numpy as np
 import typer
 from utils import get_paths
@@ -15,6 +16,7 @@ app = typer.Typer()
 
 def experiments_start_and_join(experiments):
     for p in experiments:
+        time.sleep(5)
         p.start()
     for p in experiments:
         p.join()
