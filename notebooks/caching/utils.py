@@ -34,7 +34,7 @@ def get_runtimes(df):
             sv_check_status_list = run_metadata["sv_check_status"]
             # simplifying function for now
             assert len(sv_check_status_list) <= 1
-        
+
             key = (
                 "sv_check_status"
                 + str([sv_check_status for sv_check_status in sv_check_status_list])
@@ -51,7 +51,7 @@ def get_runtimes(df):
                 key = "R3 output path"
             else:
                 key = "R2 output path"
-            
+
             if key not in query_execution_path_runtimes:
                 query_execution_path_runtimes[key] = []
             query_execution_path_runtimes[key].append(run_metadata["runtime"])
@@ -75,16 +75,12 @@ def get_runtimes(df):
     # print("\nquery_execution_path_db_runtimes", query_execution_path_db_runtimes)
     return query_execution_path_runtimes
 
+
 def get_convergence_num_updates(df):
 
     dfs = []
 
-    for (
-        tasks,
-        key,
-        learning_rate,
-        heuristic,
-    ) in df[
+    for (tasks, key, learning_rate, heuristic,) in df[
         [
             "tasks_info",
             "key",
@@ -95,24 +91,25 @@ def get_convergence_num_updates(df):
         for task in reversed(tasks):
             run_metadata = task["run_metadata"]
             if "num_updates_monoblock" in run_metadata:
-                num_updates = run_metadata["num_updates_monoblock"]        
+                num_updates = run_metadata["num_updates_monoblock"]
                 dfs.append(
-                        pd.DataFrame(
-                            [
-                                {
-                                    "key": key,
-                                    "learning_rate": learning_rate,
-                                    "heuristic": heuristic,
-                                    "num_updates": num_updates
-                                }
-                            ]
-                        )
+                    pd.DataFrame(
+                        [
+                            {
+                                "key": key,
+                                "learning_rate": learning_rate,
+                                "heuristic": heuristic,
+                                "num_updates": num_updates,
+                            }
+                        ]
                     )
+                )
                 break
     if dfs:
         dfs = pd.concat(dfs).reset_index()
         return dfs
-            
+
+
 def get_budgets_information(df, num_blocks):
     dfs = []
     global_dfs = []
@@ -433,6 +430,47 @@ def analyze_monoblock(experiment_path):
     # analyze_mechanism_type_use(df)
     # analyze_mechanism_type_use_bar(df)
 
+
+def analyze_heuristics_2(experiment_path):
+    def plot_budget_utilization_c0(df, total_tasks):
+        df["budget"] = df["initial_budget"] - df["budget"]
+
+        df.to_csv(
+            LOGS_PATH.joinpath(f"{experiment_path}/budget_utilization_c0.csv"),
+            index=False,
+        )
+        fig = px.line(
+            df,
+            x="c0",
+            y="budget",
+            color="key",
+            title=f"Budget Consumption - total tasks-{total_tasks}",
+            # category_orders=category_orders,
+            width=1000,
+            height=600,
+            facet_row="zipf_k",
+        )
+        fig.write_image(
+            LOGS_PATH.joinpath(f"{experiment_path}/budget_utilization_c0.png")
+        )
+        return fig
+
+    df = get_df(experiment_path)
+    df["zipf_k"] = df["zipf_k"].astype(float)
+
+    df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
+    total_tasks = df["total_tasks"].max()
+    blocks = get_blocks_information(df)
+
+    def f(x):
+        heuristic_name, params = x.split(":")
+        c0, s0 = params.split("-")
+        return f"{heuristic_name}-S0={s0}", c0
+
+    blocks["key"], blocks["c0"] = zip(*blocks["heuristic"].apply(f))
+    iplot(plot_budget_utilization_c0(blocks, total_tasks))
+
+
 def analyze_convergence(experiment_path):
     def plot_convergence(df):
         df.to_csv(
@@ -448,24 +486,28 @@ def analyze_convergence(experiment_path):
             width=1000,
             height=600,
             log_x=True,
-            range_x=[0.001250,1],
-            range_y=[0,25000],
+            range_x=[0.001250, 1],
+            range_y=[0, 25000],
         )
         fig.write_image(
             LOGS_PATH.joinpath(f"{experiment_path}/empirical_convergence.png")
         )
         return fig
+
     df = get_df(experiment_path)
     df["learning_rate"] = df["learning_rate"].astype(float)
     df["learning_rate"] = df["learning_rate"] / 8
     df["key"] = df["heuristic"]
     # print(df)
     for index, _ in df.iterrows():
-        df.loc[index, "key"] = "PMW" if df.loc[index, "heuristic"] == "bin_visits:0-0" else "PMW-Bypass"        
+        df.loc[index, "key"] = (
+            "PMW" if df.loc[index, "heuristic"] == "bin_visits:0-0" else "PMW-Bypass"
+        )
 
     df.sort_values(["key", "learning_rate"], ascending=[True, True], inplace=True)
     convergence_df = get_convergence_num_updates(df)
     iplot(plot_convergence(convergence_df))
+
 
 def analyze_multiblock(experiment_path):
     def plot_num_allocated_tasks(df, total_tasks):
@@ -655,7 +697,7 @@ def analyze_runtime(experiment_path):
     df.sort_values(["key", "zipf_k"], ascending=[True, True], inplace=True)
     runtimes = get_runtimes(df)
     print(f"Avg. Query Runtime per execution path for {experiment_path}:")
-    for k,v in runtimes.items():
+    for k, v in runtimes.items():
         print("\t", k, v)
 
 
@@ -686,6 +728,7 @@ def analyze_num_cuts(experiment_path):
     df.sort_values(["chunk_size"], ascending=[False], inplace=True)
 
     iplot(plot_num_cuts(df))
+
 
 @app.command()
 def main(function: str = "", experiment_path: str = ""):

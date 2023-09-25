@@ -27,7 +27,7 @@ class HistogramCache:
         self.blocks_metadata = self.config.blocks_metadata
         self.domain_size = self.blocks_metadata["domain_size"]
         heuristic = config.mechanism.probabilistic_cfg.heuristic
-        _, heuristic_params = heuristic.split(":")
+        self.heuristic_type, heuristic_params = heuristic.split(":")
         threshold, step = heuristic_params.split("-")
         self.bin_thershold = int(threshold)
         self.bin_thershold_step = int(step)
@@ -209,6 +209,11 @@ class HistogramCache:
         cache_entry.histogram.tensor = torch.mul(
             cache_entry.histogram.tensor, torch.exp(query_tensor_dense * lr)
         )
+
+        if self.heuristic_type == "global_visits":
+            query_tensor_dense = torch.ones(
+                size=(1, self.domain_size), dtype=torch.float64
+            )
         # TODO: This depends on Query Values being 1 (counts queries only) for now
         cache_entry.bin_updates = torch.add(cache_entry.bin_updates, query_tensor_dense)
         cache_entry.histogram.normalize()
@@ -222,8 +227,14 @@ class HistogramCache:
         cache_entry = self.read_entry(blocks)
         assert cache_entry is not None
 
-        # TODO: This depends on Query Values being 1 (counts queries only) for now
-        query_tensor_dense = query
+        if self.heuristic_type == "global_visits":
+            query_tensor_dense = torch.ones(
+                size=(1, self.domain_size), dtype=torch.float64
+            )
+        else:
+            # TODO: This depends on Query Values being 1 (counts queries only) for now
+            query_tensor_dense = query
+
         new_threshold = (
             torch.min(cache_entry.bin_updates[query_tensor_dense > 0])
             + self.bin_thershold_step
